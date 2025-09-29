@@ -1,0 +1,6 @@
+@SapaFoRestRMSAPI_HostAddress = http://localhost:5180
+
+GET {{SapaFoRestRMSAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
