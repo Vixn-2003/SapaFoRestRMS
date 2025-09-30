@@ -9,15 +9,18 @@ namespace SapaFoRestRMSAPI.Services
         private readonly DriveService _driveService;
         private readonly string _folderId = "1X0Xg480hM3qXW3sr6oVRoT3Ix2Pp75jB"; // folderId của bạn
 
-        public GoogleDriveService(IConfiguration configuration)
+        public GoogleDriveService()
         {
-            var credential = GoogleCredential.FromFile("wwwroot/keys/sapa-forest-rms-service.json")
+            // Lấy đường dẫn tuyệt đối tới file JSON
+            var keyFilePath = Path.Combine(Directory.GetCurrentDirectory(), "keys", "sapaforestrms-81161b168f3c.json");
+
+            var credential = GoogleCredential.FromFile(keyFilePath)
                 .CreateScoped(DriveService.Scope.Drive);
 
-            _driveService = new DriveService(new BaseClientService.Initializer
+            _driveService = new DriveService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = credential,
-                ApplicationName = "SapaFoRestRMS"
+                ApplicationName = "SapaFoRestRMS",
             });
         }
 
