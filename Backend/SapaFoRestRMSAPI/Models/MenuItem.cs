@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace DomainAccessLayer.Models;
+namespace SapaFoRestRMSAPI.Models;
 
 public partial class MenuItem
 {

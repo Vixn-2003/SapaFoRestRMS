@@ -1,39 +1,83 @@
-﻿using DataAccessLayer.UnitOfWork.Interfaces;
+﻿using DataAccessLayer.Dbcontext;
+using DataAccessLayer.Repositories;
+using DataAccessLayer.Repositories.Interfaces;
+using DataAccessLayer.UnitOfWork.Interfaces;
 using Microsoft.EntityFrameworkCore.Storage;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DataAccessLayer.UnitOfWork
 {
-    public class UnitOfWork : IUnitOfWork
-
+    public class UnitOfWork : IUnitOfWork, IDisposable
     {
-        public Task<IDbContextTransaction> BeginTransactionAsync()
+        private readonly SapaFoRestRmsContext _context;
+        private IDbContextTransaction _transaction;
+
+        private IMenuRepository _menuRepository;
+
+        private IComboRepository _comboRepository;
+
+
+        public UnitOfWork(SapaFoRestRmsContext context)
         {
-            throw new NotImplementedException();
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public Task CommitAsync()
+        public IMenuRepository MenuItem => _menuRepository ??= new MenuRepository(_context);
+        public IComboRepository Combo => _comboRepository ??= new ComboRepository(_context);
+
+        // Bắt đầu transaction
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
         {
-            throw new NotImplementedException();
+            if (_transaction == null)
+            {
+                _transaction = await _context.Database.BeginTransactionAsync();
+            }
+            return _transaction;
         }
 
+        // Commit transaction
+        public async Task CommitAsync()
+        {
+            try
+            {
+                await _context.SaveChangesAsync();
+                if (_transaction != null)
+                {
+                    await _transaction.CommitAsync();
+                    await _transaction.DisposeAsync();
+                    _transaction = null;
+                }
+            }
+            catch
+            {
+                await RollbackAsync();
+                throw;
+            }
+        }
+
+        // Rollback transaction
+        public async Task RollbackAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
+        }
+
+        // Lưu thay đổi mà không cần transaction
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        // Giải phóng resource
         public void Dispose()
         {
-            throw new NotImplementedException();
-        }
-
-        public Task RollbackAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<int> SaveChangesAsync()
-        {
-            throw new NotImplementedException();
+            _transaction?.Dispose();
+            _context?.Dispose();
         }
     }
 }
