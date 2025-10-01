@@ -9,6 +9,7 @@ namespace DataAccessLayer.Repositories.Interfaces
 {
     public interface ISystemLogoRepository : IRepository<SystemLogo>
     {
+        IEnumerable<SystemLogo> GetAll();
         IEnumerable<SystemLogo> GetActiveLogos();
         Task<SystemLogo?> GetByIdAsync(int id); // lấy theo id
         Task AddAsync(SystemLogo logo);

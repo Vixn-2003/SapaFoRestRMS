@@ -17,6 +17,10 @@ namespace DataAccessLayer.Repositories
         {
             _context = context;
         }
+        public IEnumerable<SystemLogo> GetAll()
+        {
+            return _context.SystemLogos.ToList();
+        }
 
         public IEnumerable<SystemLogo> GetActiveLogos()
         {

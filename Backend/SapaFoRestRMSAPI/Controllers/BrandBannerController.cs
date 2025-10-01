@@ -1,8 +1,9 @@
 ﻿using BusinessAccessLayer.DTOs;
-
 using BusinessLogicLayer.Services.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.AspNetCore.Mvc;
+using SapaFoRestRMSAPI.Services;
+using Microsoft.AspNetCore.Http;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -11,10 +12,12 @@ namespace SapaFoRestRMSAPI.Controllers
     public class BrandBannerController : ControllerBase
     {
         private readonly IBrandBannerService _bannerService;
+        private readonly CloudinaryService _cloudinaryService;
 
-        public BrandBannerController(IBrandBannerService bannerService)
+        public BrandBannerController(IBrandBannerService bannerService, CloudinaryService cloudinaryService)
         {
             _bannerService = bannerService;
+            _cloudinaryService = cloudinaryService;
         }
 
         [HttpGet("active")]
@@ -40,17 +43,22 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> Add([FromBody] BrandBannerUpdateDto dto)
+        public async Task<ActionResult> Add([FromForm] BrandBannerUpdateDto dto)
         {
+            string imageUrl = null;
+            if (dto.ImageFile != null)
+            {
+                imageUrl = await _cloudinaryService.UploadFileAsync(dto.ImageFile);
+            }
+
             var banner = new BrandBanner
             {
                 Title = dto.Title,
-                ImageUrl = dto.ImageUrl,
+                ImageUrl = imageUrl,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Status = dto.Status,
-                CreatedBy = 1, // tạm thời fix user id = 1
-               
+                CreatedBy = 3
             };
 
             await _bannerService.AddAsync(banner);
@@ -58,7 +66,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, [FromBody] BrandBannerUpdateDto dto)
+        public async Task<ActionResult> Update(int id, [FromForm] BrandBannerUpdateDto dto)
         {
             if (id != dto.BannerId) return BadRequest();
 
@@ -66,12 +74,15 @@ namespace SapaFoRestRMSAPI.Controllers
             if (banner == null) return NotFound();
 
             banner.Title = dto.Title;
-            banner.ImageUrl = dto.ImageUrl;
             banner.StartDate = dto.StartDate;
             banner.EndDate = dto.EndDate;
             banner.Status = dto.Status;
-            banner.CreatedBy = 1; // tạm thời fix user id = 1
-          
+            banner.CreatedBy = 3;
+
+            if (dto.ImageFile != null)
+            {
+                banner.ImageUrl = await _cloudinaryService.UploadFileAsync(dto.ImageFile);
+            }
 
             await _bannerService.UpdateAsync(banner);
             return NoContent();

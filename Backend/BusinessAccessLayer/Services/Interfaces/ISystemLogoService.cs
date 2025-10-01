@@ -9,6 +9,7 @@ namespace BusinessAccessLayer.Services.Interfaces
 {
     public interface ISystemLogoService
     {
+        IEnumerable<SystemLogoDto> GetAllLogos();
         IEnumerable<SystemLogoDto> GetActiveLogos();
         Task<SystemLogoDto?> GetByIdAsync(int id);
         Task<SystemLogoDto> AddLogoAsync(SystemLogoDto dto, int userId);

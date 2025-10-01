@@ -6,8 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="CloudinaryDotNet" Version="1.27.7" />
 		<PackageReference Include="Google.Apis.Drive.v3" Version="1.71.0.3905" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.16" />
+		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
 		<PackageReference Include="Microsoft.AspNetCore.OData" Version="8.2.5" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11">
 			<PrivateAssets>all</PrivateAssets>
@@ -21,5 +23,8 @@
 	  <ProjectReference Include="..\BusinessAccessLayer\BusinessAccessLayer.csproj" />
 	  <ProjectReference Include="..\DataAccessLayer\DataAccessLayer.csproj" />
 	  <ProjectReference Include="..\DomainAccessLayer\DomainAccessLayer.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="keys\" />
 	</ItemGroup>
 </Project>

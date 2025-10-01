@@ -1,6 +1,7 @@
 ﻿using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using SapaFoRestRMSAPI.Services;
 using System.Threading.Tasks;
 
 namespace SapaFoRestRMSAPI.Controllers
@@ -10,11 +11,20 @@ namespace SapaFoRestRMSAPI.Controllers
     public class SystemLogoController : ControllerBase
     {
         private readonly ISystemLogoService _logoService;
+        private readonly CloudinaryService _cloudinaryService;
 
-        public SystemLogoController(ISystemLogoService logoService)
+        public SystemLogoController(ISystemLogoService logoService, CloudinaryService cloudinaryService)
         {
             _logoService = logoService;
+            _cloudinaryService = cloudinaryService;
         }
+        [HttpGet("all")]
+        public IActionResult GetAllLogos()
+        {
+            var logos = _logoService.GetAllLogos();
+            return Ok(logos);
+        }
+
 
         [HttpGet("active")]
         public IActionResult GetActiveLogos()
@@ -32,16 +42,27 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddLogo([FromBody] SystemLogoDto dto, int userId = 1)
+        public async Task<IActionResult> AddLogo([FromForm] SystemLogoDto dto, int userId = 3)
         {
+            if (dto.File != null)
+            {
+                dto.LogoUrl = await _cloudinaryService.UploadFileAsync(dto.File);
+            }
+
             var newLogo = await _logoService.AddLogoAsync(dto, userId);
             return CreatedAtAction(nameof(GetLogoById), new { id = newLogo.LogoId }, newLogo);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateLogo(int id, [FromBody] SystemLogoDto dto, int userId = 1)
+        public async Task<IActionResult> UpdateLogo(int id, [FromForm] SystemLogoDto dto, int userId = 3)
         {
             dto.LogoId = id;
+
+            if (dto.File != null)
+            {
+                dto.LogoUrl = await _cloudinaryService.UploadFileAsync(dto.File);
+            }
+
             var success = await _logoService.UpdateLogoAsync(dto, userId);
             if (!success) return NotFound();
             return NoContent();

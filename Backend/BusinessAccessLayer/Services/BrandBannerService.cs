@@ -32,7 +32,7 @@ namespace BusinessLogicLayer.Services
 
         public async Task AddAsync(BrandBanner banner)
         {
-            banner.CreatedBy = 1;
+            banner.CreatedBy = 3;
             await _bannerRepository.AddAsync(banner);
             await _bannerRepository.SaveChangesAsync();
         }

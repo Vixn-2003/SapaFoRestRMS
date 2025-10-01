@@ -35,7 +35,11 @@ namespace SapaFoRestRMSAPI
 
             builder.Services.AddScoped<IBrandBannerRepository, BrandBannerRepository>();
             builder.Services.AddScoped<IBrandBannerService, BrandBannerService>();
-            builder.Services.AddSingleton<GoogleDriveService>();
+
+            builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+            builder.Services.AddScoped<IMenuItemService, MenuItemService>();
+
+            builder.Services.AddSingleton<CloudinaryService>();
 
             builder.Services.AddSwaggerGen();
             var app = builder.Build();

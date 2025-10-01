@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using BusinessAccessLayer.DTOs;
+﻿using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories.Interfaces;
@@ -14,38 +13,81 @@ namespace BusinessAccessLayer.Services
     {
         private readonly ISystemLogoRepository _logoRepository;
         private readonly SapaFoRestRmsContext _context;
-        private readonly IMapper _mapper;
 
-        public SystemLogoService(ISystemLogoRepository logoRepository, SapaFoRestRmsContext context, IMapper mapper)
+        public SystemLogoService(ISystemLogoRepository logoRepository, SapaFoRestRmsContext context)
         {
             _logoRepository = logoRepository;
             _context = context;
-            _mapper = mapper;
         }
+        public IEnumerable<SystemLogoDto> GetAllLogos()
+        {
+            var logos = _logoRepository.GetAll();
+            var result = new List<SystemLogoDto>();
+            foreach (var logo in logos)
+            {
+                result.Add(new SystemLogoDto
+                {
+                    LogoId = logo.LogoId,
+                    LogoName = logo.LogoName,
+                    LogoUrl = logo.LogoUrl,
+                    Description = logo.Description,
+                    IsActive = logo.IsActive
+                });
+            }
+            return result;
+        }
+
 
         public IEnumerable<SystemLogoDto> GetActiveLogos()
         {
             var logos = _logoRepository.GetActiveLogos();
-            return _mapper.Map<IEnumerable<SystemLogoDto>>(logos);
+            var result = new List<SystemLogoDto>();
+            foreach (var logo in logos)
+            {
+                result.Add(new SystemLogoDto
+                {
+                    LogoId = logo.LogoId,
+                    LogoName = logo.LogoName,
+                    LogoUrl = logo.LogoUrl,
+                    Description = logo.Description,
+                    IsActive = logo.IsActive
+                });
+            }
+            return result;
         }
 
         public async Task<SystemLogoDto?> GetByIdAsync(int id)
         {
             var logo = await _logoRepository.GetByIdAsync(id);
-            return _mapper.Map<SystemLogoDto>(logo);
+            if (logo == null) return null;
+
+            return new SystemLogoDto
+            {
+                LogoId = logo.LogoId,
+                LogoName = logo.LogoName,
+                LogoUrl = logo.LogoUrl,
+                Description = logo.Description,
+                IsActive = logo.IsActive
+            };
         }
 
         public async Task<SystemLogoDto> AddLogoAsync(SystemLogoDto dto, int userId)
         {
-            var logo = _mapper.Map<SystemLogo>(dto);
-            logo.CreatedBy = userId;
-            logo.CreatedDate = DateTime.Now;
-            logo.IsActive = true;
+            var logo = new SystemLogo
+            {
+                LogoName = dto.LogoName,
+                LogoUrl = dto.LogoUrl,
+                Description = dto.Description,
+                IsActive = dto.IsActive,
+                CreatedBy = userId,
+                CreatedDate = DateTime.Now
+            };
 
             await _logoRepository.AddAsync(logo);
             await _context.SaveChangesAsync();
 
-            return _mapper.Map<SystemLogoDto>(logo);
+            dto.LogoId = logo.LogoId; // trả về id vừa tạo
+            return dto;
         }
 
         public async Task<bool> UpdateLogoAsync(SystemLogoDto dto, int userId)

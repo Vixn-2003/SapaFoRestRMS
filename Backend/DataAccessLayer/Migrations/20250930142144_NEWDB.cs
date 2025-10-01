@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class NEWDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -149,7 +149,8 @@ namespace DataAccessLayer.Migrations
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CourseType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    IsAvailable = table.Column<bool>(type: "bit", nullable: true, defaultValue: true)
+                    IsAvailable = table.Column<bool>(type: "bit", nullable: true, defaultValue: true),
+                    ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
