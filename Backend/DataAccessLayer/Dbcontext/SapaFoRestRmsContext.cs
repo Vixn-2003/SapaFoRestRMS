@@ -182,6 +182,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.Location).HasMaxLength(200);
             entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Events)
                 .HasForeignKey(d => d.CreatedBy)

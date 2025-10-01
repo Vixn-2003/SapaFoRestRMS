@@ -27,7 +27,8 @@ namespace BusinessAccessLayer.Services
                 MenuItemName = x.MenuItem.Name,
                 TotalQuantity = x.TotalQuantity,
                 Description = x.MenuItem.Description,   // thêm mô tả
-                ImageUrl = x.MenuItem.ImageUrl
+                ImageUrl = x.MenuItem.ImageUrl,
+                Price = x.MenuItem.Price
 
             });
         }

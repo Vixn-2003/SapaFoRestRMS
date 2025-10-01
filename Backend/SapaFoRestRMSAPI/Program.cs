@@ -1,4 +1,4 @@
-using BusinessAccessLayer.Mapping;
+﻿using BusinessAccessLayer.Mapping;
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
 using BusinessLogicLayer.Services;
@@ -39,9 +39,27 @@ namespace SapaFoRestRMSAPI
             builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
             builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 
+            builder.Services.AddScoped<IComboRepository, ComboRepository>();
+            builder.Services.AddScoped<IComboService, ComboService>();
+
+            builder.Services.AddScoped<IEventRepository, EventRepository>();
+            builder.Services.AddScoped<IEventService, EventService>();
+
+
             builder.Services.AddSingleton<CloudinaryService>();
 
             builder.Services.AddSwaggerGen();
+            // Thêm CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend",
+                    policy =>
+                    {
+                        policy.WithOrigins("https://localhost:5158") // frontend của em
+                              .AllowAnyHeader()
+                              .AllowAnyMethod();
+                    });
+            });
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -53,7 +71,8 @@ namespace SapaFoRestRMSAPI
 
 
             app.UseHttpsRedirection();
-
+            // Bật CORS
+            app.UseCors("AllowFrontend");
             app.UseAuthorization();
 
 
