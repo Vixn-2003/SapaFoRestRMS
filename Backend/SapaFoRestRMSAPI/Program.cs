@@ -55,7 +55,7 @@ namespace SapaFoRestRMSAPI
                 options.AddPolicy("AllowFrontend",
                     policy =>
                     {
-                        policy.WithOrigins("https://localhost:5158") // frontend của em
+                        policy.WithOrigins("https://localhost:5158")
                               .AllowAnyHeader()
                               .AllowAnyMethod();
                     });
