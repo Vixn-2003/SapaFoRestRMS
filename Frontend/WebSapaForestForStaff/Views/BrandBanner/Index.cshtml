@@ -1,0 +1,95 @@
+﻿@model WebSapaForestForStaff.Models.BannerListViewModel
+
+<h2>Danh sách Banner</h2>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-3">
+        <select name="status" class="form-select">
+            <option value="">-- Trạng thái --</option>
+            @foreach (var s in Model.Statuses)
+            {
+                <option value="@s" selected="@(Model.CurrentStatus == s)">@s</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input type="text" name="title" value="@Model.CurrentTitle" class="form-control" placeholder="Tìm theo tiêu đề..." />
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Lọc</button>
+    </div>
+    <div class="col-md-4 text-end">
+        <a class="btn btn-success" href="@Url.Action("Add")">+ Thêm mới</a>
+    </div>
+</form>
+
+<p><strong>Tổng cộng:</strong> @Model.TotalItems Baners</p>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Tiêu đề</th>
+            <th>Hình ảnh</th>
+            <th>Trạng thái</th>
+            <th>Ngày bắt đầu</th>
+            <th>Ngày kết thúc</th>
+            <th>Người tạo</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Banners.Any())
+        {
+            foreach (var b in Model.Banners)
+            {
+                <tr>
+                    <td>@b.Title</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(b.ImageUrl))
+                        {
+                            <img src="@b.ImageUrl" alt="@b.Title" width="120" />
+                        }
+                    </td>
+                    <td>@b.Status</td>
+                    <td>@b.StartDate</td>
+                    <td>@b.EndDate</td>
+                    <td>@b.CreatedByName</td>
+                    <td>
+                        <a href="@Url.Action("Edit", new { id = b.BannerId })" class="btn btn-sm btn-warning">Sửa</a>
+                        <form asp-action="Delete" asp-route-id="@b.BannerId" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xóa banner này?');">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="7" class="text-center text-muted">Không có banner nào</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@if (Model.TotalPages > 1)
+{
+    <nav>
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new { status = Model.CurrentStatus, title = Model.CurrentTitle, pageNumber = Model.PageNumber - 1 })">«</a>
+            </li>
+
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { status = Model.CurrentStatus, title = Model.CurrentTitle, pageNumber = i })">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new { status = Model.CurrentStatus, title = Model.CurrentTitle, pageNumber = Model.PageNumber + 1 })">»</a>
+            </li>
+        </ul>
+    </nav>
+}

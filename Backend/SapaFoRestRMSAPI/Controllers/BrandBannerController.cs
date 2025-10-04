@@ -2,8 +2,8 @@
 using BusinessLogicLayer.Services.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SapaFoRestRMSAPI.Services;
-using Microsoft.AspNetCore.Http;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -21,18 +21,66 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpGet("active")]
-        public async Task<ActionResult<IEnumerable<BrandBanner>>> GetActiveBanners()
+        public async Task<ActionResult<IEnumerable<BrandBannerDto>>> GetActiveBanners()
         {
             var banners = await _bannerService.GetActiveBannersAsync();
             return Ok(banners);
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<BrandBanner>>> GetAll()
+        public async Task<ActionResult<IEnumerable<BrandBannerDto>>> GetAll()
         {
             var banners = await _bannerService.GetAllAsync();
+            await AutoUpdateBannerStatus(banners);
             return Ok(banners);
         }
+        [HttpGet("filter")]
+        public async Task<IActionResult> Filter([FromQuery] string? status, [FromQuery] string? title, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 7)
+        {
+            var banners = await _bannerService.GetAllAsync();
+            await AutoUpdateBannerStatus(banners);
+            if (!string.IsNullOrEmpty(status))
+                banners = banners.Where(b => b.Status != null && b.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrEmpty(title))
+                banners = banners.Where(b => b.Title != null && b.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
+
+            var totalItems = banners.Count();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var pagedData = banners
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var result = new
+            {
+                Data = pagedData,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+            };
+
+            return Ok(result);
+        }
+        private async Task AutoUpdateBannerStatus(IEnumerable<BrandBannerDto> banners)
+        {
+            var now = DateTime.Now;
+            foreach (var dto in banners)
+            {
+                if (dto.EndDate.HasValue && dto.EndDate.Value.ToDateTime(TimeOnly.MinValue) < now && dto.Status == "Active")
+                {
+                    var entity = await _bannerService.GetByIdAsync(dto.BannerId);
+                    if (entity != null && entity.Status == "Active")
+                    {
+                        entity.Status = "Inactive";
+                        await _bannerService.UpdateAsync(entity);
+                    }
+                }
+            }
+        }
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<BrandBanner>> GetById(int id)
@@ -42,10 +90,11 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(banner);
         }
 
+
         [HttpPost]
         public async Task<ActionResult> Add([FromForm] BrandBannerUpdateDto dto)
         {
-            string imageUrl = null;
+            string? imageUrl = null;
             if (dto.ImageFile != null)
             {
                 imageUrl = await _cloudinaryService.UploadFileAsync(dto.ImageFile);
@@ -64,6 +113,13 @@ namespace SapaFoRestRMSAPI.Controllers
             await _bannerService.AddAsync(banner);
             return CreatedAtAction(nameof(GetById), new { id = banner.BannerId }, banner);
         }
+        [HttpGet("statuses")]
+        public IActionResult GetBannerStatuses()
+        {
+            var statuses = new List<string> { "Active", "Inactive" };
+            return Ok(statuses);
+        }
+
 
         [HttpPut("{id}")]
         public async Task<ActionResult> Update(int id, [FromForm] BrandBannerUpdateDto dto)

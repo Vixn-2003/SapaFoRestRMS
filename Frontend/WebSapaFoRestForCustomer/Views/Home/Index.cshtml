@@ -23,7 +23,7 @@
 </div>
 <!-- Best Seller -->
 <div class="container mt-5">
-    <h3 class="section-title mb-4">Món ăn bán chạy</h3>
+    <h3 class="section-title mb-4">Món ăn đặc sắc</h3>
     <div id="bestSellerCarousel" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-inner">
             @if (bestSellers != null && bestSellers.Any())
@@ -73,7 +73,7 @@
             {
                 var combos = (List<ComboDto>)ViewBag.Combos;
                 var grouped = combos.Select((item, index) => new { item, index })
-                .GroupBy(x => x.index / 3) // Mỗi slide 4 combo
+                .GroupBy(x => x.index / 3) 
                 .ToList();
 
                 var first = true;
@@ -114,7 +114,7 @@
 
     <div id="eventCarousel" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-inner">
-            @for (int i = 0; i < ViewBag.Events.Count; i += 3)  // mỗi slide hiển thị 3 event
+            @for (int i = 0; i < ViewBag.Events.Count; i += 3)  
             {
                 <div class="carousel-item @(i == 0 ? "active" : "")">
                     <div class="row g-4">
