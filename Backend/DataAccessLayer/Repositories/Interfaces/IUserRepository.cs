@@ -7,27 +7,26 @@ using System.Threading.Tasks;
 
 namespace DataAccessLayer.Repositories.Interfaces
 {
-    internal class IUserRepository : IRepository<User>
+    internal interface IUserRepository : IRepository<User>
     {
       
 
-   
         Task<User?> GetByEmailAsync(string email);
         Task<bool> IsEmailExistsAsync(string email);
-       
+
         Task<bool> changePassword(int id, string newPassword);
+
+        public Task<User?> GetByIdAsync(int id)
+        {
+            throw new NotImplementedException();
+        }
 
         public Task<IEnumerable<User>> GetAllAsync()
         {
             throw new NotImplementedException();
         }
 
-        Task<User> IRepository<User>.GetByIdAsync(int id)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task CreateAsync(User entity)
+        public Task AddAsync(User entity)
         {
             throw new NotImplementedException();
         }
@@ -37,7 +36,12 @@ namespace DataAccessLayer.Repositories.Interfaces
             throw new NotImplementedException();
         }
 
-        public Task DeleteByIdAsync(int id)
+        public Task DeleteAsync(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SaveChangesAsync()
         {
             throw new NotImplementedException();
         }

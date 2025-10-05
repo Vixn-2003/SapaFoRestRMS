@@ -14,6 +14,7 @@ public partial class Staff
     public DateOnly HireDate { get; set; }
 
     public decimal SalaryBase { get; set; }
+    public int Status { get; set; } // add property status
 
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
