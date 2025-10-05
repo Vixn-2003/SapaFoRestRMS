@@ -86,9 +86,9 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("server=localhost;database=SapaFoRestRMS;uid=sa;pwd=sa;TrustServerCertificate=True;");
+    {
 
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Announcement>(entity =>
@@ -145,6 +145,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.IsAvailable).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
         });
 
@@ -181,6 +182,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.Location).HasMaxLength(200);
             entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
 
             entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.Events)
                 .HasForeignKey(d => d.CreatedBy)
@@ -279,7 +281,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.IsAvailable).HasDefaultValue(true);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
-
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
             entity.HasOne(d => d.Category).WithMany(p => p.MenuItems)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK__MenuItems__Categ__2BFE89A6");

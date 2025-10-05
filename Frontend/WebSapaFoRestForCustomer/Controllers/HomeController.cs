@@ -7,15 +7,39 @@ namespace WebSapaFoRestForCustomer.Controllers
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
-
-        public HomeController(ILogger<HomeController> logger)
+        private readonly HttpClient _httpClient;
+        public HomeController(ILogger<HomeController> logger, IHttpClientFactory httpClientFactory)
         {
             _logger = logger;
+            _httpClient = httpClientFactory.CreateClient();
+            _httpClient.BaseAddress = new Uri("https://localhost:7096/");
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            try
+            {
+                // G?i API bestseller
+                var bestSellers = await _httpClient.GetFromJsonAsync<List<MenuItemDto>>("api/MenuItem/top-best-sellers");
+
+                // G?i API combos
+                var combos = await _httpClient.GetFromJsonAsync<List<ComboDto>>("api/Combos");
+                var events = await _httpClient.GetFromJsonAsync<List<EventDto>>("api/Events/top6");
+                
+                // Truy?n d? li?u sang View
+                ViewBag.BestSellers = bestSellers ?? new List<MenuItemDto>();
+                ViewBag.Combos = combos ?? new List<ComboDto>();
+                ViewBag.Events = events ?? new List<EventDto>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "L?i khi g?i API trong HomeController");
+                ViewBag.BestSellers = new List<MenuItemDto>();
+                ViewBag.Combos = new List<ComboDto>();
+            }
+
             return View();
+
         }
 
         public IActionResult Privacy()

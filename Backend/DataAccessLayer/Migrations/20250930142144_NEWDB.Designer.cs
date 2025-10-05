@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    [Migration("20250929142704_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250930142144_NEWDB")]
+    partial class NEWDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -457,6 +457,10 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 

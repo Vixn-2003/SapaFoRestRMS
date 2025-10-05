@@ -1,6 +1,14 @@
-using Microsoft.EntityFrameworkCore;
+﻿using BusinessAccessLayer.Mapping;
+using BusinessAccessLayer.Services;
+using BusinessAccessLayer.Services.Interfaces;
+using BusinessLogicLayer.Services;
+using BusinessLogicLayer.Services.Interfaces;
 using DataAccessLayer;
 using DataAccessLayer.Dbcontext;
+using DataAccessLayer.Repositories;
+using DataAccessLayer.Repositories.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using SapaFoRestRMSAPI.Services;
 namespace SapaFoRestRMSAPI
 {
     public class Program
@@ -16,12 +24,55 @@ namespace SapaFoRestRMSAPI
 
             builder.Services.AddControllers();
 
+            // Add AutoMapper
+            builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+
+            // Add Repositories
+            builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
+
+            // Add Services
+            builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
+
+            builder.Services.AddScoped<IBrandBannerRepository, BrandBannerRepository>();
+            builder.Services.AddScoped<IBrandBannerService, BrandBannerService>();
+
+            builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+            builder.Services.AddScoped<IMenuItemService, MenuItemService>();
+
+            builder.Services.AddScoped<IComboRepository, ComboRepository>();
+            builder.Services.AddScoped<IComboService, ComboService>();
+
+            builder.Services.AddScoped<IEventRepository, EventRepository>();
+            builder.Services.AddScoped<IEventService, EventService>();
+
+
+            builder.Services.AddSingleton<CloudinaryService>();
+
+            builder.Services.AddSwaggerGen();
+            // Thêm CORS
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend",
+                    policy =>
+                    {
+                        policy.WithOrigins("https://localhost:5158")
+                              .AllowAnyHeader()
+                              .AllowAnyMethod();
+                    });
+            });
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
 
             app.UseHttpsRedirection();
-
+            // Bật CORS
+            app.UseCors("AllowFrontend");
             app.UseAuthorization();
 
 

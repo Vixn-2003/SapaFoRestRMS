@@ -1,8 +1,199 @@
 ﻿@{
+  
+    var bestSellers = ViewBag.BestSellers as List<MenuItemDto>;
+}
+@{
     ViewData["Title"] = "Home Page";
 }
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+@section Styles {
+    <link rel="stylesheet" href="~/css/home.css" />
+}
+<div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner" id="bannerContainer">
+        <!-- JS sẽ render banners -->
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#bannerCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+        <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#bannerCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+        <span class="visually-hidden">Next</span>
+    </button>
 </div>
+<!-- Best Seller -->
+<div class="container mt-5">
+    <h3 class="section-title mb-4">Món ăn bán chạy</h3>
+    <div id="bestSellerCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            @if (bestSellers != null && bestSellers.Any())
+            {
+                var grouped = bestSellers.Select((item, index) => new { item, index })
+                .GroupBy(x => x.index / 5) // Mỗi slide tối đa 5 món
+                .ToList();
+
+                var first = true;
+                foreach (var group in grouped)
+                {
+                    <div class="carousel-item @(first ? "active" : "")">
+                        <div class="d-flex justify-content-center gap-3">
+                            @foreach (var g in group)
+                            {
+                                <div class="card menu-card">
+                                    <img src="@g.item.ImageUrl" class="card-img-top menu-img" alt="@g.item.MenuItemName" />
+                                    <div class="card-body text-center">
+                                        <h6 class="menu-title">@g.item.MenuItemName</h6>
+                                        <p class="menu-price">@g.item.Price.ToString("N0") ₫</p>
+                                    </div>
+                                </div>
+
+                            }
+                        </div>
+                    </div>
+                    first = false;
+                }
+            }
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#bestSellerCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#bestSellerCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</div>
+<!-- Combo Section -->
+<div class="container mt-5">
+   <h3 class="section-title mb-4">Combo Ưu Đãi</h3>
+    <div id="comboCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            @if (ViewBag.Combos != null && ((List<ComboDto>)ViewBag.Combos).Any())
+            {
+                var combos = (List<ComboDto>)ViewBag.Combos;
+                var grouped = combos.Select((item, index) => new { item, index })
+                .GroupBy(x => x.index / 3) // Mỗi slide 4 combo
+                .ToList();
+
+                var first = true;
+                foreach (var group in grouped)
+                {
+                    <div class="carousel-item @(first ? "active" : "")">
+                        <div class="d-flex justify-content-center gap-4">
+                            @foreach (var g in group)
+                            {
+                                <div class="card combo-card">
+                                    <img src="@g.item.ImageUrl" class="card-img-top combo-img" alt="@g.item.Name" />
+                                    <div class="card-body text-center">
+                                        <h5 class="combo-title">@g.item.Name</h5>
+                                        <p class="combo-desc">@g.item.Description</p>
+                                        <p class="combo-price">@g.item.Price.ToString("N0") ₫</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    first = false;
+                }
+            }
+        </div>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#comboCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#comboCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</div>
+<div class="container mt-5">
+    <h2 class="text-center section-title mb-4">Sự kiện sắp tới</h2>
+
+    <div id="eventCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            @for (int i = 0; i < ViewBag.Events.Count; i += 3)  // mỗi slide hiển thị 3 event
+            {
+                <div class="carousel-item @(i == 0 ? "active" : "")">
+                    <div class="row g-4">
+                        @for (int j = i; j < i + 3 && j < ViewBag.Events.Count; j++)
+                        {
+                            var ev = ViewBag.Events[j];
+                            <div class="col-md-4">
+                                <div class="card event-card h-100 shadow-sm">
+                                    <img src="@ev.ImageUrl" class="card-img-top" alt="@ev.Title">
+                                    <div class="card-body">
+                                        <h5 class="card-title">@ev.Title</h5>
+                                        <p class="card-text">
+                                            <strong>Ngày bắt đầu:</strong> @ev.StartDate?.ToString("dd/MM/yyyy") <br />
+                                            <strong>Ngày kết thúc:</strong> @ev.EndDate?.ToString("dd/MM/yyyy") <br />
+                                            <strong>Địa điểm:</strong> @ev.Location
+                                        </p>
+                                      
+                                        <a href="/Events/Details?title=@ev.Title" class="btn">Xem chi tiết</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Nút điều khiển slider -->
+        <button class="carousel-control-prev" type="button" data-bs-target="#eventCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Trước</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#eventCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Tiếp</span>
+        </button>
+    </div>
+</div>
+
+
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const response = await fetch('@Url.Action("Active", "Banner")');
+                const banners = await response.json();
+                console.log("Banners:", banners);
+
+                const container = document.getElementById("bannerContainer");
+
+                if (banners.length > 0) {
+                    banners.forEach((banner, index) => {
+                        const activeClass = index === 0 ? "active" : "";
+                          const item = `
+        <div class="carousel-item ${activeClass}">
+            <img src="${banner.imageUrl}" alt="${banner.title}" class="d-block w-100">
+            <div class="carousel-caption d-none d-md-block">
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="/Booking/Index" class="btn btn-success">Đặt bàn ngay</a>
+                    <a href="/Banner/Details/${banner.id}" class="btn btn-success">Chi tiết</a>
+                    <a href="https://maps.google.com/?q=${encodeURIComponent(banner.address || 'Sapa Restaurant')}"
+                       target="_blank"
+                       class="btn btn-success">Địa chỉ</a>
+                </div>
+            </div>
+        </div>`;
+
+                        container.insertAdjacentHTML("beforeend", item);
+                    });
+                } else {
+                    container.innerHTML = `<div class="carousel-item active">
+                        <img src="/images/default-banner.jpg" class="d-block w-100">
+                    </div>`;
+                }
+            } catch (err) {
+                console.error("Lỗi load banner:", err);
+            }
+        });
+    </script>
+}
+

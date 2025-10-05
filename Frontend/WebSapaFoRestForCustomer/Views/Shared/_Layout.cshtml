@@ -1,49 +1,235 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - WebSapaFoRestForCustomer</title>
+    <title>@ViewData["Title"] - Rừng Xanh Sapa</title>
+
+    <!-- Bootstrap -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <!-- Site CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/WebSapaFoRestForCustomer.styles.css" asp-append-version="true" />
+
+    <!-- Google Fonts sang trọng -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        main {
+            flex: 1;
+        }
+
+        /* Navbar */
+        .navbar-custom {
+            background-color: #2E7D32; /* xanh rừng */
+        }
+
+            .navbar-custom .nav-link {
+                font-family: 'Playfair Display', serif;
+                font-weight: 600;
+                color: #FAF3E0 !important;
+                letter-spacing: 0.5px;
+                transition: color 0.3s;
+            }
+
+                .navbar-custom .nav-link:hover {
+                    color: #FFD54F !important; /* vàng nổi bật */
+                }
+
+        .navbar-brand span {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            color: #FFD54F;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .hotline {
+            color: #FFD54F;
+            font-weight: bold;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-book {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            background-color: #6D4C41; /* nâu gỗ */
+            color: #fff;
+            border-radius: 25px;
+            transition: all 0.3s;
+        }
+
+            .btn-book:hover {
+                background-color: #4E342E;
+                color: #FFD54F;
+            }
+
+        /* Footer */
+        .footer-sapa {
+            background-color: #1B5E20; /* xanh rừng đậm */
+            color: #FAF3E0;
+        }
+
+            .footer-sapa span,
+            .footer-sapa a {
+                font-family: 'Playfair Display', serif;
+                letter-spacing: 0.5px;
+            }
+
+            .footer-sapa .fw-bold {
+                font-family: 'Cinzel', serif;
+                font-weight: 700;
+                font-size: 1.2rem;
+                text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            }
+
+            .footer-sapa p,
+            .footer-sapa a.text-white-50 {
+                color: #FAF3E0;
+                font-weight: 500;
+            }
+
+            .footer-sapa a:hover {
+                color: #FFD54F !important;
+            }
+
+            /* Biểu tượng mạng xã hội */
+            .footer-sapa i {
+                transition: color 0.3s;
+            }
+
+                .footer-sapa i:hover {
+                    color: #FFD54F;
+                }
+    </style>
+
+    @RenderSection("Styles", required: false)
 </head>
 <body>
+    <!-- Header -->
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg navbar-custom shadow-sm fixed-top">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">WebSapaFoRestForCustomer</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                <!-- Logo -->
+                <a class="navbar-brand d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                    <img id="navbarLogo" src="~/images/logo.png" alt="Rừng Xanh Sapa" style="height:60px;" class="me-2" />
+                    <span class="fw-bold">Rừng Xanh Sapa</span>
+                </a>
+
+                <!-- Toggle mobile -->
+                <button class="navbar-toggler text-white" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#mainNavbar" aria-controls="mainNavbar"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
+
+                <!-- Menu -->
+                <div class="collapse navbar-collapse" id="mainNavbar">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">Trang Chủ</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Menu" asp-action="Index">Thực Đơn</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="About" asp-action="Index">Giới thiệu</a></li>
+                        <li class="nav-item"><a class="nav-link" asp-controller="Contact" asp-action="Index">Ưu Đãi</a></li>
                     </ul>
+
+                    <!-- Hotline & Nút đặt bàn -->
+                    <div class="d-flex align-items-center">
+                        <div class="me-3 hotline">
+                            📞 <a href="tel:0123456789" class="text-decoration-none hotline"> Hotline: 0123 456 789</a>
+                        </div>
+                        <a class="btn btn-book px-4" asp-controller="Reservation" asp-action="Index">Đặt bàn</a>
+                    </div>
                 </div>
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
+    <!-- Body -->
+    <main role="main" class="pb-3">
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer-sapa py-5 mt-5">
         <div class="container">
-            &copy; 2025 - WebSapaFoRestForCustomer - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <div class="row align-items-center">
+                <!-- Logo + nút đặt bàn -->
+                <div class="col-md-3 text-center text-md-start mb-4 mb-md-0">
+                    <a asp-controller="Home" asp-action="Index" class="d-flex align-items-center mb-3">
+                        <img id="footerLogo" src="~/images/logo.png" alt="Rừng Xanh Sapa" style="height:80px;" class="me-2" />
+                        <span class="fw-bold">Rừng Xanh Sapa</span>
+                    </a>
+                    <a class="btn btn-outline-warning rounded-pill px-4 fw-bold" asp-controller="Reservation" asp-action="Index">
+                        Đặt bàn
+                    </a>
+                </div>
+
+                <!-- Menu -->
+                <div class="col-md-3 mb-4 mb-md-0">
+                    <ul class="list-unstyled text-white">
+                        <li><a class="text-decoration-none text-white-50" asp-controller="Menu" asp-action="Index">Trang Chủ</a></li>
+                        <li><a class="text-decoration-none text-white-50" asp-controller="Branch" asp-action="Index">Thực Đơn</a></li>
+                        <li><a class="text-decoration-none text-white-50" asp-controller="Promotion" asp-action="Index">Giới Thiệu </a></li>
+                        <li><a class="text-decoration-none text-white-50" asp-controller="Contact" asp-action="Index">Ưu Đãi </a></li>
+                    </ul>
+                </div>
+
+                <!-- Hotline + Email -->
+                <div class="col-md-3 mb-4 mb-md-0 text-white">
+                    <p class="mb-1">Hotline: <span class="text-warning fw-bold">0123 456 789</span></p>
+                    <p class="mb-0">
+                        Email: <a href="mailto:rungxanhsapa@gmail.com" class="text-warning text-decoration-none">
+                            rungxanhsapa@gmail.com
+                        </a>
+                    </p>
+                </div>
+
+                <!-- Social -->
+                <div class="col-md-3 text-center text-md-end">
+                    <a href="#" class="text-white-50 fs-5 me-3"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="text-white-50 fs-5 me-3"><i class="bi bi-tiktok"></i></a>
+                    <a href="#" class="text-white-50 fs-5 me-3"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="text-white-50 fs-5"><i class="bi bi-youtube"></i></a>
+                    <p class="text-white-50 mt-3 mb-0">© 2025 Rừng Xanh Sapa</p>
+                </div>
+            </div>
         </div>
     </footer>
+
+    <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('@Url.Action("Active", "Logo")');
+                const data = await response.json();
+                if (data.logoUrl) {
+                    document.getElementById('navbarLogo').src = data.logoUrl;
+                    document.getElementById('footerLogo').src = data.logoUrl;
+                }
+            } catch (err) {
+                console.error("Lỗi khi load logo:", err);
+            }
+        });
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
