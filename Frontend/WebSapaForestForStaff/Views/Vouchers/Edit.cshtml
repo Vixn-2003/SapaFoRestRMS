@@ -1,0 +1,78 @@
+﻿@model WebSapaForestForStaff.Models.VoucherDTO.VoucherDto
+
+@{
+    ViewData["Title"] = "Update Voucher";
+    var pageNumber = ViewData["PageNumber"] as int? ?? 1;
+}
+
+<h2>Update Voucher</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="VoucherId" />
+    <input type="hidden" name="pageNumber" value="@pageNumber" />
+
+    <div class="form-group mb-3">
+        <label>Voucher ID</label>
+        <input class="form-control" asp-for="VoucherId" readonly />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Code</label>
+        <input class="form-control" asp-for="Code" readonly />
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Description</label>
+        <input class="form-control" asp-for="Description" />
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Discount Type</label>
+        <input class="form-control" asp-for="DiscountType" />
+        <span asp-validation-for="DiscountType" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Discount Value</label>
+        <input type="number" step="0.01" class="form-control" asp-for="DiscountValue" />
+        <span asp-validation-for="DiscountValue" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Start Date</label>
+        <input type="date" class="form-control" asp-for="StartDate" />
+        <span asp-validation-for="StartDate" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>End Date</label>
+        <input type="date" class="form-control" asp-for="EndDate" />
+        <span asp-validation-for="EndDate" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Min Order Value</label>
+        <input type="number" step="0.01" class="form-control" asp-for="MinOrderValue" />
+        <span asp-validation-for="MinOrderValue" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Max Discount</label>
+        <input type="number" step="0.01" class="form-control" asp-for="MaxDiscount" />
+        <span asp-validation-for="MaxDiscount" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Status</label>
+        <input class="form-control" asp-for="Status" />
+        <span asp-validation-for="Status" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" asp-route-pageNumber="@pageNumber" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

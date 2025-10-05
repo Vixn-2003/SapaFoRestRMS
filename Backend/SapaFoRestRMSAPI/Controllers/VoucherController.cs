@@ -16,21 +16,39 @@ namespace SapaFoRestRMSAPI.Controllers
             _voucherService = voucherService;
         }
 
-        //  [GET] api/voucher?pageNumber=1&pageSize=10&keyword=...&discountType=...
         [HttpGet]
         public async Task<IActionResult> GetAll(
-            [FromQuery] string? keyword,
-            [FromQuery] string? discountType,
-            [FromQuery] decimal? discountValue,
-            [FromQuery] DateOnly? startDate,
-            [FromQuery] DateOnly? endDate,
-            [FromQuery] decimal? minOrderValue,
-            [FromQuery] decimal? maxDiscount,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+     [FromQuery] string? keyword,
+     [FromQuery] string? discountType,
+     [FromQuery] decimal? discountValue,
+     [FromQuery] DateOnly? startDate,
+     [FromQuery] DateOnly? endDate,
+     [FromQuery] decimal? minOrderValue,
+     [FromQuery] decimal? maxDiscount,
+     [FromQuery] int pageNumber = 1,
+     [FromQuery] int pageSize = 10)
         {
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+            {
+                return BadRequest(new { error = "StartDate phải nhỏ hơn hoặc bằng EndDate." });
+            }
+
+            if ((discountValue.HasValue && discountValue < 0) ||
+                (minOrderValue.HasValue && minOrderValue < 0) ||
+                (maxDiscount.HasValue && maxDiscount < 0))
+            {
+                return BadRequest(new { error = "Các giá trị số không được phép âm." });
+            }
+
+            if (pageNumber <= 0 || pageSize <= 0)
+            {
+                return BadRequest(new { error = "PageNumber và PageSize phải lớn hơn 0." });
+            }
+
+            var trimmedKeyword = string.IsNullOrWhiteSpace(keyword) ? null : keyword.Trim();
+
             var (data, totalCount) = await _voucherService.SearchFilterPaginateAsync(
-                keyword, discountType, discountValue, startDate, endDate, minOrderValue, maxDiscount, pageNumber, pageSize);
+                trimmedKeyword, discountType, discountValue, startDate, endDate, minOrderValue, maxDiscount, pageNumber, pageSize);
 
             return Ok(new
             {
@@ -40,6 +58,8 @@ namespace SapaFoRestRMSAPI.Controllers
                 Data = data
             });
         }
+
+
 
         //  [GET] api/voucher/{id}
         [HttpGet("{id}")]
@@ -77,7 +97,7 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(updated);
         }
 
-        // ✅ [DELETE] api/voucher/{id}
+        //  [DELETE] api/voucher/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

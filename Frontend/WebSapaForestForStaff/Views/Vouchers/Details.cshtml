@@ -1,0 +1,45 @@
+﻿@using WebSapaForestForStaff.Models
+@using WebSapaForestForStaff.Models.VoucherDTO
+@model WebSapaForestForStaff.Models.VoucherDTO.VoucherDto
+
+@{
+    ViewData["Title"] = "Voucher Details";
+}
+
+<h2>Voucher Details</h2>
+
+<div class="card">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Voucher ID</dt>
+            <dd class="col-sm-9">@Model.VoucherId</dd>
+
+            <dt class="col-sm-3">Code</dt>
+            <dd class="col-sm-9">@Model.Code</dd>
+
+            <dt class="col-sm-3">Description</dt>
+            <dd class="col-sm-9">@Model.Description</dd>
+
+            <dt class="col-sm-3">Discount Type</dt>
+            <dd class="col-sm-9">@Model.DiscountType</dd>
+
+            <dt class="col-sm-3">Discount Value</dt>
+            <dd class="col-sm-9">@Model.DiscountValue</dd>
+
+            <dt class="col-sm-3">Start Date</dt>
+            <dd class="col-sm-9">@Model.StartDate?.ToString("yyyy-MM-dd")</dd>
+
+            <dt class="col-sm-3">End Date</dt>
+            <dd class="col-sm-9">@Model.EndDate?.ToString("yyyy-MM-dd")</dd>
+
+            <dt class="col-sm-3">Min Order Value</dt>
+            <dd class="col-sm-9">@Model.MinOrderValue</dd>
+
+            <dt class="col-sm-3">Max Discount</dt>
+            <dd class="col-sm-9">@Model.MaxDiscount</dd>
+        </dl>
+
+        <a href="@Url.Action("Index", "Vouchers", new { pageNumber = ViewData["PageNumber"] })" class="btn btn-secondary">Back to List</a>
+        <a href="@Url.Action("Edit", "Vouchers", new { id = Model.VoucherId })" class="btn btn-warning">Edit</a>
+    </div>
+</div>

@@ -17,39 +17,54 @@ namespace DataAccessLayer.Repositories
         }
 
         public async Task<IEnumerable<Voucher>> GetFilteredVouchersAsync(
-            string? searchKeyword,
-            string? discountType,
-            decimal? discountValue,
-            DateOnly? startDate,
-            DateOnly? endDate,
-            decimal? minOrderValue,
-            decimal? maxDiscount,
-            int pageNumber,
-            int pageSize)
+    string? searchKeyword,
+    string? discountType,
+    decimal? discountValue,
+    DateOnly? startDate,
+    DateOnly? endDate,
+    decimal? minOrderValue,
+    decimal? maxDiscount,
+    int pageNumber,
+    int pageSize)
         {
-            var query = _dbSet.AsQueryable();
-
-            //  Search theo Code + Description
-            if (!string.IsNullOrWhiteSpace(searchKeyword))
+            // 1. Validate ngày
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
             {
-                query = query.Where(v =>
-                    v.Code.Contains(searchKeyword) ||
-                    (v.Description ?? "").Contains(searchKeyword));
+                throw new ArgumentException("StartDate phải nhỏ hơn hoặc bằng EndDate.");
             }
 
-            //  Filter theo DiscountType
+            // 2. Validate các giá trị không âm
+            if ((discountValue.HasValue && discountValue < 0) ||
+                (minOrderValue.HasValue && minOrderValue < 0) ||
+                (maxDiscount.HasValue && maxDiscount < 0))
+            {
+                throw new ArgumentException("Các giá trị số không được phép âm.");
+            }
+
+            var query = _dbSet.AsQueryable();
+
+            // 3. Trim keyword và check để tránh case "code     "
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+            {
+                var trimmedKeyword = searchKeyword.Trim();
+                if (!string.IsNullOrEmpty(trimmedKeyword))
+                {
+                    query = query.Where(v =>
+                        v.Code.Contains(trimmedKeyword) ||
+                        (v.Description ?? "").Contains(trimmedKeyword));
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(discountType))
             {
                 query = query.Where(v => v.DiscountType == discountType);
             }
 
-            //  Filter theo DiscountValue
             if (discountValue.HasValue)
             {
                 query = query.Where(v => v.DiscountValue == discountValue);
             }
 
-            //  Filter theo StartDate / EndDate
             if (startDate.HasValue)
             {
                 query = query.Where(v => v.StartDate >= startDate);
@@ -60,7 +75,6 @@ namespace DataAccessLayer.Repositories
                 query = query.Where(v => v.EndDate <= endDate);
             }
 
-            //  Filter theo MinOrderValue / MaxDiscount
             if (minOrderValue.HasValue)
             {
                 query = query.Where(v => v.MinOrderValue >= minOrderValue);
@@ -71,7 +85,6 @@ namespace DataAccessLayer.Repositories
                 query = query.Where(v => v.MaxDiscount <= maxDiscount);
             }
 
-            //  Phân trang + Sắp xếp
             query = query
                 .OrderByDescending(v => v.VoucherId)
                 .Skip((pageNumber - 1) * pageSize)
@@ -79,6 +92,7 @@ namespace DataAccessLayer.Repositories
 
             return await query.ToListAsync();
         }
+
 
         public async Task<int> CountFilteredVouchersAsync(
             string? searchKeyword,
