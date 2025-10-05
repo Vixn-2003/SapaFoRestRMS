@@ -545,7 +545,7 @@ public partial class SapaFoRestRmsContext : DbContext
 
             entity.Property(e => e.Position).HasMaxLength(50);
             entity.Property(e => e.SalaryBase).HasColumnType("decimal(18, 2)");
-
+            entity.Property(e => e.Status).HasDefaultValue(0);
             entity.HasOne(d => d.User).WithMany(p => p.Staff)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -624,9 +624,8 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.PasswordHash).HasMaxLength(200);
             entity.Property(e => e.Phone).HasMaxLength(20);
-            entity.Property(e => e.Status)
-                .HasMaxLength(20)
-                .HasDefaultValue("Active");
+            entity.Property(e => e.Status).HasDefaultValue(0);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
 
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
                 .HasForeignKey(d => d.RoleId)
