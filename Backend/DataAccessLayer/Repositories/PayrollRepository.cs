@@ -21,8 +21,7 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<Payroll>> SearchAsync(string? staffName)
         {
-            var query = _context.Payrolls
-                .Include(p => p.Staff).Include(p=>p.Staff).ThenInclude(p=>p.User)
+            var query = _context.Payrolls.Include(p => p.Staff).ThenInclude(p=>p.User)   
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(staffName))
@@ -48,7 +47,7 @@ namespace DataAccessLayer.Repositories
             decimal? maxNetSalary,
             string? monthYear)
         {
-            var query = _context.Payrolls.Include(p => p.Staff).AsQueryable();
+            var query = _context.Payrolls.Include(p => p.Staff).ThenInclude(p=>p.User).AsQueryable();
 
             if (minBaseSalary.HasValue)
                 query = query.Where(p => p.BaseSalary >= minBaseSalary.Value);

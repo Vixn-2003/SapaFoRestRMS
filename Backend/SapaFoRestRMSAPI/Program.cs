@@ -49,6 +49,11 @@ namespace SapaFoRestRMSAPI
             builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
             builder.Services.AddScoped<IVoucherService, VoucherService>();
 
+            //Payroll
+            builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
+            builder.Services.AddScoped<IPayrollService, PayrollService>();
+
+
             builder.Services.AddSingleton<CloudinaryService>();
 
             builder.Services.AddSwaggerGen();
