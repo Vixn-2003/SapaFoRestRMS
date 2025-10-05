@@ -12,70 +12,109 @@ namespace DataAccessLayer.Repositories
 {
     public class VoucherRepository : Repository<Voucher>, IVoucherRepository
     {
-        private readonly SapaFoRestRmsContext _context;
-
         public VoucherRepository(SapaFoRestRmsContext context) : base(context)
         {
-            _context = context;
         }
 
-        public async Task<Voucher?> GetByIdAsync(int id)
+        public async Task<IEnumerable<Voucher>> GetFilteredVouchersAsync(
+            string? searchKeyword,
+            string? discountType,
+            decimal? discountValue,
+            DateOnly? startDate,
+            DateOnly? endDate,
+            decimal? minOrderValue,
+            decimal? maxDiscount,
+            int pageNumber,
+            int pageSize)
         {
-            return await _context.Vouchers.FindAsync(id);
-        }
+            var query = _dbSet.AsQueryable();
 
-        public async Task<Voucher?> GetByCodeAsync(string code)
-        {
-            return await _context.Vouchers.FirstOrDefaultAsync(v => v.Code == code);
-        }
-
-        public async Task AddAsync(Voucher voucher)
-        {
-            await _context.Vouchers.AddAsync(voucher);
-        }
-
-        public async Task UpdateAsync(Voucher voucher)
-        {
-            _context.Vouchers.Update(voucher);
-        }
-
-        public async Task DeleteAsync(int id)
-        {
-            var voucher = await _context.Vouchers.FindAsync(id);
-            if (voucher != null)
-            {
-                _context.Vouchers.Remove(voucher);
-            }
-        }
-
-        public async Task<(IEnumerable<Voucher> Data, int TotalCount)> GetPagedVouchersAsync(
-            int pageIndex, int pageSize,
-            string? searchKeyword = null,
-            string? status = null)
-        {
-            var query = _context.Vouchers.AsQueryable();
-
-            // Filter theo status
-            if (!string.IsNullOrEmpty(status))
-                query = query.Where(v => v.Status == status);
-
-            // Search theo Code hoặc Description
-            if (!string.IsNullOrEmpty(searchKeyword))
+            //  Search theo Code + Description
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
             {
                 query = query.Where(v =>
                     v.Code.Contains(searchKeyword) ||
-                    (v.Description != null && v.Description.Contains(searchKeyword)));
+                    (v.Description ?? "").Contains(searchKeyword));
             }
 
-            var totalCount = await query.CountAsync();
+            //  Filter theo DiscountType
+            if (!string.IsNullOrWhiteSpace(discountType))
+            {
+                query = query.Where(v => v.DiscountType == discountType);
+            }
 
-            var data = await query
-                .OrderByDescending(v => v.StartDate)
-                .Skip((pageIndex - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            //  Filter theo DiscountValue
+            if (discountValue.HasValue)
+            {
+                query = query.Where(v => v.DiscountValue == discountValue);
+            }
 
-            return (data, totalCount);
+            //  Filter theo StartDate / EndDate
+            if (startDate.HasValue)
+            {
+                query = query.Where(v => v.StartDate >= startDate);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(v => v.EndDate <= endDate);
+            }
+
+            //  Filter theo MinOrderValue / MaxDiscount
+            if (minOrderValue.HasValue)
+            {
+                query = query.Where(v => v.MinOrderValue >= minOrderValue);
+            }
+
+            if (maxDiscount.HasValue)
+            {
+                query = query.Where(v => v.MaxDiscount <= maxDiscount);
+            }
+
+            //  Phân trang + Sắp xếp
+            query = query
+                .OrderByDescending(v => v.VoucherId)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize);
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<int> CountFilteredVouchersAsync(
+            string? searchKeyword,
+            string? discountType,
+            decimal? discountValue,
+            DateOnly? startDate,
+            DateOnly? endDate,
+            decimal? minOrderValue,
+            decimal? maxDiscount)
+        {
+            var query = _dbSet.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+                query = query.Where(v =>
+                    v.Code.Contains(searchKeyword) ||
+                    (v.Description ?? "").Contains(searchKeyword));
+
+            if (!string.IsNullOrWhiteSpace(discountType))
+                query = query.Where(v => v.DiscountType == discountType);
+
+            if (discountValue.HasValue)
+                query = query.Where(v => v.DiscountValue == discountValue);
+
+            if (startDate.HasValue)
+                query = query.Where(v => v.StartDate >= startDate);
+
+            if (endDate.HasValue)
+                query = query.Where(v => v.EndDate <= endDate);
+
+            if (minOrderValue.HasValue)
+                query = query.Where(v => v.MinOrderValue >= minOrderValue);
+
+            if (maxDiscount.HasValue)
+                query = query.Where(v => v.MaxDiscount <= maxDiscount);
+
+            return await query.CountAsync();
         }
     }
 }

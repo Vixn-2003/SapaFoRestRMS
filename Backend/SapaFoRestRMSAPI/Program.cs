@@ -45,6 +45,9 @@ namespace SapaFoRestRMSAPI
             builder.Services.AddScoped<IEventRepository, EventRepository>();
             builder.Services.AddScoped<IEventService, EventService>();
 
+            //Voucher
+            builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
+            builder.Services.AddScoped<IVoucherService, VoucherService>();
 
             builder.Services.AddSingleton<CloudinaryService>();
 
