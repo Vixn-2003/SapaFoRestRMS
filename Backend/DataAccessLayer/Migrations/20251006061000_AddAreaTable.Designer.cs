@@ -4,6 +4,7 @@ using DataAccessLayer.Dbcontext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    partial class SapaFoRestRmsContextModelSnapshot : ModelSnapshot
+    [Migration("20251006061000_AddAreaTable")]
+    partial class AddAreaTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -825,21 +828,8 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReservationId"));
 
-                    b.Property<TimeSpan?>("ArrivalTime")
-                        .HasColumnType("time");
-
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
-
-                    b.Property<string>("CustomerNameReservation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("DepositAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<bool>("DepositPaid")
-                        .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
@@ -848,17 +838,8 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("NumberOfGuests")
                         .HasColumnType("int");
 
-                    b.Property<bool>("RequireDeposit")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("ReservationDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime>("ReservationTime")
                         .HasColumnType("datetime");
-
-                    b.Property<int?>("StaffId")
-                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .ValueGeneratedOnAdd()
@@ -866,20 +847,10 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Pending");
 
-                    b.Property<string>("TimeSlot")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ZaloMessageId")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("ReservationId")
                         .HasName("PK__Reservat__B7EE5F24CA6A82D8");
 
                     b.HasIndex("CustomerId");
-
-                    b.HasIndex("StaffId");
 
                     b.ToTable("Reservations");
                 });
@@ -1331,46 +1302,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Vouchers");
                 });
 
-            modelBuilder.Entity("DomainAccessLayer.Models.ZaloMessage", b =>
-                {
-                    b.Property<int>("MessageId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
-
-                    b.Property<string>("MessageText")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MessageType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int?>("ReservationId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("SentAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("ZaloMessageId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("MessageId");
-
-                    b.HasIndex("ReservationId");
-
-                    b.ToTable("ZaloMessages");
-                });
-
             modelBuilder.Entity("DomainAccessLayer.Models.Announcement", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.User", "CreatedByNavigation")
@@ -1647,13 +1578,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__Reservati__Custo__395884C4");
 
-                    b.HasOne("DomainAccessLayer.Models.User", "Staff")
-                        .WithMany()
-                        .HasForeignKey("StaffId");
-
                     b.Navigation("Customer");
-
-                    b.Navigation("Staff");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.ReservationTable", b =>
@@ -1756,15 +1681,6 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK__Users__RoleId__41EDCAC5");
 
                     b.Navigation("Role");
-                });
-
-            modelBuilder.Entity("DomainAccessLayer.Models.ZaloMessage", b =>
-                {
-                    b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
-                        .WithMany()
-                        .HasForeignKey("ReservationId");
-
-                    b.Navigation("Reservation");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Area", b =>

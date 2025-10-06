@@ -1,0 +1,75 @@
+﻿/* Scope riêng cho reservation */
+#reservation-page {
+    max-width: 480px;
+    margin: 50px auto;
+    padding: 30px 25px;
+    background: linear-gradient(to bottom right, #e6f2e6, #c8edc8);
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+    /* Tiêu đề nổi bật */
+    #reservation-page .reservation-title {
+        font-family: 'Georgia', serif;
+        font-weight: 900;
+        font-size: 2rem;
+        color: #2e7d32; /* xanh rừng đậm */
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Labels */
+    #reservation-page label.form-label {
+        font-weight: 600;
+        color: #1b5e20;
+    }
+
+    /* Inputs & selects */
+    #reservation-page input.form-control,
+    #reservation-page select.form-select,
+    #reservation-page textarea.form-control {
+        border: 2px solid #1b5e20;
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 14px;
+        background-color: #f0fff0;
+        transition: all 0.3s ease;
+    }
+
+        #reservation-page input.form-control:focus,
+        #reservation-page select.form-select:focus,
+        #reservation-page textarea.form-control:focus {
+            border-color: #2e7d32;
+            box-shadow: 0 0 8px rgba(46, 125, 50, 0.4);
+            outline: none;
+        }
+
+    /* Button */
+    #reservation-page .btn-reservation {
+        background-color: #2e7d32;
+        border-color: #2e7d32;
+        font-weight: bold;
+        font-size: 16px;
+        padding: 12px;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+        #reservation-page .btn-reservation:hover {
+            background-color: #1b5e20;
+            border-color: #1b5e20;
+            box-shadow: 0 4px 15px rgba(27, 94, 32, 0.4);
+        }
+
+    /* Error message */
+    #reservation-page .text-danger {
+        font-size: 13px;
+        margin-top: 5px;
+    }
+
+/* Responsive */
+@media (max-width: 576px) {
+    #reservation-page {
+        padding: 20px;
+        margin: 30px 10px;
+    }
+}

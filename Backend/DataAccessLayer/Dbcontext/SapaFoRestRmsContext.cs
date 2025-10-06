@@ -16,7 +16,7 @@ public partial class SapaFoRestRmsContext : DbContext
     }
 
     public virtual DbSet<Announcement> Announcements { get; set; }
-
+    public virtual DbSet<Area> Areas { get; set; } = null!;
     public virtual DbSet<Attendance> Attendances { get; set; }
 
     public virtual DbSet<BrandBanner> BrandBanners { get; set; }
@@ -84,7 +84,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
-
+    public DbSet<ZaloMessage> ZaloMessages { get; set; }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
 

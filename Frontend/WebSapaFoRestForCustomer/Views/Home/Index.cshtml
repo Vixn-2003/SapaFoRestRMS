@@ -7,6 +7,7 @@
 }
 @section Styles {
     <link rel="stylesheet" href="~/css/home.css" />
+
 }
 <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-inner" id="bannerContainer">
@@ -174,7 +175,7 @@
             <img src="${banner.imageUrl}" alt="${banner.title}" class="d-block w-100">
             <div class="carousel-caption d-none d-md-block">
                 <div class="d-flex justify-content-center gap-3">
-                    <a href="/Booking/Index" class="btn btn-success">Đặt bàn ngay</a>
+                    <a  class="btn btn-success"  data-bs-toggle="modal" data-bs-target="#reservationModal">Đặt bàn ngay</a>
                     <a href="/Banner/Details/${banner.id}" class="btn btn-success">Chi tiết</a>
                     <a href="https://maps.google.com/?q=${encodeURIComponent(banner.address || 'Sapa Restaurant')}"
                        target="_blank"
