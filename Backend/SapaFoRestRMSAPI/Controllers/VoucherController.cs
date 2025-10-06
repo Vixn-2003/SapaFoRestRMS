@@ -79,8 +79,16 @@ namespace SapaFoRestRMSAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var created = await _voucherService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.VoucherId }, created);
+            try
+            {
+                var created = await _voucherService.CreateAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = created.VoucherId }, created);
+            }
+            catch (Exception ex)
+            {
+                // Trả lỗi rõ ràng cho client
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         //  [PUT] api/voucher/{id}
@@ -106,6 +114,36 @@ namespace SapaFoRestRMSAPI.Controllers
                 return NotFound(new { message = "Voucher not found." });
 
             return Ok(new { message = "Voucher deleted successfully." });
+        }
+
+        //  Lấy danh sách voucher đã xóa 
+        [HttpGet("deleted")]
+        public async Task<IActionResult> GetDeletedVouchers(
+            [FromQuery] string? searchKeyword,
+            [FromQuery] string? discountType,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var (data, totalCount) = await _voucherService.GetDeletedVouchersAsync(
+                searchKeyword, discountType, pageNumber, pageSize);
+
+            return Ok(new
+            {
+                TotalCount = totalCount,
+                Data = data
+            });
+        }
+
+        // Khôi phục voucher đã bị xóa 
+        [HttpPut("restore/{id}")]
+        public async Task<IActionResult> RestoreVoucher(int id)
+        {
+            var result = await _voucherService.RestoreAsync(id);
+
+            if (!result)
+                return NotFound(new { Message = "Voucher not found or not deleted." });
+
+            return Ok(new { Message = "Voucher restored successfully." });
         }
     }
 }

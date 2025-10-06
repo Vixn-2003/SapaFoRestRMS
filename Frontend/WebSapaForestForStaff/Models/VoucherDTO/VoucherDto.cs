@@ -12,5 +12,7 @@
         public decimal? MinOrderValue { get; set; }
         public decimal? MaxDiscount { get; set; }
         public string? Status { get; set; }
+
+        public bool? IsDelete { get; set; }
     }
 }

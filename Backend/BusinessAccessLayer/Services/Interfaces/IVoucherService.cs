@@ -25,5 +25,17 @@ namespace BusinessAccessLayer.Services.Interfaces
             decimal? maxDiscount,
             int pageNumber,
             int pageSize);
+
+        /// <summary>
+        /// Lấy danh sách voucher đã bị xóa (soft delete) để hỗ trợ phục hồi.
+        /// </summary>
+        Task<(IEnumerable<VoucherDto> data, int totalCount)> GetDeletedVouchersAsync(
+      string? searchKeyword,
+      string? discountType,
+      int pageNumber,
+      int pageSize);
+
+        Task<bool> RestoreAsync(int id);
+
     }
 }

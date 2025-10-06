@@ -25,5 +25,6 @@ public partial class Voucher
 
     public string? Status { get; set; }
 
+    public bool? IsDelete { get; set; }
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

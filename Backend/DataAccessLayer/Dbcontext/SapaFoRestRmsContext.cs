@@ -652,6 +652,10 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Active");
+               entity.Property(e => e.IsDelete)
+        .HasColumnName("IsDelete")
+        .HasDefaultValue(false);
+
         });
 
         OnModelCreatingPartial(modelBuilder);

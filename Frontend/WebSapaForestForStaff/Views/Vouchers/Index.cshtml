@@ -7,6 +7,15 @@
     var selectedDiscountType = Context.Request.Query["discountType"].ToString();
     var discountTypes = new List<string> { "", "Percentage", "Fixed", "Free Shipping" };
 }
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
 
 <style>
     body {
@@ -168,6 +177,12 @@
 
 <h2>Danh sách Voucher</h2>
 
+<div style="margin-bottom: 20px;">
+    <a class="btn btn-secondary" href="@Url.Action("IsDelete", "Vouchers")">Xem Voucher đã xóa</a>
+</div>
+<div style="margin-bottom: 20px;">
+    <a class="btn btn-secondary" href="@Url.Action("Create", "Vouchers")">Tạo Voucher mới</a>
+</div>
 @if (!ViewData.ModelState.IsValid)
 {
     <div class="alert alert-danger">
@@ -186,8 +201,8 @@
 
     <select id="discountType" name="discountType">
         <option value="" selected="@(string.IsNullOrEmpty(selectedDiscountType) ? "selected" : null)">-- Chọn loại giảm giá --</option>
-        <option value="Percentage" selected="@(selectedDiscountType == "Percentage" ? "selected" : null)">Percentage</option>
-        <option value="Fixed" selected="@(selectedDiscountType == "Fixed" ? "selected" : null)">Fixed</option>
+        <option value="Phần trăm" selected="@(selectedDiscountType == "Phần trăm" ? "selected" : null)">Phần trăm</option>
+        <option value="Giá trị cố định" selected="@(selectedDiscountType == "Giá trị cố định" ? "selected" : null)">Giá trị cố định</option>
         <option value="Free Shipping" selected="@(selectedDiscountType == "Free Shipping" ? "selected" : null)">Free Shipping</option>
     </select>
 

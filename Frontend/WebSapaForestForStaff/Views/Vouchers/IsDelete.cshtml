@@ -1,0 +1,75 @@
+﻿@using WebSapaForestForStaff.Models
+@using WebSapaForestForStaff.Models.VoucherDTO
+@model PagedResult<VoucherDto>
+
+<h2>Danh sách Voucher đã xóa</h2>
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Discount Type</th>
+            <th>Discount Value</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Min Order Value</th>
+            <th>Max Discount</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Data != null && Model.Data.Any())
+        {
+            foreach (var voucher in Model.Data)
+            {
+                <tr>
+                    <td>@voucher.Code</td>
+                    <td>@voucher.DiscountType</td>
+                    <td>@voucher.DiscountValue</td>
+                    <td>@(voucher.StartDate?.ToDateTime(TimeOnly.MinValue).ToString("yyyy-MM-dd") ?? "")</td>
+                    <td>@(voucher.EndDate?.ToDateTime(TimeOnly.MinValue).ToString("yyyy-MM-dd") ?? "")</td>
+                    <td>@voucher.MinOrderValue</td>
+                    <td>@voucher.MaxDiscount</td>
+                    <td>
+                        <form asp-action="Restore" method="post" style="display:inline;">
+                            <input type="hidden" name="id" value="@voucher.VoucherId" />
+                            <button type="submit" class="btn btn-success btn-sm"
+                                    onclick="return confirm('Bạn có chắc muốn khôi phục voucher này?');">
+                                Restore
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="8" style="text-align:center;">Không có voucher nào đã xóa.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="pagination">
+    <span>Trang: @ViewBag.PageNumber / @((Model.TotalCount + ViewBag.PageSize - 1) / ViewBag.PageSize)</span>
+    <div>
+        @if (ViewBag.PageNumber > 1)
+        {
+            <a asp-action="IsDelete" asp-route-pageNumber="@(ViewBag.PageNumber - 1)" asp-route-pageSize="@ViewBag.PageSize">Trang trước</a>
+        }
+        @if (ViewBag.PageNumber * ViewBag.PageSize < Model.TotalCount)
+        {
+            <a asp-action="IsDelete" asp-route-pageNumber="@(ViewBag.PageNumber + 1)" asp-route-pageSize="@ViewBag.PageSize">Trang sau</a>
+        }
+    </div>
+</div>

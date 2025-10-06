@@ -1,5 +1,76 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model WebSapaForestForStaff.Models.VoucherDTO.VoucherCreateDto
+
 @{
+    ViewData["Title"] = "Create Voucher";
+}
+
+<h2>Create Voucher</h2>
+@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+<form asp-action="Create" method="post">
+    <div class="form-group mb-3">
+        <label>Code</label>
+        <input class="form-control" asp-for="Code" />
+        <span asp-validation-for="Code" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Description</label>
+        <input class="form-control" asp-for="Description" />
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Discount Type</label>
+        <select class="form-control" asp-for="DiscountType">
+            <option value="">-- Chọn loại giảm giá --</option>
+            <option value="Giá trị cố định">Giá trị cố định</option>
+            <option value="Phần trăm">Phần trăm</option>
+        </select>
+        <span asp-validation-for="DiscountType" class="text-danger"></span>
+    </div>
+
+
+    <div class="form-group mb-3">
+        <label>Discount Value</label>
+        <input type="number" step="0.01" class="form-control" asp-for="DiscountValue" />
+        <span asp-validation-for="DiscountValue" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Start Date</label>
+        <input type="date" class="form-control" asp-for="StartDate" />
+        <span asp-validation-for="StartDate" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>End Date</label>
+        <input type="date" class="form-control" asp-for="EndDate" />
+        <span asp-validation-for="EndDate" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Min Order Value</label>
+        <input type="number" step="0.01" class="form-control" asp-for="MinOrderValue" />
+        <span asp-validation-for="MinOrderValue" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Max Discount</label>
+        <input type="number" step="0.01" class="form-control" asp-for="MaxDiscount" />
+        <span asp-validation-for="MaxDiscount" class="text-danger"></span>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Status</label>
+        <input class="form-control" asp-for="Status" />
+        <span asp-validation-for="Status" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 }

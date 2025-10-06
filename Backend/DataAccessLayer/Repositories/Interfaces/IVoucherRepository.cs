@@ -34,5 +34,16 @@ namespace DataAccessLayer.Repositories.Interfaces
             DateOnly? endDate,
             decimal? minOrderValue,
             decimal? maxDiscount);
+
+        /// <summary>
+        /// Lấy tất cả voucher đã bị xóa mềm (IsDelete = true).
+        /// </summary>
+        Task<IEnumerable<Voucher>> GetDeletedVouchersAsync(string? searchKeyword,
+    string? discountType,
+    int pageNumber,
+    int pageSize);
+
+        Task<int> CountDeletedVouchersAsync(string? searchKeyword, string? discountType);
+
     }
 }

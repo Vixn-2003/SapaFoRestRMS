@@ -43,7 +43,7 @@ namespace DataAccessLayer.Repositories
 
             var query = _dbSet.AsQueryable();
 
-            // 3. Trim keyword và check để tránh case "code     "
+            // 3. Trim keyword và check để tránh case "code"
             if (!string.IsNullOrWhiteSpace(searchKeyword))
             {
                 var trimmedKeyword = searchKeyword.Trim();
@@ -85,7 +85,7 @@ namespace DataAccessLayer.Repositories
                 query = query.Where(v => v.MaxDiscount <= maxDiscount);
             }
 
-            query = query
+            query = query.Where(v => v.IsDelete == false)
                 .OrderByDescending(v => v.VoucherId)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize);
@@ -104,6 +104,7 @@ namespace DataAccessLayer.Repositories
             decimal? maxDiscount)
         {
             var query = _dbSet.AsQueryable();
+            query = query.Where(v => v.IsDelete == false);
 
             if (!string.IsNullOrWhiteSpace(searchKeyword))
                 query = query.Where(v =>
@@ -127,6 +128,60 @@ namespace DataAccessLayer.Repositories
 
             if (maxDiscount.HasValue)
                 query = query.Where(v => v.MaxDiscount <= maxDiscount);
+
+            return await query.CountAsync();
+        }
+
+
+
+        public async Task<IEnumerable<Voucher>> GetDeletedVouchersAsync(
+     string? searchKeyword,
+     string? discountType,
+     int pageNumber,
+     int pageSize)
+        {
+            var query = _context.Vouchers
+                .IgnoreQueryFilters() // nếu có global filter IsDelete = false
+                .Where(v => v.IsDelete == true);
+
+            // Lọc theo mã code (search keyword)
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+            {
+                query = query.Where(v =>
+                    v.Code.Contains(searchKeyword));
+            }
+
+            // Lọc theo loại giảm giá
+            if (!string.IsNullOrWhiteSpace(discountType))
+            {
+                query = query.Where(v => v.DiscountType == discountType);
+            }
+
+            // Phân trang
+            var skip = (pageNumber - 1) * pageSize;
+
+            return await query
+                .OrderByDescending(v => v.VoucherId) // sắp xếp mới nhất trước
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync();
+
+        }
+
+        public async Task<int> CountDeletedVouchersAsync(string? searchKeyword, string? discountType)
+        {
+            var query = _context.Vouchers
+                .Where(v => v.IsDelete == true);
+
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+            {
+                query = query.Where(v => v.Code.Contains(searchKeyword) || v.Description.Contains(searchKeyword));
+            }
+
+            if (!string.IsNullOrWhiteSpace(discountType))
+            {
+                query = query.Where(v => v.DiscountType == discountType);
+            }
 
             return await query.CountAsync();
         }
