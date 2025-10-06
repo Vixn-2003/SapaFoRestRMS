@@ -1,4 +1,7 @@
-﻿using DataAccessLayer.UnitOfWork.Interfaces;
+﻿using DataAccessLayer.Dbcontext;
+using DataAccessLayer.Repositories;
+using DataAccessLayer.Repositories.Interfaces;
+using DataAccessLayer.UnitOfWork.Interfaces;
 using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Collections.Generic;
@@ -11,29 +14,67 @@ namespace DataAccessLayer.UnitOfWork
     public class UnitOfWork : IUnitOfWork
 
     {
-        public Task<IDbContextTransaction> BeginTransactionAsync()
+        private readonly SapaFoRestRmsContext _context;
+
+        private IDbContextTransaction _transaction;
+
+
+        private IUserRepository _users;
+
+        public IUserRepository Users => _users ??= new UserRepository(_context);
+
+        public UnitOfWork(SapaFoRestRmsContext context)
         {
-            throw new NotImplementedException();
+            _context = context;
+        }
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            _transaction = await _context.Database.BeginTransactionAsync();
+            return _transaction;
         }
 
-        public Task CommitAsync()
+        public async Task CommitAsync()
         {
-            throw new NotImplementedException();
+            try
+            {
+                await _transaction.CommitAsync();
+            }
+            catch
+            {
+                await _transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task RollbackAsync()
+        {
+            await _transaction.RollbackAsync();
+        }
+
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        private bool disposed = false;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    _transaction?.Dispose();
+                    _context.Dispose();
+                }
+            }
+            disposed = true;
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
-        }
-
-        public Task RollbackAsync()
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<int> SaveChangesAsync()
-        {
-            throw new NotImplementedException();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }
