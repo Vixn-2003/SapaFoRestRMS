@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessAccessLayer.DTOs
+namespace BusinessAccessLayer.Services.Interfaces
 {
-    internal class Class1
+   public  class UserService
     {
     }
 }

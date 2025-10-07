@@ -19,7 +19,7 @@ public partial class MenuItem
 
     public bool? IsAvailable { get; set; }
 
-    public string? LinkImg { get; set; }
+    public string? ImageUrl { get; set; }
 
     public virtual MenuCategory? Category { get; set; }
 

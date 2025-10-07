@@ -19,7 +19,17 @@ namespace DataAccessLayer.Repositories
             _context = context;
         }
 
+        public Task AddAsync(Combo entity)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task CreateAsync(Combo entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteAsync(int id)
         {
             throw new NotImplementedException();
         }
@@ -30,6 +40,11 @@ namespace DataAccessLayer.Repositories
         }
 
         public Task<IEnumerable<Combo>> GetAllAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Combo> GetByIdAsync(int id)
         {
             throw new NotImplementedException();
         }
@@ -51,8 +66,7 @@ namespace DataAccessLayer.Repositories
             }
         }
 
-
-        public Task<Combo> GetByIdAsync(int id)
+        public Task SaveChangesAsync()
         {
             throw new NotImplementedException();
         }

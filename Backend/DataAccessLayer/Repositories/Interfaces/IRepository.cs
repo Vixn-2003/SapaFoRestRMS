@@ -8,10 +8,11 @@ namespace DataAccessLayer.Repositories.Interfaces
 {
     public interface IRepository<T> where T : class
     {
-        Task<IEnumerable<T>> GetAllAsync(); // Gets all data.
-        Task<T> GetByIdAsync(int id);      // Gets data by ID.
-        Task CreateAsync(T entity);        // Create a new resource.
-        Task UpdateAsync(T entity);        // Updates existing data.
-        Task DeleteByIdAsync(int id);      // Deletes data by ID.
+        Task<T?> GetByIdAsync(int id);
+        Task<IEnumerable<T>> GetAllAsync();
+        Task AddAsync(T entity);
+        Task UpdateAsync(T entity);
+        Task DeleteAsync(int id);
+        Task SaveChangesAsync();
     }
 }

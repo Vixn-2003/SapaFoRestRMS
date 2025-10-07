@@ -11,73 +11,77 @@ namespace DataAccessLayer.UnitOfWork
     public class UnitOfWork : IUnitOfWork, IDisposable
     {
         private readonly SapaFoRestRmsContext _context;
-        private IDbContextTransaction _transaction;
+
 
         private IManagerMenuRepository _menuRepository;
 
         private IManagerComboRepository _comboRepository;
 
-
-        public UnitOfWork(SapaFoRestRmsContext context)
-        {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-        }
-
         public IManagerMenuRepository MenuItem => _menuRepository ??= new ManagerMenuRepository(_context);
         public IManagerComboRepository Combo => _comboRepository ??= new ManagerComboRepository(_context);
 
-        // Bắt đầu transaction
+
+        private IDbContextTransaction _transaction;
+
+
+        private IUserRepository _users;
+
+        public IUserRepository Users => _users ??= new UserRepository(_context);
+
+        public UnitOfWork(SapaFoRestRmsContext context)
+        {
+            _context = context;
+        }
         public async Task<IDbContextTransaction> BeginTransactionAsync()
         {
-            if (_transaction == null)
-            {
-                _transaction = await _context.Database.BeginTransactionAsync();
-            }
+            _transaction = await _context.Database.BeginTransactionAsync();
             return _transaction;
         }
 
-        // Commit transaction
         public async Task CommitAsync()
         {
             try
             {
-                await _context.SaveChangesAsync();
-                if (_transaction != null)
-                {
-                    await _transaction.CommitAsync();
-                    await _transaction.DisposeAsync();
-                    _transaction = null;
-                }
+                await _transaction.CommitAsync();
             }
             catch
             {
-                await RollbackAsync();
+                await _transaction.RollbackAsync();
                 throw;
             }
         }
 
-        // Rollback transaction
         public async Task RollbackAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-                _transaction = null;
-            }
+            await _transaction.RollbackAsync();
         }
 
-        // Lưu thay đổi mà không cần transaction
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
         }
 
+        private bool disposed = false;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    _transaction?.Dispose();
+                    _context.Dispose();
+                }
+            }
+            disposed = true;
+
+        }
         // Giải phóng resource
         public void Dispose()
         {
-            _transaction?.Dispose();
-            _context?.Dispose();
+
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

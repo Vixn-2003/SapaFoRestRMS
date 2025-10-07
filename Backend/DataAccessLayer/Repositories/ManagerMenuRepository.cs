@@ -19,7 +19,17 @@ namespace DataAccessLayer.Repositories
             _context = context;
         }
 
+        public Task AddAsync(MenuItem entity)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task CreateAsync(MenuItem entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteAsync(int id)
         {
             throw new NotImplementedException();
         }
@@ -33,13 +43,17 @@ namespace DataAccessLayer.Repositories
         {
             throw new NotImplementedException();
         }
-
         public async Task<IEnumerable<MenuItem>> GetManagerAllMenus()
         {
-            return await _context.MenuItems.Where(m => m.IsAvailable ==  true).Include(p => p.Category).ToListAsync();
+            return await _context.MenuItems.Where(m => m.IsAvailable == true).Include(p => p.Category).ToListAsync();
         }
 
+
         public Task<MenuItem> GetByIdAsync(int id)
+        {
+            throw new NotImplementedException();
+        }
+        public Task SaveChangesAsync()
         {
             throw new NotImplementedException();
         }
