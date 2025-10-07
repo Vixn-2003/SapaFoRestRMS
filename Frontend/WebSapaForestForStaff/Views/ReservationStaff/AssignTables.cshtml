@@ -8,10 +8,19 @@
 
 <h2>Xử lý đặt bàn</h2>
 
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
 <div class="card p-3 mb-3">
     <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
     <strong>SĐT:</strong> @reservation.CustomerPhone <br />
-    <strong>Ngày:</strong> @reservation.ReservationDate:dd/MM/yyyy <br />
+    <strong>Ngày:</strong> @reservation.ReservationDate.ToString("dd/MM/yyyy") <br />
     <strong>Ca:</strong> @reservation.TimeSlot <br />
     <strong>Số khách:</strong> @reservation.NumberOfGuests
 </div>
@@ -31,13 +40,8 @@
                     var isSuggested = suggestedTableIdsByArea.ContainsKey(area.AreaId)
                     && suggestedTableIdsByArea[area.AreaId].Contains(table.TableId);
 
-                    string labelClass;
-                    if (isBooked)
-                        labelClass = "btn btn-danger disabled";
-                    else if (isSuggested)
-                        labelClass = "btn btn-primary";
-                    else
-                        labelClass = "btn btn-outline-success";
+                    string labelClass = isBooked ? "btn btn-danger disabled" :
+                    isSuggested ? "btn btn-primary" : "btn btn-outline-success";
 
                     <label class="@labelClass">
                         <input type="checkbox" name="TableIds" value="@table.TableId"
@@ -50,15 +54,35 @@
     }
 
     <div class="form-check mt-3">
-        <input type="checkbox" class="form-check-input" name="RequireDeposit" id="depositCheck" />
+        <!-- Hidden fallback để luôn gửi false nếu unchecked -->
+        <input type="checkbox" class="form-check-input" name="RequireDeposit" id="depositCheck" value="true" />
         <label class="form-check-label" for="depositCheck">Yêu cầu đặt cọc</label>
-        <input type="number" name="DepositAmount" class="form-control mt-1" placeholder="Số tiền đặt cọc (VND)" />
+
+        <input type="number" name="DepositAmount" class="form-control mt-1"
+               placeholder="Số tiền đặt cọc (VND)" step="0.01" />
     </div>
 
     <button type="submit" class="btn btn-success mt-3">Xác nhận gán bàn</button>
-    <!-- Nút reset bàn -->
     <button type="submit" formaction="@Url.Action("ResetTables")" formmethod="post" class="btn btn-warning mt-3">
         Reset bàn đã chọn
     </button>
     <a class="btn btn-secondary mt-3" href="@Url.Action("Index")">Quay lại</a>
 </form>
+<div style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        padding: 10px 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        z-index: 1000;
+    ">
+    <strong>Chú thích bàn:</strong>
+    <div class="d-flex gap-2 mt-2">
+        <span class="btn btn-danger btn-sm disabled">Đã đặt</span>
+        <span class="btn btn-primary btn-sm">Gợi ý</span>
+        <span class="btn btn-outline-success btn-sm">Trống</span>
+    </div>
+</div>

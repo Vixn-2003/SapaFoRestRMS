@@ -72,17 +72,30 @@ namespace WebSapaForestForStaff.Controllers
             ViewBag.SuggestedTableIdsByArea = suggestedTableIdsByArea;
             return View();
         }
+
         [HttpPost]
-        public async Task<IActionResult> AssignTablesPost(int ReservationId, List<int> TableIds,
-            bool RequireDeposit, decimal? DepositAmount)
+        public async Task<IActionResult> AssignTablesPost(int ReservationId, List<int> TableIds, bool RequireDeposit, decimal? DepositAmount)
         {
-            var dto = new
+            if (TableIds == null || !TableIds.Any())
+            {
+                TempData["Error"] = "Bạn phải chọn ít nhất 1 bàn!";
+                return RedirectToAction("AssignTables", new { id = ReservationId });
+            }
+
+            if (RequireDeposit && (!DepositAmount.HasValue || DepositAmount.Value <= 0))
+            {
+                TempData["Error"] = "Bạn phải nhập số tiền đặt cọc hợp lệ!";
+                return RedirectToAction("AssignTables", new { id = ReservationId });
+            }
+
+            // Tạo DTO gửi API
+            var dto = new AssignTableDto
             {
                 ReservationId = ReservationId,
                 TableIds = TableIds,
                 RequireDeposit = RequireDeposit,
                 DepositAmount = DepositAmount,
-                StaffId = 3, // lấy Staff hiện tại từ session hoặc login
+                StaffId = 3, // hoặc lấy từ session/login
                 ConfirmBooking = true
             };
 
@@ -99,6 +112,8 @@ namespace WebSapaForestForStaff.Controllers
             TempData["Success"] = "Gán bàn thành công!";
             return RedirectToAction("Index");
         }
+
+
         [HttpPost]
         public async Task<IActionResult> ResetTables(int reservationId)
         {
@@ -115,6 +130,39 @@ namespace WebSapaForestForStaff.Controllers
             }
 
             return RedirectToAction("AssignTables", new { id = reservationId });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Add(ReservationViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return PartialView("_ReservationForm", model);
+
+            var dto = new
+            {
+                CustomerName = model.CustomerName,
+                Phone = model.Phone,
+                ReservationDate = model.ReservationDate,
+                ReservationTime = model.ReservationTime,
+                NumberOfGuests = model.NumberOfGuests,
+                Notes = model.Notes
+            };
+
+            var jsonContent = JsonConvert.SerializeObject(dto);
+            var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+            var response = await _client.PostAsync("Reservation", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+
+                return Json(new { success = true });
+            }
+            else
+            {
+                ModelState.AddModelError("", "Không thể đặt bàn. Vui lòng thử lại.");
+                return PartialView("_ReservationForm", model);
+            }
         }
 
     }

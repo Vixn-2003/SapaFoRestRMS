@@ -11,5 +11,11 @@ namespace BusinessAccessLayer.Services.Interfaces
     public interface IReservationService
     {
         Task<Reservation> CreateReservationAsync(ReservationCreateDto dto);
+        Task<object> GetPendingAndConfirmedReservationsAsync();
+        Task<object> GetAllTablesGroupedByAreaAsync();
+        Task<List<int>> GetBookedTableIdsAsync(DateTime date, string slot);
+        Task<object> SuggestTablesByAreasAsync(DateTime date, string slot, int guests, int? currentReservationId = null);
+        Task<object> AssignTablesAsync(AssignTableDto dto);
+        Task<object> ResetTablesAsync(int reservationId);
     }
 }

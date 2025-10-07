@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace BusinessAccessLayer.DTOs
 {
-    public class TableDto
+    public class AreaSuggestionDto
     {
-        public int TableId { get; set; }
-        public string TableName { get; set; } = null!;
-        public int Capacity { get; set; }
         public int AreaId { get; set; }
         public string AreaName { get; set; } = null!;
+        public List<TableDto> AllAvailableTables { get; set; } = new();
+        public List<TableDto> SuggestedSingleTables { get; set; } = new();
+        public List<List<TableDto>> SuggestedCombos { get; set; } = new();
     }
 }
