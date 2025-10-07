@@ -1,0 +1,64 @@
+﻿@{
+    var reservation = ViewBag.Reservation as ReservationStaffViewModel;
+    var areas = ViewBag.Areas as List<AreaViewModel>;
+    var bookedTableIds = ViewBag.BookedTableIds as List<int> ?? new List<int>();
+    var suggestedTableIdsByArea = ViewBag.SuggestedTableIdsByArea as Dictionary<int, List<int>>
+                                 ?? new Dictionary<int, List<int>>();
+}
+
+<h2>Xử lý đặt bàn</h2>
+
+<div class="card p-3 mb-3">
+    <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
+    <strong>SĐT:</strong> @reservation.CustomerPhone <br />
+    <strong>Ngày:</strong> @reservation.ReservationDate:dd/MM/yyyy <br />
+    <strong>Ca:</strong> @reservation.TimeSlot <br />
+    <strong>Số khách:</strong> @reservation.NumberOfGuests
+</div>
+
+<form asp-action="AssignTablesPost" method="post">
+    <input type="hidden" name="ReservationId" value="@reservation.ReservationId" />
+
+    <h4>Chọn bàn</h4>
+    @foreach (var area in areas)
+    {
+        <div class="mb-2">
+            <strong>@area.AreaName</strong>
+            <div class="d-flex gap-2 flex-wrap mt-1">
+                @foreach (var table in area.Tables)
+                {
+                    var isBooked = bookedTableIds.Contains(table.TableId);
+                    var isSuggested = suggestedTableIdsByArea.ContainsKey(area.AreaId)
+                    && suggestedTableIdsByArea[area.AreaId].Contains(table.TableId);
+
+                    string labelClass;
+                    if (isBooked)
+                        labelClass = "btn btn-danger disabled";
+                    else if (isSuggested)
+                        labelClass = "btn btn-primary";
+                    else
+                        labelClass = "btn btn-outline-success";
+
+                    <label class="@labelClass">
+                        <input type="checkbox" name="TableIds" value="@table.TableId"
+                               @(isBooked ? "disabled" : "") />
+                        @table.TableName (@table.Capacity chỗ)
+                    </label>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="form-check mt-3">
+        <input type="checkbox" class="form-check-input" name="RequireDeposit" id="depositCheck" />
+        <label class="form-check-label" for="depositCheck">Yêu cầu đặt cọc</label>
+        <input type="number" name="DepositAmount" class="form-control mt-1" placeholder="Số tiền đặt cọc (VND)" />
+    </div>
+
+    <button type="submit" class="btn btn-success mt-3">Xác nhận gán bàn</button>
+    <!-- Nút reset bàn -->
+    <button type="submit" formaction="@Url.Action("ResetTables")" formmethod="post" class="btn btn-warning mt-3">
+        Reset bàn đã chọn
+    </button>
+    <a class="btn btn-secondary mt-3" href="@Url.Action("Index")">Quay lại</a>
+</form>

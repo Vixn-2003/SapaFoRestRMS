@@ -1,0 +1,38 @@
+﻿@model List<ReservationStaffViewModel>
+
+<h2>Danh sách đơn đặt bàn</h2>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Mã đơn</th>
+            <th>Tên khách hàng</th>
+            <th>Số điện thoại</th>
+            <th>Ngày đặt</th>
+            <th>Ca</th>
+            <th>Số người</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var r in Model)
+        {
+            <tr>
+                <td>@r.ReservationId</td>
+                <td>@r.CustomerName</td>
+                <td>@r.CustomerPhone</td>
+                <td>@r.ReservationDate.ToString("dd/MM/yyyy")</td>
+                <td>@r.TimeSlot</td>
+                <td>@r.NumberOfGuests</td>
+                <td>
+                    <span class="badge @(r.Status == "Pending" ? "bg-warning" : "bg-success")">
+                        @(r.Status == "Pending" ? "Chờ xử lý" : "Đã xác nhận")
+                    </span>
+                </td>
+                <td>
+                    <a class="btn btn-primary" href="@Url.Action("AssignTables", "ReservationStaff", new { id = r.ReservationId })">Xử lý</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
