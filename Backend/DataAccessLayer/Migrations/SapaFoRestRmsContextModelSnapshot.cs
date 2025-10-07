@@ -675,6 +675,33 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Payroll", (string)null);
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Position", b =>
+                {
+                    b.Property<int>("PositionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PositionId"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PositionName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("PositionId")
+                        .HasName("PK__Position__60BB9D7D");
+
+                    b.ToTable("Positions");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.PurchaseOrder", b =>
                 {
                     b.Property<int>("PurchaseOrderId")
@@ -1000,11 +1027,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateOnly>("HireDate")
                         .HasColumnType("date");
 
-                    b.Property<string>("Position")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<decimal>("SalaryBase")
                         .HasColumnType("decimal(18, 2)");
 
@@ -1299,6 +1321,21 @@ namespace DataAccessLayer.Migrations
                         .IsUnique();
 
                     b.ToTable("Vouchers");
+                });
+
+            modelBuilder.Entity("StaffPosition", b =>
+                {
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PositionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("StaffId", "PositionId");
+
+                    b.HasIndex("PositionId");
+
+                    b.ToTable("StaffPositions", (string)null);
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Announcement", b =>
@@ -1669,6 +1706,23 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK__Users__RoleId__41EDCAC5");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("StaffPosition", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Position", null)
+                        .WithMany()
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_StaffPosition_Position");
+
+                    b.HasOne("DomainAccessLayer.Models.Staff", null)
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_StaffPosition_Staff");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Combo", b =>

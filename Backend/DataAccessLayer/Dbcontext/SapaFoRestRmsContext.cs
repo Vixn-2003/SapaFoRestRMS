@@ -68,6 +68,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<Position> Positions { get; set; }
+
     public virtual DbSet<SalaryRule> SalaryRules { get; set; }
 
     public virtual DbSet<Shift> Shifts { get; set; }
@@ -86,13 +88,6 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-        IConfigurationRoot configuration = builder.Build();
-        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyCnn"));
-
-    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Announcement>(entity =>
@@ -547,7 +542,6 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.StaffId).HasName("PK__Staffs__96D4AB17BB2B00FA");
 
-            entity.Property(e => e.Position).HasMaxLength(50);
             entity.Property(e => e.SalaryBase).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Status).HasDefaultValue(0);
             entity.HasOne(d => d.User).WithMany(p => p.Staff)
@@ -555,6 +549,36 @@ public partial class SapaFoRestRmsContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Staffs__UserId__3E1D39E1");
         });
+
+        modelBuilder.Entity<Position>(entity =>
+        {
+            entity.HasKey(e => e.PositionId).HasName("PK__Position__60BB9D7D");
+            entity.Property(e => e.PositionName).HasMaxLength(100);
+            entity.Property(e => e.Status).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<Staff>()
+            .HasMany(s => s.Positions)
+            .WithMany(p => p.Staff)
+            .UsingEntity<Dictionary<string, object>>(
+                "StaffPosition",
+                j => j
+                    .HasOne<Position>()
+                    .WithMany()
+                    .HasForeignKey("PositionId")
+                    .HasConstraintName("FK_StaffPosition_Position")
+                    .OnDelete(DeleteBehavior.Cascade),
+                j => j
+                    .HasOne<Staff>()
+                    .WithMany()
+                    .HasForeignKey("StaffId")
+                    .HasConstraintName("FK_StaffPosition_Staff")
+                    .OnDelete(DeleteBehavior.Cascade),
+                j =>
+                {
+                    j.HasKey("StaffId", "PositionId");
+                    j.ToTable("StaffPositions");
+                });
 
         modelBuilder.Entity<StockTransaction>(entity =>
         {
