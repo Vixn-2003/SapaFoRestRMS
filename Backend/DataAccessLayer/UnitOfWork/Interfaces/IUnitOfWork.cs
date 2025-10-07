@@ -11,9 +11,9 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
 {
     public interface IUnitOfWork : IDisposable
     {
-        IMenuRepository MenuItem { get; }
+        IManagerMenuRepository MenuItem { get; }
 
-        IComboRepository Combo { get; }
+        IManagerComboRepository Combo { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

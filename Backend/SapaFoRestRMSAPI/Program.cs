@@ -26,8 +26,8 @@ namespace SapaFoRestRMSAPI
 
 
             //Scope
-            builder.Services.AddScoped<IMenuService, MenuService>();
-            builder.Services.AddScoped<IComboService, ComboService>();
+            builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
+            builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
 
             //UnitOfWork

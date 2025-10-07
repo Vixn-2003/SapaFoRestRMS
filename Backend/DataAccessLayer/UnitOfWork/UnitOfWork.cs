@@ -13,9 +13,9 @@ namespace DataAccessLayer.UnitOfWork
         private readonly SapaFoRestRmsContext _context;
         private IDbContextTransaction _transaction;
 
-        private IMenuRepository _menuRepository;
+        private IManagerMenuRepository _menuRepository;
 
-        private IComboRepository _comboRepository;
+        private IManagerComboRepository _comboRepository;
 
 
         public UnitOfWork(SapaFoRestRmsContext context)
@@ -23,8 +23,8 @@ namespace DataAccessLayer.UnitOfWork
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public IMenuRepository MenuItem => _menuRepository ??= new MenuRepository(_context);
-        public IComboRepository Combo => _comboRepository ??= new ComboRepository(_context);
+        public IManagerMenuRepository MenuItem => _menuRepository ??= new ManagerMenuRepository(_context);
+        public IManagerComboRepository Combo => _comboRepository ??= new ManagerComboRepository(_context);
 
         // Bắt đầu transaction
         public async Task<IDbContextTransaction> BeginTransactionAsync()

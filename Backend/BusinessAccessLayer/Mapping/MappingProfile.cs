@@ -15,11 +15,11 @@ namespace BusinessAccessLayer.Mapping
         public MappingProfile()
         {
 
-            CreateMap<MenuItem, MenuDTO>();
-            CreateMap<MenuCategory, MenuCategoryDTO>();
+            CreateMap<MenuItem, ManagerMenuDTO>();
+            CreateMap<MenuCategory, ManagerMenuCategoryDTO>();
 
-            CreateMap<Combo, ComboDTO>();
-            CreateMap<ComboItem, ComboItemDTO>();
+            CreateMap<Combo, ManagerComboDTO>();
+            CreateMap<ComboItem, ManagerComboItemDTO>();
         }
     }
 }

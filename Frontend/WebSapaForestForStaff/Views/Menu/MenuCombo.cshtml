@@ -1,509 +1,948 @@
 ﻿@using WebSapaForestForStaff.DTOs
-@{
-    ViewBag.Title = "Quản Lý Thực Đơn";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-}
+@using System.Linq
 
-@model WebSapaForestForStaff.Controllers.MenuComboViewModel
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SapaFoRest - Quản Lý Nhà Hàng</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<style>
-    .management-container {
-        padding: 20px;
-        background-color: #f5f5f5;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
 
-    .section-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 20px;
-        border-radius: 10px 10px 0 0;
-        margin-top: 30px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
 
-    .section-header h2 {
-        margin: 0;
-        font-size: 24px;
-    }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
 
-    .btn-add {
-        background-color: #fff;
-        color: #667eea;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.3s;
-    }
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+        }
 
-    .btn-add:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
 
-    .content-section {
-        background: white;
-        padding: 20px;
-        border-radius: 0 0 10px 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    /* Menu Item Card */
-    .menu-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
-    }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
 
-    .menu-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        overflow: hidden;
-        transition: all 0.3s;
-        background: white;
-    }
+        .btn-logout {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
 
-    .menu-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-    }
+        .btn-logout:hover {
+            background-color: white;
+            color: #667eea;
+        }
 
-    .menu-image {
-        width: 100%;
-        height: 200px;
-        object-fit: cover;
-        background-color: #f0f0f0;
-    }
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 70px;
+            width: 250px;
+            height: calc(100vh - 70px);
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            transition: all 0.3s;
+        }
 
-    .menu-body {
-        padding: 15px;
-    }
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 0;
+        }
 
-    .menu-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 8px;
-    }
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #333;
+        }
 
-    .menu-category {
-        display: inline-block;
-        background-color: #e3f2fd;
-        color: #1976d2;
-        padding: 4px 12px;
-        border-radius: 15px;
-        font-size: 12px;
-        margin-bottom: 8px;
-    }
+        .menu-item:hover {
+            background-color: #f0f0f0;
+            border-left-color: #667eea;
+        }
 
-    .menu-price {
-        font-size: 20px;
-        color: #e91e63;
-        font-weight: 700;
-        margin: 10px 0;
-    }
+        .menu-item.active {
+            background-color: #e3f2fd;
+            border-left-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
 
-    .menu-description {
-        color: #666;
-        font-size: 14px;
-        line-height: 1.5;
-        margin-bottom: 10px;
-    }
+        .menu-icon {
+            font-size: 20px;
+            width: 24px;
+        }
 
-    .status-badge {
-        display: inline-block;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-    }
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            margin-top: 70px;
+            padding: 30px;
+            min-height: calc(100vh - 70px);
+        }
 
-    .status-available {
-        background-color: #c8e6c9;
-        color: #2e7d32;
-    }
+        .content-section {
+            display: none;
+        }
 
-    .status-unavailable {
-        background-color: #ffcdd2;
-        color: #c62828;
-    }
+        .content-section.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
 
-    .card-actions {
-        margin-top: 15px;
-        text-align: right;
-    }
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    .btn-edit {
-        background-color: #667eea;
-        color: white;
-        border: none;
-        padding: 8px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.3s;
-    }
+        /* Section Header */
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+        }
 
-    .btn-edit:hover {
-        background-color: #5568d3;
-    }
+        .section-header h2 {
+            font-size: 24px;
+        }
 
-    /* Combo Section */
-    .combo-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        background: white;
-        transition: all 0.3s;
-    }
+        .btn-add {
+            background-color: white;
+            color: #667eea;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
 
-    .combo-card:hover {
-        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-    }
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
 
-    .combo-header {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 15px;
-    }
+        .content-body {
+            background: white;
+            padding: 20px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
 
-    .combo-image {
-        width: 150px;
-        height: 150px;
-        object-fit: cover;
-        border-radius: 10px;
-        background-color: #f0f0f0;
-    }
-
-    .combo-info {
-        flex: 1;
-    }
-
-    .combo-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #333;
-        margin-bottom: 10px;
-    }
-
-    .combo-price {
-        font-size: 24px;
-        color: #e91e63;
-        font-weight: 700;
-        margin-bottom: 10px;
-    }
-
-    .combo-description {
-        color: #666;
-        line-height: 1.6;
-        margin-bottom: 10px;
-    }
-
-    .combo-items {
-        background-color: #f9f9f9;
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 15px;
-    }
-
-    .combo-items h4 {
-        margin-top: 0;
-        color: #667eea;
-        font-size: 16px;
-    }
-
-    .combo-items ul {
-        list-style: none;
-        padding: 0;
-        margin: 10px 0 0 0;
-    }
-
-    .combo-items li {
-        padding: 8px 0;
-        border-bottom: 1px solid #e0e0e0;
-    }
-
-    .combo-items li:last-child {
-        border-bottom: none;
-    }
-
-    /* Category Table */
-    .category-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-
-    .category-table th {
-        background-color: #f5f5f5;
-        padding: 15px;
-        text-align: left;
-        font-weight: 600;
-        color: #333;
-        border-bottom: 2px solid #667eea;
-    }
-
-    .category-table td {
-        padding: 15px;
-        border-bottom: 1px solid #e0e0e0;
-    }
-
-    .category-table tr:hover {
-        background-color: #f9f9f9;
-    }
-
-    .btn-icon {
-        background: none;
-        border: none;
-        color: #667eea;
-        cursor: pointer;
-        font-size: 18px;
-        padding: 5px 10px;
-        transition: all 0.3s;
-    }
-
-    .btn-icon:hover {
-        color: #5568d3;
-        transform: scale(1.2);
-    }
-
-    @@media (max-width: 768px) {
+        /* Menu Cards */
         .menu-grid {
-            grid-template-columns: 1fr;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
         }
 
-        .combo-header {
-            flex-direction: column;
+        .menu-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s;
+            background: white;
         }
 
-        .combo-image {
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .menu-image {
             width: 100%;
             height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
         }
-    }
 
+        .menu-body {
+            padding: 15px;
+        }
 
-    #loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255,255,255,0.9);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
+        .menu-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
 
-.spinner {
-    border: 6px solid #f3f3f3;
-    border-top: 6px solid #667eea;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
-}
+        .menu-category {
+            display: inline-block;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
 
-@@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-</style>
+        .menu-price {
+            font-size: 20px;
+            color: #e91e63;
+            font-weight: 700;
+            margin: 10px 0;
+        }
 
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
 
-<div id="loading-overlay">
-    <div class="spinner"></div>
-    <p>Đang tải dữ liệu...</p>
-</div>
+        .status-available {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
 
-<div class="management-container">
-    <!-- Quản lý Menu -->
-    <div class="management-section">
-        <div class="section-header">
-            <h2>📋 Quản Lý Menu Thực Đơn</h2>
-            <button class="btn-add" onclick="location.href='@Url.Action("Create", "Menu")'">
-                ➕ Thêm Món Mới
-            </button>
+        .card-actions {
+            margin-top: 15px;
+            text-align: right;
+        }
+
+        .btn-edit {
+            background-color: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-edit:hover {
+            background-color: #5568d3;
+        }
+
+        /* Statistics */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th {
+            background-color: #f5f5f5;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .data-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-250px);
+            }
+
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">🌲 SapaFoRest</div>
         </div>
-        <div class="content-section">
-            <div class="menu-grid">
-                @foreach (var item in Model.ProductsMenu)
-                {
-                    <div class="menu-card">
-                        <img src="@(!string.IsNullOrEmpty(item.LinkImg) ? item.LinkImg : "https://via.placeholder.com/300x200/FF6B6B/FFFFFF?text=" + item.Name)"
-                             alt="@item.Name" class="menu-image">
+        <div class="header-right">
+            <div class="user-info">
+                <div class="user-avatar">A</div>
+                <span>Admin User</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">🚪 Đăng xuất</button>
+        </div>
+    </div>
 
-                        <div class="menu-body">
-                            <span class="menu-category">@item.Category?.CategoryName</span>
-                            <h3 class="menu-title">@item.Name</h3>
-                            <div class="menu-price">@item.Price ₫</div>
-                            <p class="menu-description">@item.Description</p>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="menu-item active" onclick="showSection('menu')">
+                <span class="menu-icon">📋</span>
+                <span>Quản Lý Menu</span>
+            </li>
+            <li class="menu-item" onclick="showSection('combo')">
+                <span class="menu-icon">🎁</span>
+                <span>Quản Lý Combo</span>
+            </li>
+            <li class="menu-item" onclick="showSection('category')">
+                <span class="menu-icon">📂</span>
+                <span>Quản Lý Loại Món</span>
+            </li>
+            <li class="menu-item" onclick="showSection('statistics')">
+                <span class="menu-icon">📊</span>
+                <span>Thống Kê</span>
+            </li>
+            <li class="menu-item" onclick="showSection('staff')">
+                <span class="menu-icon">👥</span>
+                <span>Quản Lý Nhân Viên</span>
+            </li>
+            <li class="menu-item" onclick="showSection('orders')">
+                <span class="menu-icon">🧾</span>
+                <span>Quản Lý Đơn Hàng</span>
+            </li>
+            <li class="menu-item" onclick="showSection('tables')">
+                <span class="menu-icon">🪑</span>
+                <span>Quản Lý Bàn</span>
+            </li>
+            <li class="menu-item" onclick="showSection('customers')">
+                <span class="menu-icon">👤</span>
+                <span>Quản Lý Khách Hàng</span>
+            </li>
+            <li class="menu-item" onclick="showSection('reservations')">
+                <span class="menu-icon">📅</span>
+                <span>Đặt Bàn</span>
+            </li>
+        </ul>
+    </div>
 
-                            <span class="status-badge status-available">
-                                @(item.IsAvailable == true ? "Còn món" : "Hết món")
-                            </span>
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Menu Section -->
+        <div id="menu" class="content-section active">
+            <div class="section-header">
+                <h2>📋 Quản Lý Menu Thực Đơn</h2>
+                <button class="btn-add">➕ Thêm Món Mới</button>
+            </div>
+            <div class="content-body">
+                <div class="menu-grid">
+                    @foreach (var item in Model.ProductsMenu)
+                    {
+                        <div class="menu-card">
+                            <img src="@(!string.IsNullOrEmpty(item.LinkImg) ? item.LinkImg : "https://via.placeholder.com/300x200/FF6B6B/FFFFFF?text=" + item.Name)"
+                                 alt="@item.Name" class="menu-image">
 
-                            <div class="card-actions">
-                                <button class="btn-edit"
-                                        onclick="location.href='@Url.Action("Edit", "Menu", new { id = item.MenuItemId })'">
-                                    ✏️ Chỉnh sửa
-                                </button>
+                            <div class="menu-body">
+                                <span class="menu-category">@item.Category?.CategoryName</span>
+                                <h3 class="menu-title">@item.Name</h3>
+                                <div class="menu-price">@item.Price ₫</div>
+                                <p class="menu-description">@item.Description</p>
+
+                                <span class="status-badge status-available">
+                                    @(item.IsAvailable == true ? "Còn món" : "Hết món")
+                                </span>
+
+                                <div class="card-actions">
+                                    <button class="btn-edit"
+                                            onclick="location.href='@Url.Action("Edit", "Menu", new { id = item.MenuItemId })'">
+                                        ✏️ Chỉnh sửa
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Combo Section -->
+        <div id="combo" class="content-section">
+            <div class="section-header">
+                <h2>🎁 Quản Lý Combo Thực Đơn</h2>
+                <button class="btn-add">➕ Thêm Combo Mới</button>
+            </div>
+            <div class="content-body">
+                @foreach (var combo in Model.ProductsCombo)
+                {
+                <div class="menu-grid">
+                    <div class="menu-card">
+                            <img src="@(!string.IsNullOrEmpty(combo.LinkImg)
+                        ? combo.LinkImg
+                        : "https://via.placeholder.com/150x150/FF6B6B/FFFFFF?text=" + combo.Name)"
+                                 alt="@combo.Name" class="combo-image">
+                        <div class="menu-body">
+                                <h3 class="menu-title">@combo.Name</h3>
+                                <div class="menu-price">@combo.Price.ToString("N0") ₫</div>
+                                <p style="color: #666; font-size: 14px; margin: 10px 0;">@combo.Description</p>
+                                <span class="status-badge status-available">@(combo.IsAvailable == true ? "Đang phục vụ" : "Tạm ngừng")</span>
+                            <div class="card-actions">
+                                    <button class="btn-edit"
+                                            onclick="">
+                                        ✏️ Chỉnh sửa
+                                    </button>
+                            </div>
+                        </div>
+                    </div>                  
+                </div>
+                    <div class="combo-items">
+                        <h4>🍽️ Các món ăn trong combo:</h4>
+                        <ul>
+                            @if (combo.ComboItems != null && combo.ComboItems.Count > 0)
+                            {
+                                foreach (var item in combo.ComboItems)
+                                {
+                                    <li>
+                                        ✓ @item.Quantity x @item.ManagerMenuItem?.Name
+                                    </li>
+                                }
+                            }
+                            else
+                            {
+                                <li>Không có món nào trong combo</li>
+                            }
+                        </ul>
                     </div>
                 }
             </div>
+
+                
         </div>
 
-    </div>
-
-    <!-- Quản lý Combo -->
-    <div class="management-section">
-        <div class="section-header">
-            <h2>🎁 Quản Lý Combo Thực Đơn</h2>
-            <button class="btn-add" onclick="location.href='@Url.Action("Create", "Combo")'">
-                ➕ Thêm Combo Mới
-            </button>
+        <!-- Category Section -->
+        <div id="category" class="content-section">
+            <div class="section-header">
+                <h2>📂 Quản Lý Loại Thực Đơn</h2>
+                <button class="btn-add">➕ Thêm Loại Mới</button>
+            </div>
+            <div class="content-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Tên Loại</th>
+                            <th>Số Món</th>
+                            <th style="text-align: center;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Món Chính</td>
+                            <td>15 món</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Món Khai Vị</td>
+                            <td>8 món</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Đồ Uống</td>
+                            <td>12 món</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Món Tráng Miệng</td>
+                            <td>6 món</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="content-section">
-    @foreach (var combo in Model.ProductsCombo)
-    {
-        <div class="combo-card">
-            <div class="combo-header">
-                <img src="@(!string.IsNullOrEmpty(combo.LinkImg) 
-                        ? combo.LinkImg 
-                        : "https://via.placeholder.com/150x150/FF6B6B/FFFFFF?text=" + combo.Name)" 
-                     alt="@combo.Name" class="combo-image">
 
-                <div class="combo-info">
-                    <h3 class="combo-title">@combo.Name</h3>
-                    <div class="combo-price">@combo.Price.ToString("N0") ₫</div>
-                    <p class="combo-description">@combo.Description</p>
+        <!-- Statistics Section -->
+        <div id="statistics" class="content-section">
+            <div class="section-header">
+                <h2>📊 Thống Kê & Báo Cáo</h2>
+            </div>
+            <div class="content-body">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Tổng Doanh Thu Hôm Nay</div>
+                        <div class="stat-value">12,500,000 ₫</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Số Đơn Hàng</div>
+                        <div class="stat-value">45</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Số Khách Hàng</div>
+                        <div class="stat-value">128</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Đánh Giá Trung Bình</div>
+                        <div class="stat-value">4.8 ⭐</div>
+                    </div>
+                </div>
 
-                    <span class="status-badge @(combo.IsAvailable == true ? "status-available" : "status-unavailable")">
-                        @(combo.IsAvailable == true ? "Đang phục vụ" : "Tạm ngừng")
-                    </span>
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #333;">🔥 Top Món Ăn Được Gọi Nhiều Nhất</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Hạng</th>
+                            <th>Tên Món</th>
+                            <th>Loại</th>
+                            <th>Số Lượng Gọi</th>
+                            <th>Doanh Thu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🥇 1</td>
+                            <td>Phở Bò Sapa</td>
+                            <td>Món Chính</td>
+                            <td>156</td>
+                            <td>11,700,000 ₫</td>
+                        </tr>
+                        <tr>
+                            <td>🥈 2</td>
+                            <td>Thịt Nướng Rừng</td>
+                            <td>Món Chính</td>
+                            <td>98</td>
+                            <td>11,760,000 ₫</td>
+                        </tr>
+                        <tr>
+                            <td>🥉 3</td>
+                            <td>Cà Phê Sapa</td>
+                            <td>Đồ Uống</td>
+                            <td>234</td>
+                            <td>8,190,000 ₫</td>
+                        </tr>
+                    </tbody>
+                </table>
 
-                    <div class="card-actions">
-                        <button class="btn-edit" 
-                                onclick="location.href='@Url.Action("Edit", "Combo", new { id = combo.ComboId })'">
-                            ✏️ Chỉnh sửa
-                        </button>
+                <h3 style="margin-top: 30px; margin-bottom: 15px; color: #333;">🎁 Top Combo Được Đặt Nhiều Nhất</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Hạng</th>
+                            <th>Tên Combo</th>
+                            <th>Số Lượng Đặt</th>
+                            <th>Doanh Thu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>🥇 1</td>
+                            <td>Combo Gia Đình</td>
+                            <td>45</td>
+                            <td>15,750,000 ₫</td>
+                        </tr>
+                        <tr>
+                            <td>🥈 2</td>
+                            <td>Combo Tiệc Tùng</td>
+                            <td>12</td>
+                            <td>10,200,000 ₫</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Staff Section -->
+        <div id="staff" class="content-section">
+            <div class="section-header">
+                <h2>👥 Quản Lý Nhân Viên</h2>
+                <button class="btn-add">➕ Thêm Nhân Viên</button>
+            </div>
+            <div class="content-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã NV</th>
+                            <th>Họ Tên</th>
+                            <th>Chức Vụ</th>
+                            <th>Số Điện Thoại</th>
+                            <th>Trạng Thái</th>
+                            <th style="text-align: center;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>NV001</td>
+                            <td>Nguyễn Văn A</td>
+                            <td>Quản Lý</td>
+                            <td>0901234567</td>
+                            <td><span class="status-badge status-available">Đang làm</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>NV002</td>
+                            <td>Trần Thị B</td>
+                            <td>Phục Vụ</td>
+                            <td>0912345678</td>
+                            <td><span class="status-badge status-available">Đang làm</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>NV003</td>
+                            <td>Lê Văn C</td>
+                            <td>Đầu Bếp</td>
+                            <td>0923456789</td>
+                            <td><span class="status-badge status-available">Đang làm</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Orders Section -->
+        <div id="orders" class="content-section">
+            <div class="section-header">
+                <h2>🧾 Quản Lý Đơn Hàng</h2>
+            </div>
+            <div class="content-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã ĐH</th>
+                            <th>Bàn</th>
+                            <th>Thời Gian</th>
+                            <th>Tổng Tiền</th>
+                            <th>Trạng Thái</th>
+                            <th style="text-align: center;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#DH001</td>
+                            <td>Bàn 5</td>
+                            <td>14:30</td>
+                            <td>450,000 ₫</td>
+                            <td><span class="status-badge status-available">Đang phục vụ</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">👁️ Chi tiết</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#DH002</td>
+                            <td>Bàn 3</td>
+                            <td>14:45</td>
+                            <td>280,000 ₫</td>
+                            <td><span class="status-badge status-available">Đang phục vụ</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">👁️ Chi tiết</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tables Section -->
+        <div id="tables" class="content-section">
+            <div class="section-header">
+                <h2>🪑 Quản Lý Bàn</h2>
+                <button class="btn-add">➕ Thêm Bàn Mới</button>
+            </div>
+            <div class="content-body">
+                <div class="menu-grid">
+                    <div class="menu-card">
+                        <div class="menu-image">🪑</div>
+                        <div class="menu-body">
+                            <h3 class="menu-title">Bàn 1</h3>
+                            <p style="color: #666;">Sức chứa: 4 người</p>
+                            <span class="status-badge status-available">Trống</span>
+                            <div class="card-actions">
+                                <button class="btn-edit">✏️ Quản lý</button>
+                            </div>
+                        </div>
+                    </div>
+                                            <div class="menu-card">
+                        <div class="menu-image" style="background: linear-gradient(135deg, #e91e63 0%, #c62828 100%);">🪑</div>
+                        <div class="menu-body">
+                            <h3 class="menu-title">Bàn 2</h3>
+                            <p style="color: #666;">Sức chứa: 6 người</p>
+                            <span class="status-badge" style="background-color: #ffcdd2; color: #c62828;">Đang sử dụng</span>
+                            <div class="card-actions">
+                                <button class="btn-edit">✏️ Quản lý</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-card">
+                        <div class="menu-image">🪑</div>
+                        <div class="menu-body">
+                            <h3 class="menu-title">Bàn 3</h3>
+                            <p style="color: #666;">Sức chứa: 8 người</p>
+                            <span class="status-badge status-available">Trống</span>
+                            <div class="card-actions">
+                                <button class="btn-edit">✏️ Quản lý</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="combo-items">
-                <h4>🍽️ Các món ăn trong combo:</h4>
-                <ul>
-                    @if (combo.ComboItems != null && combo.ComboItems.Any())
-                    {
-                        foreach (var item in combo.ComboItems)
-                        {
-                            <li>
-                                        ✓ @item.Quantity x @item.MenuItem?.Name
-                            </li>
-                        }
-                    }
-                    else
-                    {
-                        <li>Không có món nào trong combo</li>
-                    }
-                </ul>
+        <!-- Customers Section -->
+        <div id="customers" class="content-section">
+            <div class="section-header">
+                <h2>👤 Quản Lý Khách Hàng</h2>
+                <button class="btn-add">➕ Thêm Khách Hàng</button>
+            </div>
+            <div class="content-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã KH</th>
+                            <th>Họ Tên</th>
+                            <th>Số Điện Thoại</th>
+                            <th>Email</th>
+                            <th>Điểm Tích Lũy</th>
+                            <th style="text-align: center;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>KH001</td>
+                            <td>Phạm Văn D</td>
+                            <td>0934567890</td>
+                            <td>phamd@email.com</td>
+                            <td>350 điểm</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>KH002</td>
+                            <td>Hoàng Thị E</td>
+                            <td>0945678901</td>
+                            <td>hoange@email.com</td>
+                            <td>520 điểm</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>KH003</td>
+                            <td>Đặng Văn F</td>
+                            <td>0956789012</td>
+                            <td>dangf@email.com</td>
+                            <td>180 điểm</td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chỉnh sửa</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    }
-</div>
 
-    </div>
-
-    <!-- Quản lý Loại Thực Đơn -->
-    <div class="management-section">
-        <div class="section-header">
-            <h2>📂 Quản Lý Loại Thực Đơn</h2>
-            <button class="btn-add" onclick="location.href='@Url.Action("Create", "Category")'">
-                ➕ Thêm Loại Mới
-            </button>
-        </div>
-        <div class="content-section">
-            <table class="category-table">
-                <thead>
-                    <tr>
-                        <th style="width: 80px;">STT</th>
-                        <th>Tên Loại Thực Đơn</th>
-                        <th style="width: 150px; text-align: center;">Thao Tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>1</td>
-                        <td>Món Chính</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 1 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>2</td>
-                        <td>Món Khai Vị</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 2 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>3</td>
-                        <td>Đồ Uống</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 3 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>4</td>
-                        <td>Món Tráng Miệng</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 4 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>5</td>
-                        <td>Món Ăn Vặt</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 5 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Reservations Section -->
+        <div id="reservations" class="content-section">
+            <div class="section-header">
+                <h2>📅 Quản Lý Đặt Bàn</h2>
+                <button class="btn-add">➕ Thêm Đặt Bàn</button>
+            </div>
+            <div class="content-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mã Đặt</th>
+                            <th>Tên Khách</th>
+                            <th>SĐT</th>
+                            <th>Ngày & Giờ</th>
+                            <th>Số Người</th>
+                            <th>Trạng Thái</th>
+                            <th style="text-align: center;">Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#DB001</td>
+                            <td>Vũ Văn G</td>
+                            <td>0967890123</td>
+                            <td>06/10/2025 - 19:00</td>
+                            <td>4 người</td>
+                            <td><span class="status-badge status-available">Đã xác nhận</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chi tiết</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#DB002</td>
+                            <td>Bùi Thị H</td>
+                            <td>0978901234</td>
+                            <td>06/10/2025 - 20:00</td>
+                            <td>6 người</td>
+                            <td><span class="status-badge" style="background-color: #fff9c4; color: #f57f17;">Chờ xác nhận</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chi tiết</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>#DB003</td>
+                            <td>Ngô Văn I</td>
+                            <td>0989012345</td>
+                            <td>07/10/2025 - 12:00</td>
+                            <td>8 người</td>
+                            <td><span class="status-badge status-available">Đã xác nhận</span></td>
+                            <td style="text-align: center;">
+                                <button class="btn-edit">✏️ Chi tiết</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const overlay = document.getElementById("loading-overlay");
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
 
-        setTimeout(() => {
-            if (overlay) {
-                overlay.style.display = "none";
+            // Remove active class from all menu items
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show selected section
+            const selectedSection = document.getElementById(sectionId);
+            if (selectedSection) {
+                selectedSection.classList.add('active');
             }
-        }, 2000);
-    });
-    // Có thể thêm JavaScript cho các chức năng tương tác
-    console.log('Restaurant Management UI loaded successfully');
-</script>
+
+            // Add active class to clicked menu item
+            event.currentTarget.classList.add('active');
+        }
+
+        function logout() {
+            if (confirm('Bạn có chắc muốn đăng xuất?')) {
+                alert('Đăng xuất thành công!');
+                // Redirect to login page
+                // window.location.href = '/login';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('SapaFoRest Management System Loaded');
+        });
+    </script>
+</body>
+</html>
