@@ -4,17 +4,22 @@ using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using Microsoft.EntityFrameworkCore.Storage;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DataAccessLayer.UnitOfWork
 {
-    public class UnitOfWork : IUnitOfWork
-
+    public class UnitOfWork : IUnitOfWork, IDisposable
     {
         private readonly SapaFoRestRmsContext _context;
+
+
+        private IManagerMenuRepository _menuRepository;
+
+        private IManagerComboRepository _comboRepository;
+
+        public IManagerMenuRepository MenuItem => _menuRepository ??= new ManagerMenuRepository(_context);
+        public IManagerComboRepository Combo => _comboRepository ??= new ManagerComboRepository(_context);
+
 
         private IDbContextTransaction _transaction;
 
@@ -69,10 +74,12 @@ namespace DataAccessLayer.UnitOfWork
                 }
             }
             disposed = true;
-        }
 
+        }
+        // Giải phóng resource
         public void Dispose()
         {
+
             Dispose(true);
             GC.SuppressFinalize(this);
         }
