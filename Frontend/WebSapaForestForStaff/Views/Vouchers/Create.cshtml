@@ -1,76 +1,259 @@
 ﻿@model WebSapaForestForStaff.Models.VoucherDTO.VoucherCreateDto
 
 @{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
     ViewData["Title"] = "Create Voucher";
 }
 
-<h2>Create Voucher</h2>
-@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+<style>
+    select:focus, input:focus {
+        box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
+        border-color: #0d6efd;
+    }
 
-<form asp-action="Create" method="post">
-    <div class="form-group mb-3">
-        <label>Code</label>
-        <input class="form-control" asp-for="Code" />
-        <span asp-validation-for="Code" class="text-danger"></span>
-    </div>
+    select option[selected] {
+        background-color: #d1e7dd !important;
+        font-weight: 600;
+    }
 
-    <div class="form-group mb-3">
-        <label>Description</label>
-        <input class="form-control" asp-for="Description" />
-        <span asp-validation-for="Description" class="text-danger"></span>
-    </div>
+    .form-select, .form-control {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s ease;
+    }
 
-    <div class="form-group mb-3">
-        <label>Discount Type</label>
-        <select class="form-control" asp-for="DiscountType">
-            <option value="">-- Chọn loại giảm giá --</option>
-            <option value="Giá trị cố định">Giá trị cố định</option>
-            <option value="Phần trăm">Phần trăm</option>
-        </select>
-        <span asp-validation-for="DiscountType" class="text-danger"></span>
-    </div>
+        .form-select:hover, .form-control:hover {
+            background-color: #ffffff;
+        }
 
+    #jsValidationErrors ul {
+        padding-left: 1.2rem;
+        margin-top: 0.5rem;
+        color: red;
+    }
+</style>
 
-    <div class="form-group mb-3">
-        <label>Discount Value</label>
-        <input type="number" step="0.01" class="form-control" asp-for="DiscountValue" />
-        <span asp-validation-for="DiscountValue" class="text-danger"></span>
-    </div>
+<div class="p-4 rounded shadow-sm border bg-white">
+    <h3 class="mb-4 fw-semibold text-primary">
+        <i class="mdi mdi-plus-circle-outline"></i> Tạo Voucher Mới
+    </h3>
 
-    <div class="form-group mb-3">
-        <label>Start Date</label>
-        <input type="date" class="form-control" asp-for="StartDate" />
-        <span asp-validation-for="StartDate" class="text-danger"></span>
-    </div>
+    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
 
-    <div class="form-group mb-3">
-        <label>End Date</label>
-        <input type="date" class="form-control" asp-for="EndDate" />
-        <span asp-validation-for="EndDate" class="text-danger"></span>
-    </div>
+    <form asp-action="Create" method="post" id="createForm">
+        @Html.AntiForgeryToken()
+        <div class="row g-3">
+            <!-- Cột trái -->
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Mã Voucher</label>
+                    <input class="form-control form-control-sm border-primary" asp-for="Code" id="Code" placeholder="Nhập mã..." />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
 
-    <div class="form-group mb-3">
-        <label>Min Order Value</label>
-        <input type="number" step="0.01" class="form-control" asp-for="MinOrderValue" />
-        <span asp-validation-for="MinOrderValue" class="text-danger"></span>
-    </div>
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Mô tả</label>
+                    <input class="form-control form-control-sm border-secondary" asp-for="Description" id="Keyword" placeholder="Mô tả voucher..." />
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
 
-    <div class="form-group mb-3">
-        <label>Max Discount</label>
-        <input type="number" step="0.01" class="form-control" asp-for="MaxDiscount" />
-        <span asp-validation-for="MaxDiscount" class="text-danger"></span>
-    </div>
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Loại giảm giá</label>
+                    <select class="form-select form-select-sm border-success" asp-for="DiscountType">
+                        <option value="">-- Chọn loại giảm giá --</option>
+                        <option value="Giá trị cố định">Giá trị cố định</option>
+                        <option value="Phần trăm">Phần trăm</option>
+                    </select>
+                    <span asp-validation-for="DiscountType" class="text-danger"></span>
+                </div>
 
-    <div class="form-group mb-3">
-        <label>Status</label>
-        <input class="form-control" asp-for="Status" />
-        <span asp-validation-for="Status" class="text-danger"></span>
-    </div>
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Giá trị giảm</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm border-warning" asp-for="DiscountValue" id="DiscountValue" placeholder="VD: 50000" />
+                    <span asp-validation-for="DiscountValue" class="text-danger"></span>
+                </div>
 
-    <button type="submit" class="btn btn-primary">Create</button>
-    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-</form>
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Ngày bắt đầu</label>
+                    <input type="date" class="form-control form-control-sm border-info" asp-for="StartDate" id="StartDate" />
+                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                </div>
+            </div>
+
+            <!-- Cột phải -->
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Ngày kết thúc</label>
+                    <input type="date" class="form-control form-control-sm border-info" asp-for="EndDate" id="EndDate" />
+                    <span asp-validation-for="EndDate" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Giá trị đơn tối thiểu</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm border-secondary" asp-for="MinOrderValue" id="MinOrderValue" placeholder="VD: 300000" />
+                    <span asp-validation-for="MinOrderValue" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Giảm tối đa</label>
+                    <input type="number" step="0.01" class="form-control form-control-sm border-secondary" asp-for="MaxDiscount" id="MaxDiscount" placeholder="VD: 100000" />
+                    <span asp-validation-for="MaxDiscount" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label fw-semibold">Trạng thái</label>
+                    <select class="form-select form-select-sm border-info text-dark fw-semibold" asp-for="Status" id="Status">
+                        <option value="">-- Chọn trạng thái --</option>
+                        <option value="Đang sử dụng">Đang sử dụng</option>
+                        <option value="Sắp ra mắt">Sắp ra mắt</option>
+                        <option value="Hết hạn">Hết hạn</option>
+                    </select>
+                    <span asp-validation-for="Status" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chỗ hiển thị lỗi từ JavaScript -->
+        <div id="jsValidationErrors" class="text-danger mt-3"></div>
+
+        <div class="mt-4 text-end">
+            <button type="submit" class="btn btn-primary fw-semibold shadow-sm">
+                <i class="mdi mdi-content-save-outline"></i> Tạo mới
+            </button>
+            <a asp-action="Index" class="btn btn-secondary fw-semibold ms-2 shadow-sm">
+                <i class="mdi mdi-cancel"></i> Hủy
+            </a>
+        </div>
+    </form>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("createForm");
+        const errorContainer = document.getElementById("jsValidationErrors");
+
+        const startDateInput = document.getElementById("StartDate");
+        const endDateInput = document.getElementById("EndDate");
+        const discountTypeInput = document.getElementById("DiscountType");
+        const discountValueInput = document.getElementById("DiscountValue");
+        const minOrderValueInput = document.getElementById("MinOrderValue");
+        const maxDiscountInput = document.getElementById("MaxDiscount");
+        const codeInput = document.getElementById("Code");
+        const keywordInput = document.getElementById("Keyword");
+
+        const statusSelect = document.getElementById("Status");
+
+        // Tự động gợi ý trạng thái theo ngày
+        const allStatusOptions = Array.from(statusSelect.options).map(opt => ({ value: opt.value, text: opt.text }));
+
+        function updateStatusOptions() {
+            const today = new Date();
+            const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+            const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+
+            statusSelect.innerHTML = '';
+
+            if (!startDate && !endDate) {
+                allStatusOptions.forEach(opt => statusSelect.appendChild(new Option(opt.text, opt.value)));
+                return;
+            }
+
+            if (startDate && startDate > today) {
+                const option = allStatusOptions.find(o => o.value === "Sắp ra mắt");
+                if (option) {
+                    statusSelect.appendChild(new Option(option.text, option.value));
+                    statusSelect.value = option.value;
+                }
+                return;
+            }
+
+            if (endDate && endDate < today) {
+                const option = allStatusOptions.find(o => o.value === "Hết hạn");
+                if (option) {
+                    statusSelect.appendChild(new Option(option.text, option.value));
+                    statusSelect.value = option.value;
+                }
+                return;
+            }
+
+            allStatusOptions.forEach(opt => statusSelect.appendChild(new Option(opt.text, opt.value)));
+        }
+
+        updateStatusOptions();
+        startDateInput.addEventListener("change", updateStatusOptions);
+        endDateInput.addEventListener("change", updateStatusOptions);
+
+        // Validate form
+        form.addEventListener("submit", function (e) {
+            let errorMessages = [];
+
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // chỉ lấy ngày
+
+            const discountType = discountTypeInput.value;
+            const discountValue = parseFloat(discountValueInput.value);
+            const minOrderValue = parseFloat(minOrderValueInput.value);
+            const maxDiscount = parseFloat(maxDiscountInput.value);
+            const code = codeInput.value.trim();
+            const keyword = keywordInput.value.trim();
+
+            // Mã không được để trống
+            if (!code) {
+                errorMessages.push("Mã voucher không được để trống.");
+            }
+
+            // Mô tả không được toàn khoảng trắng
+            if (keyword === "") {
+                errorMessages.push("Mô tả không được để trống hoặc chỉ có khoảng trắng.");
+            }
+
+            // Ngày bắt đầu < ngày kết thúc
+            if (startDateInput.value && endDateInput.value && startDate > endDate) {
+                errorMessages.push("Ngày bắt đầu phải nhỏ hơn ngày kết thúc.");
+            }
+
+            // Ngày kết thúc không được trong quá khứ
+            if (endDateInput.value && endDate < today) {
+                errorMessages.push("Ngày kết thúc không được trong quá khứ.");
+            }
+
+            // Giá trị số không được âm
+            if (!isNaN(discountValue) && discountValue < 0)
+                errorMessages.push("Giá trị giảm không được âm.");
+
+            if (!isNaN(minOrderValue) && minOrderValue < 0)
+                errorMessages.push("Giá trị đơn tối thiểu không được âm.");
+
+            if (!isNaN(maxDiscount) && maxDiscount < 0)
+                errorMessages.push("Giảm tối đa không được âm.");
+
+            // Nếu là phần trăm thì DiscountValue phải từ 1 đến 100
+            if (discountType === "Phần trăm") {
+                if (isNaN(discountValue) || discountValue < 1 || discountValue > 100) {
+                    errorMessages.push("Giá trị phần trăm phải từ 1 đến 100.");
+                }
+            }
+
+            // Kiểu giảm giá phải hợp lệ
+            const validTypes = ["Phần trăm", "Giá trị cố định"];
+            if (discountType && !validTypes.includes(discountType)) {
+                errorMessages.push("Kiểu giảm giá không hợp lệ.");
+            }
+
+            // Không kiểm tra trùng mã + khoảng ngày bằng JS (vì cần kiểm tra DB)
+
+            // Hiển thị lỗi
+            if (errorMessages.length > 0) {
+                e.preventDefault();
+                errorContainer.innerHTML = `<ul>${errorMessages.map(msg => `<li>${msg}</li>`).join("")}</ul>`;
+            } else {
+                errorContainer.innerHTML = "";
+            }
+        });
+    });
+</script>

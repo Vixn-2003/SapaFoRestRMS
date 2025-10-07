@@ -16,10 +16,11 @@ namespace DataAccessLayer.Repositories.Interfaces
             string? searchKeyword,         // search theo Code, Description
             string? discountType,          // lọc theo loại giảm giá
             decimal? discountValue,        // lọc theo giá trị giảm
-            DateOnly? startDate,           // lọc theo thời gian bắt đầu
-            DateOnly? endDate,             // lọc theo thời gian kết thúc
+            DateTime? startDate,           // lọc theo thời gian bắt đầu
+            DateTime? endDate,             // lọc theo thời gian kết thúc
             decimal? minOrderValue,        // lọc theo giá trị đơn tối thiểu
             decimal? maxDiscount,          // lọc theo giá trị giảm tối đa
+            string? status, // <- Thêm tham số
             int pageNumber,
             int pageSize);
 
@@ -30,20 +31,24 @@ namespace DataAccessLayer.Repositories.Interfaces
             string? searchKeyword,
             string? discountType,
             decimal? discountValue,
-            DateOnly? startDate,
-            DateOnly? endDate,
+            DateTime? startDate,
+            DateTime? endDate,
             decimal? minOrderValue,
-            decimal? maxDiscount);
+            decimal? maxDiscount,
+            string? status // <- Thêm tham số
+);
 
         /// <summary>
         /// Lấy tất cả voucher đã bị xóa mềm (IsDelete = true).
         /// </summary>
-        Task<IEnumerable<Voucher>> GetDeletedVouchersAsync(string? searchKeyword,
+        Task<IEnumerable<Voucher>> GetDeletedVouchersAsync(string? searchKeyword,  // <- Thêm tham số
+
     string? discountType,
+    string? status,
     int pageNumber,
     int pageSize);
 
-        Task<int> CountDeletedVouchersAsync(string? searchKeyword, string? discountType);
+        Task<int> CountDeletedVouchersAsync(string? searchKeyword, string? discountType, string? status);// <- Thêm tham số);
 
     }
 }

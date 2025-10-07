@@ -15,6 +15,12 @@ public partial class SapaFoRestRmsContext : DbContext
         : base(options)
     {
     }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        IConfigurationRoot configuration = builder.Build();
+        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyCnn"));
+    }
 
     public virtual DbSet<Announcement> Announcements { get; set; }
 
@@ -665,7 +671,10 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.VoucherId).HasName("PK__Vouchers__3AEE7921766B4882");
 
-            entity.HasIndex(e => e.Code, "UQ__Vouchers__A25C5AA74763DC38").IsUnique();
+            // Thay đổi Unique Index từ Code thành Code + StartDate + EndDate
+            entity.HasIndex(e => new { e.Code, e.StartDate, e.EndDate })
+                  .IsUnique()
+                  .HasDatabaseName("UQ_Vouchers_Code_StartDate_EndDate");
 
             entity.Property(e => e.Code).HasMaxLength(50);
             entity.Property(e => e.Description).HasMaxLength(200);
@@ -674,13 +683,13 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.MaxDiscount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.MinOrderValue).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Status)
-                .HasMaxLength(20)
-                .HasDefaultValue("Active");
-               entity.Property(e => e.IsDelete)
-        .HasColumnName("IsDelete")
-        .HasDefaultValue(false);
-
+                  .HasMaxLength(20)
+                  .HasDefaultValue("Active");
+            entity.Property(e => e.IsDelete)
+                  .HasColumnName("IsDelete")
+                  .HasDefaultValue(false);
         });
+
 
         OnModelCreatingPartial(modelBuilder);
     }

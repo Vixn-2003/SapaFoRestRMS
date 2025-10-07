@@ -19,10 +19,11 @@ namespace BusinessAccessLayer.Services.Interfaces
             string? keyword,
             string? discountType,
             decimal? discountValue,
-            DateOnly? startDate,
-            DateOnly? endDate,
+            DateTime? startDate,
+            DateTime? endDate,
             decimal? minOrderValue,
             decimal? maxDiscount,
+            string? status,
             int pageNumber,
             int pageSize);
 
@@ -32,6 +33,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<(IEnumerable<VoucherDto> data, int totalCount)> GetDeletedVouchersAsync(
       string? searchKeyword,
       string? discountType,
+      string? status,
       int pageNumber,
       int pageSize);
 

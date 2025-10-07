@@ -1,188 +1,24 @@
-﻿@using WebSapaForestForStaff.Models
-@using WebSapaForestForStaff.Models.VoucherDTO
-@model PagedResult<VoucherDto>
+﻿@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
 
-@{
-    Layout = null;
     var selectedDiscountType = Context.Request.Query["discountType"].ToString();
-    var discountTypes = new List<string> { "", "Percentage", "Fixed", "Free Shipping" };
+    var selectedStatus = Context.Request.Query["status"].ToString();
 }
 @if (TempData["SuccessMessage"] != null)
 {
     <div class="alert alert-success">@TempData["SuccessMessage"]</div>
 }
-
 @if (TempData["ErrorMessage"] != null)
 {
     <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
 }
-
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        padding: 20px;
-    }
-
-    h2 {
-        color: #2c3e50;
-        margin-bottom: 20px;
-    }
-
-    form.filter-form {
-        background: #fff;
-        padding: 15px 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        margin-bottom: 25px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 15px;
-        align-items: flex-end;
-    }
-
-        form.filter-form > div {
-            flex: 1 1 200px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        form.filter-form label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #34495e;
-        }
-
-        form.filter-form input[type="text"],
-        form.filter-form input[type="number"],
-        form.filter-form input[type="date"] {
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            transition: border-color 0.2s;
-        }
-
-            form.filter-form input[type="text"]:focus,
-            form.filter-form input[type="number"]:focus,
-            form.filter-form input[type="date"]:focus {
-                border-color: #2980b9;
-                outline: none;
-            }
-
-        form.filter-form button {
-            padding: 10px 25px;
-            background-color: #2980b9;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.3s;
-        }
-
-            form.filter-form button:hover {
-                background-color: #1f6391;
-            }
-
-    table.table {
-        width: 100%;
-        border-collapse: collapse;
-        background: #fff;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-        table.table thead {
-            background-color: #2980b9;
-            color: white;
-            font-weight: 600;
-        }
-
-        table.table th,
-        table.table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #ddd;
-            text-align: center;
-        }
-
-        table.table tbody tr:hover {
-            background-color: #f0f8ff;
-        }
-
-    div.pagination {
-        margin-top: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: 600;
-        color: #555;
-    }
-
-        div.pagination a {
-            padding: 8px 16px;
-            background-color: #2980b9;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-
-            div.pagination a:hover {
-                background-color: #1f6391;
-            }
-
-        div.pagination span {
-            font-size: 1rem;
-        }
-
-
-    .search-bar {
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: flex-start;
-        gap: 10px;
-    }
-
-        .search-bar input[type="text"] {
-            padding: 8px 15px;
-            width: 300px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-            .search-bar input[type="text"]:focus {
-                border-color: #2980b9;
-                outline: none;
-            }
-
-        .search-bar button {
-            padding: 8px 20px;
-            background-color: #2980b9;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-            .search-bar button:hover {
-                background-color: #1f6391;
-            }
-
-</style>
-
-<h2>Danh sách Voucher</h2>
-
-<div style="margin-bottom: 20px;">
-    <a class="btn btn-secondary" href="@Url.Action("IsDelete", "Vouchers")">Xem Voucher đã xóa</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Danh sách Voucher</h2>
+    <a class="btn btn-success" href="@Url.Action("Create", "Vouchers")">
+        <i class="mdi mdi-plus-box"></i> Tạo Voucher mới
+    </a>
 </div>
-<div style="margin-bottom: 20px;">
-    <a class="btn btn-secondary" href="@Url.Action("Create", "Vouchers")">Tạo Voucher mới</a>
-</div>
+
 @if (!ViewData.ModelState.IsValid)
 {
     <div class="alert alert-danger">
@@ -192,59 +28,115 @@
         }
     </div>
 }
+<form method="get" asp-action="Index" class="p-4 mb-4 rounded shadow-sm border bg-white" id="filterForm">
+    <div class="row align-items-end g-3">
+        <!-- Mã voucher -->
+        <div class="col-md-3">
+            <label for="keyword" class="form-label fw-semibold">Mã Voucher</label>
+            <input type="text" class="form-control form-control-sm border-primary"
+                   id="keyword" name="keyword"
+                   value="@Context.Request.Query["keyword"]"
+                   placeholder="Nhập mã voucher...">
+        </div>
 
-<form method="get" asp-action="Index" class="filter-form">
-    <div>
-        <label for="keyword">Voucher Code</label>
-        <input type="text" id="keyword" name="keyword" value="@Context.Request.Query["keyword"]" placeholder="Nhập mã voucher..." />
-    </div>
+        <!-- Loại giảm giá -->
+        <div class="col-md-3">
+            <label for="discountType" class="form-label fw-semibold">Loại Giảm Giá</label>
+            <select id="discountType" name="discountType" class="form-select form-select-sm border-success text-dark fw-semibold">
+                <option value="">-- Chọn loại giảm giá --</option>
+                @{
+                    var discountOptions = new List<string> { "Phần trăm", "Giá trị cố định", "Free" };
+                }
+                @foreach (var option in discountOptions)
+                {
+                    <option value="@option" selected="@(option == selectedDiscountType)">
+                        @option
+                    </option>
+                }
+            </select>
+        </div>
 
-    <select id="discountType" name="discountType">
-        <option value="" selected="@(string.IsNullOrEmpty(selectedDiscountType) ? "selected" : null)">-- Chọn loại giảm giá --</option>
-        <option value="Phần trăm" selected="@(selectedDiscountType == "Phần trăm" ? "selected" : null)">Phần trăm</option>
-        <option value="Giá trị cố định" selected="@(selectedDiscountType == "Giá trị cố định" ? "selected" : null)">Giá trị cố định</option>
-        <option value="Free Shipping" selected="@(selectedDiscountType == "Free Shipping" ? "selected" : null)">Free Shipping</option>
-    </select>
+        <!-- Giá trị giảm -->
+        <div class="col-md-3">
+            <label for="discountValue" class="form-label fw-semibold">Giá trị giảm</label>
+            <input type="number" class="form-control form-control-sm border-warning"
+                   step="0.01" id="discountValue" name="discountValue"
+                   value="@Context.Request.Query["discountValue"]"
+                   placeholder="VD: 10">
+        </div>
 
-    <div>
-        <label for="discountValue">Discount Value</label>
-        <input type="number" step="0.01" id="discountValue" name="discountValue" value="@Context.Request.Query["discountValue"]" placeholder="Ví dụ: 10" />
-    </div>
-    <div>
-        <label for="startDate">Start Date</label>
-        <input type="date" id="startDate" name="startDate" value="@Context.Request.Query["startDate"]" />
-    </div>
-    <div>
-        <label for="endDate">End Date</label>
-        <input type="date" id="endDate" name="endDate" value="@Context.Request.Query["endDate"]" />
-    </div>
-    <div>
-        <label for="minOrderValue">Min Order Value</label>
-        <input type="number" step="0.01" id="minOrderValue" name="minOrderValue" value="@Context.Request.Query["minOrderValue"]" placeholder="Ví dụ: 100" />
-    </div>
-    <div>
-        <label for="maxDiscount">Max Discount</label>
-        <input type="number" step="0.01" id="maxDiscount" name="maxDiscount" value="@Context.Request.Query["maxDiscount"]" placeholder="Ví dụ: 50" />
-    </div>
- @*    <div>
-        <label for="pageSize">Page Size</label>
-        <input type="number" id="pageSize" name="pageSize" value="@Model.PageSize" min="1" />
-    </div> *@
-    <div>
-        <button type="submit">Lọc</button>
+        <!-- Ngày bắt đầu -->
+        <div class="col-md-3">
+            <label for="startDate" class="form-label fw-semibold">Ngày bắt đầu</label>
+            <input type="date" class="form-control form-control-sm border-info"
+                   id="startDate" name="startDate"
+                   value="@Context.Request.Query["startDate"]">
+        </div>
+
+        <!-- Ngày kết thúc -->
+        <div class="col-md-3">
+            <label for="endDate" class="form-label fw-semibold">Ngày kết thúc</label>
+            <input type="date" class="form-control form-control-sm border-info"
+                   id="endDate" name="endDate"
+                   value="@Context.Request.Query["endDate"]">
+        </div>
+
+        <!-- Giá trị đơn tối thiểu -->
+        <div class="col-md-3">
+            <label for="minOrderValue" class="form-label fw-semibold">Giá trị đơn tối thiểu</label>
+            <input type="number" class="form-control form-control-sm border-secondary"
+                   step="0.01" id="minOrderValue" name="minOrderValue"
+                   value="@Context.Request.Query["minOrderValue"]"
+                   placeholder="VD: 100">
+        </div>
+
+        <!-- Giảm tối đa -->
+        <div class="col-md-3">
+            <label for="maxDiscount" class="form-label fw-semibold">Giảm tối đa</label>
+            <input type="number" class="form-control form-control-sm border-secondary"
+                   step="0.01" id="maxDiscount" name="maxDiscount"
+                   value="@Context.Request.Query["maxDiscount"]"
+                   placeholder="VD: 50">
+        </div>
+
+        <!-- Trạng thái -->
+        <div class="col-md-3">
+            <label for="status" class="form-label fw-semibold">Trạng thái</label>
+            <select id="status" name="status" class="form-select form-select-sm border-info text-dark fw-semibold">
+                <option value="">-- Chọn trạng thái --</option>
+                @{
+                    var statusOptions = new List<string> { "Đang sử dụng", "Sắp ra mắt", "Hết hạn" };
+                }
+                @foreach (var option in statusOptions)
+                {
+                    <option value="@option" selected="@(option == selectedStatus)">
+                        @option
+                    </option>
+                }
+            </select>
+        </div>
+
+        <!-- Nút lọc -->
+        <div class="col-md-3 d-flex align-items-center">
+            <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold shadow-sm">
+                <i class="mdi mdi-filter"></i> Lọc
+            </button>
+        </div>
     </div>
 </form>
-<table class="table">
-    <thead>
+
+
+<table class="table table-striped table-bordered">
+    <thead class="thead-dark">
         <tr>
-            <th>Code</th>
-            <th>Discount Type</th>
-            <th>Discount Value</th>
-            <th>Start Date</th>
-            <th>End Date</th>
-            <th>Min Order Value</th>
-            <th>Max Discount</th>
-            <th>Actions</th> <!-- Thêm cột Actions -->
+            <th>Mã</th>
+            <th>Loại Giảm</th>
+            <th>Giá trị</th>
+            <th>Ngày Bắt đầu</th>
+            <th>Ngày Kết thúc</th>
+            <th>Đơn Tối thiểu</th>
+            <th>Giảm Tối đa</th>
+            <th>Thao tác</th>
         </tr>
     </thead>
     <tbody>
@@ -253,93 +145,110 @@
             <tr>
                 <td>@voucher.Code</td>
                 <td>@voucher.DiscountType</td>
-                <td>@voucher.DiscountValue</td>
-                <td>@(voucher.StartDate?.ToDateTime(TimeOnly.MinValue).ToString("yyyy-MM-dd") ?? "")</td>
-                <td>@(voucher.EndDate?.ToDateTime(TimeOnly.MinValue).ToString("yyyy-MM-dd") ?? "")</td>
-                <td>@voucher.MinOrderValue</td>
-                <td>@voucher.MaxDiscount</td>
                 <td>
-                    <!-- Các nút Detail, Update, Delete -->
-                    <a href="@Url.Action("Details", "Vouchers", new { id = voucher.VoucherId, pageNumber = Model.PageNumber })">View Details</a>
-                    <a class="btn btn-warning btn-sm" href="@Url.Action("Edit", "Vouchers", new { id = voucher.VoucherId,pageNumber = Model.PageNumber })">Update</a>
-                    <a class="btn btn-danger btn-sm" href="@Url.Action("Delete", "Vouchers", new { id = voucher.VoucherId })"
-                       onclick="return confirm('Are you sure you want to delete this voucher?');">Delete</a>
+                    @if (voucher.DiscountType?.ToLower() == "phần trăm")
+                    {
+                        @($"{voucher.DiscountValue:0.#} %")
+                    }
+                    else
+                    {
+                        @string.Format("{0:N0} VND", voucher.DiscountValue)
+                    }
+                </td>
+                <td>@voucher.StartDate.ToString("dd-MM-yyyy")</td>
+                <td>@voucher.EndDate.ToString("dd-MM-yyyy")</td>
+
+                <td>@string.Format("{0:N0} VND", voucher.MinOrderValue)</td>
+                <td>@string.Format("{0:N0} VND", voucher.MaxDiscount)</td>
+                <td class="text-nowrap">
+                    <a class="btn btn-sm btn-info" href="@Url.Action("Details", "Vouchers", new { id = voucher.VoucherId, pageNumber = Model.PageNumber })">
+                        <i class="mdi mdi-eye"></i>
+                    </a>
+                    <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", "Vouchers", new { id = voucher.VoucherId, pageNumber = Model.PageNumber })">
+                        <i class="mdi mdi-pencil"></i>
+                    </a>
+                    <a class="btn btn-sm btn-danger" href="@Url.Action("Delete", "Vouchers", new { id = voucher.VoucherId })"
+                       onclick="return confirm('Bạn có chắc chắn muốn xóa voucher này không?');">
+                        <i class="mdi mdi-delete"></i>
+                    </a>
                 </td>
             </tr>
         }
     </tbody>
+
 </table>
 
-<div class="pagination">
-    <span>Trang: @Model.PageNumber / @((Model.TotalCount + Model.PageSize - 1) / Model.PageSize)</span>
+@{
+    int totalPages = (Model.TotalCount + Model.PageSize - 1) / Model.PageSize;
+    int currentPage = Model.PageNumber;
+    int maxPagesToShow = 5;
+    int startPage = Math.Max(currentPage - 2, 1);
+    int endPage = Math.Min(startPage + maxPagesToShow - 1, totalPages);
+    startPage = Math.Max(endPage - maxPagesToShow + 1, 1);
+}
 
-    <div>
-        @if (Model.PageNumber > 1)
-        {
-            <a asp-action="Index" asp-route-pageNumber="@(Model.PageNumber - 1)"
-               asp-route-discountType="@Context.Request.Query["discountType"]"
-               asp-route-discountValue="@Context.Request.Query["discountValue"]"
-               asp-route-startDate="@Context.Request.Query["startDate"]"
-               asp-route-endDate="@Context.Request.Query["endDate"]"
-               asp-route-minOrderValue="@Context.Request.Query["minOrderValue"]"
-               asp-route-maxDiscount="@Context.Request.Query["maxDiscount"]"
-               asp-route-pageSize="@Model.PageSize">Trang trước</a>
-        }
+<div class="d-flex justify-content-center mt-4">
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new {
+                    pageNumber = currentPage - 1,
+                    discountType = Context.Request.Query["discountType"].ToString(),
+                    discountValue = Context.Request.Query["discountValue"].ToString(),
+                    startDate = Context.Request.Query["startDate"].ToString(),
+                    endDate = Context.Request.Query["endDate"].ToString(),
+                    minOrderValue = Context.Request.Query["minOrderValue"].ToString(),
+                    maxDiscount = Context.Request.Query["maxDiscount"].ToString(),
+                    status = Context.Request.Query["status"].ToString(),
+                    pageSize = Model.PageSize
+                })" tabindex="-1" aria-disabled="@(currentPage == 1 ? "true" : "false")">Trang trước</a>
+            </li>
 
-        @if (Model.PageNumber * Model.PageSize < Model.TotalCount)
-        {
-            <a asp-action="Index" asp-route-pageNumber="@(Model.PageNumber + 1)"
-               asp-route-discountType="@Context.Request.Query["discountType"]"
-               asp-route-discountValue="@Context.Request.Query["discountValue"]"
-               asp-route-startDate="@Context.Request.Query["startDate"]"
-               asp-route-endDate="@Context.Request.Query["endDate"]"
-               asp-route-minOrderValue="@Context.Request.Query["minOrderValue"]"
-               asp-route-maxDiscount="@Context.Request.Query["maxDiscount"]"
-               asp-route-pageSize="@Model.PageSize">Trang sau</a>
-        }
-    </div>
+            @for (int i = startPage; i <= endPage; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")" aria-current="@(i == currentPage ? "page" : null)">
+                    <a class="page-link" href="@Url.Action("Index", new {
+                        pageNumber = i,
+                        discountType = Context.Request.Query["discountType"].ToString(),
+                        discountValue = Context.Request.Query["discountValue"].ToString(),
+                        startDate = Context.Request.Query["startDate"].ToString(),
+                        endDate = Context.Request.Query["endDate"].ToString(),
+                        minOrderValue = Context.Request.Query["minOrderValue"].ToString(),
+                        maxDiscount = Context.Request.Query["maxDiscount"].ToString(),
+                                            status = Context.Request.Query["status"].ToString(),
+                        pageSize = Model.PageSize
+                    })">@i</a>
+                </li>
+            }
+
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new {
+                    pageNumber = currentPage + 1,
+                    discountType = Context.Request.Query["discountType"].ToString(),
+                    discountValue = Context.Request.Query["discountValue"].ToString(),
+                    startDate = Context.Request.Query["startDate"].ToString(),
+                    endDate = Context.Request.Query["endDate"].ToString(),
+                    minOrderValue = Context.Request.Query["minOrderValue"].ToString(),
+                    maxDiscount = Context.Request.Query["maxDiscount"].ToString(),
+                                        status = Context.Request.Query["status"].ToString(),
+
+                    pageSize = Model.PageSize
+                })" aria-disabled="@(currentPage == totalPages ? "true" : "false")">Trang sau</a>
+            </li>
+        </ul>
+    </nav>
 </div>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const form = document.querySelector("form.filter-form");
 
-        form.addEventListener("submit", function (e) {
-            const startDate = document.getElementById("startDate").value;
-            const endDate = document.getElementById("endDate").value;
-            const discountValue = parseFloat(document.getElementById("discountValue").value);
-            const minOrderValue = parseFloat(document.getElementById("minOrderValue").value);
-            const maxDiscount = parseFloat(document.getElementById("maxDiscount").value);
-            const keywordInput = document.getElementById("keyword");
+@section Styles {
+    <link rel="stylesheet" href="~/css/vouchers.css" />
+}
 
-            let errorMessages = [];
-
-            // 1. Validate StartDate <= EndDate
-            if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
-                errorMessages.push("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
-            }
-
-            // 2. Validate không âm
-            if (!isNaN(discountValue) && discountValue < 0)
-                errorMessages.push("Discount Value không được âm.");
-
-            if (!isNaN(minOrderValue) && minOrderValue < 0)
-                errorMessages.push("Min Order Value không được âm.");
-
-            if (!isNaN(maxDiscount) && maxDiscount < 0)
-                errorMessages.push("Max Discount không được âm.");
-
-            // 3. Trim keyword
-            if (keywordInput.value && keywordInput.value.trim() === "") {
-                errorMessages.push("Keyword không được chỉ có khoảng trắng.");
-            } else {
-                keywordInput.value = keywordInput.value.trim(); // trim luôn trước khi submit
-            }
-
-            // Nếu có lỗi => ngăn submit và hiển thị
-            if (errorMessages.length > 0) {
-                e.preventDefault();
-                alert(errorMessages.join("\n")); // hoặc show lên UI
-            }
-        });
-    });
-</script>
+@section Scripts {
+    <script src="~/js/vouchers.js"></script>
+    <script>
+        // Pass TempData messages to JS
+        var successMessage = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["SuccessMessage"] ?? ""));
+        var errorMessage = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["ErrorMessage"] ?? ""));
+        initializeVouchersPage(successMessage, errorMessage);
+    </script>
+}

@@ -31,6 +31,8 @@ namespace BusinessAccessLayer.DTOs
 
         [Range(0, double.MaxValue, ErrorMessage = "Max discount must be >= 0")]
         public decimal? MaxDiscount { get; set; }
+
+        [Required(ErrorMessage = "Vui lòng chọn trạng thái.")]
         public string? Status { get; set; }
     }
 }

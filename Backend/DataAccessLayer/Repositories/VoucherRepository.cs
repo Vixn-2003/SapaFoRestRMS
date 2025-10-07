@@ -20,10 +20,11 @@ namespace DataAccessLayer.Repositories
     string? searchKeyword,
     string? discountType,
     decimal? discountValue,
-    DateOnly? startDate,
-    DateOnly? endDate,
+    DateTime? startDate,
+    DateTime? endDate,
     decimal? minOrderValue,
     decimal? maxDiscount,
+    string? status, // <- Thêm tham số
     int pageNumber,
     int pageSize)
         {
@@ -60,6 +61,8 @@ namespace DataAccessLayer.Repositories
                 query = query.Where(v => v.DiscountType == discountType);
             }
 
+           
+
             if (discountValue.HasValue)
             {
                 query = query.Where(v => v.DiscountValue == discountValue);
@@ -84,7 +87,8 @@ namespace DataAccessLayer.Repositories
             {
                 query = query.Where(v => v.MaxDiscount <= maxDiscount);
             }
-
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
             query = query.Where(v => v.IsDelete == false)
                 .OrderByDescending(v => v.VoucherId)
                 .Skip((pageNumber - 1) * pageSize)
@@ -98,10 +102,10 @@ namespace DataAccessLayer.Repositories
             string? searchKeyword,
             string? discountType,
             decimal? discountValue,
-            DateOnly? startDate,
-            DateOnly? endDate,
+            DateTime? startDate,
+            DateTime? endDate,
             decimal? minOrderValue,
-            decimal? maxDiscount)
+            decimal? maxDiscount, string? status)
         {
             var query = _dbSet.AsQueryable();
             query = query.Where(v => v.IsDelete == false);
@@ -113,7 +117,7 @@ namespace DataAccessLayer.Repositories
 
             if (!string.IsNullOrWhiteSpace(discountType))
                 query = query.Where(v => v.DiscountType == discountType);
-
+         
             if (discountValue.HasValue)
                 query = query.Where(v => v.DiscountValue == discountValue);
 
@@ -128,6 +132,8 @@ namespace DataAccessLayer.Repositories
 
             if (maxDiscount.HasValue)
                 query = query.Where(v => v.MaxDiscount <= maxDiscount);
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
 
             return await query.CountAsync();
         }
@@ -136,7 +142,7 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<Voucher>> GetDeletedVouchersAsync(
      string? searchKeyword,
-     string? discountType,
+     string? discountType, string? status,
      int pageNumber,
      int pageSize)
         {
@@ -156,7 +162,8 @@ namespace DataAccessLayer.Repositories
             {
                 query = query.Where(v => v.DiscountType == discountType);
             }
-
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
             // Phân trang
             var skip = (pageNumber - 1) * pageSize;
 
@@ -168,21 +175,23 @@ namespace DataAccessLayer.Repositories
 
         }
 
-        public async Task<int> CountDeletedVouchersAsync(string? searchKeyword, string? discountType)
+        public async Task<int> CountDeletedVouchersAsync(string? searchKeyword, string? discountType, string? status)
         {
             var query = _context.Vouchers
                 .Where(v => v.IsDelete == true);
 
             if (!string.IsNullOrWhiteSpace(searchKeyword))
             {
-                query = query.Where(v => v.Code.Contains(searchKeyword) || v.Description.Contains(searchKeyword));
+                query = query.Where(v => v.Code.Contains(searchKeyword)
+                || v.Description.Contains(searchKeyword));
             }
 
             if (!string.IsNullOrWhiteSpace(discountType))
             {
                 query = query.Where(v => v.DiscountType == discountType);
             }
-
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
             return await query.CountAsync();
         }
     }

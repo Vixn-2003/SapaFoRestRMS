@@ -2,7 +2,6 @@
 using Newtonsoft.Json;
 using System.Web;
 using WebSapaForestForStaff.Models.VoucherDTO;
-using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -16,15 +15,16 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         public async Task<IActionResult> Index(
-     string keyword = "",
-     string discountType = "",
-     decimal? discountValue = null,
-     DateTime? startDate = null,
-     DateTime? endDate = null,
-     decimal? minOrderValue = null,
-     decimal? maxDiscount = null,
-     int pageNumber = 1,
-     int pageSize = 10)
+            string keyword = "",
+            string discountType = "",
+            decimal? discountValue = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            decimal? minOrderValue = null,
+            decimal? maxDiscount = null,
+            string status = "",
+            int pageNumber = 1,
+            int pageSize = 10)
         {
             var query = HttpUtility.ParseQueryString(string.Empty);
 
@@ -35,6 +35,7 @@ namespace WebSapaForestForStaff.Controllers
             if (endDate.HasValue) query["endDate"] = endDate.Value.ToString("yyyy-MM-dd");
             if (minOrderValue.HasValue) query["minOrderValue"] = minOrderValue.Value.ToString();
             if (maxDiscount.HasValue) query["maxDiscount"] = maxDiscount.Value.ToString();
+            if (!string.IsNullOrEmpty(status)) query["status"] = status;
 
             query["pageNumber"] = pageNumber.ToString();
             query["pageSize"] = pageSize.ToString();
@@ -52,6 +53,7 @@ namespace WebSapaForestForStaff.Controllers
 
             return View(pagedResult);
         }
+
         public async Task<IActionResult> Details(int id, int pageNumber = 1)
         {
             var apiUrl = $"https://localhost:7096/api/Voucher/{id}";
@@ -71,7 +73,6 @@ namespace WebSapaForestForStaff.Controllers
                 return StatusCode(500, "Error calling API: " + ex.Message);
             }
         }
-
 
         // GET: Vouchers/Edit/5
         public async Task<IActionResult> Edit(int id, int pageNumber = 1)
@@ -106,32 +107,47 @@ namespace WebSapaForestForStaff.Controllers
 
             var apiUrl = $"https://localhost:7096/api/Voucher/{id}";
 
-            // Lấy voucher gốc từ API để giữ VoucherId và Code
+            // Lấy voucher hiện tại từ API (optional, nếu cần)
             var existingVoucher = await _httpClient.GetFromJsonAsync<VoucherDto>(apiUrl);
             if (existingVoucher == null)
             {
                 return NotFound();
             }
 
-            // Giữ nguyên VoucherId và Code
+            // Giữ lại các thuộc tính không sửa
             model.VoucherId = existingVoucher.VoucherId;
             model.Code = existingVoucher.Code;
 
-            // Gửi PUT request cập nhật
             var response = await _httpClient.PutAsJsonAsync(apiUrl, model);
             if (response.IsSuccessStatusCode)
             {
+                TempData["SuccessMessage"] = "Cập nhật voucher thành công!";
                 return RedirectToAction("Index", new { pageNumber });
             }
             else
             {
-                ModelState.AddModelError("", "Update failed: " + response.ReasonPhrase);
+                var errorContent = await response.Content.ReadAsStringAsync();
+
+                try
+                {
+                    var errorObj = JsonConvert.DeserializeObject<dynamic>(errorContent);
+                    string errorMessage = errorObj?.message?.ToString() ?? "Cập nhật voucher thất bại";
+
+                    ModelState.AddModelError("", errorMessage);
+                }
+                catch
+                {
+                    ModelState.AddModelError("", "Cập nhật voucher thất bại: " + errorContent);
+                }
+
                 ViewData["PageNumber"] = pageNumber;
                 return View(model);
             }
         }
 
-        //Delete
+
+
+        // Delete
         [HttpGet]
         public async Task<IActionResult> Delete(int id, int pageNumber = 1)
         {
@@ -145,27 +161,35 @@ namespace WebSapaForestForStaff.Controllers
 
                     if (response.IsSuccessStatusCode)
                     {
-                        TempData["SuccessMessage"] = "Voucher deleted successfully.";
+                        TempData["SuccessMessage"] = "Voucher đã được xóa thành công.";
                         return RedirectToAction("Index", new { pageNumber });
                     }
                     else
                     {
-                        TempData["ErrorMessage"] = $"Delete failed. Server responded with status: {response.StatusCode}";
+                        TempData["ErrorMessage"] = $"Xóa voucher thất bại. Server trả về trạng thái: {response.StatusCode}";
                         return RedirectToAction("Index", new { pageNumber });
                     }
                 }
                 catch (Exception ex)
                 {
-                    TempData["ErrorMessage"] = $"An error occurred: {ex.Message}";
+                    TempData["ErrorMessage"] = $"Đã xảy ra lỗi: {ex.Message}";
                     return RedirectToAction("Index", new { pageNumber });
                 }
             }
         }
 
         [HttpGet]
-        public async Task<IActionResult> IsDelete(int pageNumber = 1, int pageSize = 10)
+        public async Task<IActionResult> IsDelete(
+    string? searchKeyword,
+    string? discountType,
+    string? status,
+    int pageNumber = 1,
+    int pageSize = 10)
         {
             var query = HttpUtility.ParseQueryString(string.Empty);
+            query["searchKeyword"] = searchKeyword;
+            query["discountType"] = discountType;
+            query["status"] = status;
             query["pageNumber"] = pageNumber.ToString();
             query["pageSize"] = pageSize.ToString();
 
@@ -178,15 +202,31 @@ namespace WebSapaForestForStaff.Controllers
 
             var jsonString = await response.Content.ReadAsStringAsync();
 
-            var pagedResult = JsonConvert.DeserializeObject<PagedResult<VoucherDto>>(jsonString);
+            // ✅ Giải mã JSON đúng cấu trúc
+            dynamic result = JsonConvert.DeserializeObject<dynamic>(jsonString);
 
-            // Truyền thông tin phân trang xuống view qua ViewBag
+            int totalCount = Convert.ToInt32(result?["totalCount"] ?? 0);
+
+            var vouchers = JsonConvert.DeserializeObject<List<VoucherDto>>(
+                Convert.ToString(result?["data"]) ?? "[]"
+            );
+
+            var pagedResult = new PagedResult<VoucherDto>
+            {
+                TotalCount = totalCount,
+                Data = vouchers,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
             ViewBag.PageNumber = pageNumber;
             ViewBag.PageSize = pageSize;
+            ViewBag.SearchKeyword = searchKeyword;
+            ViewBag.DiscountType = discountType;
+            ViewBag.Status = status;
 
             return View(pagedResult);
         }
-
 
 
         [HttpPost]
@@ -194,7 +234,6 @@ namespace WebSapaForestForStaff.Controllers
         {
             string apiUrl = $"https://localhost:7096/api/voucher/restore/{id}";
 
-            // Tạo request HTTP PUT không có body
             var request = new HttpRequestMessage(HttpMethod.Put, apiUrl);
 
             var response = await _httpClient.SendAsync(request);
@@ -211,8 +250,7 @@ namespace WebSapaForestForStaff.Controllers
             return RedirectToAction("IsDelete");
         }
 
-
-        //Create 
+        // Create 
         // GET: Vouchers/Create
         [HttpGet]
         public IActionResult Create()
@@ -239,6 +277,7 @@ namespace WebSapaForestForStaff.Controllers
                 var createdVoucher = await response.Content.ReadFromJsonAsync<VoucherDto>();
                 if (createdVoucher != null)
                 {
+                    TempData["SuccessMessage"] = "Tạo voucher thành công!";
                     return RedirectToAction("Details", new { id = createdVoucher.VoucherId });
                 }
                 else
@@ -253,7 +292,6 @@ namespace WebSapaForestForStaff.Controllers
 
                 try
                 {
-                    // Nếu là JSON và có field "message"
                     var errorObj = JsonConvert.DeserializeObject<dynamic>(errorContent);
                     string errorMessage = errorObj?.message?.ToString() ?? "Tạo voucher thất bại";
 
@@ -261,17 +299,11 @@ namespace WebSapaForestForStaff.Controllers
                 }
                 catch
                 {
-                    // Nếu không phải JSON, hiển thị toàn bộ lỗi dạng chuỗi
                     ModelState.AddModelError("", "Tạo voucher thất bại: " + errorContent);
                 }
 
                 return View(dto);
             }
         }
-
-
-
     }
-
-
 }

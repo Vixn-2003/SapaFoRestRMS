@@ -21,10 +21,11 @@ namespace SapaFoRestRMSAPI.Controllers
      [FromQuery] string? keyword,
      [FromQuery] string? discountType,
      [FromQuery] decimal? discountValue,
-     [FromQuery] DateOnly? startDate,
-     [FromQuery] DateOnly? endDate,
+     [FromQuery] DateTime? startDate,
+     [FromQuery] DateTime? endDate,
      [FromQuery] decimal? minOrderValue,
      [FromQuery] decimal? maxDiscount,
+     [FromQuery] string? status,
      [FromQuery] int pageNumber = 1,
      [FromQuery] int pageSize = 10)
         {
@@ -48,7 +49,7 @@ namespace SapaFoRestRMSAPI.Controllers
             var trimmedKeyword = string.IsNullOrWhiteSpace(keyword) ? null : keyword.Trim();
 
             var (data, totalCount) = await _voucherService.SearchFilterPaginateAsync(
-                trimmedKeyword, discountType, discountValue, startDate, endDate, minOrderValue, maxDiscount, pageNumber, pageSize);
+                trimmedKeyword, discountType, discountValue, startDate, endDate, minOrderValue, maxDiscount,status, pageNumber, pageSize);
 
             return Ok(new
             {
@@ -98,12 +99,21 @@ namespace SapaFoRestRMSAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var updated = await _voucherService.UpdateAsync(id, dto);
-            if (updated == null)
-                return NotFound(new { message = "Voucher not found." });
+            try
+            {
+                var updated = await _voucherService.UpdateAsync(id, dto);
+                if (updated == null)
+                    return NotFound(new { message = "Voucher không tồn tại." });
 
-            return Ok(updated);
+                return Ok(updated);
+            }
+            catch (Exception ex)
+            {
+                // 👇 Trả lỗi gọn gàng, chỉ message
+                return BadRequest(new { message = ex.Message });
+            }
         }
+
 
         //  [DELETE] api/voucher/{id}
         [HttpDelete("{id}")]
@@ -121,11 +131,12 @@ namespace SapaFoRestRMSAPI.Controllers
         public async Task<IActionResult> GetDeletedVouchers(
             [FromQuery] string? searchKeyword,
             [FromQuery] string? discountType,
+            [FromQuery] string? status,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
         {
             var (data, totalCount) = await _voucherService.GetDeletedVouchersAsync(
-                searchKeyword, discountType, pageNumber, pageSize);
+                searchKeyword, discountType,status, pageNumber, pageSize);
 
             return Ok(new
             {

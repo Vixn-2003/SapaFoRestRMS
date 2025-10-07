@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace DomainAccessLayer.Models;
 
@@ -15,13 +16,15 @@ public partial class Voucher
 
     public decimal DiscountValue { get; set; }
 
-    public DateOnly? StartDate { get; set; }
+    public DateTime? StartDate { get; set; }
 
-    public DateOnly? EndDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
     public decimal? MinOrderValue { get; set; }
 
     public decimal? MaxDiscount { get; set; }
+
+    [Required(ErrorMessage = "Vui lòng chọn trạng thái.")]
 
     public string? Status { get; set; }
 

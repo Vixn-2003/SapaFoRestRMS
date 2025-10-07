@@ -1,5 +1,4 @@
-
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using DataAccessLayer;
 using DataAccessLayer.Dbcontext;
 using BusinessAccessLayer.Mapping;
@@ -7,10 +6,8 @@ using BusinessAccessLayer.Services.Interfaces;
 using BusinessAccessLayer.Services;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DataAccessLayer.UnitOfWork;
-
 using BusinessLogicLayer.Services;
 using BusinessLogicLayer.Services.Interfaces;
-
 using SapaFoRestRMSAPI.Services;
 using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.Repositories;
@@ -22,40 +19,34 @@ namespace SapaFoRestRMSAPI
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            // ===== DbContext =====
             builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SapaFoRestRMSContext")));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("SapaFoRestRMSContext")));
 
-
+            // ===== Swagger =====
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                // ✅ BẮT BUỘC: khai báo SwaggerDoc có version hợp lệ
+                c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "SapaFoRestRMS API",
+                    Version = "v1",
+                    Description = "API documentation for SapaFoRestRMS system"
+                });
+            });
 
 
-            // MAPPING
-            builder.Services.AddAutoMapper(typeof(MappingProfile));
-
-
-            //Scope
-            builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
-            builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
-
-
-            //UnitOfWork
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-
-            // Add services to the container.
-
-            builder.Services.AddControllers();
-
-            // Add AutoMapper
+            // ===== AutoMapper =====
             builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
             builder.Services.AddAutoMapper(typeof(MappingProfile));
 
+            // ===== UnitOfWork =====
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // Add Repositories
+            // ===== Repository & Service DI =====
             builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
-
-            // Add Services
             builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
 
             builder.Services.AddScoped<IBrandBannerRepository, BrandBannerRepository>();
@@ -70,68 +61,50 @@ namespace SapaFoRestRMSAPI
             builder.Services.AddScoped<IEventRepository, EventRepository>();
             builder.Services.AddScoped<IEventService, EventService>();
 
-            //Voucher
             builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
             builder.Services.AddScoped<IVoucherService, VoucherService>();
 
-            //Payroll
             builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
             builder.Services.AddScoped<IPayrollService, PayrollService>();
 
             builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
             builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
-            //UnitOfWork
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-
             builder.Services.AddSingleton<CloudinaryService>();
 
-            builder.Services.AddSwaggerGen();
-            // Thêm CORS
+            // ===== Controllers =====
+            builder.Services.AddControllers();
+
+            // ===== CORS =====
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowFrontend",
-                    policy =>
-                    {
-                        policy.WithOrigins("https://localhost:5158")
-                              .AllowAnyHeader()
-                              .AllowAnyMethod();
-                    });
+                options.AddPolicy("AllowFrontend", policy =>
+                {
+                    policy.WithOrigins("https://localhost:5158")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                });
             });
+
             var app = builder.Build();
 
-
-
-
-            // Bật middleware Swagger
-
-            app.UseSwagger();
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-                    c.RoutePrefix = string.Empty; // để Swagger UI ở trang gốc: https://localhost:5001/
-                });
-
-
-            // Configure the HTTP request pipeline.
+            // ===== Swagger Middleware =====
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "SapaFoRestRMS API v1");
+                    // ⚠️ KHÔNG đặt RoutePrefix = string.Empty;
+                });
             }
 
 
-
-
+            // ===== Pipeline =====
             app.UseHttpsRedirection();
-            // Bật CORS
             app.UseCors("AllowFrontend");
             app.UseAuthorization();
-
-
             app.MapControllers();
-
             app.Run();
         }
     }
