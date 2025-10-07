@@ -19,7 +19,8 @@ namespace BusinessAccessLayer.Mapping
             CreateMap<MenuCategory, ManagerMenuCategoryDTO>();
 
             CreateMap<Combo, ManagerComboDTO>();
-            CreateMap<ComboItem, ManagerComboItemDTO>();
+            CreateMap<ComboItem, ManagerComboItemDTO>().ForMember(dest => dest.ManagerMenuItem,
+                      opt => opt.MapFrom(src => src.MenuItem)); ;
         }
     }
 }

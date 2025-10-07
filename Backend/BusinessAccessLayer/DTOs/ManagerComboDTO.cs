@@ -19,7 +19,7 @@ namespace BusinessAccessLayer.DTOs
         public decimal Price { get; set; }
 
         public bool? IsAvailable { get; set; }
-        public string? LinkImg { get; set; }
+        public string? ImageUrl { get; set; }
 
         public List<ManagerComboItemDTO?> ComboItems { get; set; } = new List<ManagerComboItemDTO?>();
     }
