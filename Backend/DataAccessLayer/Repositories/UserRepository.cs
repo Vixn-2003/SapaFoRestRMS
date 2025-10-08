@@ -23,17 +23,13 @@ namespace DataAccessLayer.Repositories
             _context = context;
         }
 
-        public async Task<User?> GetByIdAsync(int id)
-        public async Task<User?> GetByPhoneAsync(string phone)
-        {
+        public async Task<User?> GetByIdAsync(int id) { 
             return await _context.Users.FirstOrDefaultAsync(u => u.UserId == id && u.IsDeleted == false);
-            return await _context.Users.FirstOrDefaultAsync(u => u.Phone == phone);
         }
-
-        public async Task<bool> changePassword(int id, string newPassword)
-        public async Task<User> CreateAsync(User user)
+        
+       public async Task<bool> changePassword(int id, string newPassword)
         {
-            _context.Users.Add(user);
+           
             var user = await GetByIdAsync(id);
             if (user != null)
             {
@@ -87,10 +83,20 @@ namespace DataAccessLayer.Repositories
             }
 
         }
-
         public Task SaveChangesAsync()
         {
             throw new NotImplementedException();
+        }
+        public async Task<User?> GetByPhoneAsync(string phone)
+        {
+
+            return await _context.Users.FirstOrDefaultAsync(u => u.Phone == phone);
+        }
+
+        public async Task<User> CreateAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
             return user;
         }
     }

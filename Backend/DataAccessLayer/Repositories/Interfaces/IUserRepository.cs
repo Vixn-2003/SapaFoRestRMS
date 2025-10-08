@@ -16,6 +16,8 @@ namespace DataAccessLayer.Repositories.Interfaces
 
         Task<bool> changePassword(int id, string newPassword);
 
+        Task<User?> GetByPhoneAsync(string phone);
+        Task<User> CreateAsync(User user);
         public Task<User?> GetByIdAsync(int id)
         {
             throw new NotImplementedException();
@@ -24,8 +26,7 @@ namespace DataAccessLayer.Repositories.Interfaces
         public Task<IEnumerable<User>> GetAllAsync()
         {
             throw new NotImplementedException();
-        Task<User?> GetByPhoneAsync(string phone);
-        Task<User> CreateAsync(User user);
+       
         }
 
         public Task AddAsync(User entity)
