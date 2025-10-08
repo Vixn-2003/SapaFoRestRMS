@@ -7,36 +7,63 @@ using BusinessAccessLayer.Services.Interfaces;
 using BusinessAccessLayer.Services;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DataAccessLayer.UnitOfWork;
-
-using BusinessLogicLayer.Services;
-using BusinessLogicLayer.Services.Interfaces;
-using DataAccessLayer;
-using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories;
 using DataAccessLayer.Repositories.Interfaces;
-using DataAccessLayer.UnitOfWork;
-using DataAccessLayer.UnitOfWork.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using SapaFoRestRMSAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using DomainAccessLayer.Enums;
+using BusinessLogicLayer.Services.Interfaces;
+using BusinessLogicLayer.Services;
 namespace SapaFoRestRMSAPI
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static  void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
             builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SapaFoRestRMSContext")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            // Bật middleware Swagger
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "RMS API",
+                    Version = "v1"
+                });
 
+                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    Description = "Nhập token theo dạng: Bearer {token}"
+                });
+
+                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+       {
+           {
+             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                      {
+                           Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                      }
+                 },
+                  new string[] {}
+           }
+        });
+            });
 
             // MAPPING
             builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -100,18 +127,7 @@ namespace SapaFoRestRMSAPI
 
             builder.Services.AddSingleton<CloudinaryService>();
 
-            builder.Services.AddSwaggerGen();
-            // Thêm CORS
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowFrontend",
-                    policy =>
-                    {
-                        policy.WithOrigins("https://localhost:5158")
-                              .AllowAnyHeader()
-                              .AllowAnyMethod();
-                    });
-            });
+    
 
             builder.Services.AddAuthorization(options =>
             {
@@ -148,45 +164,17 @@ namespace SapaFoRestRMSAPI
                     };
                 });
 
-            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        // Khi chưa đăng nhập mà vào trang yêu cầu auth, hệ thống sẽ redirect về /Auth/Login
-        options.LoginPath = "/Auth/Login";
-
-        // Khi logout thì redirect về /Auth/Logout
-        options.LogoutPath = "/Auth/Logout";
-
-        // Khi không đủ quyền truy cập (AccessDenied) thì redirect về /Auth/AccessDenied
-        options.AccessDeniedPath = "/Auth/AccessDenied";
-
-        // Tên của cookie lưu trữ thông tin đăng nhập
-        options.Cookie.Name = "CellPhoneShop.Auth";
-
-        // Cookie chỉ cho server đọc (client JS không đọc được) → tăng bảo mật
-        options.Cookie.HttpOnly = true;
-
-        // Thời gian sống của cookie (ở đây là 1 tiếng)
-        options.ExpireTimeSpan = TimeSpan.FromHours(1);
-
-        // Nếu người dùng hoạt động trong thời gian hiệu lực → hệ thống tự động kéo dài thêm hạn cookie
-        options.SlidingExpiration = true;
-    });
-
            
+         
+
             var app = builder.Build();
 
 
 
 
-            // Bật middleware Swagger
+           
 
-            app.UseSwagger();
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-                    c.RoutePrefix = string.Empty; // để Swagger UI ở trang gốc: https://localhost:5001/
-                });
+         
 
 
             // Configure the HTTP request pipeline.
@@ -208,12 +196,12 @@ namespace SapaFoRestRMSAPI
 
             app.MapControllers();
 
-            // Seed admin user on startup
-            //using (var scope = app.Services.CreateScope())
-            //{
-            //    var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-            //    await SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
-            //}
+            //Seed admin user on startup
+            using (var scope = app.Services.CreateScope())
+            {
+                var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+              SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
+            }
 
             app.Run();
         }
