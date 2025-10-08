@@ -4,6 +4,7 @@ using DataAccessLayer.Dbcontext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    partial class SapaFoRestRmsContextModelSnapshot : ModelSnapshot
+    [Migration("20251006120720_AddVerificationCodesAndPasswordFlows")]
+    partial class AddVerificationCodesAndPasswordFlows
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -947,33 +950,6 @@ namespace DataAccessLayer.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles");
-
-                    b.HasData(
-                        new
-                        {
-                            RoleId = 1,
-                            RoleName = "Owner"
-                        },
-                        new
-                        {
-                            RoleId = 2,
-                            RoleName = "Admin"
-                        },
-                        new
-                        {
-                            RoleId = 3,
-                            RoleName = "Manager"
-                        },
-                        new
-                        {
-                            RoleId = 4,
-                            RoleName = "Staff"
-                        },
-                        new
-                        {
-                            RoleId = 5,
-                            RoleName = "Customer"
-                        });
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.SalaryRule", b =>

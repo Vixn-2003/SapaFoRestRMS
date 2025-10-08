@@ -87,6 +87,12 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
+    public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Announcement>(entity =>
@@ -505,6 +511,15 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasIndex(e => e.RoleName, "UQ__Roles__8A2B61607CE6A2D3").IsUnique();
 
             entity.Property(e => e.RoleName).HasMaxLength(50);
+
+            // Seed standard roles
+            entity.HasData(
+                new Role { RoleId = 1, RoleName = "Owner" },
+                new Role { RoleId = 2, RoleName = "Admin" },
+                new Role { RoleId = 3, RoleName = "Manager" },
+                new Role { RoleId = 4, RoleName = "Staff" },
+                new Role { RoleId = 5, RoleName = "Customer" }
+            );
         });
 
         modelBuilder.Entity<SalaryRule>(entity =>
@@ -658,6 +673,17 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.RoleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Users__RoleId__41EDCAC5");
+        });
+
+        modelBuilder.Entity<VerificationCode>(entity =>
+        {
+            entity.HasKey(e => e.VerificationCodeId);
+            entity.Property(e => e.Code).HasMaxLength(10);
+            entity.Property(e => e.Purpose).HasMaxLength(50);
+            entity.Property(e => e.IsUsed).HasDefaultValue(false);
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Voucher>(entity =>

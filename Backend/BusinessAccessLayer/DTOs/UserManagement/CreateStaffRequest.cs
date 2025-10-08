@@ -1,14 +1,10 @@
-﻿using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BusinessAccessLayer.DTOs.Auth
+namespace BusinessAccessLayer.DTOs.UserManagement
 {
-    public class RegisterRequest
+    public class CreateStaffRequest
     {
         [Required]
         [StringLength(100)]
@@ -24,7 +20,17 @@ namespace BusinessAccessLayer.DTOs.Auth
         public string? Phone { get; set; }
 
         [Required]
-        public Role Role { get; set; }
+        public DateOnly HireDate { get; set; }
 
+        [Required]
+        public decimal SalaryBase { get; set; }
+
+        // Positions to assign to this staff
+        public List<int> PositionIds { get; set; } = new();
+
+        // Optional explicit role id; if null, role will be resolved by name "Staff"
+        public int? RoleId { get; set; }
     }
 }
+
+
