@@ -9,11 +9,10 @@ public partial class Staff
 
     public int UserId { get; set; }
 
-    public string Position { get; set; } = null!;
-
     public DateOnly HireDate { get; set; }
 
     public decimal SalaryBase { get; set; }
+    public int Status { get; set; } // add property status
 
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
@@ -22,4 +21,6 @@ public partial class Staff
     public virtual ICollection<Shift> Shifts { get; set; } = new List<Shift>();
 
     public virtual User User { get; set; } = null!;
+
+    public virtual ICollection<Position> Positions { get; set; } = new List<Position>();
 }

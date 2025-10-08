@@ -67,6 +67,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<Position> Positions { get; set; }
+
     public virtual DbSet<SalaryRule> SalaryRules { get; set; }
 
     public virtual DbSet<Shift> Shifts { get; set; }
@@ -543,14 +545,43 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.StaffId).HasName("PK__Staffs__96D4AB17BB2B00FA");
 
-            entity.Property(e => e.Position).HasMaxLength(50);
             entity.Property(e => e.SalaryBase).HasColumnType("decimal(18, 2)");
-
+            entity.Property(e => e.Status).HasDefaultValue(0);
             entity.HasOne(d => d.User).WithMany(p => p.Staff)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Staffs__UserId__3E1D39E1");
         });
+
+        modelBuilder.Entity<Position>(entity =>
+        {
+            entity.HasKey(e => e.PositionId).HasName("PK__Position__60BB9D7D");
+            entity.Property(e => e.PositionName).HasMaxLength(100);
+            entity.Property(e => e.Status).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<Staff>()
+            .HasMany(s => s.Positions)
+            .WithMany(p => p.Staff)
+            .UsingEntity<Dictionary<string, object>>(
+                "StaffPosition",
+                j => j
+                    .HasOne<Position>()
+                    .WithMany()
+                    .HasForeignKey("PositionId")
+                    .HasConstraintName("FK_StaffPosition_Position")
+                    .OnDelete(DeleteBehavior.Cascade),
+                j => j
+                    .HasOne<Staff>()
+                    .WithMany()
+                    .HasForeignKey("StaffId")
+                    .HasConstraintName("FK_StaffPosition_Staff")
+                    .OnDelete(DeleteBehavior.Cascade),
+                j =>
+                {
+                    j.HasKey("StaffId", "PositionId");
+                    j.ToTable("StaffPositions");
+                });
 
         modelBuilder.Entity<StockTransaction>(entity =>
         {
@@ -624,9 +655,8 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.PasswordHash).HasMaxLength(200);
             entity.Property(e => e.Phone).HasMaxLength(20);
-            entity.Property(e => e.Status)
-                .HasMaxLength(20)
-                .HasDefaultValue("Active");
+            entity.Property(e => e.Status).HasDefaultValue(0);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
 
             entity.HasOne(d => d.Role).WithMany(p => p.Users)
                 .HasForeignKey(d => d.RoleId)

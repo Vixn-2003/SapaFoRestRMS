@@ -698,6 +698,33 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Payroll", (string)null);
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Position", b =>
+                {
+                    b.Property<int>("PositionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PositionId"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PositionName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("PositionId")
+                        .HasName("PK__Position__60BB9D7D");
+
+                    b.ToTable("Positions");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.PurchaseOrder", b =>
                 {
                     b.Property<int>("PurchaseOrderId")
@@ -1055,13 +1082,13 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateOnly>("HireDate")
                         .HasColumnType("date");
 
-                    b.Property<string>("Position")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<decimal>("SalaryBase")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
@@ -1241,6 +1268,15 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
 
+                    b.Property<int?>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DeletedBy")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1250,6 +1286,17 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool?>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedBy")
+                        .HasColumnType("int");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -1263,11 +1310,10 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Status")
+                    b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Active");
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.HasKey("UserId")
                         .HasName("PK__Users__1788CC4C331B3280");
@@ -1756,20 +1802,6 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK__Users__RoleId__41EDCAC5");
 
                     b.Navigation("Role");
-                });
-
-            modelBuilder.Entity("DomainAccessLayer.Models.ZaloMessage", b =>
-                {
-                    b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
-                        .WithMany()
-                        .HasForeignKey("ReservationId");
-
-                    b.Navigation("Reservation");
-                });
-
-            modelBuilder.Entity("DomainAccessLayer.Models.Area", b =>
-                {
-                    b.Navigation("Tables");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Combo", b =>
