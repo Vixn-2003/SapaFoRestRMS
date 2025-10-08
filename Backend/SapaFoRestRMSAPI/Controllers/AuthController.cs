@@ -28,8 +28,19 @@ namespace SapaFoRestRMSAPI.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginRequest request, CancellationToken ct)
         {
-            var result = await _authService.LoginAsync(request);
-            return Ok(result);
+            try
+            {
+                var response = await _authService.LoginAsync(request);
+                return Ok(response);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while logging in" });
+            }
         }
 
         [HttpPost("google-login")]

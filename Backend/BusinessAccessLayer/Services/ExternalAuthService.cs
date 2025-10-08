@@ -60,7 +60,8 @@ namespace BusinessAccessLayer.Services
                 UserId = user.UserId,
                 FullName = user.FullName ?? string.Empty,
                 Email = user.Email,
-                Role = (Role)user.Role,
+                RoleId = user.RoleId,
+                RoleName = user.Role?.RoleName ?? string.Empty,
                 Token = GenerateJwtToken(user)
             };
         }
@@ -83,7 +84,7 @@ namespace BusinessAccessLayer.Services
                 new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
                 new Claim("userId", user.UserId.ToString()),
                 new Claim("email", user.Email),
-                new Claim(ClaimTypes.Role, ((Role)user.Role).ToString()),
+                new Claim(ClaimTypes.Role, user.Role?.RoleName ?? user.RoleId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
