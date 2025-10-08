@@ -73,18 +73,13 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(new { message = "Payroll deleted successfully" });
         }
 
-        // ✅ SEARCH: api/Payroll/search?name=...
-        [HttpGet("search")]
-        public async Task<IActionResult> Search([FromQuery] string name)
-        {
-            var result = await _payrollService.SearchAsync(name);
-            return Ok(result);
-        }
-
-        // ✅ FILTER: api/Payroll/filter?... (lọc và sắp xếp)
-        [HttpGet("filter")]
-        public async Task<IActionResult> Filter(
-            [FromQuery] string? sortBy,
+        // GET: api/Payroll/search-filter-paged
+        [HttpGet("getAllPayroll")]
+        public async Task<IActionResult> SearchFilterSortPaged(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? name = null,
+            [FromQuery] string? sortBy = null,
             [FromQuery] bool descending = false,
             [FromQuery] decimal? minBaseSalary = null,
             [FromQuery] decimal? maxBaseSalary = null,
@@ -98,7 +93,10 @@ namespace SapaFoRestRMSAPI.Controllers
             [FromQuery] decimal? maxNetSalary = null,
             [FromQuery] string? monthYear = null)
         {
-            var result = await _payrollService.FilterAsync(
+            var (data, totalCount) = await _payrollService.SearchFilterSortPagedAsync(
+                pageNumber,
+                pageSize,
+                name,
                 sortBy,
                 descending,
                 minBaseSalary,
@@ -113,27 +111,14 @@ namespace SapaFoRestRMSAPI.Controllers
                 maxNetSalary,
                 monthYear);
 
-            return Ok(result);
-        }
-
-        // ✅ PAGINATION: api/Payroll/paged?pageNumber=1&pageSize=10&name=...
-        [HttpGet("paged")]
-        public async Task<IActionResult> GetPaged(
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10,
-            [FromQuery] string? name = null,
-            [FromQuery] string? sortBy = null,
-            [FromQuery] bool descending = false)
-        {
-            var (data, total) = await _payrollService.GetPagedAsync(pageNumber, pageSize, name, sortBy, descending);
-
             return Ok(new
             {
-                totalRecords = total,
+                totalRecords = totalCount,
                 pageNumber,
                 pageSize,
                 data
             });
         }
+
     }
 }

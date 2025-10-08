@@ -146,7 +146,6 @@ namespace WebSapaForestForStaff.Controllers
         }
 
 
-
         // Delete
         [HttpGet]
         public async Task<IActionResult> Delete(int id, int pageNumber = 1)

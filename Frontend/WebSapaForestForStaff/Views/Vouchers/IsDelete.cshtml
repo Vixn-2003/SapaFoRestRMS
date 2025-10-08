@@ -144,17 +144,14 @@
                     <td>@string.Format("{0:N0} VND", voucher.MinOrderValue)</td>
                     <td>@string.Format("{0:N0} VND", voucher.MaxDiscount)</td>
                     <td class="text-nowrap">
-                        <a class="btn btn-sm btn-info" href="@Url.Action("Details", "Vouchers", new { id = voucher.VoucherId, pageNumber = Model.PageNumber })">
-                            <i class="mdi mdi-eye"></i>
-                        </a>
-                        <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", "Vouchers", new { id = voucher.VoucherId, pageNumber = Model.PageNumber })">
-                            <i class="mdi mdi-pencil"></i>
-                        </a>
-                        <a class="btn btn-sm btn-danger" href="@Url.Action("Delete", "Vouchers", new { id = voucher.VoucherId })"
-                           onclick="return confirm('Bạn có chắc chắn muốn xóa voucher này không?');">
-                            <i class="mdi mdi-delete"></i>
-                        </a>
+                        <form asp-action="Restore" asp-controller="Vouchers" method="post" style="display:inline;">
+                            <input type="hidden" name="id" value="@voucher.VoucherId" />
+                            <button type="submit" class="btn btn-sm btn-success" title="Khôi phục">
+                                <i class="mdi mdi-restore"></i>
+                            </button>
+                        </form>
                     </td>
+
                 </tr>
             }
         }

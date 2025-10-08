@@ -36,6 +36,14 @@ namespace BusinessAccessLayer.Services
 
         public async Task AddAsync(PayrollDTO dto)
         {
+            ValidatePayrollDTO(dto);
+
+            var exists = await _payrollRepository
+                .AnyAsync(x => x.StaffId == dto.StaffId && x.MonthYear == dto.MonthYear);
+
+            if (exists)
+                throw new InvalidOperationException("Bảng lương đã tồn tại cho nhân viên trong tháng này.");
+
             var entity = new Payroll
             {
                 StaffId = dto.StaffId,
@@ -44,8 +52,8 @@ namespace BusinessAccessLayer.Services
                 TotalWorkDays = dto.TotalWorkDays,
                 TotalBonus = dto.TotalBonus,
                 TotalPenalty = dto.TotalPenalty,
-                NetSalary = dto.NetSalary,
-                Status = dto.Status
+                NetSalary = dto.BaseSalary + dto.TotalBonus - dto.TotalPenalty,
+                Status = string.IsNullOrEmpty(dto.Status) ? PayrollStatus.Draft : dto.Status
             };
 
             await _payrollRepository.AddAsync(entity);
@@ -54,8 +62,23 @@ namespace BusinessAccessLayer.Services
 
         public async Task UpdateAsync(PayrollDTO dto)
         {
+            ValidatePayrollDTO(dto);
+
             var entity = await _payrollRepository.GetByIdAsync(dto.PayrollId);
-            if (entity == null) return;
+            if (entity == null)
+                throw new KeyNotFoundException("Bảng lương không tồn tại.");
+
+            // Chỉ cho phép sửa khi trạng thái là Draft hoặc Rejected
+            if (entity.Status != PayrollStatus.Draft && entity.Status != PayrollStatus.Rejected)
+                throw new InvalidOperationException("Chỉ được sửa bảng lương ở trạng thái mới tạo hoặc bị từ chối.");
+
+            var exists = await _payrollRepository.AnyAsync(x =>
+                x.StaffId == dto.StaffId &&
+                x.MonthYear == dto.MonthYear &&
+                x.PayrollId != dto.PayrollId
+            );
+            if (exists)
+                throw new InvalidOperationException("Đã có bảng lương cho nhân viên này trong tháng đã chọn.");
 
             entity.StaffId = dto.StaffId;
             entity.MonthYear = dto.MonthYear;
@@ -63,12 +86,38 @@ namespace BusinessAccessLayer.Services
             entity.TotalWorkDays = dto.TotalWorkDays;
             entity.TotalBonus = dto.TotalBonus;
             entity.TotalPenalty = dto.TotalPenalty;
-            entity.NetSalary = dto.NetSalary;
-            entity.Status = dto.Status;
+            entity.NetSalary = dto.BaseSalary + dto.TotalBonus - dto.TotalPenalty;
+            entity.Status = string.IsNullOrEmpty(dto.Status) ? entity.Status : dto.Status;
 
             await _payrollRepository.UpdateAsync(entity);
             await _payrollRepository.SaveChangesAsync();
         }
+
+
+
+
+        private void ValidatePayrollDTO(PayrollDTO dto)
+        {
+            if (dto.StaffId <= 0)
+                throw new ArgumentException("StaffId phải là số nguyên dương.");
+
+            if (string.IsNullOrEmpty(dto.MonthYear) || dto.MonthYear.Length != 6)
+                throw new ArgumentException("MonthYear phải có định dạng 'yyyyMM'.");
+
+            if (dto.BaseSalary < 0)
+                throw new ArgumentException("BaseSalary không được nhỏ hơn 0.");
+
+            if (dto.TotalBonus < 0)
+                throw new ArgumentException("TotalBonus không được nhỏ hơn 0.");
+
+            if (dto.TotalPenalty < 0)
+                throw new ArgumentException("TotalPenalty không được nhỏ hơn 0.");
+
+            if (dto.TotalWorkDays < 0 || dto.TotalWorkDays > 31)
+                throw new ArgumentException("TotalWorkDays phải trong khoảng từ 0 đến 31.");
+        }
+
+
 
         public async Task DeleteAsync(int id)
         {
@@ -76,49 +125,46 @@ namespace BusinessAccessLayer.Services
             await _payrollRepository.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<PayrollDTO>> SearchAsync(string staffName)
+        public async Task<(IEnumerable<PayrollDTO> Data, int TotalCount)> SearchFilterSortPagedAsync(
+     int pageNumber,
+     int pageSize,
+     string? staffName = null,
+     string? sortBy = null,
+     bool descending = false,
+     decimal? minBaseSalary = null,
+     decimal? maxBaseSalary = null,
+     int? minWorkDays = null,
+     int? maxWorkDays = null,
+     decimal? minBonus = null,
+     decimal? maxBonus = null,
+     decimal? minPenalty = null,
+     decimal? maxPenalty = null,
+     decimal? minNetSalary = null,
+     decimal? maxNetSalary = null,
+     string? monthYear = null)
         {
-            var results = await _payrollRepository.SearchAsync(staffName);
-            return results.Select(MapToDTO);
-        }
-
-        public async Task<IEnumerable<PayrollDTO>> FilterAsync(
-            string? sortBy,
-            bool descending,
-            decimal? minBaseSalary,
-            decimal? maxBaseSalary,
-            int? minWorkDays,
-            int? maxWorkDays,
-            decimal? minBonus,
-            decimal? maxBonus,
-            decimal? minPenalty,
-            decimal? maxPenalty,
-            decimal? minNetSalary,
-            decimal? maxNetSalary,
-            string? monthYear)
-        {
-            var results = await _payrollRepository.FilterAsync(
-                sortBy, descending,
-                minBaseSalary, maxBaseSalary,
-                minWorkDays, maxWorkDays,
-                minBonus, maxBonus,
-                minPenalty, maxPenalty,
-                minNetSalary, maxNetSalary,
+            var (entities, totalCount) = await _payrollRepository.SearchFilterPagedAsync(
+                pageNumber,
+                pageSize,
+                staffName,
+                sortBy,
+                descending,
+                minBaseSalary,
+                maxBaseSalary,
+                minWorkDays,
+                maxWorkDays,
+                minBonus,
+                maxBonus,
+                minPenalty,
+                maxPenalty,
+                minNetSalary,
+                maxNetSalary,
                 monthYear);
 
-            return results.Select(MapToDTO);
+            var dtos = entities.Select(MapToDTO);
+            return (dtos, totalCount);
         }
 
-        public async Task<(IEnumerable<PayrollDTO> Data, int TotalCount)> GetPagedAsync(
-            int pageNumber,
-            int pageSize,
-            string? staffName,
-            string? sortBy,
-            bool descending)
-        {
-            var (data, total) = await _payrollRepository.GetPagedAsync(pageNumber, pageSize, staffName, sortBy, descending);
-            return (data.Select(MapToDTO), total);
-        }
 
         private PayrollDTO MapToDTO(Payroll entity)
         {

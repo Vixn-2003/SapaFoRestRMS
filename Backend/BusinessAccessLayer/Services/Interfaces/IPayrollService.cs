@@ -16,30 +16,22 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task DeleteAsync(int id);
 
         // Search theo StaffName
-        Task<IEnumerable<PayrollDTO>> SearchAsync(string staffName);
-
-        // Filter nâng cao
-        Task<IEnumerable<PayrollDTO>> FilterAsync(
-            string? sortBy,
-            bool descending,
-            decimal? minBaseSalary,
-            decimal? maxBaseSalary,
-            int? minWorkDays,
-            int? maxWorkDays,
-            decimal? minBonus,
-            decimal? maxBonus,
-            decimal? minPenalty,
-            decimal? maxPenalty,
-            decimal? minNetSalary,
-            decimal? maxNetSalary,
-            string? monthYear);
-
-        // Phân trang
-        Task<(IEnumerable<PayrollDTO> Data, int TotalCount)> GetPagedAsync(
-            int pageNumber,
-            int pageSize,
-            string? staffName,
-            string? sortBy,
-            bool descending);
+        Task<(IEnumerable<PayrollDTO> Data, int TotalCount)> SearchFilterSortPagedAsync(
+         int pageNumber,
+         int pageSize,
+         string? staffName = null,
+         string? sortBy = null,
+         bool descending = false,
+         decimal? minBaseSalary = null,
+         decimal? maxBaseSalary = null,
+         int? minWorkDays = null,
+         int? maxWorkDays = null,
+         decimal? minBonus = null,
+         decimal? maxBonus = null,
+         decimal? minPenalty = null,
+         decimal? maxPenalty = null,
+         decimal? minNetSalary = null,
+         decimal? maxNetSalary = null,
+         string? monthYear = null);
     }
 }
