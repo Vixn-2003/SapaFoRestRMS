@@ -22,7 +22,13 @@
     <strong>SĐT:</strong> @reservation.CustomerPhone <br />
     <strong>Ngày:</strong> @reservation.ReservationDate.ToString("dd/MM/yyyy") <br />
     <strong>Ca:</strong> @reservation.TimeSlot <br />
-    <strong>Số khách:</strong> @reservation.NumberOfGuests
+    <strong>Số khách:</strong> @reservation.NumberOfGuests<br />
+    <strong>Bàn chọn lần xử lý trước:</strong>
+    @(
+        reservation.Tables != null && reservation.Tables.Any()
+        ? string.Join(", ", reservation.Tables.Select(t => t.TableNumber))
+        : "Không có bàn nào được đặt ở lần xử lý trước đó"
+        )
 </div>
 
 <form asp-action="AssignTablesPost" method="post">

@@ -25,15 +25,87 @@ namespace DataAccessLayer.Repositories
             await _context.SaveChangesAsync();
             return reservation;
         }
-        public async Task<List<Reservation>> GetPendingAndConfirmedReservationsAsync()
+      public async Task<(List<Reservation> Data, int TotalCount)> GetPendingAndConfirmedReservationsAsync(
+    string? status = null,
+    DateTime? date = null,
+    string? customerName = null,
+    string? phone = null,
+    string? timeSlot = null,
+    int page = 1,
+    int pageSize = 10)
+{
+    var query = _context.Reservations
+        .Include(r => r.Customer)
+            .ThenInclude(c => c.User)
+        .Include(r => r.ReservationTables)
+        .AsQueryable();
+
+    // Lọc trạng thái
+    if (!string.IsNullOrEmpty(status))
+        query = query.Where(r => r.Status == status);
+    else
+        query = query.Where(r => r.Status == "Pending" || r.Status == "Confirmed");
+
+    // Lọc theo ngày
+    if (date.HasValue)
+        query = query.Where(r => r.ReservationDate.Date == date.Value.Date);
+
+    // Lọc theo ca (TimeSlot)
+    if (!string.IsNullOrEmpty(timeSlot))
+        query = query.Where(r => r.TimeSlot == timeSlot);
+
+    // Lọc theo tên khách hàng
+    if (!string.IsNullOrEmpty(customerName))
+        query = query.Where(r => r.CustomerNameReservation.Contains(customerName));
+
+    // Lọc theo số điện thoại khách hàng
+    if (!string.IsNullOrEmpty(phone))
+        query = query.Where(r => r.Customer.User.Phone.Contains(phone));
+
+    // Tổng số bản ghi
+    var totalCount = await query.CountAsync();
+
+    // Phân trang
+    var data = await query
+        .OrderByDescending(r => r.ReservationDate)
+        .ThenBy(r => r.ReservationTime)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .ToListAsync();
+
+    return (data, totalCount);
+}
+        public async Task<object?> GetReservationDetailAsync(int reservationId)
         {
-            return await _context.Reservations
+            var reservation = await _context.Reservations
                 .Include(r => r.Customer)
                     .ThenInclude(c => c.User)
-                .Where(r => r.Status == "Pending" || r.Status == "Confirmed")
                 .Include(r => r.ReservationTables)
-                .ToListAsync();
+                .ThenInclude(rt => rt.Table)
+                .FirstOrDefaultAsync(r => r.ReservationId == reservationId);
+
+            if (reservation == null) return null;
+
+            return new
+            {
+                reservation.ReservationId,
+                CustomerName = reservation.CustomerNameReservation,
+                CustomerPhone = reservation.Customer.User.Phone,
+                reservation.ReservationDate,
+                reservation.ReservationTime,
+                reservation.TimeSlot,
+                reservation.NumberOfGuests,
+                reservation.Status,
+                Tables = reservation.ReservationTables
+            .Select(rt => new
+            {
+                rt.Table.TableId,
+                rt.Table.TableNumber
+            })
+            .ToList()
+            };
         }
+
 
         public async Task<List<Area>> GetAllAreasWithTablesAsync()
         {

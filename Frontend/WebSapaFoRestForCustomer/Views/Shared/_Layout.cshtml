@@ -224,7 +224,20 @@
         });
 
         // AJAX submit form đặt bàn trong modal
-        $(document).ready(function () {
+              $(document).ready(function () {
+
+            // Khi mở modal, load form mới từ server
+            $('#reservationModal').on('show.bs.modal', function () {
+                const $modalBody = $(this).find('.modal-body');
+                $.get('/Reservation/_ReservationForm', function (html) {
+                    $modalBody.html(html);
+                });
+            });
+
+            // Bỏ binding cũ trước khi bind lại
+            $(document).off('submit', '#reservationForm');
+
+            // Bind sự kiện submit
             $(document).on('submit', '#reservationForm', function (e) {
                 e.preventDefault();
                 var $form = $(this);
@@ -237,13 +250,13 @@
                     data: $form.serialize(),
                     headers: { 'RequestVerificationToken': token },
                     success: function (result) {
-                        // Nếu server trả PartialView có lỗi validation
-                        if ($(result).find('.text-danger').length > 0) {
-                            $('#reservationModal .modal-body').html(result);
-                        } else {
+                        // Nếu server trả JSON
+                        if (result && result.success !== undefined) {
                             $('#reservationModal').modal('hide');
-                            alert('Đặt bàn thành công!');
-                            $form[0].reset();
+                            alert(result.message || 'Đặt bàn thành công!');
+                        } else {
+                            // Nếu server trả PartialView (validation lỗi)
+                            $('#reservationModal .modal-body').html(result);
                         }
                     },
                     error: function (xhr) {
@@ -252,7 +265,9 @@
                     }
                 });
             });
+
         });
+
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

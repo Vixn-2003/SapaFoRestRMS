@@ -10,7 +10,16 @@ namespace DataAccessLayer.Repositories.Interfaces
     public interface IReservationRepository
     {
         Task<Reservation> CreateAsync(Reservation reservation);
-        Task<List<Reservation>> GetPendingAndConfirmedReservationsAsync();
+        Task<(List<Reservation> Data, int TotalCount)> GetPendingAndConfirmedReservationsAsync(
+    string? status = null,
+    DateTime? date = null,
+    string? customerName = null,
+    string? phone = null,
+    string? timeSlot = null,
+    int page = 1,
+    int pageSize = 10);
+        Task<object?> GetReservationDetailAsync(int reservationId);
+
         Task<List<Area>> GetAllAreasWithTablesAsync();
         Task<List<int>> GetBookedTableIdsAsync(DateTime reservationDate, string timeSlot);
         Task<Reservation?> GetReservationByIdAsync(int reservationId);

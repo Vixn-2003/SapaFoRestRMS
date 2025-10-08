@@ -32,9 +32,10 @@ namespace BusinessAccessLayer.Services
                 user = new User
                 {
                     FullName = dto.CustomerName,
-                    PasswordHash = "666666", 
+                    Email = $"customer_{dto.Phone}@gmail.com",
+                    PasswordHash = "666666",
                     Phone = dto.Phone,
-                    RoleId = 2 
+                    RoleId = 2
                 };
                 user = await _userRepository.CreateAsync(user);
             }
@@ -61,7 +62,7 @@ namespace BusinessAccessLayer.Services
                 CustomerNameReservation = dto.CustomerName,
                 CustomerId = customer.CustomerId,
                 ReservationDate = dto.ReservationDate.Date, // chỉ ngày
-                ReservationTime = dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay, 
+                ReservationTime = dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay,
                 TimeSlot = GetTimeSlot(dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay),
                 NumberOfGuests = dto.NumberOfGuests,
                 Notes = dto.Notes,
@@ -70,22 +71,45 @@ namespace BusinessAccessLayer.Services
 
             return await _reservationRepository.CreateAsync(reservation);
         }
-        public async Task<object> GetPendingAndConfirmedReservationsAsync()
+        public async Task<object> GetPendingAndConfirmedReservationsAsync(
+     string? status = null,
+     DateTime? date = null,
+     string? customerName = null,
+     string? phone = null,
+     string? timeSlot = null,
+     int page = 1,
+     int pageSize = 10)
         {
-            var reservations = await _reservationRepository.GetPendingAndConfirmedReservationsAsync();
-            return reservations.Select(r => new
+            var (reservations, totalCount) = await _reservationRepository
+                .GetPendingAndConfirmedReservationsAsync(status, date, customerName, phone, timeSlot, page, pageSize);
+
+            var result = new
             {
-                r.ReservationId,
-                CustomerName = r.CustomerNameReservation,
-                CustomerPhone = r.Customer.User.Phone,
-                r.ReservationDate,
-                r.ReservationTime,
-                r.TimeSlot,
-                r.NumberOfGuests,
-                r.Status,
-                TableIds = r.ReservationTables.Select(rt => rt.TableId).ToList()
-            });
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                Data = reservations.Select(r => new
+                {
+                    r.ReservationId,
+                    CustomerName = r.CustomerNameReservation,
+                    CustomerPhone = r.Customer?.User?.Phone,
+                    r.ReservationDate,
+                    r.ReservationTime,
+                    r.TimeSlot,
+                    r.NumberOfGuests,
+                    r.Status,
+                    TableIds = r.ReservationTables.Select(rt => rt.TableId).ToList()
+                }).ToList()
+            };
+
+            return result;
         }
+        public async Task<object?> GetReservationDetailAsync(int reservationId)
+        {
+            return await _reservationRepository.GetReservationDetailAsync(reservationId);
+        }
+
 
         public async Task<object> GetAllTablesGroupedByAreaAsync()
         {

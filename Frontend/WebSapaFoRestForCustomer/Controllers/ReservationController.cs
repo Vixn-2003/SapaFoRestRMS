@@ -22,7 +22,7 @@ namespace WebSapaFoRestForCustomer.Controllers
         public async Task<IActionResult> Add(ReservationViewModel model)
         {
             if (!ModelState.IsValid)
-                return PartialView("_ReservationForm", model);
+                return PartialView("_ReservationForm", model); 
 
             var dto = new
             {
@@ -41,8 +41,7 @@ namespace WebSapaFoRestForCustomer.Controllers
 
             if (response.IsSuccessStatusCode)
             {
-                // Trả về JSON cho AJAX
-                return Json(new { success = true });
+                return Json(new { success = true, message = "Đặt bàn thành công" });
             }
             else
             {
@@ -50,6 +49,7 @@ namespace WebSapaFoRestForCustomer.Controllers
                 return PartialView("_ReservationForm", model);
             }
         }
+
 
 
     }

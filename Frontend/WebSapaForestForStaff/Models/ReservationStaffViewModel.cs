@@ -9,7 +9,8 @@
         public string TimeSlot { get; set; } = string.Empty;
         public int NumberOfGuests { get; set; }
         public string Status { get; set; } = string.Empty;
-        public List<int> TableIds { get; set; } = new();
+        public List<TableInfoViewModel> Tables { get; set; } = new();
+
         public bool RequireDeposit { get; set; }
         public decimal? DepositAmount { get; set; }
     }

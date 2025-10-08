@@ -17,10 +17,29 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpGet("reservations/pending-confirmed")]
-        public async Task<IActionResult> GetPendingAndConfirmedReservations()
+        public async Task<IActionResult> GetPendingAndConfirmedReservations(
+    [FromQuery] string? status,
+    [FromQuery] DateTime? date,
+    [FromQuery] string? customerName,
+    [FromQuery] string? phone,
+    [FromQuery] string? timeSlot,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 10)
         {
-            var result = await _service.GetPendingAndConfirmedReservationsAsync();
+            var result = await _service.GetPendingAndConfirmedReservationsAsync(
+                status, date, customerName, phone, timeSlot, page, pageSize);
+
             return Ok(result);
+        }
+
+        [HttpGet("reservations/{id}")]
+        public async Task<IActionResult> GetReservationDetail(int id)
+        {
+            var reservation = await _service.GetReservationDetailAsync(id);
+            if (reservation == null)
+                return NotFound(new { message = "Không tìm thấy đặt bàn này." });
+
+            return Ok(reservation);
         }
 
         [HttpGet("tables/by-area-all")]

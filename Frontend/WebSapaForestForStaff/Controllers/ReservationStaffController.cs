@@ -15,23 +15,74 @@ namespace WebSapaForestForStaff.Controllers
             _client.BaseAddress = new Uri("https://localhost:7096/api/");
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(
+             string? status,
+             string? customerName,
+             string? phone,
+             DateTime? reservationDate,
+             string? timeSlot,
+             int page = 1,
+             int pageSize = 10)
         {
-            var response = await _client.GetAsync("ReservationStaff/reservations/pending-confirmed");
-            if (!response.IsSuccessStatusCode) return View(new List<ReservationStaffViewModel>());
+            // Build query string safely
+            var queryParts = new List<string>();
+            if (!string.IsNullOrEmpty(status)) queryParts.Add($"status={Uri.EscapeDataString(status)}");
+            if (!string.IsNullOrEmpty(customerName)) queryParts.Add($"customerName={Uri.EscapeDataString(customerName)}");
+            if (!string.IsNullOrEmpty(phone)) queryParts.Add($"phone={Uri.EscapeDataString(phone)}");
+            if (reservationDate.HasValue) queryParts.Add($"date={reservationDate:yyyy-MM-dd}");
+            if (!string.IsNullOrEmpty(timeSlot)) queryParts.Add($"timeSlot={Uri.EscapeDataString(timeSlot)}");
+            queryParts.Add($"page={page}");
+            queryParts.Add($"pageSize={pageSize}");
+
+            var queryString = string.Join("&", queryParts);
+            var response = await _client.GetAsync($"ReservationStaff/reservations/pending-confirmed?{queryString}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // trả model rỗng để view xử lý
+                var empty = new ReservationListViewModel
+                {
+                    TotalCount = 0,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalPages = 0,
+                    Data = new List<ReservationStaffViewModel>()
+                };
+                // giữ lại filter
+                ViewBag.Status = status;
+                ViewBag.CustomerName = customerName;
+                ViewBag.Phone = phone;
+                ViewBag.ReservationDate = reservationDate?.ToString("yyyy-MM-dd");
+                ViewBag.TimeSlot = timeSlot;
+                return View(empty);
+            }
 
             var json = await response.Content.ReadAsStringAsync();
-            var reservations = JsonConvert.DeserializeObject<List<ReservationStaffViewModel>>(json);
-            return View(reservations);
+            var result = JsonConvert.DeserializeObject<ReservationListViewModel>(json)
+                         ?? new ReservationListViewModel { Data = new List<ReservationStaffViewModel>() };
+
+            // Giữ lại filter để hiển thị lại trên view
+            ViewBag.Status = status;
+            ViewBag.CustomerName = customerName;
+            ViewBag.Phone = phone;
+            ViewBag.ReservationDate = reservationDate?.ToString("yyyy-MM-dd");
+            ViewBag.TimeSlot = timeSlot;
+
+            return View(result);
         }
+
 
         public async Task<IActionResult> AssignTables(int id)
         {
-            var resResponse = await _client.GetAsync("ReservationStaff/reservations/pending-confirmed");
+            var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{id}");
+            if (!resResponse.IsSuccessStatusCode)
+                return NotFound();
+
             var resJson = await resResponse.Content.ReadAsStringAsync();
-            var reservations = JsonConvert.DeserializeObject<List<ReservationStaffViewModel>>(resJson);
-            var reservation = reservations.FirstOrDefault(r => r.ReservationId == id);
+            var reservation = JsonConvert.DeserializeObject<ReservationStaffViewModel>(resJson);
+
             if (reservation == null) return NotFound();
+
 
             var tableResponse = await _client.GetAsync("ReservationStaff/tables/by-area-all");
             var tableJson = await tableResponse.Content.ReadAsStringAsync();
@@ -131,12 +182,18 @@ namespace WebSapaForestForStaff.Controllers
 
             return RedirectToAction("AssignTables", new { id = reservationId });
         }
+        [HttpGet]
+        public IActionResult CreateReservation()
+        {
+            return View(new ReservationViewModel());
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Add(ReservationViewModel model)
+        public async Task<IActionResult> CreateReservation(ReservationViewModel model)
         {
             if (!ModelState.IsValid)
-                return PartialView("_ReservationForm", model);
+                return View(model);
 
             var dto = new
             {
@@ -155,13 +212,13 @@ namespace WebSapaForestForStaff.Controllers
 
             if (response.IsSuccessStatusCode)
             {
-
-                return Json(new { success = true });
+                TempData["Success"] = "Đặt bàn thành công!";
+                return RedirectToAction("Index"); // trở về danh sách reservations
             }
             else
             {
                 ModelState.AddModelError("", "Không thể đặt bàn. Vui lòng thử lại.");
-                return PartialView("_ReservationForm", model);
+                return View(model);
             }
         }
 
