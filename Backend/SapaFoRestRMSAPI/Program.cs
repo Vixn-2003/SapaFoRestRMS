@@ -1,6 +1,13 @@
-﻿using BusinessAccessLayer.Mapping;
-using BusinessAccessLayer.Services;
+
+﻿using Microsoft.EntityFrameworkCore;
+using DataAccessLayer;
+using DataAccessLayer.Dbcontext;
+using BusinessAccessLayer.Mapping;
 using BusinessAccessLayer.Services.Interfaces;
+using BusinessAccessLayer.Services;
+using DataAccessLayer.UnitOfWork.Interfaces;
+using DataAccessLayer.UnitOfWork;
+
 using BusinessLogicLayer.Services;
 using BusinessLogicLayer.Services.Interfaces;
 using DataAccessLayer;
@@ -24,7 +31,24 @@ namespace SapaFoRestRMSAPI
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SapaFoRestRMSContext")));
+
+
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+
+
+            // MAPPING
+            builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+
+            //Scope
+            builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
+            builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+
+
+            //UnitOfWork
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
             // Add services to the container.
@@ -33,6 +57,8 @@ namespace SapaFoRestRMSAPI
 
             // Add AutoMapper
             builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+            builder.Services.AddAutoMapper(typeof(MappingProfile));
+
 
             // Add Repositories
             builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
@@ -51,6 +77,12 @@ namespace SapaFoRestRMSAPI
 
             builder.Services.AddScoped<IEventRepository, EventRepository>();
             builder.Services.AddScoped<IEventService, EventService>();
+
+            builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
+            builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+
+            //UnitOfWork
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
             // Unit of Work and User Repository mapping
@@ -144,12 +176,27 @@ namespace SapaFoRestRMSAPI
            
             var app = builder.Build();
 
+
+
+
+            // Bật middleware Swagger
+
+            app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+                    c.RoutePrefix = string.Empty; // để Swagger UI ở trang gốc: https://localhost:5001/
+                });
+
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+
 
 
             app.UseHttpsRedirection();

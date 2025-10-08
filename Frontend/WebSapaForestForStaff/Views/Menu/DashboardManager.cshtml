@@ -1,0 +1,669 @@
+﻿@using WebSapaForestForStaff.DTOs
+
+@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+@model WebSapaForestForStaff.Controllers.MenuComboViewModel
+
+<style>
+    .management-container {
+        padding: 15px;
+        background-color: #f5f5f5;
+    }
+
+    .section-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .section-header h2 {
+        margin: 0;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .search-box {
+        flex: 1;
+        max-width: 400px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 8px 35px 8px 12px;
+        border: none;
+        border-radius: 5px;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .search-input:focus {
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+    }
+
+    .search-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+        font-size: 16px;
+    }
+
+    .btn-add {
+        background-color: #fff;
+        color: #667eea;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s;
+        flex-shrink: 0;
+    }
+
+    .btn-add:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .content-section {
+        background: white;
+        padding: 15px;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* List Container with Scroll */
+    .list-container {
+        max-height: 450px;
+        overflow-y: auto;
+        margin-top: 10px;
+    }
+
+    /* Scrollbar Styling */
+    .list-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .list-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .list-container::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 10px;
+    }
+
+    .list-container::-webkit-scrollbar-thumb:hover {
+        background: #5568d3;
+    }
+
+    /* Menu List Item */
+    .menu-list-item {
+        display: flex;
+        gap: 12px;
+        padding: 10px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background: white;
+        transition: all 0.3s;
+        align-items: center;
+    }
+
+    .menu-list-item:hover {
+        box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        transform: translateX(3px);
+    }
+
+    .menu-list-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 6px;
+        background-color: #f0f0f0;
+        flex-shrink: 0;
+    }
+
+    .menu-list-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .menu-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 10px;
+    }
+
+    .menu-list-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+    }
+
+    .menu-category {
+        display: inline-block;
+        background-color: #e3f2fd;
+        color: #1976d2;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-bottom: 3px;
+    }
+
+    .menu-list-price {
+        font-size: 18px;
+        color: #e91e63;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .menu-list-description {
+        color: #666;
+        font-size: 13px;
+        line-height: 1.4;
+        margin: 3px 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .menu-list-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 5px;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .status-available {
+        background-color: #c8e6c9;
+        color: #2e7d32;
+    }
+
+    .status-unavailable {
+        background-color: #ffcdd2;
+        color: #c62828;
+    }
+
+    .btn-edit {
+        background-color: #667eea;
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        transition: all 0.3s;
+    }
+
+    .btn-edit:hover {
+        background-color: #5568d3;
+        transform: translateY(-2px);
+    }
+
+    /* Combo List Item */
+    .combo-list-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background: white;
+        transition: all 0.3s;
+    }
+
+    .combo-list-item:hover {
+        box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+        transform: translateX(3px);
+    }
+
+    .combo-list-image {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+        background-color: #f0f0f0;
+        flex-shrink: 0;
+    }
+
+    .combo-list-content {
+        flex: 1;
+    }
+
+    .combo-list-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #333;
+        margin: 0 0 5px 0;
+    }
+
+    .combo-list-price {
+        font-size: 20px;
+        color: #e91e63;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .combo-list-description {
+        color: #666;
+        font-size: 13px;
+        line-height: 1.4;
+        margin-bottom: 8px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .combo-items-inline {
+        background-color: #f9f9f9;
+        padding: 8px;
+        border-radius: 6px;
+        margin: 8px 0;
+    }
+
+    .combo-items-inline h4 {
+        margin: 0 0 5px 0;
+        color: #667eea;
+        font-size: 12px;
+    }
+
+    .combo-items-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .combo-item-tag {
+        background-color: #e8eaf6;
+        color: #5568d3;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+    }
+
+    /* Category Table */
+    .category-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .category-table th {
+        background-color: #f5f5f5;
+        text-align: left;
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+        border-bottom: 2px solid #667eea;
+    }
+
+    .category-table td {
+        padding: 12px;
+        font-size: 14px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .category-table tr:hover {
+        background-color: #f9f9f9;
+    }
+
+    .btn-icon {
+        background: none;
+        border: none;
+        color: #667eea;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 5px 10px;
+        transition: all 0.3s;
+    }
+
+    .btn-icon:hover {
+        color: #5568d3;
+        transform: scale(1.2);
+    }
+
+    #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.9);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .spinner {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 12px;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @@media (max-width: 768px) {
+        .section-header {
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            order: 3;
+            max-width: 100%;
+            width: 100%;
+        }
+
+        .menu-list-item,
+        .combo-list-item {
+            flex-direction: column;
+        }
+
+        .menu-list-image,
+        .combo-list-image {
+            width: 100%;
+            height: 150px;
+        }
+
+        .menu-list-header {
+            flex-direction: column;
+            gap: 5px;
+        }
+    }
+</style>
+
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Đang tải dữ liệu...</p>
+</div>
+
+<div class="management-container">
+    <!-- Quản lý Menu -->
+    <div class="management-section">
+        <div class="section-header">
+            <h2>📋 Quản Lý Menu Thực Đơn</h2>
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchMenu" placeholder="Tìm kiếm món ăn...">
+                <span class="search-icon">🔍</span>
+            </div>
+            <button class="btn-add" onclick="location.href='@Url.Action("Create", "Menu")'">
+                ➕ Thêm Món Mới
+            </button>
+        </div>
+        <div class="content-section">
+            <div class="list-container" id="menuList">
+                @foreach (var item in Model.ProductsMenu)
+                {
+                    <div class="menu-list-item" data-name="@item.Name.ToLower()" data-category="@item.Category?.CategoryName.ToLower()">
+                        <img src="@(!string.IsNullOrEmpty(item.ImageUrl) ? item.ImageUrl : "https://via.placeholder.com/80x80/FF6B6B/FFFFFF?text=" + item.Name)"
+                             alt="@item.Name" class="menu-list-image">
+
+                        <div class="menu-list-content">
+                            <div class="menu-list-header">
+                                <div>
+                                    <span class="menu-category">@item.Category?.CategoryName</span>
+                                    <h3 class="menu-list-title">@item.Name</h3>
+                                </div>
+                                <div class="menu-list-price">@item.Price.ToString("N0") ₫</div>
+                            </div>
+
+                            <p class="menu-list-description">@item.Description</p>
+
+                            <div class="menu-list-footer">
+                                <span class="status-badge @(item.IsAvailable == true ? "status-available" : "status-unavailable")">
+                                    @(item.IsAvailable == true ? "Còn món" : "Hết món")
+                                </span>
+
+                                <button class="btn-edit"
+                                        onclick="location.href='@Url.Action("Edit", "Menu", new { id = item.MenuItemId })'">
+                                    ✏️ Chỉnh sửa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Quản lý Combo -->
+    <div class="management-section">
+        <div class="section-header">
+            <h2>🎁 Quản Lý Combo Thực Đơn</h2>
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchCombo" placeholder="Tìm kiếm combo...">
+                <span class="search-icon">🔍</span>
+            </div>
+            <button class="btn-add" onclick="location.href='@Url.Action("Create", "Combo")'">
+                ➕ Thêm Combo Mới
+            </button>
+        </div>
+        <div class="content-section">
+            <div class="list-container" id="comboList">
+                @foreach (var combo in Model.ProductsCombo)
+                {
+                    <div class="combo-list-item" data-name="@combo.Name.ToLower()">
+                        <img src="@(!string.IsNullOrEmpty(combo.ImageUrl) ? combo.ImageUrl : "https://via.placeholder.com/100x100/FF6B6B/FFFFFF?text=" + combo.Name)"
+                             alt="@combo.Name" class="combo-list-image">
+
+                        <div class="combo-list-content">
+                            <h3 class="combo-list-title">@combo.Name</h3>
+                            <div class="combo-list-price">@combo.Price.ToString("N0") ₫</div>
+                            <p class="combo-list-description">@combo.Description</p>
+
+                            <div class="combo-items-inline">
+                                <h4>🍽️ Các món ăn trong combo:</h4>
+                                <ul class="combo-items-list">
+                                    @if (combo.ComboItems != null && combo.ComboItems.Any())
+                                    {
+                                        foreach (var item in combo.ComboItems)
+                                        {
+                                            <li class="combo-item-tag">
+                                                @item.Quantity x @item.ManagerMenuItem.Name
+                                            </li>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <li class="combo-item-tag">Không có món nào</li>
+                                    }
+                                </ul>
+                            </div>
+
+                            <div class="menu-list-footer">
+                                <span class="status-badge @(combo.IsAvailable == true ? "status-available" : "status-unavailable")">
+                                    @(combo.IsAvailable == true ? "Đang phục vụ" : "Tạm ngừng")
+                                </span>
+
+                                <button class="btn-edit"
+                                        onclick="location.href='@Url.Action("Edit", "Combo", new { id = combo.ComboId })'">
+                                    ✏️ Chỉnh sửa
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Quản lý Loại Thực Đơn -->
+    <div class="management-section">
+        <div class="section-header">
+            <h2>📂 Quản Lý Loại Thực Đơn</h2>
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchCategory" placeholder="Tìm kiếm loại thực đơn...">
+                <span class="search-icon">🔍</span>
+            </div>
+            <button class="btn-add" onclick="location.href='@Url.Action("Create", "Category")'">
+                ➕ Thêm Loại Mới
+            </button>
+        </div>
+        <div class="content-section">
+            <table class="category-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">STT</th>
+                        <th>Tên Loại Thực Đơn</th>
+                        <th style="width: 120px; text-align: center;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="categoryList">
+                    <tr data-name="món chính">
+                        <td>1</td>
+                        <td>Món Chính</td>
+                        <td style="text-align: center;">
+                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 1 })'">
+                                ✏️
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-name="món khai vị">
+                        <td>2</td>
+                        <td>Món Khai Vị</td>
+                        <td style="text-align: center;">
+                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 2 })'">
+                                ✏️
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-name="đồ uống">
+                        <td>3</td>
+                        <td>Đồ Uống</td>
+                        <td style="text-align: center;">
+                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 3 })'">
+                                ✏️
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-name="món tráng miệng">
+                        <td>4</td>
+                        <td>Món Tráng Miệng</td>
+                        <td style="text-align: center;">
+                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 4 })'">
+                                ✏️
+                            </button>
+                        </td>
+                    </tr>
+                    <tr data-name="món ăn vặt">
+                        <td>5</td>
+                        <td>Món Ăn Vặt</td>
+                        <td style="text-align: center;">
+                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 5 })'">
+                                ✏️
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const overlay = document.getElementById("loading-overlay");
+
+        setTimeout(() => {
+            if (overlay) {
+                overlay.style.display = "none";
+            }
+        }, 2000);
+
+        // Search functionality for Menu
+        const searchMenu = document.getElementById('searchMenu');
+        const menuItems = document.querySelectorAll('#menuList .menu-list-item');
+
+        searchMenu.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            menuItems.forEach(item => {
+                const name = item.getAttribute('data-name');
+                const category = item.getAttribute('data-category');
+                
+                if (name.includes(searchTerm) || category.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        // Search functionality for Combo
+        const searchCombo = document.getElementById('searchCombo');
+        const comboItems = document.querySelectorAll('#comboList .combo-list-item');
+
+        searchCombo.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            comboItems.forEach(item => {
+                const name = item.getAttribute('data-name');
+                
+                if (name.includes(searchTerm)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        // Search functionality for Category
+        const searchCategory = document.getElementById('searchCategory');
+        const categoryRows = document.querySelectorAll('#categoryList tr');
+
+        searchCategory.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            categoryRows.forEach(row => {
+                const name = row.getAttribute('data-name');
+                
+                if (name.includes(searchTerm)) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    console.log('Restaurant Management List View with Search loaded successfully');
+</script>
