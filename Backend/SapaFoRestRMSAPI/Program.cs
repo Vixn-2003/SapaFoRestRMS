@@ -111,6 +111,11 @@ namespace SapaFoRestRMSAPI
             //UnitOfWork
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+            builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+
+            builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
             // Unit of Work and User Repository mapping
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

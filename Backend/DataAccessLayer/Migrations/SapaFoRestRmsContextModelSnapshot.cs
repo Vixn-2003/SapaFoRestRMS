@@ -57,6 +57,29 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Announcements");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Area", b =>
+                {
+                    b.Property<int>("AreaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AreaId"));
+
+                    b.Property<string>("AreaName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Floor")
+                        .HasColumnType("int");
+
+                    b.HasKey("AreaId");
+
+                    b.ToTable("Areas");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Attendance", b =>
                 {
                     b.Property<int>("AttendanceId")
@@ -829,8 +852,21 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReservationId"));
 
+                    b.Property<TimeSpan?>("ArrivalTime")
+                        .HasColumnType("time");
+
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
+
+                    b.Property<string>("CustomerNameReservation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("DepositAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("DepositPaid")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
@@ -839,8 +875,17 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("NumberOfGuests")
                         .HasColumnType("int");
 
+                    b.Property<bool>("RequireDeposit")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ReservationDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("ReservationTime")
                         .HasColumnType("datetime");
+
+                    b.Property<int?>("StaffId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .ValueGeneratedOnAdd()
@@ -848,10 +893,20 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<string>("TimeSlot")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ZaloMessageId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("ReservationId")
                         .HasName("PK__Reservat__B7EE5F24CA6A82D8");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("StaffId");
 
                     b.ToTable("Reservations");
                 });
@@ -1202,6 +1257,9 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TableId"));
 
+                    b.Property<int>("AreaId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Capacity")
                         .HasColumnType("int");
 
@@ -1218,6 +1276,8 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("TableId")
                         .HasName("PK__Tables__7D5F01EE063230D4");
+
+                    b.HasIndex("AreaId");
 
                     b.ToTable("Tables");
                 });
@@ -1380,19 +1440,44 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Vouchers");
                 });
 
-            modelBuilder.Entity("StaffPosition", b =>
+            modelBuilder.Entity("DomainAccessLayer.Models.ZaloMessage", b =>
                 {
-                    b.Property<int>("StaffId")
+                    b.Property<int>("MessageId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    b.Property<int>("PositionId")
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
+
+                    b.Property<string>("MessageText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MessageType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("ReservationId")
                         .HasColumnType("int");
 
-                    b.HasKey("StaffId", "PositionId");
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
 
-                    b.HasIndex("PositionId");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
-                    b.ToTable("StaffPositions", (string)null);
+                    b.Property<string>("ZaloMessageId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("ReservationId");
+
+                    b.ToTable("ZaloMessages");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Announcement", b =>
@@ -1671,7 +1756,13 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__Reservati__Custo__395884C4");
 
+                    b.HasOne("DomainAccessLayer.Models.User", "Staff")
+                        .WithMany()
+                        .HasForeignKey("StaffId");
+
                     b.Navigation("Customer");
+
+                    b.Navigation("Staff");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.ReservationTable", b =>
@@ -1752,6 +1843,17 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK_SystemLogos_Users");
 
                     b.Navigation("CreatedByNavigation");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Table", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Area", "Area")
+                        .WithMany("Tables")
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Area");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>

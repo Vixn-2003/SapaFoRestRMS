@@ -1,0 +1,120 @@
+﻿@{
+    var reservation = ViewBag.Reservation as ReservationStaffViewModel;
+    var areas = ViewBag.Areas as List<AreaViewModel>;
+    var bookedTableIds = ViewBag.BookedTableIds as List<int> ?? new List<int>();
+    var suggestedTableIdsByArea = ViewBag.SuggestedTableIdsByArea as Dictionary<int, List<int>>
+                                 ?? new Dictionary<int, List<int>>();
+}
+
+<link rel="stylesheet" href="~/css/assign-tables.css" />
+
+<h2>🌿 Xử lý đặt bàn</h2>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="card p-3 mb-3">
+    <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
+    <strong>SĐT:</strong> @reservation.CustomerPhone <br />
+    <strong>Ngày:</strong> @reservation.ReservationDate.ToString("dd/MM/yyyy") <br />
+    <strong>Ca:</strong> @reservation.TimeSlot <br />
+    <strong>Số khách:</strong> @reservation.NumberOfGuests <br />
+    <strong>Bàn lần xử lý trước:</strong>
+    @(
+        reservation.Tables != null && reservation.Tables.Any()
+        ? string.Join(", ", reservation.Tables.Select(t => t.TableNumber))
+        : "Không có bàn nào được đặt ở lần xử lý trước đó"
+        )
+</div>
+
+<!-- Bộ lọc bàn -->
+<div class="mb-3">
+    <label><strong>Lọc bàn hiển thị:</strong></label>
+    <select id="tableFilter" class="form-select" style="width: 250px; display: inline-block; margin-left: 10px;">
+        <option value="all" selected>Tất cả bàn</option>
+        <option value="available">🟢 Bàn trống</option>
+        <option value="suggested">🔵 Bàn gợi ý</option>
+        <option value="booked">🔴 Bàn đã đặt</option>
+        <option value="selectable">🟢🔵 Bàn có thể chọn</option>
+    </select>
+</div>
+
+<form asp-action="AssignTablesPost" method="post">
+    <input type="hidden" name="ReservationId" value="@reservation.ReservationId" />
+
+    <h4 class="text-success">Chọn bàn</h4>
+    @foreach (var area in areas)
+    {
+        <div class="mb-3 area-block">
+            <strong style="color:#2e572f;">@area.AreaName</strong>
+            <div class="d-flex flex-wrap mt-2">
+                @foreach (var table in area.Tables)
+                {
+                    var isBooked = bookedTableIds.Contains(table.TableId);
+                    var isSuggested = suggestedTableIdsByArea.ContainsKey(area.AreaId)
+                    && suggestedTableIdsByArea[area.AreaId].Contains(table.TableId);
+
+                    string labelClass = isBooked ? "btn btn-danger disabled"
+                    : isSuggested ? "btn btn-primary"
+                    : "btn btn-outline-success";
+
+                    string filterType = isBooked ? "booked"
+                    : isSuggested ? "suggested"
+                    : "available";
+
+                    <label class="@labelClass table-item" data-type="@filterType">
+                        <input type="checkbox" name="TableIds" value="@table.TableId"
+                               @(isBooked ? "disabled" : "") />
+                        @table.TableName (@table.Capacity chỗ)
+                    </label>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="form-check mt-4">
+        <input type="checkbox" class="form-check-input" name="RequireDeposit" id="depositCheck" value="true" />
+        <label class="form-check-label" for="depositCheck">Yêu cầu đặt cọc</label>
+        <input type="number" name="DepositAmount" class="form-control mt-2"
+               placeholder="Số tiền đặt cọc (VND)" step="0.01" />
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-success me-2">✅ Xác nhận gán bàn</button>
+        <button type="submit" formaction="@Url.Action("ResetTables")" formmethod="post" class="btn btn-warning me-2">
+            🔄 Reset bàn
+        </button>
+        <a class="btn btn-secondary" href="@Url.Action("Index")">⬅ Quay lại</a>
+    </div>
+</form>
+
+<!-- Ghi chú -->
+<div class="legend-box">
+    <div class="legend-title">Chú thích bàn:</div>
+    <div class="legend-items d-flex gap-2 mt-2">
+        <span class="btn btn-danger btn-sm disabled">Đã đặt</span>
+        <span class="btn btn-primary btn-sm">Gợi ý</span>
+        <span class="btn btn-outline-success btn-sm">Trống</span>
+    </div>
+</div>
+
+<script>
+    document.getElementById("tableFilter").addEventListener("change", function () {
+        var selected = this.value;
+        document.querySelectorAll(".table-item").forEach(function (item) {
+            var type = item.dataset.type;
+            var show =
+                selected === "all" ||
+                type === selected ||
+                (selected === "selectable" && (type === "available" || type === "suggested"));
+
+            item.style.display = show ? "inline-block" : "none";
+        });
+    });
+</script>

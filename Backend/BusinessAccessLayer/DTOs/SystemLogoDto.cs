@@ -11,9 +11,11 @@ namespace BusinessAccessLayer.DTOs
     {
         public int LogoId { get; set; }
         public string LogoName { get; set; } = null!;
-        public IFormFile? File { get; set; }  // file upload
-        public string? LogoUrl { get; set; }   // URL lưu trên Cloudinary
+        public IFormFile? File { get; set; }  
+        public string? LogoUrl { get; set; }   
         public string? Description { get; set; }
-        public bool? IsActive { get; set; } = true;
+        public bool? IsActive { get; set; } 
+        public int? CreatedBy { get; set; }   
+        public string? CreatedByName { get; set; }
     }
 }

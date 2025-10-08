@@ -23,6 +23,7 @@ namespace BusinessAccessLayer.Services
         {
             var logos = _logoRepository.GetAll();
             var result = new List<SystemLogoDto>();
+
             foreach (var logo in logos)
             {
                 result.Add(new SystemLogoDto
@@ -31,9 +32,12 @@ namespace BusinessAccessLayer.Services
                     LogoName = logo.LogoName,
                     LogoUrl = logo.LogoUrl,
                     Description = logo.Description,
-                    IsActive = logo.IsActive
+                    IsActive = logo.IsActive,
+                    CreatedBy = logo.CreatedBy,
+                    CreatedByName = logo.CreatedByNavigation?.FullName ?? logo.CreatedByNavigation?.FullName // fallback
                 });
             }
+
             return result;
         }
 
@@ -42,6 +46,7 @@ namespace BusinessAccessLayer.Services
         {
             var logos = _logoRepository.GetActiveLogos();
             var result = new List<SystemLogoDto>();
+
             foreach (var logo in logos)
             {
                 result.Add(new SystemLogoDto
@@ -50,9 +55,12 @@ namespace BusinessAccessLayer.Services
                     LogoName = logo.LogoName,
                     LogoUrl = logo.LogoUrl,
                     Description = logo.Description,
-                    IsActive = logo.IsActive
+                    IsActive = logo.IsActive,
+                    CreatedBy = logo.CreatedBy,
+                    CreatedByName = logo.CreatedByNavigation?.FullName ?? logo.CreatedByNavigation?.FullName
                 });
             }
+
             return result;
         }
 
@@ -67,9 +75,12 @@ namespace BusinessAccessLayer.Services
                 LogoName = logo.LogoName,
                 LogoUrl = logo.LogoUrl,
                 Description = logo.Description,
-                IsActive = logo.IsActive
+                IsActive = logo.IsActive,
+                CreatedBy = logo.CreatedBy,
+                CreatedByName = logo.CreatedByNavigation?.FullName ?? logo.CreatedByNavigation?.FullName
             };
         }
+
 
         public async Task<SystemLogoDto> AddLogoAsync(SystemLogoDto dto, int userId)
         {
@@ -93,20 +104,27 @@ namespace BusinessAccessLayer.Services
         public async Task<bool> UpdateLogoAsync(SystemLogoDto dto, int userId)
         {
             var logo = await _logoRepository.GetByIdAsync(dto.LogoId);
-            if (logo == null) return false;
+            if (logo == null)
+                return false;
 
             logo.LogoName = dto.LogoName;
-            logo.LogoUrl = dto.LogoUrl;
             logo.Description = dto.Description;
             logo.IsActive = dto.IsActive;
             logo.UpdatedDate = DateTime.Now;
             logo.CreatedBy = userId;
 
+            // Nếu có file upload mới thì cập nhật URL
+            if (!string.IsNullOrEmpty(dto.LogoUrl))
+            {
+                logo.LogoUrl = dto.LogoUrl;
+            }
+
             _logoRepository.Update(logo);
             await _context.SaveChangesAsync();
-
             return true;
         }
+
+
 
         public async Task<bool> DeleteLogoAsync(int id)
         {
