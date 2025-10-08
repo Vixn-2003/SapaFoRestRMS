@@ -7,28 +7,63 @@ using BusinessAccessLayer.Services.Interfaces;
 using BusinessAccessLayer.Services;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DataAccessLayer.UnitOfWork;
-
-using BusinessLogicLayer.Services;
-using BusinessLogicLayer.Services.Interfaces;
-
-using SapaFoRestRMSAPI.Services;
-using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.Repositories;
-
+using DataAccessLayer.Repositories.Interfaces;
+using SapaFoRestRMSAPI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using DomainAccessLayer.Enums;
+using BusinessLogicLayer.Services.Interfaces;
+using BusinessLogicLayer.Services;
 namespace SapaFoRestRMSAPI
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static  void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
             builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SapaFoRestRMSContext")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            // Bật middleware Swagger
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "RMS API",
+                    Version = "v1"
+                });
 
+                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    Description = "Nhập token theo dạng: Bearer {token}"
+                });
+
+                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+       {
+           {
+             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                      {
+                           Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                      }
+                 },
+                  new string[] {}
+           }
+        });
+            });
 
             // MAPPING
             builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -82,33 +117,69 @@ namespace SapaFoRestRMSAPI
 
             builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
+            // Unit of Work and User Repository mapping
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
+
+            // Auth and User Management services
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IVerificationService, VerificationService>();
+            builder.Services.AddScoped<IPasswordService, PasswordService>();
+            builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+
+
             builder.Services.AddSingleton<CloudinaryService>();
 
-            builder.Services.AddSwaggerGen();
-            // Thêm CORS
-            builder.Services.AddCors(options =>
+    
+
+            builder.Services.AddAuthorization(options =>
             {
-                options.AddPolicy("AllowFrontend",
-                    policy =>
-                    {
-                        policy.WithOrigins("https://localhost:5158")
-                              .AllowAnyHeader()
-                              .AllowAnyMethod();
-                    });
+                options.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin));
+                options.AddPolicy(Roles.Manager, p => p.RequireRole(Roles.Manager));
+                options.AddPolicy(Roles.Staff, p => p.RequireRole(Roles.Staff));
+                options.AddPolicy(Roles.Customer, p => p.RequireRole(Roles.Customer));
+                options.AddPolicy(Roles.Owner, p => p.RequireRole(Roles.Owner));
+                options.AddPolicy("AdminOrManager", p => p.RequireRole(Roles.Admin, Roles.Manager));
+                options.AddPolicy("StaffOrManager", p => p.RequireRole(Roles.Staff, Roles.Manager));
             });
+
+            // JWT Authentication
+            var jwtSection = builder.Configuration.GetSection("Jwt");
+            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Key"] ?? "replace-with-strong-key"));
+            builder.Services
+                .AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidateLifetime = true,
+                        ValidIssuer = jwtSection["Issuer"],
+                        ValidAudience = jwtSection["Audience"],
+                        IssuerSigningKey = signingKey,
+                        ClockSkew = TimeSpan.FromMinutes(1)
+                    };
+                });
+
+           
+         
+
             var app = builder.Build();
 
 
 
 
-            // Bật middleware Swagger
+           
 
-            app.UseSwagger();
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-                    c.RoutePrefix = string.Empty; // để Swagger UI ở trang gốc: https://localhost:5001/
-                });
+         
 
 
             // Configure the HTTP request pipeline.
@@ -124,10 +195,18 @@ namespace SapaFoRestRMSAPI
             app.UseHttpsRedirection();
             // Bật CORS
             app.UseCors("AllowFrontend");
+            app.UseAuthentication();
             app.UseAuthorization();
 
 
             app.MapControllers();
+
+            //Seed admin user on startup
+            using (var scope = app.Services.CreateScope())
+            {
+                var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+              SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
+            }
 
             app.Run();
         }

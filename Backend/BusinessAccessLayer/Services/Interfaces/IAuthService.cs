@@ -10,7 +10,6 @@ namespace BusinessAccessLayer.Services.Interfaces
     public interface IAuthService 
     {
         Task<LoginResponse> LoginAsync(LoginRequest request);
-        Task<LoginResponse> RegisterAsync(RegisterRequest request);
-        Task<bool> IsEmailExistsAsync(string email);
+    
     }
 }
