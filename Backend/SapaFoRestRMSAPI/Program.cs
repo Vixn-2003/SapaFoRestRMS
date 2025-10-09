@@ -27,43 +27,12 @@ namespace SapaFoRestRMSAPI
 
             builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
+            Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));
 
 
             builder.Services.AddEndpointsApiExplorer();
             // Bật middleware Swagger
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-                {
-                    Title = "RMS API",
-                    Version = "v1"
-                });
-
-                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-                    Scheme = "Bearer",
-                    BearerFormat = "JWT",
-                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-                    Description = "Nhập token theo dạng: Bearer {token}"
-                });
-
-                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-       {
-           {
-             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                {
-                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                      {
-                           Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                      }
-                 },
-                  new string[] {}
-           }
-        });
-            });
+            builder.Services.AddSwaggerGen();
 
             // MAPPING
             builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -202,11 +171,11 @@ namespace SapaFoRestRMSAPI
             app.MapControllers();
 
             //Seed admin user on startup
-            using (var scope = app.Services.CreateScope())
-            {
-                var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-              SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
-            }
+            //using (var scope = app.Services.CreateScope())
+            //{
+            //    var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+            //  SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
+            //}
 
             app.Run();
         }
