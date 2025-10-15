@@ -87,15 +87,11 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
+ 
 
     public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
 
-    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Announcement>(entity =>

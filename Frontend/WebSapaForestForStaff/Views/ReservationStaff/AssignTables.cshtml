@@ -19,39 +19,84 @@
     <div class="alert alert-success">@TempData["Success"]</div>
 }
 
-<div class="card p-3 mb-3">
-    <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
-    <strong>SĐT:</strong> @reservation.CustomerPhone <br />
-    <strong>Ngày:</strong> @reservation.ReservationDate.ToString("dd/MM/yyyy") <br />
-    <strong>Ca:</strong> @reservation.TimeSlot <br />
-    <strong>Số khách:</strong> @reservation.NumberOfGuests <br />
-    <strong>Bàn lần xử lý trước:</strong>
-    @(
-        reservation.Tables != null && reservation.Tables.Any()
-        ? string.Join(", ", reservation.Tables.Select(t => t.TableNumber))
-        : "Không có bàn nào được đặt ở lần xử lý trước đó"
-        )
+<div class="card p-3 mb-3" style="display:flex; flex-direction:row; gap:20px; flex-wrap:nowrap; align-items:flex-start;">
+    <!-- Bên trái: Thông tin khách hàng -->
+    <div style="flex:1; min-width:250px;">
+        <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
+        <strong>SĐT:</strong> @reservation.CustomerPhone <br />
+        <strong>Ngày:</strong> @reservation.ReservationDate.ToString("dd/MM/yyyy") <br />
+        <strong>Ca:</strong> @reservation.TimeSlot <br />
+        <strong>Giờ đến :</strong> @reservation.ReservationTime.ToString("HH:mm") <br />
+        <strong>Số khách:</strong> @reservation.NumberOfGuests <br />
+        <strong>Lưu ý của khách hàng - Notes :</strong> @(string.IsNullOrWhiteSpace(@reservation.Notes) ? "Không có lưu ý gì" : @reservation.Notes) <br />
+        <strong>Bàn lần xử lý trước:</strong>
+        @(
+                reservation.Tables != null && reservation.Tables.Any()
+                ? string.Join(", ", reservation.Tables.Select(t => t.TableNumber))
+                : "Không có bàn nào được đặt ở lần xử lý trước đó"
+                )
+    </div>
+
+    <!-- Bên phải: Thống kê bàn trống & sức chứa -->
+    <div style="flex:1; min-width:250px;">
+        <h5>📊 Thống kê khu vực</h5>
+        @foreach (var area in areas)
+        {
+            var tablesInArea = area.Tables;
+            var freeTables = tablesInArea.Where(t => !bookedTableIds.Contains(t.TableId)).ToList();
+            var remainingCapacity = freeTables.Sum(t => t.Capacity);
+
+            <div class="mb-2 p-2 border rounded area-summary" style="background:#f0fdf4; cursor:pointer;"
+                 data-area-id="@area.AreaId">
+                <strong>@area.AreaName</strong> -
+                Số bàn trống: <strong>@freeTables.Count</strong> -
+                Sức chứa còn lại: <strong>@remainingCapacity</strong> chỗ
+            </div>
+
+        }
+    </div>
 </div>
 
-<!-- Bộ lọc bàn -->
-<div class="mb-3">
-    <label><strong>Lọc bàn hiển thị:</strong></label>
-    <select id="tableFilter" class="form-select" style="width: 250px; display: inline-block; margin-left: 10px;">
-        <option value="all" selected>Tất cả bàn</option>
-        <option value="available">🟢 Bàn trống</option>
-        <option value="suggested">🔵 Bàn gợi ý</option>
-        <option value="booked">🔴 Bàn đã đặt</option>
-        <option value="selectable">🟢🔵 Bàn có thể chọn</option>
-    </select>
-</div>
+
+@if (suggestedTableIdsByArea.Any())
+{
+    <div class="alert alert-info">
+        <strong>🪑 Bàn gợi ý :</strong>
+        @foreach (var area in areas)
+        {
+            if (suggestedTableIdsByArea.ContainsKey(area.AreaId))
+            {
+                var tables = area.Tables
+                .Where(t => suggestedTableIdsByArea[area.AreaId].Contains(t.TableId))
+                .Select(t => t.TableName);
+                if (tables.Any())
+                {
+                    <span>@area.AreaName: @string.Join(", ", tables)</span>
+    
+                    <br />
+                }
+            }
+        }
+    </div>
+}
 
 <form asp-action="AssignTablesPost" method="post">
+    @Html.AntiForgeryToken()
     <input type="hidden" name="ReservationId" value="@reservation.ReservationId" />
 
-    <h4 class="text-success">Chọn bàn</h4>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="text-success">Chọn bàn</h4>
+        <select id="filterSelect" class="form-select w-auto">
+            <option value="all">Tất cả</option>
+            <option value="available">Bàn trống</option>
+            <option value="booked">Đang đặt</option>
+            <option value="suggested">Gợi ý</option>
+        </select>
+    </div>
+
     @foreach (var area in areas)
     {
-        <div class="mb-3 area-block">
+        <div class="mb-3 area-block" data-area-id="@area.AreaId">
             <strong style="color:#2e572f;">@area.AreaName</strong>
             <div class="d-flex flex-wrap mt-2">
                 @foreach (var table in area.Tables)
@@ -81,8 +126,14 @@
     <div class="form-check mt-4">
         <input type="checkbox" class="form-check-input" name="RequireDeposit" id="depositCheck" value="true" />
         <label class="form-check-label" for="depositCheck">Yêu cầu đặt cọc</label>
-        <input type="number" name="DepositAmount" class="form-control mt-2"
+
+        <input type="number" id="depositAmount" name="DepositAmount"
+               class="form-control mt-2"
                placeholder="Số tiền đặt cọc (VND)" step="0.01" />
+
+        <button type="button" id="sendDepositBtn" class="btn btn-info mt-3" style="display:none;">
+            💬 Gửi yêu cầu đặt cọc
+        </button>
     </div>
 
     <div class="mt-4">
@@ -94,27 +145,78 @@
     </div>
 </form>
 
-<!-- Ghi chú -->
-<div class="legend-box">
-    <div class="legend-title">Chú thích bàn:</div>
-    <div class="legend-items d-flex gap-2 mt-2">
-        <span class="btn btn-danger btn-sm disabled">Đã đặt</span>
-        <span class="btn btn-primary btn-sm">Gợi ý</span>
-        <span class="btn btn-outline-success btn-sm">Trống</span>
-    </div>
-</div>
-
 <script>
-    document.getElementById("tableFilter").addEventListener("change", function () {
-        var selected = this.value;
-        document.querySelectorAll(".table-item").forEach(function (item) {
-            var type = item.dataset.type;
-            var show =
-                selected === "all" ||
-                type === selected ||
-                (selected === "selectable" && (type === "available" || type === "suggested"));
+    const depositCheck = document.getElementById("depositCheck");
+    const sendBtn = document.getElementById("sendDepositBtn");
 
-            item.style.display = show ? "inline-block" : "none";
+    depositCheck.addEventListener("change", function () {
+        sendBtn.style.display = this.checked ? "inline-block" : "none";
+    });
+
+    sendBtn.addEventListener("click", async () => {
+        const depositAmount = document.getElementById("depositAmount").value;
+        if (!depositAmount || depositAmount <= 0) {
+            alert("Vui lòng nhập số tiền đặt cọc hợp lệ!");
+            return;
+        }
+
+        const reservationId = "@reservation.ReservationId";
+        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+        const response = await fetch(`/ReservationStaff/SendDepositRequest`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "RequestVerificationToken": token
+            },
+            body: JSON.stringify({
+                reservationId: reservationId,
+                depositAmount: depositAmount
+            })
+        });
+
+        const result = await response.json();
+        alert(result.message);
+    });
+
+        // --- Lọc theo khu vực khi click vào thống kê ---
+    document.querySelectorAll(".area-summary").forEach(summary => {
+        summary.addEventListener("click", () => {
+            const areaId = summary.getAttribute("data-area-id");
+            document.querySelectorAll(".area-block").forEach(block => {
+                if (block.getAttribute("data-area-id") === areaId) {
+                    block.style.display = "block";
+                } else {
+                    block.style.display = "none";
+                }
+            });
+        });
+    });
+    // --- Lọc bàn ---
+    const filterSelect = document.getElementById("filterSelect");
+    filterSelect.addEventListener("change", () => {
+        const value = filterSelect.value;
+        document.querySelectorAll(".table-item").forEach(item => {
+            const type = item.getAttribute("data-type");
+
+            // ✅ Logic lọc mới
+            if (value === "all") {
+                item.style.display = "inline-block";
+                // Hiện toàn bộ khu vực
+            document.querySelectorAll(".area-block").forEach(block => block.style.display = "block");
+            }
+            else if (value === "available") {
+                // Bàn trống = bàn available + suggested
+                item.style.display = (type === "available" || type === "suggested")
+                    ? "inline-block" : "none";
+            }
+            else if (value === "booked") {
+                item.style.display = (type === "booked") ? "inline-block" : "none";
+            }
+            else if (value === "suggested") {
+                item.style.display = (type === "suggested") ? "inline-block" : "none";
+            }
         });
     });
 </script>
+

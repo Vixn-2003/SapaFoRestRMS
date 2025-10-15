@@ -7,8 +7,10 @@
         public string CustomerPhone { get; set; } = string.Empty;
         public DateTime ReservationDate { get; set; }
         public string TimeSlot { get; set; } = string.Empty;
+        public DateTime ReservationTime { get; set; }
         public int NumberOfGuests { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string? Notes { get; set; }
         public List<TableInfoViewModel> Tables { get; set; } = new();
 
         public bool RequireDeposit { get; set; }

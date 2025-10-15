@@ -128,6 +128,12 @@ namespace SapaFoRestRMSAPI
             builder.Services.AddScoped<IVerificationService, VerificationService>();
             builder.Services.AddScoped<IPasswordService, PasswordService>();
             builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+            //Table Service/Repository
+            builder.Services.AddScoped<ITableRepository, TableRepository>();
+            builder.Services.AddScoped<ITableService, TableService>();
+            // Area Repository
+            builder.Services.AddScoped<IAreaRepository, AreaRepository>();
+            builder.Services.AddScoped<IAreaService, AreaService>();
 
 
             builder.Services.AddSingleton<CloudinaryService>();
@@ -202,11 +208,11 @@ namespace SapaFoRestRMSAPI
             app.MapControllers();
 
             //Seed admin user on startup
-            using (var scope = app.Services.CreateScope())
-            {
-                var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-              SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
-            }
+            //using (var scope = app.Services.CreateScope())
+            //{
+            //    var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+            //  SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
+            //}
 
             app.Run();
         }

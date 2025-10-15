@@ -10,7 +10,8 @@
 
     <!-- Site CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/reservation.css" />
+    <link rel="stylesheet" href="@Url.Content("~/css/reservation.css")" asp-append-version="true" />
+
 
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
@@ -266,6 +267,33 @@
                 });
             });
 
+        });
+
+                // Gắn event cho nút gửi OTP trong modal, kể cả khi form load bằng AJAX
+        $(document).on('click', '#sendOtpBtn', async function (e) {
+            e.preventDefault();
+
+            var $form = $(this).closest('form'); // tìm form chứa nút
+            var phone = $form.find('input[name="Phone"]').val(); // lấy số điện thoại
+
+            if (!phone) {
+                alert("Vui lòng nhập số điện thoại.");
+                return;
+            }
+
+            try {
+                var response = await fetch("/Reservation/SendOtp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone: phone })
+                });
+
+                var result = await response.json();
+                alert(result.message);
+            } catch (err) {
+                console.error(err);
+                alert("Có lỗi xảy ra khi gửi OTP.");
+            }
         });
 
     </script>
