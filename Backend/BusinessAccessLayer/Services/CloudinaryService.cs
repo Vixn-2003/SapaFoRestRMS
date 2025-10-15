@@ -1,23 +1,26 @@
 ﻿using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using BusinessAccessLayer.Services.Interfaces; // 👈 cần dòng này
 
-namespace SapaFoRestRMSAPI.Services
+namespace BusinessAccessLayer.Services
 {
-    public class CloudinaryService
+    public class CloudinaryService : ICloudinaryService // 👈 phải có interface ở đây
     {
         private readonly Cloudinary _cloudinary;
 
         public CloudinaryService(IConfiguration config)
         {
-            var cloudName = config["Cloudinary:CloudName"];
-            var apiKey = config["Cloudinary:ApiKey"];
-            var apiSecret = config["Cloudinary:ApiSecret"];
+            var cloudName = config["CloudinarySettings:CloudName"];
+            var apiKey = config["CloudinarySettings:ApiKey"];
+            var apiSecret = config["CloudinarySettings:ApiSecret"];
+
             var account = new Account(cloudName, apiKey, apiSecret);
             _cloudinary = new Cloudinary(account);
         }
 
-        // Original method
-        public async Task<string> UploadFileAsync(IFormFile file)
+        public async Task<string?> UploadFileAsync(IFormFile file)
         {
             if (file == null || file.Length == 0) return null;
 
@@ -29,11 +32,10 @@ namespace SapaFoRestRMSAPI.Services
             };
 
             var result = await _cloudinary.UploadAsync(uploadParams);
-            return result.SecureUrl.ToString();
+            return result?.SecureUrl?.ToString();
         }
 
-        // New method with custom folder support
-        public async Task<string> UploadImageAsync(IFormFile file, string folder = "uploads")
+        public async Task<string?> UploadImageAsync(IFormFile file, string folder = "uploads")
         {
             if (file == null || file.Length == 0) return null;
 
@@ -53,18 +55,17 @@ namespace SapaFoRestRMSAPI.Services
             return result?.SecureUrl?.ToString();
         }
 
-        // Delete image by URL
         public async Task<bool> DeleteImageAsync(string imageUrl)
         {
             if (string.IsNullOrEmpty(imageUrl)) return false;
 
             try
             {
-                // Extract public ID from URL
                 var uri = new Uri(imageUrl);
                 var segments = uri.Segments;
                 var publicIdWithExtension = string.Join("", segments.Skip(segments.Length - 2));
-                var publicId = publicIdWithExtension.Replace(".jpg", "")
+                var publicId = publicIdWithExtension
+                    .Replace(".jpg", "")
                     .Replace(".png", "")
                     .Replace(".jpeg", "")
                     .Replace("/", "");

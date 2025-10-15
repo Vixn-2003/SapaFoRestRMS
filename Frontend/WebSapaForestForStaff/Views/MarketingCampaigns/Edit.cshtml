@@ -1,0 +1,236 @@
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+    ViewData["Title"] = "Chỉnh sửa chiến dịch";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    var campaignId = ViewData["CampaignId"];
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title mb-0">Chỉnh sửa chiến dịch</h4>
+                    <a href="/MarketingCampaigns" class="btn btn-secondary">
+                        <i class="mdi mdi-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+
+                <form id="editCampaignForm">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Tiêu đề <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="Title" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="targetAudience" class="form-label">Đối tượng mục tiêu</label>
+                                <textarea class="form-control" id="targetAudience" name="TargetAudience" rows="2"></textarea>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="startDate" class="form-label">Ngày bắt đầu</label>
+                                    <input type="date" class="form-control" id="startDate" name="StartDate">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="endDate" class="form-label">Ngày kết thúc</label>
+                                    <input type="date" class="form-control" id="endDate" name="EndDate">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="budget" class="form-label">Ngân sách (VND)</label>
+                                    <input type="number" class="form-control" id="budget" name="Budget" step="1000">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="campaignType" class="form-label">Loại chiến dịch</label>
+                                    <select class="form-select" id="campaignType" name="CampaignType">
+                                        <option value="Discount">Discount</option>
+                                        <option value="Promotion">Promotion</option>
+                                        <option value="Event">Event</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="status" class="form-label">Trạng thái</label>
+                                    <select class="form-select" id="status" name="Status">
+                                        <option value="Pending">Pending</option>
+                                        <option value="Active">Active</option>
+                                        <option value="Completed">Completed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="voucherId" class="form-label">Voucher</label>
+                                    <select class="form-select" id="voucherId" name="VoucherId">
+                                        <option value="">-- Không áp dụng --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="imageFile" class="form-label">Ảnh Banner (để trống nếu không đổi)</label>
+                                <input class="form-control" type="file" id="imageFile" name="ImageFile" accept="image/*">
+                                <small class="text-muted">Định dạng: JPG, PNG. Kích thước tối đa: 5MB</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Ảnh hiện tại</h5>
+                                    <div id="currentImage" class="mb-3">
+                                        <p class="text-muted">Đang tải...</p>
+                                    </div>
+
+                                    <h5 class="card-title">Hiệu suất (chỉ đọc)</h5>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Lượt xem</label>
+                                        <input type="number" class="form-control form-control-sm" id="viewCount" name="ViewCount" readonly>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Doanh thu (VND)</label>
+                                        <input type="number" class="form-control form-control-sm" id="revenueGenerated" name="RevenueGenerated" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="/MarketingCampaigns" class="btn btn-secondary">Hủy</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="mdi mdi-check"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+
+                <div id="loading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const API_BASE = '@(Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096")';
+        const API_URL = API_BASE + '/api/MarketingCampaigns';
+        const campaignId = @campaignId;
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        async function loadCampaignData() {
+            try {
+                const response = await fetch(`${API_URL}/${campaignId}`);
+
+                if (!response.ok) {
+                    throw new Error('Campaign not found');
+                }
+
+                const campaign = await response.json();
+
+                // Hide loading, show form
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('editCampaignForm').style.display = 'block';
+
+                // Populate form
+                document.getElementById('title').value = campaign.title || '';
+                document.getElementById('targetAudience').value = campaign.targetAudience || '';
+                document.getElementById('startDate').value = formatDate(campaign.startDate);
+                document.getElementById('endDate').value = formatDate(campaign.endDate);
+                document.getElementById('budget').value = campaign.budget || '';
+                document.getElementById('campaignType').value = campaign.campaignType || 'Discount';
+                document.getElementById('status').value = campaign.status || 'Pending';
+                document.getElementById('voucherId').value = campaign.voucherId || '';
+                document.getElementById('viewCount').value = campaign.viewCount || 0;
+                document.getElementById('revenueGenerated').value = campaign.revenueGenerated || 0;
+
+                // Display current image
+                if (campaign.imageUrl) {
+                    document.getElementById('currentImage').innerHTML = `
+                                <img src="${campaign.imageUrl}" class="img-fluid rounded" alt="Current banner">
+                            `;
+                } else {
+                    document.getElementById('currentImage').innerHTML = `
+                                <p class="text-muted">Chưa có ảnh</p>
+                            `;
+                }
+
+            } catch (error) {
+                console.error('Error loading campaign:', error);
+                document.getElementById('loading').innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="mdi mdi-alert"></i> Không thể tải thông tin chiến dịch.
+                            </div>
+                        `;
+            }
+        }
+
+        async function loadVouchers() {
+            try {
+                const response = await fetch(`${API_BASE}/api/Vouchers`);
+                if (response.ok) {
+                    const vouchers = await response.json();
+                    const select = document.getElementById('voucherId');
+                    vouchers.forEach(v => {
+                        const option = document.createElement('option');
+                        option.value = v.voucherId;
+                        option.textContent = `${v.code} - ${v.description}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Không thể tải danh sách voucher:', error);
+            }
+        }
+
+        document.getElementById('editCampaignForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            // Remove readonly fields if they shouldn't be sent
+            // Or ensure backend ignores them during update
+
+            try {
+                const response = await fetch(`${API_URL}/${campaignId}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    alert('✅ Cập nhật chiến dịch thành công!');
+                    window.location.href = '/MarketingCampaigns';
+                } else {
+                    const error = await response.json();
+                    alert(`❌ Lỗi: ${error.message || 'Không thể cập nhật chiến dịch'}`);
+                }
+            } catch (error) {
+                console.error('Lỗi:', error);
+                alert('❌ Có lỗi xảy ra khi kết nối tới server.');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('editCampaignForm').style.display = 'none';
+            await loadVouchers();
+            await loadCampaignData();
+        });
+    </script>
+}
