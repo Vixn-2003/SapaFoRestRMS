@@ -1,0 +1,47 @@
+@model WebSapaForestForStaff.Models.Admin.AdminDashboardViewModel
+@{
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="row">
+    <div class="col-12 grid-margin">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Trang quản trị hệ thống</h4>
+                <p>
+                    Quản trị toàn bộ hệ thống: tạo tài khoản, phân quyền, kiểm soát truy cập; quản lý thực đơn, giá, khuyến mãi và báo cáo để hệ thống vận hành an toàn, ổn định.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 stretch-card grid-margin">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h4 class="mb-2">Tổng người dùng</h4>
+                <h2 class="fw-bold">@Model.TotalUsers</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 stretch-card grid-margin">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <h4 class="mb-2">Đơn đặt (Chờ/Xác nhận)</h4>
+                <h2 class="fw-bold">@Model.TotalReservationsPendingOrConfirmed</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 stretch-card grid-margin">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h4 class="mb-2">Sự kiện/KM</h4>
+                <h2 class="fw-bold">@Model.TotalEvents</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+

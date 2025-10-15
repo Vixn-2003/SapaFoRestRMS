@@ -21,7 +21,7 @@ namespace WebSapaForestForStaff.Services
 
         private string GetApiBaseUrl()
         {
-            return _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
+            return _configuration["ApiSettings:BaseUrl"];
         }
 
         private string? GetToken()
@@ -56,11 +56,17 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                var json = JsonSerializer.Serialize(request);
+                
+                var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = null,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                });
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync($"{GetApiBaseUrl()}/auth/login", content);
-                
+                var response = await _httpClient.PostAsync($"{GetApiBaseUrl()}/Auth/login", content);
+
+
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
@@ -144,6 +150,61 @@ namespace WebSapaForestForStaff.Services
             catch
             {
                 return null;
+            }
+        }
+
+        public async Task<int> GetTotalUsersAsync()
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/users");
+                if (!response.IsSuccessStatusCode) return 0;
+                var content = await response.Content.ReadAsStringAsync();
+                var users = JsonSerializer.Deserialize<List<User>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return users?.Count ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        public async Task<int> GetTotalEventsAsync()
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/events");
+                if (!response.IsSuccessStatusCode) return 0;
+                var content = await response.Content.ReadAsStringAsync();
+                var events = JsonSerializer.Deserialize<List<object>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return events?.Count ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        public async Task<int> GetTotalPendingOrConfirmedReservationsAsync()
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/reservationstaff/reservations/pending-confirmed?page=1&pageSize=1");
+                if (!response.IsSuccessStatusCode) return 0;
+                var content = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(content);
+                if (doc.RootElement.TryGetProperty("TotalCount", out var total))
+                {
+                    return total.GetInt32();
+                }
+                return 0;
+            }
+            catch
+            {
+                return 0;
             }
         }
 

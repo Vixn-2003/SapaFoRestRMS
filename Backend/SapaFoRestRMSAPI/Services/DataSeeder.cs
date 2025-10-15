@@ -13,8 +13,7 @@ namespace SapaFoRestRMSAPI.Services
         public static async Task SeedAdminAsync(SapaFoRestRmsContext context)
         {
             var email = "vinxnguyen0310@gmail.com";
-            var exists = await context.Users.AnyAsync(u => u.Email == email);
-            if (exists) return;
+            var existing = await context.Users.FirstOrDefaultAsync(u => u.Email == email);
 
             var adminRoleId = await context.Roles.Where(r => r.RoleName == "Admin").Select(r => r.RoleId).FirstOrDefaultAsync();
             if (adminRoleId == 0)
@@ -33,17 +32,27 @@ namespace SapaFoRestRMSAPI.Services
                 return Convert.ToBase64String(hashedBytes);
             }
 
-            var admin = new User
+            if (existing == null)
             {
-                FullName = "System Admin",
-                Email = email,
-                PasswordHash = HashPassword("C\"=Nt1,qu@F16oX86"),
-                RoleId = adminRoleId,
-                Status = 0,
-                CreatedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
-            await context.Users.AddAsync(admin);
+                var admin = new User
+                {
+                    FullName = "System Admin",
+                    Email = email,
+                    PasswordHash = HashPassword("C\"=Nt1,qu@F16oX86"),
+                    RoleId = adminRoleId,
+                    Status = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+                await context.Users.AddAsync(admin);
+            }
+            else
+            {
+                // Ensure role and password are correct for development convenience
+                existing.RoleId = adminRoleId;
+                existing.PasswordHash = HashPassword("C\"=Nt1,qu@F16oX86");
+                context.Users.Update(existing);
+            }
             await context.SaveChangesAsync();
         }
     }
