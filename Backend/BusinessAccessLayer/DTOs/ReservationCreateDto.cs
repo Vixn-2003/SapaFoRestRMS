@@ -14,6 +14,7 @@ namespace BusinessAccessLayer.DTOs
         public DateTime ReservationTime { get; set; }
         public int NumberOfGuests { get; set; }
         public string? Notes { get; set; }
+        public string? OtpCode { get; set; } // người dùng nhập OTP xác nhận
     }
 
 }

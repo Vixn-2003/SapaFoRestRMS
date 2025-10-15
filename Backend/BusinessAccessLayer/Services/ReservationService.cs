@@ -56,6 +56,15 @@ namespace BusinessAccessLayer.Services
                 if (hour >= 10 && hour < 14) return "Ca trưa";
                 return "Ca tối";
             }
+            // --- KIỂM TRA TRÙNG ĐƠN ---
+            var timeSlot = GetTimeSlot(dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay);
+            var existingReservations = await _reservationRepository
+                .GetReservationsByPhoneAndDateAndSlotAsync(dto.Phone, dto.ReservationDate.Date, timeSlot);
+
+            if (existingReservations != null && existingReservations.Any())
+            {
+                return null;
+            }
 
             var reservation = new Reservation
             {

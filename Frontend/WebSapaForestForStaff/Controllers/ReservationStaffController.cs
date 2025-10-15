@@ -8,13 +8,13 @@ namespace WebSapaForestForStaff.Controllers
     public class ReservationStaffController : Controller
     {
         private readonly HttpClient _client;
-
+       
         public ReservationStaffController(IHttpClientFactory clientFactory)
         {
             _client = clientFactory.CreateClient();
             _client.BaseAddress = new Uri("https://localhost:7096/api/");
         }
-
+ 
         public async Task<IActionResult> Index(
              string? status,
              string? customerName,
@@ -221,6 +221,104 @@ namespace WebSapaForestForStaff.Controllers
                 return View(model);
             }
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendDepositRequest([FromBody] DepositRequestDto dto)
+        {
+            if (dto.DepositAmount <= 0)
+                return Json(new { success = false, message = "Số tiền đặt cọc không hợp lệ." });
+
+            // Lấy thông tin đặt bàn
+            var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{dto.ReservationId}");
+            if (!resResponse.IsSuccessStatusCode)
+                return Json(new { success = false, message = "Không tìm thấy thông tin đặt bàn." });
+
+            var resJson = await resResponse.Content.ReadAsStringAsync();
+            var reservation = JsonConvert.DeserializeObject<ReservationStaffViewModel>(resJson);
+            if (reservation == null)
+                return Json(new { success = false, message = "Không thể đọc dữ liệu đặt bàn." });
+
+            // Tạo link thanh toán (ví dụ PayOS hoặc trang QR riêng)
+            var paymentLink = Url.Action("DepositPayment", "Payment",
+                new { id = dto.ReservationId, amount = dto.DepositAmount }, Request.Scheme);
+
+            // Nội dung SMS
+            string message = $"[SapaFoRest] Quý khách vui lòng thanh toán đặt cọc {dto.DepositAmount:N0} VND để giữ bàn. " +
+                             $"Thanh toán tại: {paymentLink}";
+
+            try
+            {
+                using var smsClient = new HttpClient();
+                smsClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Basic",
+                        Convert.ToBase64String(Encoding.ASCII.GetBytes("e1U7HuMJtajomx5s8higT05vxieVGyOt:")));
+
+                var smsPayload = new
+                {
+                    to = new[] { reservation.CustomerPhone },
+                    content = message,
+                    type = 2,   // Gửi qua brandname
+                    sender = "" // bắt buộc để trống nếu type=2
+                };
+
+                var json = JsonConvert.SerializeObject(smsPayload);
+                var response = await smsClient.PostAsync("https://api.speedsms.vn/index.php/sms/send",
+                    new StringContent(json, Encoding.UTF8, "application/json"));
+
+                var smsResult = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine("====================================");
+                Console.WriteLine("[SpeedSMS Response] " + smsResult);
+                Console.WriteLine("[Nội dung SMS gửi đi]");
+                Console.WriteLine($"  ➜ Gửi tới: {reservation.CustomerPhone}");
+                Console.WriteLine($"  ➜ Nội dung: {message}");
+                Console.WriteLine("====================================");
+
+                // Nếu gửi thành công
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new { success = true, message = "✅ Đã gửi yêu cầu đặt cọc qua SMS cho khách hàng." });
+                }
+
+                // Nếu là lỗi "sender not found"
+                if (smsResult.Contains("sender not found", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("[⚠️ DEMO MODE] Chưa đăng ký brandname - chỉ hiển thị nội dung SMS trong log.");
+                   
+                    return Json(new
+                    {
+                        success = true,
+                        message = "⚠️ Chưa đăng ký brandname, SMS chỉ hiển thị DEMO MODE trong log (chưa gửi thật)."
+                    });
+                }
+
+                // Lỗi khác
+                Console.WriteLine("[❌ Lỗi khác khi gửi SMS]");
+                return Json(new { success = false, message = "❌ Gửi SMS thất bại: " + smsResult });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("====================================");
+                Console.WriteLine($"[SpeedSMS Exception] {ex.Message}");
+                Console.WriteLine("[DEMO MODE] Tin nhắn gửi thử:");
+                Console.WriteLine($"  ➜ Gửi tới: {reservation.CustomerPhone}");
+                Console.WriteLine($"  ➜ Nội dung: {message}");
+                Console.WriteLine("====================================");
+
+                return Json(new
+                {
+                    success = true,
+                    message = "⚠️ DEMO MODE (do lỗi API hoặc chưa có brandname). Xem nội dung SMS trong log."
+                });
+            }
+        }
+
+        public class DepositRequestDto
+        {
+            public int ReservationId { get; set; }
+            public decimal DepositAmount { get; set; }
+        }
+
 
     }
 }
