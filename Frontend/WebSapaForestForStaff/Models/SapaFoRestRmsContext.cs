@@ -84,11 +84,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=GRANOSDESKTOP\\GRANOS;Database=SapaFoRestRMS;User Id=sa;Password=152003;TrustServerCertificate=True;MultipleActiveResultSets=True;");
-
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Announcement>(entity =>
@@ -250,17 +246,32 @@ public partial class SapaFoRestRmsContext : DbContext
 
         modelBuilder.Entity<MarketingCampaign>(entity =>
         {
-            entity.HasKey(e => e.CampaignId).HasName("PK__Marketin__3F5E8A994C02E413");
-
-            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasKey(e => e.CampaignId).HasName("PK__Marketin__3F5E8A994B3A216D");
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Active");
             entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.TargetRevenue)
+             .HasPrecision(18, 2);
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.MarketingCampaigns)
+            entity.Property(e => e.Budget).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CampaignType).HasMaxLength(20);
+            entity.Property(e => e.TargetAudience).HasMaxLength(20);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.ViewCount).HasDefaultValue(0);
+            entity.Property(e => e.RevenueGenerated).HasColumnType("decimal(18, 2)").HasDefaultValue(0m);
+
+            entity.HasOne(d => d.CreatedByNavigation)
+                .WithMany(p => p.MarketingCampaigns)
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK_MarketingCampaigns_Users");
+
+            entity.HasOne(d => d.Voucher)
+             // Thay WithMany() bằng WithMany(p => p.MarketingCampaigns)
+             .WithMany(p => p.MarketingCampaigns)
+             .HasForeignKey(d => d.VoucherId)
+             .HasConstraintName("FK_MarketingCampaigns_Vouchers")
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<MenuCategory>(entity =>

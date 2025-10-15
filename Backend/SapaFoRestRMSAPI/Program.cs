@@ -75,6 +75,9 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
+builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
+builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
+builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
 //UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -97,7 +100,7 @@ builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
 
 
-builder.Services.AddSingleton<CloudinaryService>();
+builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 
 
 
