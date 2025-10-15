@@ -1,0 +1,57 @@
+﻿@model WebSapaForestForStaff.Models.TableManageDto
+
+@{
+    ViewBag.Title = ViewBag.Title ?? "Thêm bàn mới";
+}
+
+<h2>@ViewBag.Title</h2>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-danger">@ViewBag.Error</div>
+}
+
+<form asp-action="@ViewBag.Action" method="post">
+    <div class="mb-3">
+        <label class="form-label">Tên bàn</label>
+        <input asp-for="TableNumber" class="form-control" />
+        <span asp-validation-for="TableNumber" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Sức chứa</label>
+        <input asp-for="Capacity" type="number" class="form-control" />
+        <span asp-validation-for="Capacity" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Khu vực</label>
+        <select asp-for="AreaId" class="form-control">
+            <option value="">-- Chọn khu vực --</option>
+            @if (ViewBag.Areas != null)
+            {
+                foreach (var area in ViewBag.Areas as List<WebSapaForestForStaff.Models.AreaDto>)
+                {
+                    <option value="@area.AreaId" selected="@(area.AreaId == Model.AreaId)">@area.AreaName</option>
+                }
+            }
+
+        </select>
+        <span asp-validation-for="AreaId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Trạng thái</label>
+        <select asp-for="Status" class="form-control">
+            <option value="Available" selected="@(Model.Status == "Available")">Available</option>
+            <option value="Maintenance" selected="@(Model.Status == "Maintenance")">Maintenance</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">Lưu</button>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Hủy</a>
+</form>
+
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+}

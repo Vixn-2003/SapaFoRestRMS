@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace BusinessAccessLayer.DTOs
+﻿namespace WebSapaForestForStaff.Models
 {
-    public class TableDto
+    public class TableManagerViewModel
     {
         public int TableId { get; set; }
         public string TableName { get; set; } = null!;
         public int Capacity { get; set; }
-         public string Status { get; set; } = "Available";
+        public string Status { get; set; } = "Available";
         public int AreaId { get; set; }
         public string AreaName { get; set; } = null!;
     }

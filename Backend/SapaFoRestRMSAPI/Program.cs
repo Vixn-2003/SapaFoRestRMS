@@ -91,13 +91,19 @@ builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
 
-// Auth and User Management services
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserManagementService, UserManagementService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IVerificationService, VerificationService>();
-builder.Services.AddScoped<IPasswordService, PasswordService>();
-builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+            // Auth and User Management services
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<IVerificationService, VerificationService>();
+            builder.Services.AddScoped<IPasswordService, PasswordService>();
+            builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+            //Table Service/Repository
+            builder.Services.AddScoped<ITableRepository, TableRepository>();
+            builder.Services.AddScoped<ITableService, TableService>();
+            // Area Repository
+            builder.Services.AddScoped<IAreaRepository, AreaRepository>();
+            builder.Services.AddScoped<IAreaService, AreaService>();
 
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
@@ -171,11 +177,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-//Seed admin user on startup
-using (var scope = app.Services.CreateScope())
-{
-    var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-   await  SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
-}
+            //Seed admin user on startup
+            using (var scope = app.Services.CreateScope())
+            {
+                var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+              SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
+            }
 
 app.Run();

@@ -96,6 +96,7 @@ namespace DataAccessLayer.Repositories
                 reservation.TimeSlot,
                 reservation.NumberOfGuests,
                 reservation.Status,
+                reservation.Notes,
                 Tables = reservation.ReservationTables
             .Select(rt => new
             {
@@ -110,7 +111,7 @@ namespace DataAccessLayer.Repositories
         public async Task<List<Area>> GetAllAreasWithTablesAsync()
         {
             return await _context.Areas
-                .Include(a => a.Tables)
+                .Include(a => a.Tables.Where(t => t.Status == "Available"))
                 .ToListAsync();
         }
 
@@ -129,6 +130,14 @@ namespace DataAccessLayer.Repositories
             return await _context.Reservations
                 .Include(r => r.ReservationTables)
                 .FirstOrDefaultAsync(r => r.ReservationId == reservationId);
+        }
+        public async Task<List<Reservation>> GetReservationsByPhoneAndDateAndSlotAsync(string phone, DateTime date, string slot)
+        {
+            return await _context.Reservations
+                .Where(r => r.Customer.User.Phone == phone
+                         && r.ReservationDate == date
+                         && r.TimeSlot == slot)
+                .ToListAsync();
         }
 
         public async Task SaveChangesAsync()

@@ -1,0 +1,9 @@
+﻿@{
+    ViewData["Title"] = "Thanh toán đặt cọc";
+}
+<h2>Thanh toán đặt cọc</h2>
+<p>Vui lòng quét mã QR dưới đây để thanh toán số tiền <strong>@ViewBag.Amount.ToString("N0") VND</strong></p>
+
+<img src="@($"https://img.vietqr.io/image/BIDV-4271010783-compact.png?amount={ViewBag.Amount}&addInfo=DatCocBanMSDB:{ViewBag.ReservationId}")" width="300" />
+
+<p>Sau khi thanh toán, vui lòng chờ nhân viên xác nhận.</p>
