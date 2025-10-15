@@ -1,75 +1,73 @@
-﻿/* Scope riêng cho reservation */
-#reservation-page {
-    max-width: 480px;
-    margin: 50px auto;
-    padding: 30px 25px;
-    background: linear-gradient(to bottom right, #e6f2e6, #c8edc8);
+﻿/* --- Form tổng thể --- */
+#reservationForm {
+    max-width: 550px;
+    margin: 30px auto;
+    background: linear-gradient(to bottom, #e0f2f1, #a5d6a7); /* xanh rừng nhạt */
+    padding: 25px;
     border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    border-top: 5px solid #2e7d32; /* viền xanh rừng đậm */
 }
 
-    /* Tiêu đề nổi bật */
-    #reservation-page .reservation-title {
-        font-family: 'Georgia', serif;
-        font-weight: 900;
-        font-size: 2rem;
-        color: #2e7d32; /* xanh rừng đậm */
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    }
-
-    /* Labels */
-    #reservation-page label.form-label {
+    /* --- Labels --- */
+    #reservationForm .form-label {
         font-weight: 600;
-        color: #1b5e20;
+        color: #1b5e20; /* xanh rừng đậm */
     }
 
-    /* Inputs & selects */
-    #reservation-page input.form-control,
-    #reservation-page select.form-select,
-    #reservation-page textarea.form-control {
-        border: 2px solid #1b5e20;
+    /* --- Inputs & select --- */
+    #reservationForm .form-control,
+    #reservationForm .form-select,
+    #reservationForm textarea {
         border-radius: 10px;
+        border: 1px solid #66bb6a;
         padding: 10px;
-        font-size: 14px;
-        background-color: #f0fff0;
-        transition: all 0.3s ease;
     }
 
-        #reservation-page input.form-control:focus,
-        #reservation-page select.form-select:focus,
-        #reservation-page textarea.form-control:focus {
-            border-color: #2e7d32;
-            box-shadow: 0 0 8px rgba(46, 125, 50, 0.4);
-            outline: none;
-        }
-
-    /* Button */
-    #reservation-page .btn-reservation {
-        background-color: #2e7d32;
-        border-color: #2e7d32;
+    /* --- Button Xác nhận --- */
+    #reservationForm .btn-reservation {
+        background-color: #388e3c;
+        color: #fff;
         font-weight: bold;
-        font-size: 16px;
-        padding: 12px;
-        border-radius: 12px;
+        border-radius: 10px;
         transition: all 0.3s ease;
     }
 
-        #reservation-page .btn-reservation:hover {
-            background-color: #1b5e20;
-            border-color: #1b5e20;
-            box-shadow: 0 4px 15px rgba(27, 94, 32, 0.4);
+        #reservationForm .btn-reservation:hover {
+            background-color: #2e7d32;
         }
 
-    /* Error message */
-    #reservation-page .text-danger {
-        font-size: 13px;
-        margin-top: 5px;
+/* --- Button Gửi OTP --- */
+#sendOtpBtn {
+    background-color: #81c784;
+    color: #1b5e20;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+    #sendOtpBtn:hover {
+        background-color: #66bb6a;
     }
 
-/* Responsive */
+/* --- Thông báo lỗi --- */
+#reservationForm .text-danger {
+    font-size: 0.875rem;
+}
+
+/* --- Ngày và giờ cùng hàng --- */
+#reservationForm .date-time-row {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+    #reservationForm .date-time-row .form-group {
+        flex: 1;
+    }
+
+/* --- Responsive --- */
 @media (max-width: 576px) {
-    #reservation-page {
-        padding: 20px;
-        margin: 30px 10px;
+    #reservationForm .date-time-row {
+        flex-direction: column;
     }
 }

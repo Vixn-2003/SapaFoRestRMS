@@ -32,6 +32,7 @@ namespace WebSapaFoRestForCustomer.Models
         [Display(Name = "Ghi chú")]
         public string? Notes { get; set; }
 
+        [Display(Name = "Mã OTP")]
+        public string? OtpCode { get; set; }
     }
-
 }
