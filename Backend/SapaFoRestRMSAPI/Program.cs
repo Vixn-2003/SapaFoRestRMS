@@ -1,5 +1,5 @@
 
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using DataAccessLayer;
 using DataAccessLayer.Dbcontext;
 using BusinessAccessLayer.Mapping;
@@ -17,109 +17,79 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using DomainAccessLayer.Enums;
 using BusinessLogicLayer.Services.Interfaces;
 using BusinessLogicLayer.Services;
-namespace SapaFoRestRMSAPI
-{
-    public class Program
-    {
-        public static  void Main(string[] args)
-        {
-            var builder = WebApplication.CreateBuilder(args);
-
-            builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
 
-            builder.Services.AddEndpointsApiExplorer();
-            // Bật middleware Swagger
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-                {
-                    Title = "RMS API",
-                    Version = "v1"
-                });
+var builder = WebApplication.CreateBuilder(args);
 
-                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-                    Scheme = "Bearer",
-                    BearerFormat = "JWT",
-                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-                    Description = "Nhập token theo dạng: Bearer {token}"
-                });
+builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
+options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
-                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
-       {
-           {
-             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-                {
-                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                      {
-                           Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                      }
-                 },
-                  new string[] {}
-           }
-        });
-            });
-
-            // MAPPING
-            builder.Services.AddAutoMapper(typeof(MappingProfile));
+//Show connection string in console
+Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));
 
 
-            //Scope
-            builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
-            builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+builder.Services.AddEndpointsApiExplorer();
+// Bật middleware Swagger
+builder.Services.AddSwaggerGen();
+
+// MAPPING
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 
-            //UnitOfWork
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+//Scope
+builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
+builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
 
-            // Add services to the container.
-
-            builder.Services.AddControllers();
-
-            // Add AutoMapper
-            builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
-            builder.Services.AddAutoMapper(typeof(MappingProfile));
+//UnitOfWork
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
-            // Add Repositories
-            builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
+// Add services to the container.
 
-            // Add Services
-            builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
+builder.Services.AddControllers();
 
-            builder.Services.AddScoped<IBrandBannerRepository, BrandBannerRepository>();
-            builder.Services.AddScoped<IBrandBannerService, BrandBannerService>();
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-            builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
-            builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 
-            builder.Services.AddScoped<IComboRepository, ComboRepository>();
-            builder.Services.AddScoped<IComboService, ComboService>();
+// Add Repositories
+builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
 
-            builder.Services.AddScoped<IEventRepository, EventRepository>();
-            builder.Services.AddScoped<IEventService, EventService>();
+// Add Services
+builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
 
-            builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
-            builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+builder.Services.AddScoped<IBrandBannerRepository, BrandBannerRepository>();
+builder.Services.AddScoped<IBrandBannerService, BrandBannerService>();
 
-            //UnitOfWork
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+builder.Services.AddScoped<IMenuItemService, MenuItemService>();
 
-            builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
-            builder.Services.AddScoped<IUserRepository, UserRepository>();
-            builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<IComboRepository, ComboRepository>();
+builder.Services.AddScoped<IComboService, ComboService>();
 
-            builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<IEventService, EventService>();
 
-            // Unit of Work and User Repository mapping
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-            builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
+builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
+builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+
+builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
+builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
+builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
+//UnitOfWork
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IReservationService, ReservationService>();
+
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+
+// Unit of Work and User Repository mapping
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
 
             // Auth and User Management services
             builder.Services.AddScoped<IAuthService, AuthService>();
@@ -136,85 +106,82 @@ namespace SapaFoRestRMSAPI
             builder.Services.AddScoped<IAreaService, AreaService>();
 
 
-            builder.Services.AddSingleton<CloudinaryService>();
+builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 
-    
 
-            builder.Services.AddAuthorization(options =>
-            {
-                options.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin));
-                options.AddPolicy(Roles.Manager, p => p.RequireRole(Roles.Manager));
-                options.AddPolicy(Roles.Staff, p => p.RequireRole(Roles.Staff));
-                options.AddPolicy(Roles.Customer, p => p.RequireRole(Roles.Customer));
-                options.AddPolicy(Roles.Owner, p => p.RequireRole(Roles.Owner));
-                options.AddPolicy("AdminOrManager", p => p.RequireRole(Roles.Admin, Roles.Manager));
-                options.AddPolicy("StaffOrManager", p => p.RequireRole(Roles.Staff, Roles.Manager));
-            });
 
-            // JWT Authentication
-            var jwtSection = builder.Configuration.GetSection("Jwt");
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Key"] ?? "replace-with-strong-key"));
-            builder.Services
-                .AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidateLifetime = true,
-                        ValidIssuer = jwtSection["Issuer"],
-                        ValidAudience = jwtSection["Audience"],
-                        IssuerSigningKey = signingKey,
-                        ClockSkew = TimeSpan.FromMinutes(1)
-                    };
-                });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(Roles.Admin, p => p.RequireRole(Roles.Admin));
+    options.AddPolicy(Roles.Manager, p => p.RequireRole(Roles.Manager));
+    options.AddPolicy(Roles.Staff, p => p.RequireRole(Roles.Staff));
+    options.AddPolicy(Roles.Customer, p => p.RequireRole(Roles.Customer));
+    options.AddPolicy(Roles.Owner, p => p.RequireRole(Roles.Owner));
+    options.AddPolicy("AdminOrManager", p => p.RequireRole(Roles.Admin, Roles.Manager));
+    options.AddPolicy("StaffOrManager", p => p.RequireRole(Roles.Staff, Roles.Manager));
+});
 
-           
-         
-
-            var app = builder.Build();
+// JWT Authentication
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Key"] ?? "replace-with-strong-key"));
+builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ValidIssuer = jwtSection["Issuer"],
+            ValidAudience = jwtSection["Audience"],
+            IssuerSigningKey = signingKey,
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
 
 
 
 
-           
-
-         
-
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+var app = builder.Build();
 
 
 
 
-            app.UseHttpsRedirection();
-            // Bật CORS
-            app.UseCors("AllowFrontend");
-            app.UseAuthentication();
-            app.UseAuthorization();
 
 
-            app.MapControllers();
+
+
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+
+
+
+app.UseHttpsRedirection();
+// Bật CORS
+app.UseCors("AllowFrontend");
+app.UseAuthentication();
+app.UseAuthorization();
+
+
+app.MapControllers();
 
             //Seed admin user on startup
-            //using (var scope = app.Services.CreateScope())
-            //{
-            //    var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-            //  SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
-            //}
+            using (var scope = app.Services.CreateScope())
+            {
+                var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+              SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
+            }
 
-            app.Run();
-        }
-    }
-}
+app.Run();

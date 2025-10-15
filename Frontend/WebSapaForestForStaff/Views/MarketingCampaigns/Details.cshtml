@@ -1,0 +1,163 @@
+﻿@model WebSapaFoRestRMSForStaff.Models.CampaignDTO.MarketingCampaignDto
+@{
+    ViewData["Title"] = "Chi tiết chiến dịch";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    var pageNumber = ViewData["PageNumber"] ?? 1;
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title mb-0">Chi tiết chiến dịch</h4>
+                    <div>
+                        <a asp-action="Index" asp-route-pageNumber="@pageNumber" class="btn btn-secondary">
+                            <i class="mdi mdi-arrow-left"></i> Quay lại
+                        </a>
+                        <a asp-action="Edit" asp-route-id="@Model.CampaignId" asp-route-pageNumber="@pageNumber" class="btn btn-warning">
+                            <i class="mdi mdi-pencil"></i> Chỉnh sửa
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <!-- Banner Image -->
+                        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                        {
+                            <div class="mb-4">
+                                <img src="@Model.ImageUrl" class="img-fluid rounded shadow" alt="@Model.Title">
+                            </div>
+                        }
+
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th style="width: 200px;"><i class="mdi mdi-text text-primary"></i> Tiêu đề:</th>
+                                    <td><strong>@Model.Title</strong></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="mdi mdi-tag text-info"></i> Loại chiến dịch:</th>
+                                    <td><span class="badge bg-info">@Model.CampaignType</span></td>
+                                </tr>
+                                <tr>
+                                    <th><i class="mdi mdi-check-circle text-success"></i> Trạng thái:</th>
+                                    <td>
+                                        @{
+                                            var statusClass = Model.Status?.ToLower() switch
+                                            {
+                                                "completed" => "badge bg-success",
+                                                "active" => "badge bg-warning",
+                                                "pending" => "badge bg-secondary",
+                                                _ => "badge bg-light text-dark"
+                                            };
+                                        }
+                                        <span class="@statusClass">@Model.Status</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><i class="mdi mdi-account-group text-purple"></i> Đối tượng mục tiêu:</th>
+                                    <td>@(Model.TargetAudience ?? "Chưa xác định")</td>
+                                </tr>
+                                <tr>
+                                    <th><i class="mdi mdi-calendar-start"></i> Ngày bắt đầu:</th>
+                                    <td>@Model.StartDate?.ToString("dd/MM/yyyy")</td>
+                                </tr>
+                                <tr>
+                                    <th><i class="mdi mdi-calendar-end"></i> Ngày kết thúc:</th>
+                                    <td>@Model.EndDate?.ToString("dd/MM/yyyy")</td>
+                                </tr>
+                                <tr>
+                                    <th><i class="mdi mdi-ticket-percent text-warning"></i> Voucher áp dụng:</th>
+                                    <td>@(Model.VoucherId.HasValue ? $"Voucher #{Model.VoucherId}" : "Không áp dụng")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="col-md-4">
+                        <!-- Performance Stats -->
+                        <div class="card bg-gradient-primary text-white mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="mdi mdi-chart-line"></i> Hiệu suất</h5>
+
+                                <div class="mb-3">
+                                    <small>Ngân sách</small>
+                                    <h4>@String.Format("{0:N0} VND", Model.Budget)</h4>
+                                </div>
+
+                                <div class="mb-3">
+                                    <small>Doanh thu</small>
+                                    <h4>@String.Format("{0:N0} VND", Model.RevenueGenerated)</h4>
+                                </div>
+
+                                <div class="mb-3">
+                                    <small>ROI (Return on Investment)</small>
+                                    <h4 class="@(Model.ROI >= 0 ? "" : "text-danger")">
+                                        @String.Format("{0:F2}%", Model.ROI ?? 0)
+                                    </h4>
+                                </div>
+
+                                <div>
+                                    <small>Lượt xem</small>
+                                    <h4>@String.Format("{0:N0}", Model.ViewCount)</h4>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Target KPI -->
+                        @if (Model.TargetReach.HasValue || Model.TargetRevenue.HasValue)
+                        {
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="mdi mdi-target"></i> Chỉ tiêu KPI</h5>
+
+                                    @if (Model.TargetReach.HasValue)
+                                    {
+                                        var reachPercent = Model.TargetReach.Value > 0
+                                        ? ((decimal)(Model.ViewCount ?? 0) / Model.TargetReach.Value) * 100
+                                        : 0;
+                                        var reachClass = reachPercent >= 100 ? "bg-success" : reachPercent >= 70 ? "bg-warning" : "bg-danger";
+
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <small class="text-muted">Lượt tiếp cận</small>
+                                                <small class="fw-bold">@String.Format("{0:F1}%", reachPercent)</small>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar @reachClass" style="width: @Math.Min(reachPercent, 100)%">
+                                                    @String.Format("{0:N0}", Model.ViewCount) / @String.Format("{0:N0}", Model.TargetReach)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+
+                                    @if (Model.TargetRevenue.HasValue)
+                                    {
+                                        var revenuePercent = Model.TargetRevenue.Value > 0
+                                        ? ((Model.RevenueGenerated ?? 0) / Model.TargetRevenue.Value) * 100
+                                        : 0;
+                                        var revenueClass = revenuePercent >= 100 ? "bg-success" : revenuePercent >= 70 ? "bg-warning" : "bg-danger";
+
+                                        <div>
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <small class="text-muted">Doanh thu</small>
+                                                <small class="fw-bold">@String.Format("{0:F1}%", revenuePercent)</small>
+                                            </div>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar @revenueClass" style="width: @Math.Min(revenuePercent, 100)%">
+                                                    @String.Format("{0:N0}", Model.RevenueGenerated) / @String.Format("{0:N0}", Model.TargetRevenue)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
