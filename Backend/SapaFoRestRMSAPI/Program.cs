@@ -160,6 +160,7 @@ builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfW
             builder.Services.AddScoped<IAreaRepository, AreaRepository>();
             builder.Services.AddScoped<IAreaService, AreaService>();
 
+builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 
