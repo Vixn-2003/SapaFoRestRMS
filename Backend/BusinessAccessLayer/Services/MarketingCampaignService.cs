@@ -18,9 +18,9 @@ namespace BusinessAccessLayer.Services
         private readonly ICloudinaryService _cloudinaryService;
 
         public MarketingCampaignService(
-             IMarketingCampaignRepository repository,
-             IMapper mapper,
-             ICloudinaryService cloudinaryService)
+            IMarketingCampaignRepository repository,
+            IMapper mapper,
+            ICloudinaryService cloudinaryService)
         {
             _repository = repository;
             _mapper = mapper;
@@ -122,89 +122,40 @@ namespace BusinessAccessLayer.Services
             };
         }
 
-        public async Task<IEnumerable<CampaignPerformanceDto>> GetPerformanceChartDataAsync(
+        public async Task<IEnumerable<DailyPerformanceDto>> GetDailyPerformanceChartDataAsync(
             DateOnly startDate, DateOnly endDate)
         {
-            var data = await _repository.GetPerformanceDataAsync(startDate, endDate);
+            var data = await _repository.GetDailyPerformanceDataAsync(startDate, endDate);
 
-            return data.Select(d => new CampaignPerformanceDto
+            return data.Select(d => new DailyPerformanceDto
             {
-                Month = d.Month,
-                Revenue = d.Revenue,
-                Reach = d.Reach,
-                Budget = d.Budget
+                Date = d.Date.ToString("dd/MM/yyyy"),
+                ActualRevenue = d.Revenue,
+                ActualReach = d.Reach,
+                TargetRevenue = d.TargetRevenue,
+                TargetReach = d.TargetReach,
+                RevenueAchievementPercent = d.TargetRevenue > 0 ? (d.Revenue / d.TargetRevenue) * 100 : 0,
+                ReachAchievementPercent = d.TargetReach > 0 ? ((decimal)d.Reach / d.TargetReach) * 100 : 0
             });
         }
 
-        public async Task<CampaignComparisonDto> GetYearOverYearComparisonAsync(
+        public async Task<IEnumerable<DailyPerformanceDto>> GetDailyPerformancePreviousYearAsync(
             DateOnly startDate, DateOnly endDate)
         {
-            var currentData = await _repository.GetPerformanceDataAsync(startDate, endDate);
-            var previousData = await _repository.GetPerformanceDataForPreviousYearAsync(startDate, endDate);
+            var data = await _repository.GetDailyPerformanceDataForPreviousYearAsync(startDate, endDate);
 
-            var currentRevenue = currentData.Sum(d => d.Revenue);
-            var currentReach = currentData.Sum(d => d.Reach);
-            var currentBudget = currentData.Sum(d => d.Budget);
-
-            var previousRevenue = previousData.Sum(d => d.Revenue);
-            var previousReach = previousData.Sum(d => d.Reach);
-            var previousBudget = previousData.Sum(d => d.Budget);
-
-            var revenueGrowth = previousRevenue > 0
-                ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
-                : 0;
-
-            var reachGrowth = previousReach > 0
-                ? (((decimal)currentReach - previousReach) / previousReach) * 100
-                : 0;
-
-            var currentROI = currentBudget > 0
-                ? ((currentRevenue - currentBudget) / currentBudget) * 100
-                : 0;
-
-            var previousROI = previousBudget > 0
-                ? ((previousRevenue - previousBudget) / previousBudget) * 100
-                : 0;
-
-            return new CampaignComparisonDto
+            return data.Select(d => new DailyPerformanceDto
             {
-                CurrentRevenue = currentRevenue,
-                PreviousYearRevenue = previousRevenue,
-                RevenueGrowthPercentage = revenueGrowth,
-                CurrentReach = currentReach,
-                PreviousYearReach = previousReach,
-                ReachGrowthPercentage = reachGrowth,
-                CurrentROI = currentROI,
-                PreviousYearROI = previousROI
-            };
-        }
-
-        public async Task<CampaignTargetKpiDto> GetTargetKpiAsync(
-            DateOnly startDate,
-            DateOnly endDate,
-            decimal targetRevenue,
-            int targetReach)
-        {
-            var (currentRevenue, currentReach) = await _repository.GetCurrentPeriodMetricsAsync(startDate, endDate);
-
-            return new CampaignTargetKpiDto
-            {
-                TargetRevenue = targetRevenue,
-                TargetReach = targetReach,
-                CurrentRevenue = currentRevenue,
-                CurrentReach = currentReach
-            };
-        }
-
-        public async Task<IEnumerable<CampaignDistributionDto>> GetCampaignDistributionAsync()
-        {
-            var data = await _repository.GetCampaignDistributionAsync();
-
-            return data.Select(d => new CampaignDistributionDto
-            {
-                Type = d.Type,
-                Count = d.Count
+                Date = d.Date.AddYears(1).ToString("dd/MM/yyyy"), // Adjust date to current year for comparison
+                ActualRevenue = d.Revenue,
+                ActualReach = d.Reach,
+                TargetRevenue = d.TargetRevenue,
+                TargetReach = d.TargetReach,
+                RevenueAchievementPercent = d.TargetRevenue > 0 ? (d.Revenue / d.TargetRevenue) * 100 : 0,
+                ReachAchievementPercent = d.TargetReach > 0 ? ((decimal)d.Reach / d.TargetReach) * 100 : 0
             });
         }
+
+
     }
 }
