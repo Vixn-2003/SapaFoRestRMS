@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessAccessLayer.DTOs
+namespace BusinessAccessLayer.DTOs.Manager
 {
     public class ManagerComboItemDTO
     {

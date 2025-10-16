@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using BusinessAccessLayer.DTOs;
+using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using System;
@@ -25,6 +25,12 @@ namespace BusinessAccessLayer.Services
         {
             var menu = await _unitOfWork.MenuItem.GetManagerAllMenus();
             return _mapper.Map<IEnumerable<ManagerMenuDTO>>(menu);
+        }
+
+        public async Task<ManagerMenuDTO> ManagerMenuById(int id)
+        {
+            var menu = await _unitOfWork.MenuItem.ManagerMenuByIds(id);
+            return _mapper.Map<ManagerMenuDTO>(menu);
         }
     }
 }

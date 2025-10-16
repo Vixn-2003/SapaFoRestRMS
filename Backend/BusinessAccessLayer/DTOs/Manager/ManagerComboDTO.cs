@@ -5,20 +5,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessAccessLayer.DTOs
+namespace BusinessAccessLayer.DTOs.Manager
 {
-    public class ManagerMenuDTO
+    public class ManagerComboDTO
     {
-        public int MenuItemId { get; set; }
-        public int? CategoryId { get; set; }
+
+        public int ComboId { get; set; }
+
         public string Name { get; set; } = null!;
+
         public string? Description { get; set; }
+
         public decimal Price { get; set; }
-        public string CourseType { get; set; } = null!;
+
         public bool? IsAvailable { get; set; }
         public string? ImageUrl { get; set; }
 
-        public ManagerMenuCategoryDTO? Category { get; set; }
+        public List<ManagerComboItemDTO?> ComboItems { get; set; } = new List<ManagerComboItemDTO?>();
     }
-
 }

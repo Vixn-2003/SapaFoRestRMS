@@ -14,11 +14,16 @@ namespace DataAccessLayer.UnitOfWork
 
 
         private IManagerMenuRepository _menuRepository;
+        private IManagerCategoryRepository _categoryRepository;
 
         private IManagerComboRepository _comboRepository;
 
+        private IInventoryIngredientRepository _inventoryRepository;
+
         public IManagerMenuRepository MenuItem => _menuRepository ??= new ManagerMenuRepository(_context);
+        public IManagerCategoryRepository MenuCategory => _categoryRepository ??= new ManagerCategoryRepository(_context);
         public IManagerComboRepository Combo => _comboRepository ??= new ManagerComboRepository(_context);
+        public IInventoryIngredientRepository InventoryIngredient => _inventoryRepository ??= new InventoryIngredientRepository(_context);
 
 
         private IDbContextTransaction _transaction;

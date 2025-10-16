@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 
 namespace BusinessAccessLayer.Services.Interfaces
 {
-    public interface IManagerComboService
+    public interface IManagerCategoryService
     {
-        Task<IEnumerable<ManagerComboDTO>> GetManagerAllCombo();
+
+        Task<IEnumerable<ManagerCategoryDTO>> GetAllCategory();
     }
 }

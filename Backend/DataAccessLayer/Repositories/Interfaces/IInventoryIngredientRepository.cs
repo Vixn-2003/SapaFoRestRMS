@@ -7,11 +7,9 @@ using System.Threading.Tasks;
 
 namespace DataAccessLayer.Repositories.Interfaces
 {
-    public interface IManagerMenuRepository : IRepository<MenuItem>
+    public interface IInventoryIngredientRepository : IRepository<InventoryBatch>
     {
 
-        Task<IEnumerable<MenuItem>> GetManagerAllMenus();     
-        Task<MenuItem> ManagerMenuByIds(int id);
 
-}
+    }
 }

@@ -1,13 +1,13 @@
-﻿using DomainAccessLayer.Models;
+﻿using WebSapaForestForStaff.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessAccessLayer.DTOs
+namespace WebSapaForestForStaff.DTOs
 {
-    public class ManagerMenuCategoryDTO
+    public class ManagerCategoryDTO
     {
         public int CategoryId { get; set; }
 

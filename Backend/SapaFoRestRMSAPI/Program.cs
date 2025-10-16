@@ -52,6 +52,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         {
             new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+
             {
                 Reference = new Microsoft.OpenApi.Models.OpenApiReference
                 {

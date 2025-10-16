@@ -452,11 +452,10 @@
                                 <span class="status-badge @(item.IsAvailable == true ? "status-available" : "status-unavailable")">
                                     @(item.IsAvailable == true ? "Còn món" : "Hết món")
                                 </span>
-
-                                <button class="btn-edit"
-                                        onclick="location.href='@Url.Action("Edit", "Menu", new { id = item.MenuItemId })'">
-                                    ✏️ Chỉnh sửa
-                                </button>
+                                <form method="post" asp-controller="ManagerMenu" asp-action="ManagerEditMenu">
+                                    <input type="hidden" name="id" value="@item.MenuItemId" />
+                                    <button type="submit" class="btn-edit">✏️ Chỉnh sửa</button>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -547,53 +546,21 @@
                         <th style="width: 120px; text-align: center;">Thao Tác</th>
                     </tr>
                 </thead>
-                <tbody id="categoryList">
-                    <tr data-name="món chính">
-                        <td>1</td>
-                        <td>Món Chính</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 1 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr data-name="món khai vị">
-                        <td>2</td>
-                        <td>Món Khai Vị</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 2 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr data-name="đồ uống">
-                        <td>3</td>
-                        <td>Đồ Uống</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 3 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr data-name="món tráng miệng">
-                        <td>4</td>
-                        <td>Món Tráng Miệng</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 4 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                    <tr data-name="món ăn vặt">
-                        <td>5</td>
-                        <td>Món Ăn Vặt</td>
-                        <td style="text-align: center;">
-                            <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 5 })'">
-                                ✏️
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
+                @foreach (var category in Model.ProductsCategory)
+                {
+                    <tbody id="categoryList">
+                        <tr data-name="@category.CategoryName">
+                            <td>@category.CategoryId</td>
+                            <td>@category.CategoryName</td>
+                            <td style="text-align: center;">
+                                <button class="btn-icon" onclick="location.href='@Url.Action("Edit", "Category", new { id = 1 })'">
+                                    ✏️
+                                </button>
+                            </td>
+                        </tr>
+                        
+                    </tbody>
+                }
             </table>
         </div>
     </div>
