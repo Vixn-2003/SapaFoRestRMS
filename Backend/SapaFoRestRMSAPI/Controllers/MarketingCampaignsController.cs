@@ -136,53 +136,32 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(kpis);
         }
 
-        // GET: api/MarketingCampaigns/charts/performance
-        [HttpGet("charts/performance")]
-        public async Task<IActionResult> GetPerformanceChart(
+        // GET: api/MarketingCampaigns/charts/daily-performance
+        [HttpGet("charts/daily-performance")]
+        public async Task<IActionResult> GetDailyPerformanceChart(
             [FromQuery] string startDate,
             [FromQuery] string endDate)
         {
             if (!DateOnly.TryParse(startDate, out var sd) || !DateOnly.TryParse(endDate, out var ed))
                 return BadRequest(new { message = "Invalid date format" });
 
-            var data = await _service.GetPerformanceChartDataAsync(sd, ed);
+            var data = await _service.GetDailyPerformanceChartDataAsync(sd, ed);
             return Ok(data);
         }
 
-        // GET: api/MarketingCampaigns/charts/comparison
-        [HttpGet("charts/comparison")]
-        public async Task<IActionResult> GetYearOverYearComparison(
+        // GET: api/MarketingCampaigns/charts/daily-performance-previous-year
+        [HttpGet("charts/daily-performance-previous-year")]
+        public async Task<IActionResult> GetDailyPerformancePreviousYear(
             [FromQuery] string startDate,
             [FromQuery] string endDate)
         {
             if (!DateOnly.TryParse(startDate, out var sd) || !DateOnly.TryParse(endDate, out var ed))
                 return BadRequest(new { message = "Invalid date format" });
 
-            var comparison = await _service.GetYearOverYearComparisonAsync(sd, ed);
-            return Ok(comparison);
+            var data = await _service.GetDailyPerformancePreviousYearAsync(sd, ed);
+            return Ok(data);
         }
 
-        // GET: api/MarketingCampaigns/kpi/target
-        [HttpGet("kpi/target")]
-        public async Task<IActionResult> GetTargetKpi(
-            [FromQuery] string startDate,
-            [FromQuery] string endDate,
-            [FromQuery] decimal targetRevenue,
-            [FromQuery] int targetReach)
-        {
-            if (!DateOnly.TryParse(startDate, out var sd) || !DateOnly.TryParse(endDate, out var ed))
-                return BadRequest(new { message = "Invalid date format" });
 
-            var targetKpi = await _service.GetTargetKpiAsync(sd, ed, targetRevenue, targetReach);
-            return Ok(targetKpi);
-        }
-
-        // GET: api/MarketingCampaigns/charts/distribution
-        [HttpGet("charts/distribution")]
-        public async Task<IActionResult> GetCampaignDistribution()
-        {
-            var distribution = await _service.GetCampaignDistributionAsync();
-            return Ok(distribution);
-        }
     }
 }

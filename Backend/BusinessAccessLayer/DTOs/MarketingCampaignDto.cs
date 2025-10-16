@@ -96,39 +96,16 @@ namespace BusinessAccessLayer.DTOs
         public decimal TotalROI { get; set; }
     }
 
-    // DTO for performance chart
-    public class CampaignPerformanceDto
+    // DTO for daily performance chart with KPI
+    public class DailyPerformanceDto
     {
-        public string Month { get; set; } = null!;
-        public decimal Revenue { get; set; }
-        public int Reach { get; set; }
-        public decimal Budget { get; set; }
-    }
-    public class CampaignTargetKpiDto
-    {
+        public string Date { get; set; } = null!; // Format: "dd/MM/yyyy"
+        public decimal RevenueAchievementPercent { get; set; } // % đạt KPI doanh thu
+        public decimal ReachAchievementPercent { get; set; } // % đạt KPI lượt tiếp cận
+        public decimal ActualRevenue { get; set; }
+        public int ActualReach { get; set; }
         public decimal TargetRevenue { get; set; }
         public int TargetReach { get; set; }
-        public decimal CurrentRevenue { get; set; }
-        public int CurrentReach { get; set; }
-        public decimal RevenueAchievementPercentage => TargetRevenue > 0
-            ? (CurrentRevenue / TargetRevenue) * 100
-            : 0;
-        public decimal ReachAchievementPercentage => TargetReach > 0
-            ? ((decimal)CurrentReach / TargetReach) * 100
-            : 0;
-    }
-
-    // DTO for comparison with previous year
-    public class CampaignComparisonDto
-    {
-        public decimal CurrentRevenue { get; set; }
-        public decimal PreviousYearRevenue { get; set; }
-        public decimal RevenueGrowthPercentage { get; set; }
-        public int CurrentReach { get; set; }
-        public int PreviousYearReach { get; set; }
-        public decimal ReachGrowthPercentage { get; set; }
-        public decimal CurrentROI { get; set; }
-        public decimal PreviousYearROI { get; set; }
     }
 
     // DTO for distribution chart

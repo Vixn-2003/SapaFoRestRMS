@@ -32,16 +32,13 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<decimal> GetAverageConversionRateAsync(DateOnly? startDate, DateOnly? endDate);
         Task<decimal> GetTotalROIAsync(DateOnly? startDate, DateOnly? endDate);
 
-        // Chart data
-        Task<IEnumerable<(string Month, decimal Revenue, int Reach, decimal Budget)>> GetPerformanceDataAsync(
+        // Chart data - Daily performance with KPI targets
+        Task<IEnumerable<(DateOnly Date, decimal Revenue, int Reach, decimal TargetRevenue, int TargetReach)>> GetDailyPerformanceDataAsync(
             DateOnly startDate, DateOnly endDate);
 
-        Task<IEnumerable<(string Month, decimal Revenue, int Reach, decimal Budget)>> GetPerformanceDataForPreviousYearAsync(
+        Task<IEnumerable<(DateOnly Date, decimal Revenue, int Reach, decimal TargetRevenue, int TargetReach)>> GetDailyPerformanceDataForPreviousYearAsync(
             DateOnly startDate, DateOnly endDate);
 
-        Task<IEnumerable<(string Type, int Count)>> GetCampaignDistributionAsync();
 
-        // Target KPI
-        Task<(decimal revenue, int reach)> GetCurrentPeriodMetricsAsync(DateOnly startDate, DateOnly endDate);
     }
 }
