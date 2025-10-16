@@ -12,6 +12,9 @@ public partial class Table
     public int Capacity { get; set; }
 
     public string? Status { get; set; }
+    public int AreaId { get; set; }
 
+    // Navigation property
+    public virtual Area Area { get; set; } = null!;
     public virtual ICollection<ReservationTable> ReservationTables { get; set; } = new List<ReservationTable>();
 }

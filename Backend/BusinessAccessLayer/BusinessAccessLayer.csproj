@@ -15,9 +15,12 @@
 		<PackageReference Include="AutoMapper" Version="12.0.1" />
 		<PackageReference Include="AutoMapper.Collection" Version="9.0.0" />
 		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="13.0.1" />
+		<PackageReference Include="CloudinaryDotNet" Version="1.27.8" />
+		<PackageReference Include="Google.Apis.Auth" Version="1.72.0" />
 		<PackageReference Include="Iyzipay" Version="2.1.66" />
 		<PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="8.0.11" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />

@@ -16,7 +16,7 @@ public partial class SapaFoRestRmsContext : DbContext
     }
 
     public virtual DbSet<Announcement> Announcements { get; set; }
-
+    public virtual DbSet<Area> Areas { get; set; } = null!;
     public virtual DbSet<Attendance> Attendances { get; set; }
 
     public virtual DbSet<BrandBanner> BrandBanners { get; set; }
@@ -86,7 +86,15 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
+    public DbSet<ZaloMessage> ZaloMessages { get; set; }
+ 
 
+    public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Announcement>(entity =>
@@ -250,17 +258,32 @@ public partial class SapaFoRestRmsContext : DbContext
 
         modelBuilder.Entity<MarketingCampaign>(entity =>
         {
-            entity.HasKey(e => e.CampaignId).HasName("PK__Marketin__3F5E8A994B3A216D");
-
-            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasKey(e => e.CampaignId).HasName("PK__Marketin__3F5E8A994B3A216D");          
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Active");
             entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.TargetRevenue)
+             .HasPrecision(18, 2);
 
-            entity.HasOne(d => d.CreatedByNavigation).WithMany(p => p.MarketingCampaigns)
+            entity.Property(e => e.Budget).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CampaignType).HasMaxLength(20);
+            entity.Property(e => e.TargetAudience).HasMaxLength(20);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.ViewCount).HasDefaultValue(0);
+            entity.Property(e => e.RevenueGenerated).HasColumnType("decimal(18, 2)").HasDefaultValue(0m);
+
+            entity.HasOne(d => d.CreatedByNavigation)
+                .WithMany(p => p.MarketingCampaigns)
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK_MarketingCampaigns_Users");
+
+            entity.HasOne(d => d.Voucher)
+             // Thay WithMany() bằng WithMany(p => p.MarketingCampaigns)
+             .WithMany(p => p.MarketingCampaigns)
+             .HasForeignKey(d => d.VoucherId)
+             .HasConstraintName("FK_MarketingCampaigns_Vouchers")
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<MenuCategory>(entity =>
@@ -505,6 +528,15 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasIndex(e => e.RoleName, "UQ__Roles__8A2B61607CE6A2D3").IsUnique();
 
             entity.Property(e => e.RoleName).HasMaxLength(50);
+
+            // Seed standard roles
+            entity.HasData(
+                new Role { RoleId = 1, RoleName = "Owner" },
+                new Role { RoleId = 2, RoleName = "Admin" },
+                new Role { RoleId = 3, RoleName = "Manager" },
+                new Role { RoleId = 4, RoleName = "Staff" },
+                new Role { RoleId = 5, RoleName = "Customer" }
+            );
         });
 
         modelBuilder.Entity<SalaryRule>(entity =>
@@ -658,6 +690,17 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.RoleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Users__RoleId__41EDCAC5");
+        });
+
+        modelBuilder.Entity<VerificationCode>(entity =>
+        {
+            entity.HasKey(e => e.VerificationCodeId);
+            entity.Property(e => e.Code).HasMaxLength(10);
+            entity.Property(e => e.Purpose).HasMaxLength(50);
+            entity.Property(e => e.IsUsed).HasDefaultValue(false);
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Voucher>(entity =>

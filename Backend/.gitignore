@@ -12,7 +12,8 @@
 
 # App settings (local secrets)
 appsettings.json
-appsettings.*.json
+# Google service account keys
+keys/*.json
 
 
 # User-specific files (MonoDevelop/Xamarin Studio)

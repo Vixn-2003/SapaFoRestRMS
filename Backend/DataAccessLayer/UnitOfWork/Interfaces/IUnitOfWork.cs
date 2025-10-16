@@ -17,6 +17,8 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
 
         IManagerComboRepository Combo { get; }
         IUserRepository Users { get; }
+        IStaffProfileRepository StaffProfiles { get; }
+        IPositionRepository Positions { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

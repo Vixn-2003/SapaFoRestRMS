@@ -10,8 +10,10 @@
 
     <!-- Site CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="@Url.Content("~/css/reservation.css")" asp-append-version="true" />
 
-    <!-- Google Fonts sang trọng -->
+
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
@@ -33,7 +35,7 @@
 
         /* Navbar */
         .navbar-custom {
-            background-color: #2E7D32; /* xanh rừng */
+            background-color: #2E7D32;
         }
 
             .navbar-custom .nav-link {
@@ -45,7 +47,7 @@
             }
 
                 .navbar-custom .nav-link:hover {
-                    color: #FFD54F !important; /* vàng nổi bật */
+                    color: #FFD54F !important;
                 }
 
         .navbar-brand span {
@@ -67,7 +69,7 @@
         .btn-book {
             font-family: 'Playfair Display', serif;
             font-weight: 600;
-            background-color: #6D4C41; /* nâu gỗ */
+            background-color: #6D4C41;
             color: #fff;
             border-radius: 25px;
             transition: all 0.3s;
@@ -80,12 +82,11 @@
 
         /* Footer */
         .footer-sapa {
-            background-color: #1B5E20; /* xanh rừng đậm */
+            background-color: #1B5E20;
             color: #FAF3E0;
         }
 
-            .footer-sapa span,
-            .footer-sapa a {
+            .footer-sapa span, .footer-sapa a {
                 font-family: 'Playfair Display', serif;
                 letter-spacing: 0.5px;
             }
@@ -97,8 +98,7 @@
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
             }
 
-            .footer-sapa p,
-            .footer-sapa a.text-white-50 {
+            .footer-sapa p, .footer-sapa a.text-white-50 {
                 color: #FAF3E0;
                 font-weight: 500;
             }
@@ -107,7 +107,6 @@
                 color: #FFD54F !important;
             }
 
-            /* Biểu tượng mạng xã hội */
             .footer-sapa i {
                 transition: color 0.3s;
             }
@@ -124,20 +123,13 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-custom shadow-sm fixed-top">
             <div class="container-fluid">
-                <!-- Logo -->
                 <a class="navbar-brand d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
                     <img id="navbarLogo" src="~/images/logo.png" alt="Rừng Xanh Sapa" style="height:60px;" class="me-2" />
                     <span class="fw-bold">Rừng Xanh Sapa</span>
                 </a>
-
-                <!-- Toggle mobile -->
-                <button class="navbar-toggler text-white" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#mainNavbar" aria-controls="mainNavbar"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler text-white" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-
-                <!-- Menu -->
                 <div class="collapse navbar-collapse" id="mainNavbar">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">Trang Chủ</a></li>
@@ -145,18 +137,31 @@
                         <li class="nav-item"><a class="nav-link" asp-controller="About" asp-action="Index">Giới thiệu</a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Contact" asp-action="Index">Ưu Đãi</a></li>
                     </ul>
-
-                    <!-- Hotline & Nút đặt bàn -->
                     <div class="d-flex align-items-center">
                         <div class="me-3 hotline">
-                            📞 <a href="tel:0123456789" class="text-decoration-none hotline"> Hotline: 0123 456 789</a>
+                            📞 <a href="tel:0123456789" class="text-decoration-none hotline">Hotline: 0123 456 789</a>
                         </div>
-                        <a class="btn btn-book px-4" asp-controller="Reservation" asp-action="Index">Đặt bàn</a>
+                        <a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reservationModal">Đặt bàn</a>
                     </div>
                 </div>
             </div>
         </nav>
     </header>
+
+    <!-- Modal Đặt bàn -->
+    <div class="modal fade" id="reservationModal" tabindex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Đặt bàn</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @await Html.PartialAsync("_ReservationForm", new WebSapaFoRestForCustomer.Models.ReservationViewModel())
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Body -->
     <main role="main" class="pb-3">
@@ -167,18 +172,13 @@
     <footer class="footer-sapa py-5 mt-5">
         <div class="container">
             <div class="row align-items-center">
-                <!-- Logo + nút đặt bàn -->
                 <div class="col-md-3 text-center text-md-start mb-4 mb-md-0">
                     <a asp-controller="Home" asp-action="Index" class="d-flex align-items-center mb-3">
                         <img id="footerLogo" src="~/images/logo.png" alt="Rừng Xanh Sapa" style="height:80px;" class="me-2" />
                         <span class="fw-bold">Rừng Xanh Sapa</span>
                     </a>
-                    <a class="btn btn-outline-warning rounded-pill px-4 fw-bold" asp-controller="Reservation" asp-action="Index">
-                        Đặt bàn
-                    </a>
+                    <a class="btn btn-outline-warning rounded-pill px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#reservationModal">Đặt bàn</a>
                 </div>
-
-                <!-- Menu -->
                 <div class="col-md-3 mb-4 mb-md-0">
                     <ul class="list-unstyled text-white">
                         <li><a class="text-decoration-none text-white-50" asp-controller="Menu" asp-action="Index">Trang Chủ</a></li>
@@ -187,18 +187,12 @@
                         <li><a class="text-decoration-none text-white-50" asp-controller="Contact" asp-action="Index">Ưu Đãi </a></li>
                     </ul>
                 </div>
-
-                <!-- Hotline + Email -->
                 <div class="col-md-3 mb-4 mb-md-0 text-white">
                     <p class="mb-1">Hotline: <span class="text-warning fw-bold">0123 456 789</span></p>
                     <p class="mb-0">
-                        Email: <a href="mailto:rungxanhsapa@gmail.com" class="text-warning text-decoration-none">
-                            rungxanhsapa@gmail.com
-                        </a>
+                        Email: <a href="mailto:rungxanhsapa@gmail.com" class="text-warning text-decoration-none">rungxanhsapa@gmail.com</a>
                     </p>
                 </div>
-
-                <!-- Social -->
                 <div class="col-md-3 text-center text-md-end">
                     <a href="#" class="text-white-50 fs-5 me-3"><i class="bi bi-facebook"></i></a>
                     <a href="#" class="text-white-50 fs-5 me-3"><i class="bi bi-tiktok"></i></a>
@@ -216,6 +210,7 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
+        // Load logo động
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const response = await fetch('@Url.Action("Active", "Logo")');
@@ -228,6 +223,79 @@
                 console.error("Lỗi khi load logo:", err);
             }
         });
+
+        // AJAX submit form đặt bàn trong modal
+              $(document).ready(function () {
+
+            // Khi mở modal, load form mới từ server
+            $('#reservationModal').on('show.bs.modal', function () {
+                const $modalBody = $(this).find('.modal-body');
+                $.get('/Reservation/_ReservationForm', function (html) {
+                    $modalBody.html(html);
+                });
+            });
+
+            // Bỏ binding cũ trước khi bind lại
+            $(document).off('submit', '#reservationForm');
+
+            // Bind sự kiện submit
+            $(document).on('submit', '#reservationForm', function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                var actionUrl = $form.attr('action');
+                var token = $form.find('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: actionUrl,
+                    type: 'POST',
+                    data: $form.serialize(),
+                    headers: { 'RequestVerificationToken': token },
+                    success: function (result) {
+                        // Nếu server trả JSON
+                        if (result && result.success !== undefined) {
+                            $('#reservationModal').modal('hide');
+                            alert(result.message || 'Đặt bàn thành công!');
+                        } else {
+                            // Nếu server trả PartialView (validation lỗi)
+                            $('#reservationModal .modal-body').html(result);
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error(xhr.responseText);
+                        alert('Có lỗi xảy ra. Vui lòng thử lại!');
+                    }
+                });
+            });
+
+        });
+
+                // Gắn event cho nút gửi OTP trong modal, kể cả khi form load bằng AJAX
+        $(document).on('click', '#sendOtpBtn', async function (e) {
+            e.preventDefault();
+
+            var $form = $(this).closest('form'); // tìm form chứa nút
+            var phone = $form.find('input[name="Phone"]').val(); // lấy số điện thoại
+
+            if (!phone) {
+                alert("Vui lòng nhập số điện thoại.");
+                return;
+            }
+
+            try {
+                var response = await fetch("/Reservation/SendOtp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone: phone })
+                });
+
+                var result = await response.json();
+                alert(result.message);
+            } catch (err) {
+                console.error(err);
+                alert("Có lỗi xảy ra khi gửi OTP.");
+            }
+        });
+
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

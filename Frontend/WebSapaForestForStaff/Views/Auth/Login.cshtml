@@ -1,0 +1,63 @@
+@model WebSapaForestForStaff.DTOs.Auth.LoginRequest
+@{
+    Layout = null;
+    ViewData["Title"] = "Đăng nhập - SapaFoRest_RMS";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="~/css/auth/login.css" />
+</head>
+<body>
+    <div class="login-container">
+        <div class="left-section">
+            <img src="~/img/background_img/login_background.png" alt="SapaFoRest View" class="background-image" />
+        </div>
+
+        <div class="right-section">
+            <div class="login-box">
+                <h2>Chào mừng đến với</h2>
+                <h3><span>SapaFoRest_RMS</span></h3>
+
+                <form asp-action="Login" method="post" autocomplete="off">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group">
+                        <label>Email</label>
+                        <div class="input-wrapper">
+                            <i class="bi bi-envelope-fill"></i>
+                            <input asp-for="email" type="email" placeholder="example@gmail.com" required />
+                        </div>
+                        <span asp-validation-for="email" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Mật khẩu</label>
+                        <div class="input-wrapper">
+                            <i class="bi bi-key-fill"></i>
+                            <input asp-for="password" type="password" id="password" placeholder="••••••••" required />
+                            <i id="togglePassword" class="bi bi-eye"></i>
+                        </div>
+                        <span asp-validation-for="password" class="text-danger"></span>
+                    </div>
+
+                    <div class="forgot-password">
+                        <a href="#">Quên mật khẩu?</a>
+                    </div>
+
+                    <button type="submit" class="btn-login">Đăng nhập</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/js/auth/login.js"></script>
+</body>
+</html>

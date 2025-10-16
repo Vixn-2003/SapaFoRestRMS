@@ -19,14 +19,12 @@ namespace WebSapaFoRestForCustomer.Controllers
         {
             try
             {
-                // G?i API bestseller
+                // API 
                 var bestSellers = await _httpClient.GetFromJsonAsync<List<MenuItemDto>>("api/MenuItem/top-best-sellers");
-
-                // G?i API combos
                 var combos = await _httpClient.GetFromJsonAsync<List<ComboDto>>("api/Combos");
                 var events = await _httpClient.GetFromJsonAsync<List<EventDto>>("api/Events/top6");
                 
-                // Truy?n d? li?u sang View
+                //  sang View
                 ViewBag.BestSellers = bestSellers ?? new List<MenuItemDto>();
                 ViewBag.Combos = combos ?? new List<ComboDto>();
                 ViewBag.Events = events ?? new List<EventDto>();
