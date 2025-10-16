@@ -1,4 +1,4 @@
-﻿using BusinessAccessLayer.DTOs;
+﻿using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 

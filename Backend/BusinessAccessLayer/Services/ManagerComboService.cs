@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using BusinessAccessLayer.DTOs;
+using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using System;

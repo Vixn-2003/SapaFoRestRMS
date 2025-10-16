@@ -7,7 +7,6 @@
     <title>Restaurant Manager </title>
     <!-- plugins:css -->
     <link rel="stylesheet" href="~/assets/vendors/feather/feather.css">
-    <link rel="stylesheet" href="assets/vendors/feather/feather.css">
     <link rel="stylesheet" href="~/assets/vendors/mdi/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="~/assets/vendors/ti-icons/css/themify-icons.css">
     <link rel="stylesheet" href="~/assets/vendors/font-awesome/css/font-awesome.min.css">
@@ -39,7 +38,7 @@
                     <div class="d-flex align-items-center justify-content-between">
                         <a href=""><i class="ti-home me-3 text-white"></i></a>
                         <button id="bannerClose" class="btn border-0 p-0">
-                            <i class="ti-close text-white"></i>
+                            <i class="ti-close text-white"></i> 
                         </button>
                     </div>
                 </div>
@@ -71,37 +70,7 @@
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown d-none d-lg-block">
-                        <a class="nav-link dropdown-bordered dropdown-toggle dropdown-toggle-split" id="messageDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false"> Select Category </a>
-                        <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list pb-0" aria-labelledby="messageDropdown">
-                            <a class="dropdown-item py-3">
-                                <p class="mb-0 fw-medium float-start">Select category</p>
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item preview-item">
-                                <div class="preview-item-content flex-grow py-2">
-                                    <p class="preview-subject ellipsis fw-medium text-dark">Bootstrap Bundle </p>
-                                    <p class="fw-light small-text mb-0">This is a Bundle featuring 16 unique dashboards</p>
-                                </div>
-                            </a>
-                            <a class="dropdown-item preview-item">
-                                <div class="preview-item-content flex-grow py-2">
-                                    <p class="preview-subject ellipsis fw-medium text-dark">Angular Bundle</p>
-                                    <p class="fw-light small-text mb-0">Everything you’ll ever need for your Angular projects</p>
-                                </div>
-                            </a>
-                            <a class="dropdown-item preview-item">
-                                <div class="preview-item-content flex-grow py-2">
-                                    <p class="preview-subject ellipsis fw-medium text-dark">VUE Bundle</p>
-                                    <p class="fw-light small-text mb-0">Bundle of 6 Premium Vue Admin Dashboard</p>
-                                </div>
-                            </a>
-                            <a class="dropdown-item preview-item">
-                                <div class="preview-item-content flex-grow py-2">
-                                    <p class="preview-subject ellipsis fw-medium text-dark">React Bundle</p>
-                                    <p class="fw-light small-text mb-0">Bundle of 8 Premium React Admin Dashboard</p>
-                                </div>
-                            </a>
-                        </div>
+                       
                     </li>
                     <li class="nav-item d-none d-lg-block">
                         <div id="datepicker-popup" class="input-group date datepicker navbar-date-picker">
@@ -310,11 +279,27 @@
                         </div>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="docs/documentation.html">
+                        <a class="nav-link" asp-controller="ManagerMenu" asp-action="DisplayMenu">
                             <i class="menu-icon mdi mdi-file-document"></i>
                             <span class="menu-title">Quản lý thực đơn</span>
                         </a>
                     </li>
+
+
+                    <li class="nav-item nav-category">Chức năng</li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="ExportInventory" asp-action="Index">
+                            <i class="menu-icon mdi mdi-file-document"></i>
+                            <span class="menu-title">Quản lý kho</span>
+                        </a>
+                    </li>
+                    <li class="nav-item" asp-controller="ManagerMenu" asp-action="DisplayMenu">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#auth" aria-expanded="false" aria-controls="auth">
+                        <i class="menu-icon mdi mdi-file-document"></i>
+                        <span class="menu-title">Quản lý banner</span>
+                        </a>
+                    </li>
+
                 </ul>
             </nav>
             <!-- partial -->

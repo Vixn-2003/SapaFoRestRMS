@@ -417,15 +417,27 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CampaignId"));
 
+                    b.Property<decimal?>("Budget")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("CampaignType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("int");
 
-                    b.Property<string>("Description")
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<DateOnly?>("EndDate")
-                        .HasColumnType("date");
+                    b.Property<decimal?>("RevenueGenerated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<DateOnly?>("StartDate")
                         .HasColumnType("date");
@@ -436,15 +448,36 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Active");
 
+                    b.Property<string>("TargetAudience")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("TargetReach")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("TargetRevenue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int?>("ViewCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<int?>("VoucherId")
+                        .HasColumnType("int");
+
                     b.HasKey("CampaignId")
                         .HasName("PK__Marketin__3F5E8A994B3A216D");
 
                     b.HasIndex("CreatedBy");
+
+                    b.HasIndex("VoucherId");
 
                     b.ToTable("MarketingCampaigns");
                 });
@@ -1623,7 +1656,15 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("CreatedBy")
                         .HasConstraintName("FK_MarketingCampaigns_Users");
 
+                    b.HasOne("DomainAccessLayer.Models.Voucher", "Voucher")
+                        .WithMany("MarketingCampaigns")
+                        .HasForeignKey("VoucherId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_MarketingCampaigns_Vouchers");
+
                     b.Navigation("CreatedByNavigation");
+
+                    b.Navigation("Voucher");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.MenuItem", b =>
@@ -2049,6 +2090,8 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.Voucher", b =>
                 {
+                    b.Navigation("MarketingCampaigns");
+
                     b.Navigation("Payments");
                 });
 #pragma warning restore 612, 618

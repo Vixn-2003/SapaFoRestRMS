@@ -1,0 +1,294 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - WareHouse</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #e8eaed;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #c4c4c4 0%, #a8a8a8 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            padding: 0 20px 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .logo h1 {
+            color: #22c55e;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            color: #333;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .menu {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0 15px 5px;
+            border-radius: 8px;
+        }
+
+        .menu-item:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .menu-item.active {
+            background-color: #22c55e;
+            color: white;
+        }
+
+        .menu-item svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+
+        /* User Section */
+        .user-section {
+            padding: 15px 20px;
+            margin: 10px 15px;
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .user-email {
+            font-size: 11px;
+            color: #555;
+        }
+
+        .logout-btn {
+            width: calc(100% - 30px);
+            margin: 10px 15px;
+            padding: 12px;
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background-color: #b91c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin: 20px;
+            flex: 1;
+            overflow-y: auto;
+            background-color: #e8eaed;
+        }
+
+        /* Scrollbar styling */
+        .menu::-webkit-scrollbar,
+        .main-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .menu::-webkit-scrollbar-track,
+        .main-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .menu::-webkit-scrollbar-thumb,
+        .main-content::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+
+        .menu::-webkit-scrollbar-thumb:hover,
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            .content-wrapper {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>WareHouse</h1>
+                <p>Quản lý kho</p>
+            </div>
+
+            <nav class="menu">
+                <a href="/Dashboard" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Dashboard" ? "active" : "")">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                    </svg>
+                    Dashboard
+                </a>
+
+                <a href="/NhapHang" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/NhapHang" ? "active" : "")">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z" />
+                    </svg>
+                    Nhập hàng
+                </a>
+
+                <a href="/XuatHang" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/XuatHang" ? "active" : "")">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" />
+                    </svg>
+                    Xuất hàng
+                </a>
+
+                <a href="/TonKho" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/TonKho" ? "active" : "")">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" />
+                    </svg>
+                    Tồn kho
+                </a>
+
+                <a href="/BaoCao" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/BaoCao" ? "active" : "")">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
+                    </svg>
+                    Báo cáo
+                </a>
+
+                <a href="/NhaCungCap" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/NhaCungCap" ? "active" : "")">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                    Nhà cung cấp
+                </a>
+
+                <a href="/CaiDat" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/CaiDat" ? "active" : "")">
+                    <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+                    </svg>
+                    Cài đặt
+                </a>
+            </nav>
+
+            <div class="user-section">
+                <div class="user-avatar">A</div>
+                <div class="user-info">
+                    <div class="user-name">Admin User</div>
+                    <div class="user-email">admin@warehouse.vn</div>
+                </div>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Đăng xuất</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="content-wrapper">
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function logout() {
+            if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+                window.location.href = '/Logout';
+            }
+        }
+
+        // Highlight active menu item based on current URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const menuItems = document.querySelectorAll('.menu-item');
+
+            menuItems.forEach(item => {
+                if (item.getAttribute('href') === currentPath) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        });
+    </script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

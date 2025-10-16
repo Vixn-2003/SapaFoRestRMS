@@ -1,4 +1,4 @@
-﻿using BusinessAccessLayer.DTOs;
+﻿using BusinessAccessLayer.DTOs.Manager;
 using System;
 using System.Collections.Generic;
 using System.Linq;

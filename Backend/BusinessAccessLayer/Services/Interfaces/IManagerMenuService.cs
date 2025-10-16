@@ -1,4 +1,4 @@
-﻿using BusinessAccessLayer.DTOs;
+﻿using BusinessAccessLayer.DTOs.Manager;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,7 @@ namespace BusinessAccessLayer.Services.Interfaces
     public interface IManagerMenuService
     {
         Task<IEnumerable<ManagerMenuDTO>> GetManagerAllMenu();
+        Task<ManagerMenuDTO> ManagerMenuById(int id);
        
     }
 }

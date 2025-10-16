@@ -30,8 +30,64 @@ Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));
 
 builder.Services.AddEndpointsApiExplorer();
 // Bật middleware Swagger
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "CellPhoneShop API",
+        Version = "v1"
+    });
 
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Nhập token theo dạng: Bearer {token}"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+.AddCookie(options =>
+{
+    // Khi chưa đăng nhập mà vào trang yêu cầu auth, hệ thống sẽ redirect về /Auth/Login    
+    options.LoginPath = "/Auth/Login";
+
+    // Khi logout thì redirect về /Auth/Logout
+    options.LogoutPath = "/Auth/Logout";
+
+    // Khi không đủ quyền truy cập (AccessDenied) thì redirect về /Auth/AccessDenied
+    options.AccessDeniedPath = "/Auth/AccessDenied";
+
+    // Tên của cookie lưu trữ thông tin đăng nhập
+    options.Cookie.Name = "CellPhoneShop.Auth";
+
+    // Cookie chỉ cho server đọc (client JS không đọc được) → tăng bảo mật
+    options.Cookie.HttpOnly = true;
+
+    // Thời gian sống của cookie (ở đây là 1 tiếng)
+    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+
+    // Nếu người dùng hoạt động trong thời gian hiệu lực → hệ thống tự động kéo dài thêm hạn cookie
+    options.SlidingExpiration = true;
+});
 // MAPPING
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
@@ -105,6 +161,7 @@ builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfW
             builder.Services.AddScoped<IAreaRepository, AreaRepository>();
             builder.Services.AddScoped<IAreaService, AreaService>();
 
+builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 
@@ -150,24 +207,12 @@ builder.Services
 
 var app = builder.Build();
 
-
-
-
-
-
-
-
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-
-
-
 app.UseHttpsRedirection();
 // Bật CORS
 app.UseCors("AllowFrontend");
@@ -177,11 +222,54 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-            //Seed admin user on startup
-            using (var scope = app.Services.CreateScope())
+// Upsert Admin from configuration (Development)
+using (var scope = app.Services.CreateScope())
+{
+    var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var adminEmail = config["AdminAccount:Email"];
+    var adminPassword = config["AdminAccount:Password"];
+    if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
+    {
+        var adminRoleId = await ctx.Roles.Where(r => r.RoleName == "Admin").Select(r => r.RoleId).FirstOrDefaultAsync();
+        if (adminRoleId == 0)
+        {
+            var adminRole = new DomainAccessLayer.Models.Role { RoleName = "Admin" };
+            await ctx.Roles.AddAsync(adminRole);
+            await ctx.SaveChangesAsync();
+            adminRoleId = adminRole.RoleId;
+        }
+
+        string HashPassword(string password)
+        {
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+            return Convert.ToBase64String(hashedBytes);
+        }
+
+        var existing = await ctx.Users.FirstOrDefaultAsync(u => u.Email == adminEmail);
+        if (existing == null)
+        {
+            var admin = new DomainAccessLayer.Models.User
             {
-                var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-              SapaFoRestRMSAPI.Services.DataSeeder.SeedAdminAsync(ctx);
-            }
+                FullName = "System Admin",
+                Email = adminEmail,
+                PasswordHash = HashPassword(adminPassword),
+                RoleId = adminRoleId,
+                Status = 0,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+            await ctx.Users.AddAsync(admin);
+        }
+        else
+        {
+            existing.RoleId = adminRoleId;
+            existing.PasswordHash = HashPassword(adminPassword);
+            ctx.Users.Update(existing);
+        }
+        await ctx.SaveChangesAsync();
+    }
+}
 
 app.Run();

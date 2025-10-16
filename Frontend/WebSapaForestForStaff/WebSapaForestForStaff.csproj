@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <Folder Include="Views\Auth\" />
+    <Folder Include="Views\Manager\" />
+    <Folder Include="Views\Staff\" />
   </ItemGroup>
 
 </Project>
