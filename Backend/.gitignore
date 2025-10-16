@@ -12,7 +12,6 @@
 
 # App settings (local secrets)
 appsettings.json
-appsettings.*.json
 # Google service account keys
 keys/*.json
 

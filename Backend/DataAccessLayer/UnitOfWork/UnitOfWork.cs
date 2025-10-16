@@ -28,6 +28,14 @@ namespace DataAccessLayer.UnitOfWork
 
         public IUserRepository Users => _users ??= new UserRepository(_context);
 
+        private IStaffProfileRepository _staffProfiles;
+
+        public IStaffProfileRepository StaffProfiles => _staffProfiles ??= new StaffProfileRepository(_context);
+
+        private IPositionRepository _positions;
+
+        public IPositionRepository Positions => _positions ??= new PositionRepository(_context);
+
         public UnitOfWork(SapaFoRestRmsContext context)
         {
             _context = context;
