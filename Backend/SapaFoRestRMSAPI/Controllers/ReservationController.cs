@@ -116,7 +116,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 };
                 return BadRequest(new
                 {
-                    message = $"Số điện thoại đã đặt bàn cho {formattedDate} ({timeSlot}). Vui lòng kiểm tra hoặc đổi thời gian."
+                    message = $"Số điện thoại đã đặt bàn cho {formattedDate} ({timeSlot}). Vui lòng kiểm tra hoặc đổi thời gian bằng cách liên hệ qua hotline để được hỗ trợ ."
                 });
             }
 

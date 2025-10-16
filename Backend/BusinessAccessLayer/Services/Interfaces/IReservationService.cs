@@ -26,5 +26,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<object> SuggestTablesByAreasAsync(DateTime date, string slot, int guests, int? currentReservationId = null);
         Task<object> AssignTablesAsync(AssignTableDto dto);
         Task<object> ResetTablesAsync(int reservationId);
+        Task<object> CancelReservationAsync(int reservationId, bool refund);
+
     }
 }

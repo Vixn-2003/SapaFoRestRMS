@@ -14,8 +14,8 @@ namespace BusinessAccessLayer.Services.Interfaces
             int pageSize, string? status );
 
         Task<TableManageDto?> GetByIdAsync(int id);
-        Task AddAsync(TableManageDto dto);
-        Task UpdateAsync(int id, TableManageDto dto);
+        Task AddAsync(TableCreateDto dto);
+        Task UpdateAsync(int id, TableUpdateDto dto);
         Task<(bool Success, string Message)> DeleteAsync(int id);
 
     }

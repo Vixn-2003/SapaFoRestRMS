@@ -97,6 +97,8 @@ namespace DataAccessLayer.Repositories
                 reservation.NumberOfGuests,
                 reservation.Status,
                 reservation.Notes,
+                reservation.DepositAmount,   
+                reservation.DepositPaid,
                 Tables = reservation.ReservationTables
             .Select(rt => new
             {
