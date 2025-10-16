@@ -56,12 +56,10 @@ namespace BusinessAccessLayer.Services
             };
         }
 
-        public async Task AddAsync(TableManageDto dto)
+        public async Task AddAsync(TableCreateDto dto)
         {
-            // Validate
             if (dto.Capacity <= 0)
                 throw new ArgumentException("Sức chứa phải lớn hơn 0.");
-
             if (string.IsNullOrWhiteSpace(dto.TableNumber))
                 throw new ArgumentException("Tên bàn không được để trống.");
 
@@ -70,14 +68,14 @@ namespace BusinessAccessLayer.Services
                 TableNumber = dto.TableNumber,
                 Capacity = dto.Capacity,
                 AreaId = dto.AreaId,
-                Status = dto.Status ?? "Available"
+                Status = dto.Status
             };
 
             await _repository.AddAsync(table);
             await _repository.SaveAsync();
         }
 
-        public async Task UpdateAsync(int id, TableManageDto dto)
+        public async Task UpdateAsync(int id, TableUpdateDto dto)
         {
             var table = await _repository.GetByIdAsync(id);
             if (table == null)
@@ -85,18 +83,18 @@ namespace BusinessAccessLayer.Services
 
             if (dto.Capacity <= 0)
                 throw new ArgumentException("Sức chứa phải lớn hơn 0.");
-
             if (string.IsNullOrWhiteSpace(dto.TableNumber))
                 throw new ArgumentException("Tên bàn không được để trống.");
 
             table.TableNumber = dto.TableNumber;
             table.Capacity = dto.Capacity;
             table.AreaId = dto.AreaId;
-            table.Status = dto.Status ?? "Available";
+            table.Status = dto.Status;
 
             await _repository.UpdateAsync(table);
             await _repository.SaveAsync();
         }
+
 
         public async Task<(bool Success, string Message)> DeleteAsync(int id)
         {

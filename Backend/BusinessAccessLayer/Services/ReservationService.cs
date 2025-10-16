@@ -108,6 +108,8 @@ namespace BusinessAccessLayer.Services
                     r.TimeSlot,
                     r.NumberOfGuests,
                     r.Status,
+                    r.DepositAmount,  
+                    r.DepositPaid,
                     TableIds = r.ReservationTables.Select(rt => rt.TableId).ToList()
                 }).ToList()
             };
@@ -287,5 +289,38 @@ namespace BusinessAccessLayer.Services
                 TableIds = reservation.ReservationTables.Select(rt => rt.TableId).ToList()
             };
         }
+        //Hủy đơn đặt bàn
+        public async Task<object> CancelReservationAsync(int reservationId, bool refund)
+        {
+            var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
+            if (reservation == null)
+                throw new Exception("Không tìm thấy đơn đặt bàn.");
+
+            if (reservation.Status == "Cancelled")
+                throw new Exception("Đơn này đã được hủy trước đó.");
+
+            // Xử lý hoàn cọc (nếu có)
+            if (refund && reservation.DepositPaid && reservation.DepositAmount.HasValue)
+            {
+                // Tùy hệ thống: có thể tích hợp thêm logic hoàn tiền hoặc gửi email xác nhận ở đây
+                reservation.DepositPaid = false; // đánh dấu là đã hoàn cọc
+            }
+
+            // Cập nhật trạng thái và giải phóng bàn
+            reservation.Status = "Cancelled";
+            reservation.ReservationTables.Clear();
+
+            await _reservationRepository.SaveChangesAsync();
+
+            return new
+            {
+                reservation.ReservationId,
+                reservation.Status,
+                reservation.DepositAmount,
+                reservation.DepositPaid,
+                Refunded = refund
+            };
+        }
+
     }
 }

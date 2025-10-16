@@ -1,4 +1,5 @@
 ﻿using BusinessAccessLayer.DTOs;
+using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using SapaFoRestRMSAPI.Services;
@@ -88,6 +89,23 @@ namespace SapaFoRestRMSAPI.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+        [HttpPut("cancel/{id}")]
+        public async Task<IActionResult> CancelReservation(int id, [FromQuery] bool refund = false)
+        {
+            try
+            {
+                var result = await _service.CancelReservationAsync(id, refund);
+                return Ok(new
+                {
+                    Message = refund ? "Hủy đơn và hoàn cọc thành công." : "Hủy đơn không hoàn cọc thành công.",
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
             }
         }
     }

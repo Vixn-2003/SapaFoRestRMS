@@ -182,6 +182,30 @@ namespace WebSapaForestForStaff.Controllers
 
             return RedirectToAction("AssignTables", new { id = reservationId });
         }
+        // hủy đơn
+        [HttpPost]
+        public async Task<IActionResult> CancelReservation(int id, bool refund)
+        {
+            var response = await _client.PutAsync(
+                $"ReservationStaff/cancel/{id}?refund={refund.ToString().ToLower()}",
+                null
+            );
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                TempData["Error"] = $"❌ Hủy đơn thất bại: {error}";
+            }
+            else
+            {
+                TempData["Success"] = refund
+                    ? "✅ Đã hủy đơn và hoàn cọc cho khách hàng."
+                    : "✅ Đã hủy đơn (không hoàn cọc).";
+            }
+
+            return RedirectToAction("Index");
+        }
+
         [HttpGet]
         public IActionResult CreateReservation()
         {
