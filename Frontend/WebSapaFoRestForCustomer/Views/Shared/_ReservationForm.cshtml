@@ -1,0 +1,70 @@
+﻿@model ReservationViewModel
+
+
+<form id="reservationForm" method="post" asp-controller="Reservation" asp-action="Confirm">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label asp-for="CustomerName" class="form-label"></label>
+        <input asp-for="CustomerName" class="form-control" placeholder="Nhập tên của bạn" />
+        <span asp-validation-for="CustomerName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Phone" class="form-label"></label>
+        <div class="input-group">
+            <input asp-for="Phone"  class="form-control" placeholder="Nhập số điện thoại" />
+            <button type="button" id="sendOtpBtn" class="btn btn-outline-primary">Gửi OTP</button>
+        </div>
+        <span asp-validation-for="Phone" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="OtpCode" class="form-label"></label>
+        <input asp-for="OtpCode" class="form-control" placeholder="Nhập OTP" />
+        <span asp-validation-for="OtpCode" class="text-danger"></span>
+    </div>
+
+    <!-- Ngày và giờ cùng hàng -->
+    <div class="mb-3 date-time-row">
+        <div class="form-group">
+            <label asp-for="ReservationDate" class="form-label"></label>
+            <input asp-for="ReservationDate" type="date" class="form-control" />
+            <span asp-validation-for="ReservationDate" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ReservationTime" class="form-label"></label>
+            <select asp-for="ReservationTime" class="form-select">
+                @{
+                    var start = new TimeSpan(6, 0, 0);
+                    var end = new TimeSpan(22, 0, 0);
+                    for (var time = start; time <= end; time += TimeSpan.FromMinutes(30))
+                    {
+                        <option value="@time">@time.ToString(@"hh\:mm")</option>
+                    }
+                }
+            </select>
+            <span asp-validation-for="ReservationTime" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="NumberOfGuests" class="form-label"></label>
+        <input asp-for="NumberOfGuests" type="number" min="1" class="form-control" />
+        <span asp-validation-for="NumberOfGuests" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" placeholder="Ghi chú thêm (nếu có)"></textarea>
+        <span asp-validation-for="Notes" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-reservation w-100">Xác nhận đặt bàn</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+   
+
+}

@@ -6,7 +6,9 @@
     <title>@ViewData["Title"] - WebSapaForestForStaff</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/reservation.css" />
     <link rel="stylesheet" href="~/WebSapaForestForStaff.styles.css" asp-append-version="true" />
+    @RenderSection("Styles", required: false)
 </head>
 <body>
     <header>
@@ -30,6 +32,20 @@
             </div>
         </nav>
     </header>
+    <!-- Modal Đặt bàn -->
+    <div class="modal fade" id="reservationModal" tabindex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Đặt bàn</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @await Html.PartialAsync("_ReservationForm", new WebSapaForestForStaff.Models.ReservationViewModel())
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="container">
         <main role="main" class="pb-3">
             @RenderBody()
@@ -44,6 +60,39 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+       
+        // AJAX submit form đặt bàn trong modal
+        $(document).ready(function () {
+            $(document).on('submit', '#reservationForm', function (e) {
+                e.preventDefault();
+                var $form = $(this);
+                var actionUrl = $form.attr('action');
+                var token = $form.find('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: actionUrl,
+                    type: 'POST',
+                    data: $form.serialize(),
+                    headers: { 'RequestVerificationToken': token },
+                    success: function (result) {
+                        // Nếu server trả PartialView có lỗi validation
+                        if ($(result).find('.text-danger').length > 0) {
+                            $('#reservationModal .modal-body').html(result);
+                        } else {
+                            $('#reservationModal').modal('hide');
+                            alert('Đặt bàn thành công!');
+                            $form[0].reset();
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error(xhr.responseText);
+                        alert('Có lỗi xảy ra. Vui lòng thử lại!');
+                    }
+                });
+            });
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

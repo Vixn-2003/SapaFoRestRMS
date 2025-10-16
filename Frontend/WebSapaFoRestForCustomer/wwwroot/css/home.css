@@ -1,0 +1,267 @@
+﻿/* ================== Banner Carousel ================== */
+#bannerCarousel .carousel-item img {
+    width: 100vw; /* chiều rộng full màn hình */
+    height: 500px; /* chiều cao hợp lý */
+    object-fit: cover; /* cắt ảnh cho vừa khung mà không méo */
+}
+
+#bannerCarousel .carousel-caption {
+    bottom: 20%;
+}
+
+#bannerCarousel .btn {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border-radius: 25px;
+    font-weight: 500;
+}
+
+/* ================== Body Background ================== */
+body {
+    background-color: #1b4332; /* xanh rừng trầm */
+    color: #f9f9f9; /* chữ màu sáng dễ đọc */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ================== Best Seller Cards ================== */
+.menu-card {
+    width: 220px;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    flex-shrink: 0; /* tránh co khi nhiều card */
+    background: #fff; /* nổi bật trên nền xanh */
+    color: #333;
+    border: 1px solid #4a2c2a; /* viền nâu gỗ */
+}
+
+    .menu-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+.menu-img {
+    width: 100%; /* full theo card */
+    height: 200px; /* cố định chiều cao */
+    object-fit: cover; /* cắt cho đẹp, không méo */
+    border-bottom: 2px solid #eee;
+    max-width: 200px; /* cố định chiều rộng ảnh */
+    margin: 0 auto; /* canh giữa */
+    display: block;
+}
+
+.menu-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    white-space: nowrap; /* không xuống dòng */
+    overflow: hidden;
+    text-overflow: ellipsis; /* nếu tên dài thì có dấu ... */
+}
+
+.menu-price {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #e63946;
+    margin: 0;
+}
+/* ================== Combo Cards ================== */
+.combo-card {
+    width: 350px;
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: #fff;
+    color: #333;
+}
+
+    .combo-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+.combo-img {
+    width: 100%;
+    height: 220px; /* Ảnh lớn hơn món ăn bán chạy */
+    object-fit: cover;
+}
+
+.combo-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #2d6a4f; /* xanh rừng */
+}
+
+.combo-desc {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 6px;
+    height: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.combo-price {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #e63946; /* đỏ nổi bật */
+    margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .combo-card {
+        width: 180px;
+    }
+
+    .combo-img {
+        height: 160px;
+    }
+}
+/* ================== Section Titles ================== */
+.section-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #06d6a0; /* xanh lá nổi bật */
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    cursor: default;
+}
+
+    .section-title:hover {
+        color: #ffd166;
+        transform: scale(1.1);
+    }
+/* ================== Upcoming Events ================== */
+#eventCarousel {
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
+
+    #eventCarousel h2 {
+        color: #ffe066; /* vàng nổi bật trên nền rừng */
+        font-weight: 700;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+        font-size: 2rem;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    /* Carousel Item */
+    #eventCarousel .carousel-item {
+        padding: 20px 0;
+    }
+
+/* Event Card */
+.event-card {
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1b4332 0%, #95d5b2 100%); /* gradient rừng xanh */
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+
+    .event-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+    }
+
+    /* Event Image */
+    .event-card img {
+        width: 100%;
+        height: 220px;
+        object-fit: cover;
+        border-bottom: 4px solid #2e7d32; /* xanh rừng */
+    }
+
+    /* Card Body */
+    .event-card .card-body {
+        padding: 15px;
+    }
+
+    .event-card .card-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #ffe066;
+        margin-bottom: 10px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .event-card .card-text {
+        font-size: 0.95rem;
+        color: #f1faee;
+        margin-bottom: 8px;
+    }
+
+        .event-card .card-text strong {
+            color: #ffd166; /* nhấn mạnh thông tin */
+        }
+
+    /* Button */
+    .event-card .btn {
+        background-color: #06d6a0; /* xanh lá sáng */
+        color: #1b4332; /* chữ xanh rừng */
+        border-radius: 25px;
+        padding: 8px 20px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+        .event-card .btn:hover {
+            background-color: #1b4332;
+            color: #ffd166;
+            transform: scale(1.05);
+        }
+
+/* Carousel Controls */
+#eventCarousel .carousel-control-prev-icon,
+#eventCarousel .carousel-control-next-icon {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    padding: 12px;
+}
+
+
+/* Responsive */
+@media (max-width: 992px) {
+    .event-card img {
+        height: 180px;
+    }
+}
+
+
+/* ================== Responsive ================== */
+@media (max-width: 768px) {
+    #bannerCarousel .carousel-item img {
+        height: 300px; /* ảnh banner nhỏ lại trên mobile */
+    }
+
+    .menu-card {
+        width: 160px;
+    }
+
+    .menu-img {
+        height: 160px; /* ảnh nhỏ hơn cho mobile */
+        max-width: 160px;
+    }
+    .event-card img {
+        height: 130px;
+    }
+
+    .event-card .card-body {
+        padding: 10px;
+    }
+
+    #eventCarousel h2 {
+        font-size: 1.6rem;
+    }
+}

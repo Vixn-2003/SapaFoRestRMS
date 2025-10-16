@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Restaurant Admin</title>
+    <!-- plugins:css -->
+    <link rel="stylesheet" href="~/assets/vendors/feather/feather.css">
+    <link rel="stylesheet" href="assets/vendors/feather/feather.css">
+    <link rel="stylesheet" href="~/assets/vendors/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="~/assets/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" href="~/assets/vendors/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="~/assets/vendors/typicons/typicons.css">
+    <link rel="stylesheet" href="~/assets/vendors/simple-line-icons/css/simple-line-icons.css">
+    <link rel="stylesheet" href="~/assets/vendors/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.css">
+    <!-- endinject -->
+    <!-- Plugin css for this page -->
+    <link rel="stylesheet" href="~/assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
+    <link rel="stylesheet" type="text/css" href="~/assets/js/select.dataTables.min.css">
+    <!-- End plugin css for this page -->
+    <!-- inject:css -->
+    <link rel="stylesheet" href="~/assets/css/style.css">
+    <!-- endinject -->
+    <link rel="shortcut icon" href="~/assets/images/favicon.png" />
+</head>
+<body class="with-welcome-text">
+    <div class="container-scroller">
+        <div class="row p-0 m-0 proBanner" id="proBanner">
+            <div class="col-md-12 p-0 m-0">
+                <div class="card-body card-body-padding px-3 d-flex align-items-center justify-content-between">
+                    <div class="ps-lg-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <p class="mb-0 fw-medium me-3 buy-now-text">Chào mừng đến với trang quản trị SapaFoRest</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <a href=""><i class="ti-home me-3 text-white"></i></a>
+                        <button id="bannerClose" class="btn border-0 p-0">
+                            <i class="ti-close text-white"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Navbar -->
+        <nav class="navbar default-layout col-lg-12 col-12 p-0 fixed-top d-flex align-items-top flex-row">
+            <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-start">
+                <div class="me-3">
+                    <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-bs-toggle="minimize">
+                        <span class="icon-menu"></span>
+                    </button>
+                </div>
+                <div>
+                    <a class="navbar-brand brand-logo" href="#">
+                        <img src="~/img/logo_sapaFoRest.png" alt="logo" />
+                    </a>
+                    <a class="navbar-brand brand-logo-mini" href="#">
+                        <img src="~/img/logo_sapaFoRest.png" alt="logo" />
+                    </a>
+                </div>
+            </div>
+            <div class="navbar-menu-wrapper d-flex align-items-top">
+                <ul class="navbar-nav">
+                    <li class="nav-item fw-semibold d-none d-lg-block ms-0">
+                        <h1 class="welcome-text">Chào mừng, <span class="text-black fw-bold">Admin</span></h1>
+                        <h3 class="welcome-sub-text">Quản lý hệ thống an toàn và hiệu quả</h3>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown d-none d-lg-block user-dropdown">
+                        <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img class="img-xs rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
+                            <a class="dropdown-item" asp-controller="Auth" asp-action="Logout"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Đăng xuất</a>
+                        </div>
+                    </li>
+                </ul>
+                <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button" data-bs-toggle="offcanvas">
+                    <span class="mdi mdi-menu"></span>
+                </button>
+            </div>
+        </nav>
+        <!-- Body -->
+        <div class="container-fluid page-body-wrapper">
+            <!-- Sidebar -->
+            <nav class="sidebar sidebar-offcanvas" id="sidebar">
+                <ul class="nav">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Admin" asp-action="Index">
+                            <i class="mdi mdi-grid-large menu-icon"></i>
+                            <span class="menu-title">Tổng quan</span>
+                        </a>
+                    </li>
+                    <li class="nav-item nav-category">Quản trị hệ thống</li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Users" asp-action="Index">
+                            <i class="menu-icon mdi mdi-account-multiple"></i>
+                            <span class="menu-title">Người dùng & Vai trò</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="SystemLogo" asp-action="Index">
+                            <i class="menu-icon mdi mdi-image"></i>
+                            <span class="menu-title">Logo & Thương hiệu</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="ManagerMenu" asp-action="Index">
+                            <i class="menu-icon mdi mdi-food"></i>
+                            <span class="menu-title">Thực đơn & Giá</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="BrandBanner" asp-action="Index">
+                            <i class="menu-icon mdi mdi-bullhorn"></i>
+                            <span class="menu-title">Khuyến mãi</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="Menu" asp-action="DashboardManager">
+                            <i class="menu-icon mdi mdi-chart-line"></i>
+                            <span class="menu-title">Báo cáo</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <!-- Content -->
+            <div class="main-panel">
+                <div class="content-wrapper">
+                    @RenderBody()
+                </div>
+                <footer class="footer">
+                    <div class="d-sm-flex justify-content-center justify-content-sm-between">
+                        <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">SapaFoRest RMS Admin</span>
+                        <span class="float-none float-sm-end d-block mt-1 mt-sm-0 text-center">© 2025</span>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </div>
+    <!-- scripts -->
+    <script src="~/assets/vendors/js/vendor.bundle.base.js"></script>
+    <script src="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
+    <script src="~/assets/vendors/chart.js/chart.umd.js"></script>
+    <script src="~/assets/vendors/progressbar.js/progressbar.min.js"></script>
+    <script src="~/assets/js/off-canvas.js"></script>
+    <script src="~/assets/js/template.js"></script>
+    <script src="~/assets/js/settings.js"></script>
+    <script src="~/assets/js/hoverable-collapse.js"></script>
+    <script src="~/assets/js/todolist.js"></script>
+    <script src="~/assets/js/jquery.cookie.js" type="text/javascript"></script>
+    <script src="~/assets/js/dashboard.js"></script>
+</body>
+</html>
+

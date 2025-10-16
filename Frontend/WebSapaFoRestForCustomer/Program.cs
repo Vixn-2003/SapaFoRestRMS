@@ -8,6 +8,7 @@ namespace WebSapaFoRestForCustomer
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.AddHttpClient();
 
             var app = builder.Build();
 

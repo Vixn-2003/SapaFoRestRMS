@@ -1,0 +1,116 @@
+﻿@model List<SystemLogoViewModel>
+
+<div class="container mt-4">
+    <h3 class="mb-3">Quản lý Logo hệ thống</h3>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-4">
+            <input type="text" name="search" value="@ViewBag.Search" class="form-control" placeholder="Tìm theo tên logo..." />
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="">Tất cả</option>
+                <option value="Active" selected="@(ViewBag.Status == "Active")">Đang hoạt động</option>
+                <option value="Inactive" selected="@(ViewBag.Status == "Inactive")">Ngừng hoạt động</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" type="submit">Lọc</button>
+        </div>
+        <div class="col-md-3 text-end">
+            <a href="@Url.Action("Create")" class="btn btn-success">+ Thêm logo</a>
+        </div>
+    </form>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Tên logo</th>
+                <th>Hình ảnh</th>
+                <th>Mô tả</th>
+                <th>Trạng thái</th>
+                <th>Người tạo</th>
+                <th width="150">Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr><td colspan="6" class="text-center text-muted">Không có logo nào</td></tr>
+            }
+            else
+            {
+                foreach (var logo in Model)
+                {
+                    <tr>
+                        <td>@logo.LogoName</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(logo.LogoUrl))
+                            {
+                                <img src="@logo.LogoUrl" alt="logo" style="height:50px;" />
+                            }
+                        </td>
+                        <td>@logo.Description</td>
+                        <td>
+                            <span class="badge @(logo.IsActive ? "bg-success" : "bg-secondary")">
+                                @(logo.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+                        <td>@logo.CreatedByName</td>
+                        <td>
+                            <a href="@Url.Action("Edit", new { id = logo.LogoId })" class="btn btn-sm btn-warning">Sửa</a>
+                            <form asp-action="Delete" method="post" style="display:inline;">
+                                <input type="hidden" name="id" value="@logo.LogoId" />
+                                <button class="btn btn-sm btn-danger" onclick="return confirm('Xóa logo này?')">Xóa</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+    <!-- PHÂN TRANG -->
+    @if (ViewBag.TotalPages > 1)
+    {
+        <nav>
+            <ul class="pagination justify-content-center">
+                @{
+                    int currentPage = ViewBag.Page;
+                    int totalPages = ViewBag.TotalPages;
+                }
+
+                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                    <a class="page-link"
+                       href="@Url.Action("Index", new { page = currentPage - 1, search = ViewBag.Search, status = ViewBag.Status })">
+                        Trước
+                    </a>
+                </li>
+
+                @for (int i = 1; i <= totalPages; i++)
+                {
+                    <li class="page-item @(i == currentPage ? "active" : "")">
+                        <a class="page-link"
+                           href="@Url.Action("Index", new { page = i, search = ViewBag.Search, status = ViewBag.Status })">@i</a>
+                    </li>
+                }
+
+                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                    <a class="page-link"
+                       href="@Url.Action("Index", new { page = currentPage + 1, search = ViewBag.Search, status = ViewBag.Status })">
+                        Sau
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
