@@ -14,7 +14,7 @@
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "applicationUrl": "http://localhost:5054",
-      "launchUrl": "Auth/Login",
+      "launchUrl": "MarketingCampaigns",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

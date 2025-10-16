@@ -207,57 +207,65 @@ namespace DataAccessLayer.Repositories
             return totalBudget > 0 ? ((totalRevenue - totalBudget) / totalBudget) * 100 : 0;
         }
 
-        public async Task<IEnumerable<(string Month, decimal Revenue, int Reach, decimal Budget)>> GetPerformanceDataAsync(
+        public async Task<IEnumerable<(DateOnly Date, decimal Revenue, int Reach, decimal TargetRevenue, int TargetReach)>> GetDailyPerformanceDataAsync(
             DateOnly startDate, DateOnly endDate)
         {
             var campaigns = await _context.MarketingCampaigns
                 .Where(c => c.StartDate >= startDate && c.EndDate <= endDate)
                 .ToListAsync();
 
-            var grouped = campaigns
-                .GroupBy(c => new { Year = c.StartDate!.Value.Year, Month = c.StartDate!.Value.Month })
-                .Select(g => new
-                {
-                    Month = $"{g.Key.Year}-{g.Key.Month:D2}",
-                    Revenue = g.Sum(c => c.RevenueGenerated ?? 0),
-                    Reach = g.Sum(c => c.ViewCount ?? 0),
-                    Budget = g.Sum(c => c.Budget ?? 0)
-                })
-                .OrderBy(x => x.Month)
-                .ToList();
+            var dailyData = new Dictionary<DateOnly, (decimal Revenue, int Reach, decimal TargetRevenue, int TargetReach)>();
 
-            return grouped.Select(g => (g.Month, g.Revenue, g.Reach, g.Budget));
+            foreach (var campaign in campaigns)
+            {
+                if (!campaign.StartDate.HasValue || !campaign.EndDate.HasValue)
+                    continue;
+
+                var campaignStart = campaign.StartDate.Value;
+                var campaignEnd = campaign.EndDate.Value;
+                var daysInCampaign = (campaignEnd.ToDateTime(TimeOnly.MinValue) - campaignStart.ToDateTime(TimeOnly.MinValue)).Days + 1;
+
+                if (daysInCampaign <= 0) daysInCampaign = 1;
+
+                // Distribute metrics evenly across campaign days
+                var dailyRevenue = (campaign.RevenueGenerated ?? 0) / daysInCampaign;
+                var dailyReach = (campaign.ViewCount ?? 0) / daysInCampaign;
+                var dailyTargetRevenue = (campaign.TargetRevenue ?? 0) / daysInCampaign;
+                var dailyTargetReach = (campaign.TargetReach ?? 0) / daysInCampaign;
+
+                for (var date = campaignStart; date <= campaignEnd; date = date.AddDays(1))
+                {
+                    if (date < startDate || date > endDate) continue;
+
+                    if (!dailyData.ContainsKey(date))
+                    {
+                        dailyData[date] = (0, 0, 0, 0);
+                    }
+
+                    var existing = dailyData[date];
+                    dailyData[date] = (
+                        existing.Revenue + dailyRevenue,
+                        existing.Reach + dailyReach,
+                        existing.TargetRevenue + dailyTargetRevenue,
+                        existing.TargetReach + dailyTargetReach
+                    );
+                }
+            }
+
+            return dailyData
+                .OrderBy(x => x.Key)
+                .Select(x => (x.Key, x.Value.Revenue, x.Value.Reach, x.Value.TargetRevenue, x.Value.TargetReach));
         }
 
-        public async Task<IEnumerable<(string Month, decimal Revenue, int Reach, decimal Budget)>> GetPerformanceDataForPreviousYearAsync(
+        public async Task<IEnumerable<(DateOnly Date, decimal Revenue, int Reach, decimal TargetRevenue, int TargetReach)>> GetDailyPerformanceDataForPreviousYearAsync(
             DateOnly startDate, DateOnly endDate)
         {
             var previousYearStart = startDate.AddYears(-1);
             var previousYearEnd = endDate.AddYears(-1);
 
-            return await GetPerformanceDataAsync(previousYearStart, previousYearEnd);
+            return await GetDailyPerformanceDataAsync(previousYearStart, previousYearEnd);
         }
 
-        public async Task<IEnumerable<(string Type, int Count)>> GetCampaignDistributionAsync()
-        {
-            var distribution = await _context.MarketingCampaigns
-                .GroupBy(c => c.CampaignType ?? "Unknown")
-                .Select(g => new { Type = g.Key, Count = g.Count() })
-                .ToListAsync();
 
-            return distribution.Select(d => (d.Type, d.Count));
-        }
-
-        public async Task<(decimal revenue, int reach)> GetCurrentPeriodMetricsAsync(DateOnly startDate, DateOnly endDate)
-        {
-            var campaigns = await _context.MarketingCampaigns
-                .Where(c => c.StartDate >= startDate && c.EndDate <= endDate)
-                .ToListAsync();
-
-            var revenue = campaigns.Sum(c => c.RevenueGenerated ?? 0);
-            var reach = campaigns.Sum(c => c.ViewCount ?? 0);
-
-            return (revenue, reach);
-        }
     }
 }
