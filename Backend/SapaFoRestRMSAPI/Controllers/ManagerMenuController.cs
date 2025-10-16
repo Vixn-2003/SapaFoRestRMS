@@ -1,4 +1,4 @@
-﻿using BusinessAccessLayer.DTOs;
+﻿using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Models;
@@ -35,6 +35,49 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, "An error occurred while getting the menu");
             }
         }
-    
-    }   
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ManagerMenuDTO>> ManagerMenuById(int id)
+        {
+            try
+            {
+                var menu = await _managerMenuService.ManagerMenuById(id);
+
+                if (menu == null)
+                {
+                    return NotFound("No menu found");
+                }
+
+                return Ok(menu);
+            }
+            catch (Exception ex)
+            {
+                // Ghi log lỗi nếu cần
+                return StatusCode(500, $"An error occurred while getting the menu: {ex.Message}");
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ManagerMenuDTO>> UpdateMenuById(int id)
+        {
+            try
+            {
+                var menu = await _managerMenuService.ManagerMenuById(id);
+
+                if (menu == null)
+                {
+                    return NotFound("No menu found");
+                }
+
+                return Ok(menu);
+            }
+            catch (Exception ex)
+            {
+                // Ghi log lỗi nếu cần
+                return StatusCode(500, $"An error occurred while getting the menu: {ex.Message}");
+            }
+        }
+
+
+    }
 }

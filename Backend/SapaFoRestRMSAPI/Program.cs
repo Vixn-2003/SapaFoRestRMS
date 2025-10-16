@@ -23,16 +23,11 @@ namespace SapaFoRestRMSAPI
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SapaFoRestRMSContext")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
-
-
-            // MAPPING
-            builder.Services.AddAutoMapper(typeof(MappingProfile));
-
 
             //Scope
             builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
@@ -70,8 +65,11 @@ namespace SapaFoRestRMSAPI
             builder.Services.AddScoped<IEventRepository, EventRepository>();
             builder.Services.AddScoped<IEventService, EventService>();
 
+            //DangDuc
             builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
             builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+            builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
+            builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
 
             //UnitOfWork
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

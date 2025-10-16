@@ -1,11 +1,11 @@
-﻿using WebSapaForestForStaff.Models;
+﻿using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WebSapaForestForStaff.DTOs
+namespace BusinessAccessLayer.DTOs.Manager
 {
     public class ManagerMenuDTO
     {
@@ -15,7 +15,7 @@ namespace WebSapaForestForStaff.DTOs
         public string? Description { get; set; }
         public decimal Price { get; set; }
         public string CourseType { get; set; } = null!;
-        public bool IsAvailable { get; set; }
+        public bool? IsAvailable { get; set; }
         public string? ImageUrl { get; set; }
 
         public ManagerCategoryDTO? Category { get; set; }

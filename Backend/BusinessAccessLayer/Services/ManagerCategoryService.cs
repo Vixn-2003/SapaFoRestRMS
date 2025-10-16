@@ -10,21 +10,20 @@ using System.Threading.Tasks;
 
 namespace BusinessAccessLayer.Services
 {
-    public class ManagerComboService : IManagerComboService
+    public class ManagerCategoryService : IManagerCategoryService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public ManagerComboService(IUnitOfWork unitOfWork, IMapper mapper)
+        public ManagerCategoryService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
-        public async Task<IEnumerable<ManagerComboDTO>> GetManagerAllCombo()
+        public async Task<IEnumerable<ManagerCategoryDTO>> GetAllCategory()
         {
-            var combo = await _unitOfWork.Combo.GetManagerAllCombos();
-            return _mapper.Map<IEnumerable<ManagerComboDTO>>(combo);
+            var category = await _unitOfWork.MenuCategory.GetManagerAllCategory();
+            return _mapper.Map<IEnumerable<ManagerCategoryDTO>>(category);
         }
-
     }
 }
