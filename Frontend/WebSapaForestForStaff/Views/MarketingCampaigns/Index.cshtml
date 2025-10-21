@@ -1,0 +1,580 @@
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
+    ViewData["Title"] = "Quản lý chiến dịch tiếp thị";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<!-- KPI Cards -->
+<div class="row mb-4" id="kpiCardsContainer">
+    <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-9">
+                        <h3 class="mb-0 text-success" id="kpiTotalCampaigns">0</h3>
+                    </div>
+                    <div class="col-3">
+                        <div class="icon icon-box-success">
+                            <span class="mdi mdi-buffer icon-item"></span>
+                        </div>
+                    </div>
+                </div>
+                <h6 class="text-muted font-weight-normal">Tổng chiến dịch</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-9">
+                        <h3 class="mb-0 text-info" id="kpiTotalBudget">0 VND</h3>
+                    </div>
+                    <div class="col-3">
+                        <div class="icon icon-box-info">
+                            <span class="mdi mdi-cash-multiple icon-item"></span>
+                        </div>
+                    </div>
+                </div>
+                <h6 class="text-muted font-weight-normal">Tổng ngân sách đã bỏ ra</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-9">
+                        <h3 class="mb-0 text-warning" id="kpiTotalRevenue">0 VND</h3>
+                    </div>
+                    <div class="col-3">
+                        <div class="icon icon-box-warning">
+                            <span class="mdi mdi-coin icon-item"></span>
+                        </div>
+                    </div>
+                </div>
+                <h6 class="text-muted font-weight-normal">Tổng doanh thu đã đạt được</h6>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-9">
+                        <h3 class="mb-0 text-primary" id="kpiAvgConversion">0%</h3>
+                    </div>
+                    <div class="col-3">
+                        <div class="icon icon-box-primary">
+                            <span class="mdi mdi-chart-line icon-item"></span>
+                        </div>
+                    </div>
+                </div>
+                <h6 class="text-muted font-weight-normal">Tỉ lệ chuyển đổi TB</h6>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Chart - Layout 2 cột -->
+<div class="row mb-4">
+    <!-- Biểu đồ bên trái (65% width) -->
+    <div class="col-lg-8 col-12 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Hiệu suất theo thời gian (% đạt KPI)</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small">Từ ngày</label>
+                        <input type="date" id="chartStartDate" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small">Đến ngày</label>
+                        <input type="date" id="chartEndDate" class="form-control form-control-sm">
+                    </div>
+                </div>
+
+                <div style="height: 280px; position: relative;">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+
+                <div class="mt-3 text-center text-muted small" id="chartLegendInfo">
+                    <span class="badge bg-primary me-2">█</span> % Doanh thu đạt KPI
+                    <span class="badge bg-success ms-3 me-2">█</span> % Lượt tiếp cận đạt KPI
+                    <span class="ms-3" id="chartPeriodInfo"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thống kê & điều khiển bên phải (35% width) -->
+    <div class="col-lg-4 col-12 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Tùy chọn hiển thị</h5>
+
+                <button class="btn btn-outline-primary btn-sm w-100 mb-3" id="comparePreviousYearBtn">
+                    <i class="mdi mdi-compare"></i> So sánh cùng kỳ năm ngoái
+                </button>
+
+                <div class="border-top pt-3">
+                    <h6 class="text-muted mb-2">Chú thích:</h6>
+                    <div class="mb-2">
+                        <span class="badge bg-primary me-2">█</span>
+                        <small>Doanh thu đạt KPI (%)</small>
+                    </div>
+                    <div class="mb-2">
+                        <span class="badge bg-success me-2">█</span>
+                        <small>Lượt tiếp cận đạt KPI (%)</small>
+                    </div>
+                </div>
+
+                <div class="border-top pt-3 mt-3">
+                    <h6 class="text-muted mb-2">Ghi chú:</h6>
+                    <small class="text-muted">
+                        Biểu đồ hiển thị tỷ lệ phần trăm đạt được so với mục tiêu KPI đã đặt ra cho từng chiến dịch.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Campaign List -->
+<div class="row">
+    <div class="col-12 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Danh sách chiến dịch</h4>
+
+                <form method="get" asp-action="Index" class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <input type="text" name="searchTerm" class="form-control form-control-sm" placeholder="Tìm kiếm..." value="@Context.Request.Query["searchTerm"]">
+                        </div>
+                        <div class="col-md-2">
+                            <select name="campaignType" class="form-select form-select-sm">
+                                <option value="">-- Thể loại --</option>
+                                <option value="Discount">Discount</option>
+                                <option value="Promotion">Promotion</option>
+                                <option value="Event">Event</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">-- Trạng thái --</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Active">Active</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="startDate" class="form-control form-control-sm" value="@Context.Request.Query["startDate"]">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="endDate" class="form-control form-control-sm" value="@Context.Request.Query["endDate"]">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="mdi mdi-filter"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="d-flex justify-content-end mb-3">
+                    <a asp-action="Create" class="btn btn-primary btn-sm">
+                        <i class="mdi mdi-plus me-1"></i> Thêm chiến dịch
+                    </a>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>Tiêu đề</th>
+                                <th>Loại</th>
+                                <th>Thời gian</th>
+                                <th>Ngân sách</th>
+                                <th>Doanh thu</th>
+                                <th>ROI</th>
+                                <th>Lượt xem</th>
+                                <th>Target KPI</th>
+                                <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="campaignsTableBody">
+                            <tr>
+                                <td colspan="10" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <nav aria-label="Page navigation" class="mt-3">
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        #performanceChart {
+            max-height: 280px !important;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        const API_URL = 'https://localhost:7096/api/MarketingCampaigns';
+
+        let performanceChart;
+        let currentPage = 1;
+        let showingPreviousYear = false;
+
+        // =========================================================
+        // UTILITY FUNCTIONS
+        // =========================================================
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN');
+        }
+
+        function getDefaultDateRange() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            return {
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0]
+            };
+        }
+
+        // =========================================================
+        // LOAD KPI DATA
+        // =========================================================
+        async function loadKpis() {
+            const { startDate, endDate } = getDefaultDateRange();
+            try {
+                const response = await fetch(`${API_URL}/kpis?startDate=${startDate}&endDate=${endDate}`);
+                const kpis = await response.json();
+
+                document.getElementById('kpiTotalCampaigns').textContent = kpis.totalCampaigns.toLocaleString();
+                document.getElementById('kpiTotalBudget').textContent = formatCurrency(kpis.totalBudgetSpent);
+                document.getElementById('kpiTotalRevenue').textContent = formatCurrency(kpis.totalRevenueGenerated);
+                document.getElementById('kpiAvgConversion').textContent = `${(kpis.avgConversionRate || 0).toFixed(2)}%`;
+            } catch (error) {
+                console.error("Lỗi khi tải KPIs:", error);
+            }
+        }
+
+        // =========================================================
+        // LOAD PERFORMANCE CHART
+        // =========================================================
+        async function loadPerformanceChart(usePreviousYear = false) {
+            const startDate = document.getElementById('chartStartDate').value;
+            const endDate = document.getElementById('chartEndDate').value;
+
+            if (!startDate || !endDate) return;
+
+            try {
+                const endpoint = usePreviousYear
+                    ? `${API_URL}/charts/daily-performance-previous-year`
+                    : `${API_URL}/charts/daily-performance`;
+
+                const response = await fetch(`${endpoint}?startDate=${startDate}&endDate=${endDate}`);
+                const data = await response.json();
+
+                renderPerformanceChart(data, usePreviousYear);
+
+                const periodText = usePreviousYear
+                    ? `Cùng kỳ năm ${new Date(startDate).getFullYear() - 1}`
+                    : `Từ ${new Date(startDate).toLocaleDateString('vi-VN')} đến ${new Date(endDate).toLocaleDateString('vi-VN')}`;
+                document.getElementById('chartPeriodInfo').textContent = periodText;
+
+            } catch (error) {
+                console.error("Lỗi khi tải biểu đồ:", error);
+            }
+        }
+
+        function renderPerformanceChart(data, isPreviousYear) {
+            const labels = data.map(d => d.date);
+            const revenuePercents = data.map(d => d.revenueAchievementPercent);
+            const reachPercents = data.map(d => d.reachAchievementPercent);
+
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: isPreviousYear ? '% Doanh thu (Năm trước)' : '% Doanh thu đạt KPI',
+                            data: revenuePercents,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: isPreviousYear ? '% Lượt tiếp cận (Năm trước)' : '% Lượt tiếp cận đạt KPI',
+                            data: reachPercents,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 12,
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y.toFixed(2) + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '% Đạt KPI',
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            ticks: {
+                                callback: function (value) {
+                                    return value + '%';
+                                },
+                                font: {
+                                    size: 10
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // =========================================================
+        // LOAD CAMPAIGNS LIST
+        // =========================================================
+        async function fetchCampaigns(page = 1) {
+            const params = new URLSearchParams({
+                PageNumber: page,
+                PageSize: 10,
+                SearchTerm: '@Context.Request.Query["searchTerm"]' || '',
+                CampaignType: '@Context.Request.Query["campaignType"]' || '',
+                Status: '@Context.Request.Query["status"]' || '',
+                StartDate: '@Context.Request.Query["startDate"]' || '',
+                EndDate: '@Context.Request.Query["endDate"]' || ''
+            });
+
+            try {
+                const response = await fetch(`${API_URL}/list?${params.toString()}`);
+                const result = await response.json();
+
+                renderCampaignsTable(result.data);
+                renderPagination(result.totalPages, page);
+                currentPage = page;
+            } catch (error) {
+                console.error("Lỗi khi tải danh sách:", error);
+            }
+        }
+
+        function renderCampaignsTable(campaigns) {
+            const body = document.getElementById('campaignsTableBody');
+            body.innerHTML = '';
+
+            if (!campaigns || campaigns.length === 0) {
+                body.innerHTML = '<tr><td colspan="10" class="text-center py-4">Không tìm thấy chiến dịch nào.</td></tr>';
+                return;
+            }
+
+            campaigns.forEach(c => {
+                const statusClass = c.status?.toLowerCase() === 'completed' ? 'badge bg-success' :
+                    c.status?.toLowerCase() === 'active' ? 'badge bg-warning' : 'badge bg-secondary';
+
+                const roi = c.roi ? c.roi.toFixed(2) : '0.00';
+                const roiClass = c.roi >= 0 ? 'text-success' : 'text-danger';
+
+                const row = `
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        ${c.imageUrl ? `<img src="${c.imageUrl}" alt="${c.title}" class="rounded me-2" style="width: 35px; height: 35px; object-fit: cover;">` : ''}
+                                        <span class="fw-bold">${c.title}</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-info">${c.campaignType || 'N/A'}</span></td>
+                                <td>
+                                    <small class="text-muted">
+                                        ${formatDate(c.startDate)}<br/>
+                                        ${formatDate(c.endDate)}
+                                    </small>
+                                </td>
+                                <td>${formatCurrency(c.budget)}</td>
+                                <td class="fw-bold">${formatCurrency(c.revenueGenerated)}</td>
+                                <td class="${roiClass} fw-bold">${roi}%</td>
+                                <td>${(c.viewCount || 0).toLocaleString()}</td>
+                                <td>
+                                    ${c.targetReach || c.targetRevenue ? `
+                                        <small class="text-muted">
+                                            ${c.targetReach ? `<span class="d-block">👁️ ${((c.viewCount || 0) / c.targetReach * 100).toFixed(0)}%</span>` : ''}
+                                            ${c.targetRevenue ? `<span class="d-block">💰 ${((c.revenueGenerated || 0) / c.targetRevenue * 100).toFixed(0)}%</span>` : ''}
+                                        </small>
+                                    ` : '<span class="text-muted">-</span>'}
+                                </td>
+                                <td><span class="${statusClass}">${c.status}</span></td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="/MarketingCampaigns/Details/${c.campaignId}" class="btn btn-sm btn-info" title="Chi tiết">
+                                            <i class="mdi mdi-eye"></i>
+                                        </a>
+                                        <a href="/MarketingCampaigns/Edit/${c.campaignId}" class="btn btn-sm btn-warning" title="Sửa">
+                                            <i class="mdi mdi-pencil"></i>
+                                        </a>
+                                        <a href="/MarketingCampaigns/Delete/${c.campaignId}" class="btn btn-sm btn-danger" title="Xóa" onclick="return confirm('Bạn có chắc muốn xóa?')">
+                                            <i class="mdi mdi-delete"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                body.innerHTML += row;
+            });
+        }
+
+        function renderPagination(totalPages, currentPage) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<a class="page-link" href="#" onclick="fetchCampaigns(${currentPage - 1}); return false;">«</a>`;
+            pagination.appendChild(prevLi);
+
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<a class="page-link" href="#" onclick="fetchCampaigns(${i}); return false;">${i}</a>`;
+                pagination.appendChild(li);
+            }
+
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<a class="page-link" href="#" onclick="fetchCampaigns(${currentPage + 1}); return false;">»</a>`;
+            pagination.appendChild(nextLi);
+        }
+
+        // =========================================================
+        // EVENT HANDLERS
+        // =========================================================
+        document.getElementById('comparePreviousYearBtn').addEventListener('click', function () {
+            showingPreviousYear = !showingPreviousYear;
+
+            if (showingPreviousYear) {
+                this.innerHTML = '<i class="mdi mdi-calendar-today"></i> Hiển thị năm hiện tại';
+                this.classList.remove('btn-outline-primary');
+                this.classList.add('btn-primary');
+            } else {
+                this.innerHTML = '<i class="mdi mdi-compare"></i> So sánh cùng kỳ năm ngoái';
+                this.classList.remove('btn-primary');
+                this.classList.add('btn-outline-primary');
+            }
+
+            loadPerformanceChart(showingPreviousYear);
+        });
+
+        document.getElementById('chartStartDate').addEventListener('change', () => {
+            loadPerformanceChart(showingPreviousYear);
+        });
+
+        document.getElementById('chartEndDate').addEventListener('change', () => {
+            loadPerformanceChart(showingPreviousYear);
+        });
+
+        // =========================================================
+        // INITIALIZATION
+        // =========================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const { startDate, endDate } = getDefaultDateRange();
+            document.getElementById('chartStartDate').value = startDate;
+            document.getElementById('chartEndDate').value = endDate;
+
+            loadKpis();
+            loadPerformanceChart(false);
+            fetchCampaigns(1);
+        });
+    </script>
+}

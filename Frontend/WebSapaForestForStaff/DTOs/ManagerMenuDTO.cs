@@ -16,9 +16,9 @@ namespace WebSapaForestForStaff.DTOs
         public decimal Price { get; set; }
         public string CourseType { get; set; } = null!;
         public bool IsAvailable { get; set; }
-        public string? LinkImg { get; set; }
+        public string? ImageUrl { get; set; }
 
-        public ManagerMenuCategoryDTO? Category { get; set; }
+        public ManagerCategoryDTO? Category { get; set; }
     }
 
 }

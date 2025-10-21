@@ -1,0 +1,226 @@
+﻿@model WebSapaFoRestRMSForStaff.Models.CampaignDTO.MarketingCampaignDto
+@{
+    ViewData["Title"] = "Chỉnh sửa chiến dịch";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    var pageNumber = ViewData["PageNumber"] ?? 1;
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title mb-0">Chỉnh sửa chiến dịch</h4>
+                    <a asp-action="Index" asp-route-pageNumber="@pageNumber" class="btn btn-secondary">
+                        <i class="mdi mdi-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+
+                <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="pageNumber" value="@pageNumber" />
+
+                    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Title -->
+                            <div class="mb-3">
+                                <label asp-for="Title" class="form-label">Tiêu đề <span class="text-danger">*</span></label>
+                                <input asp-for="Title" class="form-control" />
+                                <span asp-validation-for="Title" class="text-danger"></span>
+                            </div>
+
+                            <!-- Target Audience -->
+                            <div class="mb-3">
+                                <label asp-for="TargetAudience" class="form-label">Đối tượng mục tiêu</label>
+                                <textarea asp-for="TargetAudience" class="form-control" rows="2"></textarea>
+                            </div>
+
+                            <!-- Date Range -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="StartDate" class="form-label">Ngày bắt đầu</label>
+                                    <input asp-for="StartDate" type="date" class="form-control" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="EndDate" class="form-label">Ngày kết thúc</label>
+                                    <input asp-for="EndDate" type="date" class="form-control" />
+                                </div>
+                            </div>
+
+                            <!-- Budget & Campaign Type -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Budget" class="form-label">Ngân sách (VND)</label>
+                                    <input asp-for="Budget" type="number" class="form-control" step="1000" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="CampaignType" class="form-label">Loại chiến dịch</label>
+                                    <select asp-for="CampaignType" class="form-select">
+                                        <option value="Discount">Discount</option>
+                                        <option value="Promotion">Promotion</option>
+                                        <option value="Event">Event</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Status & Voucher -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="Status" class="form-label">Trạng thái</label>
+                                    <select asp-for="Status" class="form-select">
+                                        <option value="Pending">Pending</option>
+                                        <option value="Active">Active</option>
+                                        <option value="Completed">Completed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label asp-for="VoucherId" class="form-label">Voucher</label>
+                                    <select asp-for="VoucherId" class="form-select" id="voucherSelect">
+                                        <option value="">-- Không áp dụng --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Target KPI -->
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">🎯 Chỉ tiêu KPI</h5>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <label asp-for="TargetReach" class="form-label">Mục tiêu lượt tiếp cận</label>
+                                            <input asp-for="TargetReach" type="number" class="form-control" />
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <label asp-for="TargetRevenue" class="form-label">Mục tiêu doanh thu (VND)</label>
+                                            <input asp-for="TargetRevenue" type="number" class="form-control" step="1000" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Performance (Read-only) -->
+                            <div class="card bg-info text-white mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">📊 Hiệu suất (Chỉ xem)</h5>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small">Lượt xem</label>
+                                            <input asp-for="ViewCount" type="text" class="form-control form-control-sm" readonly />
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <label class="form-label small">Doanh thu (VND)</label>
+                                            <input asp-for="RevenueGenerated" type="text" class="form-control form-control-sm" readonly />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Image Upload -->
+                            <div class="mb-3">
+                                <label for="imageFile" class="form-label">Ảnh Banner mới (để trống nếu không đổi)</label>
+                                <input type="file" name="imageFile" id="imageFile" class="form-control" accept="image/*" />
+                                <small class="text-muted">Định dạng: JPG, PNG. Kích thước tối đa: 5MB</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <!-- Current Image -->
+                            <div class="card bg-light mb-3">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Ảnh hiện tại</h5>
+                                    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                                    {
+                                        <img src="@Model.ImageUrl" id="currentImage" class="img-fluid rounded" alt="Current banner">
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted">Chưa có ảnh</p>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- New Image Preview -->
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Xem trước ảnh mới</h5>
+                                    <img id="imagePreview" src="/images/placeholder-image.png" class="img-fluid rounded" alt="Preview" style="max-height: 200px; display: none;">
+                                </div>
+                            </div>
+
+                            <!-- ROI Info -->
+                            <div class="card bg-success text-white mt-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">ROI hiện tại</h6>
+                                    <h3>@String.Format("{0:F2}%", Model.ROI ?? 0)</h3>
+                                    <small>Return on Investment</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-action="Index" asp-route-pageNumber="@pageNumber" class="btn btn-secondary">
+                            <i class="mdi mdi-close"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="mdi mdi-check"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Image preview
+        document.getElementById('imageFile').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('imagePreview');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+
+        // Load vouchers
+        async function loadVouchers() {
+            try {
+                const response = await fetch('https://localhost:7096/api/Voucher');
+                if (response.ok) {
+                    const result = await response.json();
+                    const vouchers = result.data || result;
+
+                    const select = document.getElementById('voucherSelect');
+                    const currentVoucherId = @(Model.VoucherId ?? 0);
+
+                    vouchers.forEach(v => {
+                        const option = document.createElement('option');
+                        option.value = v.voucherId;
+                        option.textContent = `${v.code} - ${v.description || ''}`;
+                        option.selected = v.voucherId === currentVoucherId;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading vouchers:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadVouchers);
+    </script>
+}

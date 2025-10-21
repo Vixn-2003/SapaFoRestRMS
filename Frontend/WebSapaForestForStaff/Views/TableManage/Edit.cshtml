@@ -1,0 +1,34 @@
+﻿ @model WebSapaForestForStaff.DTOs.TableManage.TableUpdateDto
+
+@{
+    ViewData["Title"] = "Sửa bàn";
+}
+
+<h2>Sửa bàn</h2>
+
+@if(TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<form asp-action="Edit" method="post">
+    <div class="mb-3">
+        <label>Số bàn</label>
+        <input asp-for="TableNumber" class="form-control" required />
+    </div>
+    <div class="mb-3">
+        <label>Sức chứa</label>
+        <input asp-for="Capacity" type="number" class="form-control" required min="1" />
+    </div>
+    <div class="mb-3">
+        <label>Trạng thái</label>
+        <select asp-for="Status" class="form-select" asp-items="ViewBag.StatusList"></select>
+    </div>
+
+    <div class="mb-3">
+        <label>Khu vực</label>
+        <select asp-for="AreaId" class="form-select" asp-items="ViewBag.Areas"></select>
+    </div>
+    <button type="submit" class="btn btn-primary">Cập nhật</button>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Hủy</a>
+</form>

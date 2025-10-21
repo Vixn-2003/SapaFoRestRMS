@@ -12,9 +12,13 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
     public interface IUnitOfWork : IDisposable
     {
         IManagerMenuRepository MenuItem { get; }
+        IManagerCategoryRepository MenuCategory { get; }
+        IInventoryIngredientRepository InventoryIngredient { get; }
 
         IManagerComboRepository Combo { get; }
         IUserRepository Users { get; }
+        IStaffProfileRepository StaffProfiles { get; }
+        IPositionRepository Positions { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

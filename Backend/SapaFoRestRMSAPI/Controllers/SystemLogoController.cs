@@ -54,19 +54,37 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateLogo(int id, [FromForm] SystemLogoDto dto, int userId = 3)
+        public async Task<IActionResult> UpdateLogo(int id, [FromForm] SystemLogoDto dto, [FromQuery] int userId = 3)
         {
-            dto.LogoId = id;
+            if (id != dto.LogoId && dto.LogoId == 0)
+                dto.LogoId = id;
 
-            if (dto.File != null)
+            //  Upload ảnh mới nếu có
+            if (dto.File != null && dto.File.Length > 0)
             {
-                dto.LogoUrl = await _cloudinaryService.UploadFileAsync(dto.File);
+                var uploadUrl = await _cloudinaryService.UploadFileAsync(dto.File);
+                dto.LogoUrl = uploadUrl; 
+            }
+
+            //  Nếu không upload ảnh mới, giữ nguyên URL cũ để tránh null
+            else
+            {
+                var existingLogo = await _logoService.GetByIdAsync(id);
+                if (existingLogo == null)
+                    return NotFound(new { message = "Không tìm thấy logo cần cập nhật." });
+
+                dto.LogoUrl = existingLogo.LogoUrl; 
             }
 
             var success = await _logoService.UpdateLogoAsync(dto, userId);
-            if (!success) return NotFound();
-            return NoContent();
+
+            if (!success)
+                return NotFound(new { message = "Cập nhật không thành công." });
+
+            return Ok(new { message = "Cập nhật logo thành công!" });
         }
+
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteLogo(int id)

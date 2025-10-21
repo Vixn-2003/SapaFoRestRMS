@@ -48,6 +48,17 @@ namespace DataAccessLayer.Repositories
             return await _context.MenuItems.Where(m => m.IsAvailable == true).Include(p => p.Category).ToListAsync();
         }
 
+        public async Task<MenuItem> ManagerMenuByIds(int id)
+        {
+            return await _context.MenuItems
+                .Include(m => m.Category)                     // Lấy danh mục món
+                .Include(m => m.Recipes)                      // Lấy danh sách Recipe của món
+                    .ThenInclude(r => r.Ingredient)           // Lấy chi tiết Ingredient trong từng Recipe
+                .Where(m => m.IsAvailable == true && m.MenuItemId == id)
+                .FirstOrDefaultAsync();
+        }
+
+
 
         public Task<MenuItem> GetByIdAsync(int id)
         {
@@ -62,5 +73,7 @@ namespace DataAccessLayer.Repositories
         {
             throw new NotImplementedException();
         }
+
+        
     }
 }

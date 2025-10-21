@@ -1,0 +1,819 @@
+﻿@{
+    Layout = "~/Views/Shared/_LayoutInventory.cshtml";
+}
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #e5e7eb;
+        color: #1f2937;
+    }
+
+    /* Page Header */
+    .page-header {
+        margin-bottom: 25px;
+    }
+
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .page-header p {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+    /* Main Layout */
+    .content-wrapper {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 25px;
+    }
+
+    /* Left Panel */
+    .form-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 20px;
+    }
+
+    .subsection-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #10b981;
+        margin-bottom: 15px;
+        margin-top: 20px;
+    }
+
+    /* Form Groups */
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+            .form-group label span {
+                color: #ef4444;
+            }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #f9fafb;
+            color: #1f2937;
+            transition: all 0.2s;
+        }
+
+            .form-group input:focus,
+            .form-group select:focus,
+            .form-group textarea:focus {
+                outline: none;
+                border-color: #10b981;
+                background: white;
+            }
+
+            .form-group input:read-only {
+                background: #e5e7eb;
+                color: #6b7280;
+            }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        background: #fbbf24;
+        color: #78350f;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    /* Destination Info Box */
+    .destination-info {
+        background: #2d3748;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+        .destination-info h4 {
+            color: #10b981;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .info-label {
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    .info-value {
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    /* Materials Section */
+    .materials-section {
+        margin-top: 25px;
+    }
+
+    .add-material-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 15px;
+    }
+
+        .add-material-btn:hover {
+            background: #059669;
+        }
+
+    /* Table Container with Scroll */
+    .table-container {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .table-scroll {
+        max-height: 280px;
+        overflow-y: auto;
+    }
+
+    .materials-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .materials-table thead th {
+            position: sticky;
+            top: 0;
+            background: #2d3748;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 12px;
+            text-align: left;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .materials-table tbody td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+            background: white;
+        }
+
+        .materials-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .materials-table input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+    .price-cell {
+        color: #10b981;
+        font-weight: 600;
+    }
+
+    .delete-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
+    /* Total Section */
+    .total-section {
+        background: #2d3748;
+        padding: 15px 20px;
+        text-align: right;
+    }
+
+    .total-label {
+        color: #94a3b8;
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+
+    .total-value {
+        color: #10b981;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 25px;
+    }
+
+    .btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+    .btn-warning {
+        background: #92400e;
+        color: white;
+    }
+
+        .btn-warning:hover {
+            background: #78350f;
+        }
+
+    /* Right Sidebar */
+    .sidebar-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Export Orders List */
+    .export-orders {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .export-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    .export-card {
+        background: #2d3748;
+        border-radius: 8px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .export-card:hover {
+            background: #374151;
+        }
+
+    .export-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .export-code {
+        color: white;
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    .export-status {
+        background: #fbbf24;
+        color: #78350f;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .export-detail {
+        color: #94a3b8;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+
+    .export-value {
+        color: #10b981;
+        font-size: 16px;
+        font-weight: 700;
+        margin-top: 8px;
+    }
+
+    /* Destinations List */
+    .destinations {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .destination-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: #f9fafb;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .destination-rank {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .rank-1 {
+        background: #3b82f6;
+    }
+
+    .rank-2 {
+        background: #8b5cf6;
+    }
+
+    .rank-3 {
+        background: #f59e0b;
+    }
+
+    .destination-info-text {
+        flex: 1;
+    }
+
+    .destination-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1f2937;
+        margin-bottom: 2px;
+    }
+
+    .destination-count {
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .destination-total {
+        color: #10b981;
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    /* Scrollbar Styling */
+    .table-scroll::-webkit-scrollbar,
+    .export-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .table-scroll::-webkit-scrollbar-track,
+    .export-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .table-scroll::-webkit-scrollbar-thumb,
+    .export-list::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 3px;
+    }
+
+        .table-scroll::-webkit-scrollbar-thumb:hover,
+        .export-list::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+</style>
+<body>
+
+<!-- Main Content -->
+<div class="content-wrapper">
+    <!-- Left Panel - Form -->
+    <div class="form-panel">
+        <h3 class="section-title">Thông tin đơn xuất kho</h3>
+
+        <!-- Basic Info -->
+        <h4 class="subsection-title">Thông tin chung</h4>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Mã đơn xuất <span>*</span></label>
+                <input type="text" value="XK-2025-001" readonly>
+            </div>
+            <div class="form-group">
+                <label>Nơi nhận <span>*</span></label>
+                <select id="destinationSelect">
+                    <option value="">Bếp chính</option>
+                    <option value="bar">Quầy Bar</option>
+                    <option value="bakery">Bếp bánh</option>
+                    <option value="cold">Bếp lạnh</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Ngày xuất <span>*</span></label>
+                <input type="date" value="2025-10-15">
+            </div>
+            <div class="form-group">
+                <label>Trạng thái</label>
+                <div style="padding-top: 10px;">
+                    <span class="status-badge">Chưa xuất kho</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Ghi chú</label>
+            <textarea placeholder="Nhập ghi chú cho đơn xuất kho..."></textarea>
+        </div>
+
+        <!-- Destination Details -->
+        <div class="destination-info">
+            <h4>Chi tiết nơi nhận</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">Tên bộ phận</span>
+                    <span class="info-value">Bếp chính</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Người nhận</span>
+                    <span class="info-value">Nguyễn Văn B</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Điện thoại</span>
+                    <span class="info-value">0912 345 678</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Vị trí</span>
+                    <span class="info-value">Tầng 1, Khu bếp</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Materials Section -->
+        <div class="materials-section">
+            <h3 class="section-title">Chi tiết nguyên liệu xuất kho</h3>
+
+            <button class="add-material-btn" onclick="addMaterial()">
+                + Thêm nguyên liệu
+            </button>
+
+            <div class="table-container">
+                <div class="table-scroll">
+                    <table class="materials-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">STT</th>
+                                <th style="width: 120px;">Mã nguyên liệu</th>
+                                <th>Tên nguyên liệu</th>
+                                <th style="width: 100px;">Số lượng</th>
+                                <th style="width: 80px;">Đơn vị</th>
+                                <th style="width: 120px;">Đơn giá</th>
+                                <th style="width: 120px;">Thành tiền</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialsTable">
+                            <tr>
+                                <td>1</td>
+                                <td>IG-001</td>
+                                <td>Gạo ST25</td>
+                                <td><input type="number" value="100" onchange="calculateTotal()"></td>
+                                <td>kg</td>
+                                <td>25,000đ</td>
+                                <td class="price-cell">2,500,000đ</td>
+                                <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>IG-015</td>
+                                <td>Thịt heo sạch</td>
+                                <td><input type="number" value="50" onchange="calculateTotal()"></td>
+                                <td>kg</td>
+                                <td>120,000đ</td>
+                                <td class="price-cell">6,000,000đ</td>
+                                <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>IG-032</td>
+                                <td>Rau củ tổng hợp</td>
+                                <td><input type="number" value="80" onchange="calculateTotal()"></td>
+                                <td>kg</td>
+                                <td>15,000đ</td>
+                                <td class="price-cell">1,200,000đ</td>
+                                <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>IG-045</td>
+                                <td>Dầu ăn</td>
+                                <td><input type="number" value="30" onchange="calculateTotal()"></td>
+                                <td>lit</td>
+                                <td>45,000đ</td>
+                                <td class="price-cell">1,350,000đ</td>
+                                <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td>IG-067</td>
+                                <td>Gia vị tổng hợp</td>
+                                <td><input type="number" value="20" onchange="calculateTotal()"></td>
+                                <td>kg</td>
+                                <td>35,000đ</td>
+                                <td class="price-cell">700,000đ</td>
+                                <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="total-section">
+                    <div class="total-label">Tổng giá trị đơn xuất:</div>
+                    <div class="total-value" id="totalValue">9,700,000đ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="goBack()">Quay lại</button>
+            <button class="btn btn-primary" onclick="saveDraft()">Lưu nháp</button>
+            <button class="btn btn-success" onclick="confirmExport()">Xác nhận xuất kho</button>
+            <button class="btn btn-warning" onclick="printExport()">In phiếu xuất</button>
+        </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="sidebar-panel">
+        <!-- Export Orders Processing -->
+        <div class="export-orders">
+            <h3 class="section-title">Đơn xuất đang xử lý</h3>
+
+            <div class="export-list">
+                <div class="export-card">
+                    <div class="export-header">
+                        <span class="export-code">XK-2025-0034</span>
+                        <span class="export-status">Đang xử lý</span>
+                    </div>
+                    <div class="export-detail">Nơi nhận: Bếp chính</div>
+                    <div class="export-detail">Ngày: 09/10/2025</div>
+                    <div class="export-value">15,400,000đ</div>
+                </div>
+
+                <div class="export-card">
+                    <div class="export-header">
+                        <span class="export-code">XK-2025-0033</span>
+                        <span class="export-status">Đang xử lý</span>
+                    </div>
+                    <div class="export-detail">Nơi nhận: Quầy Bar</div>
+                    <div class="export-detail">Ngày: 09/10/2025</div>
+                    <div class="export-value">8,200,000đ</div>
+                </div>
+
+                <div class="export-card">
+                    <div class="export-header">
+                        <span class="export-code">XK-2025-0032</span>
+                        <span class="export-status">Đang xử lý</span>
+                    </div>
+                    <div class="export-detail">Nơi nhận: Bếp bánh</div>
+                    <div class="export-detail">Ngày: 30/09/2025</div>
+                    <div class="export-value">5,600,000đ</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Destinations -->
+        <div class="destinations">
+            <h3 class="section-title">Nơi nhận chính</h3>
+
+            <div class="destination-card">
+                <div class="destination-rank rank-1">1</div>
+                <div class="destination-info-text">
+                    <div class="destination-name">Bếp chính</div>
+                    <div class="destination-count">12 đơn hàng</div>
+                </div>
+                <div class="destination-total">85.4M</div>
+            </div>
+
+            <div class="destination-card">
+                <div class="destination-rank rank-2">2</div>
+                <div class="destination-info-text">
+                    <div class="destination-name">Quầy Bar</div>
+                    <div class="destination-count">8 đơn hàng</div>
+                </div>
+                <div class="destination-total">62.3M</div>
+            </div>
+
+            <div class="destination-card">
+                <div class="destination-rank rank-3">3</div>
+                <div class="destination-info-text">
+                    <div class="destination-name">Bếp bánh</div>
+                    <div class="destination-count">6 đơn hàng</div>
+                </div>
+                <div class="destination-total">45.2M</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let materialCount = 5;
+
+    function addMaterial() {
+        materialCount++;
+        const table = document.getElementById('materialsTable');
+        const row = table.insertRow();
+        row.innerHTML = `
+                <td>${materialCount}</td>
+                <td><input type="text" placeholder="Mã NL"></td>
+                <td><input type="text" placeholder="Tên nguyên liệu"></td>
+                <td><input type="number" value="0" onchange="calculateTotal()"></td>
+                <td><input type="text" placeholder="Đơn vị"></td>
+                <td><input type="text" placeholder="Đơn giá"></td>
+                <td class="price-cell">0đ</td>
+                <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+            `;
+    }
+
+    function deleteRow(btn) {
+        const row = btn.closest('tr');
+        row.remove();
+        updateRowNumbers();
+        calculateTotal();
+    }
+
+    function updateRowNumbers() {
+        const rows = document.querySelectorAll('#materialsTable tr');
+        rows.forEach((row, index) => {
+            row.cells[0].textContent = index + 1;
+        });
+        materialCount = rows.length;
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        const rows = document.querySelectorAll('#materialsTable tr');
+
+        rows.forEach(row => {
+            const qtyInput = row.querySelector('input[type="number"]');
+            if (qtyInput) {
+                const qty = parseFloat(qtyInput.value) || 0;
+                const priceText = row.cells[5].textContent.replace(/[^\d]/g, '');
+                const price = parseFloat(priceText) || 0;
+                const lineTotal = qty * price;
+
+                row.cells[6].textContent = lineTotal.toLocaleString('vi-VN') + 'đ';
+                total += lineTotal;
+            }
+        });
+
+        document.getElementById('totalValue').textContent = total.toLocaleString('vi-VN') + 'đ';
+    }
+
+    function goBack() {
+        if (confirm('Bạn có chắc muốn quay lại? Dữ liệu chưa lưu sẽ bị mất.')) {
+            window.location.href = '/XuatKho';
+        }
+    }
+
+    function saveDraft() {
+        alert('Đã lưu nháp thành công!');
+    }
+
+    function confirmExport() {
+        if (confirm('Xác nhận xuất kho? Hành động này không thể hoàn tác.')) {
+            alert('Đơn xuất kho đã được xác nhận thành công!');
+            // Redirect or reload
+        }
+    }
+
+    function printExport() {
+        alert('Đang tạo phiếu xuất kho...');
+        // window.print() or generate PDF
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function () {
+        calculateTotal();
+    });
+</script>
+
+@section Scripts {
+    <script>
+        // Additional page-specific scripts
+    </script>
+}
+</body>

@@ -1,0 +1,68 @@
+﻿@model BrandBannerViewModel
+
+<h2>@(Model.BannerId == 0 ? "Thêm banner" : "Cập nhật banner")</h2>
+
+<form asp-action="@(Model.BannerId == 0 ? "Add" : "Edit")" enctype="multipart/form-data" method="post">
+    @if (Model.BannerId != 0)
+    {
+        <input type="hidden" asp-for="BannerId" />
+    }
+
+   
+
+    <div class="mb-3">
+        <label class="form-label">Tiêu đề <span class="text-danger">*</span></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Ảnh banner <span class="text-danger">*</span></label>
+        <input asp-for="ImageFile" type="file" class="form-control" />
+        <span asp-validation-for="ImageFile" class="text-danger"></span>
+
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <div class="mt-2">
+                <img src="@Model.ImageUrl" alt="preview" width="180" class="rounded shadow-sm border" />
+                <small class="text-muted d-block mt-1">Nếu bạn muốn thay đổi, hãy chọn ảnh mới.</small>
+            </div>
+        }
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label>Ngày bắt đầu <span class="text-danger">*</span></label>
+            <input asp-for="StartDate" type="date" class="form-control" />
+            <span asp-validation-for="StartDate" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <label>Ngày kết thúc <span class="text-danger">*</span></label>
+            <input asp-for="EndDate" type="date" class="form-control" />
+            <span asp-validation-for="EndDate" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
+        <select class="form-select" asp-for="Status" asp-items="@(new SelectList(ViewBag.Statuses as List<string>))"></select>
+        <span asp-validation-for="Status" class="text-danger"></span>
+    </div>
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary me-2">
+            <i class="bi bi-save"></i> Lưu
+        </button>
+        <a href="@Url.Action("Index")" class="btn btn-secondary">
+            <i class="bi bi-x-circle"></i> Hủy
+        </a>
+    </div>
+</form>
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
