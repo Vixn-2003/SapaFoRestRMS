@@ -44,7 +44,7 @@ namespace DataAccessLayer.Repositories
     if (!string.IsNullOrEmpty(status))
         query = query.Where(r => r.Status == status);
     else
-        query = query.Where(r => r.Status == "Pending" || r.Status == "Confirmed");
+        query = query.Where(r => r.Status == "Pending" || r.Status == "Confirmed" || r.Status == "Cancelled");
 
     // Lọc theo ngày
     if (date.HasValue)

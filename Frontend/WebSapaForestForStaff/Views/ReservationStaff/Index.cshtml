@@ -1,5 +1,6 @@
 ﻿@model ReservationListViewModel
 @{
+    Layout = "_LayoutManager";
     ViewData["Title"] = "Quản lý đặt bàn - Nhà hàng Sapa Forest";
 }
 
@@ -17,6 +18,7 @@
                     <option value="">-- Tất cả --</option>
                     <option value="Pending" selected="@(ViewBag.Status == "Pending")">Chờ xử lý</option>
                     <option value="Confirmed" selected="@(ViewBag.Status == "Confirmed")">Đã xác nhận</option>
+                     <option value="Cancelled" selected="@(ViewBag.Status == "Cancelled")">Đã Hủy</option>
                 </select>
             </div>
 
@@ -99,13 +101,18 @@
                     }
                 </td>
                         <td class="text-center">
-                            <span class="badge @(r.Status == "Pending" ? "bg-warning text-dark" : "bg-success")">
-                                @(r.Status == "Pending" ? "Chờ xử lý" : "Đã xác nhận")
-                            </span>
+                           <span class="badge @(r.Status == "Pending" ? "bg-warning text-dark" 
+                 : r.Status == "Confirmed" ? "bg-success" 
+                 : "bg-danger")">
+    @(r.Status == "Pending" ? "Chờ xử lý" 
+      : r.Status == "Confirmed" ? "Đã xác nhận" 
+      : "Đã hủy")
+</span>
+
                         </td>
                         <td class="text-center">
                             <a class="btn btn-sm btn-outline-primary" href="@Url.Action("AssignTables", "ReservationStaff", new { id = r.ReservationId })">
-                                <i class="bi bi-clipboard-check"></i> Xử lý
+                                <i class="bi bi-clipboard-check"></i> Xếp bàn 
                             </a>
                              <form asp-action="CancelReservation" asp-controller="ReservationStaff"
           method="post" class="d-inline">
