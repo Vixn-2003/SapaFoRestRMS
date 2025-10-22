@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using DataAccessLayer;
 using DataAccessLayer.Dbcontext;
 using BusinessAccessLayer.Mapping;
+using BusinessAccessLayer.Services.Interfaces;
 using BusinessAccessLayer.Services;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DataAccessLayer.UnitOfWork;
@@ -146,19 +147,23 @@ builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
 
-            // Auth and User Management services
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IUserManagementService, UserManagementService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IVerificationService, VerificationService>();
-            builder.Services.AddScoped<IPasswordService, PasswordService>();
-            builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
-            //Table Service/Repository
-            builder.Services.AddScoped<ITableRepository, TableRepository>();
-            builder.Services.AddScoped<ITableService, TableService>();
-            // Area Repository
-            builder.Services.AddScoped<IAreaRepository, AreaRepository>();
-            builder.Services.AddScoped<IAreaService, AreaService>();
+// Auth and User Management services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVerificationService, VerificationService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+//Table Service/Repository
+builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<ITableService, TableService>();
+// Area Repository
+builder.Services.AddScoped<IAreaRepository, AreaRepository>();
+builder.Services.AddScoped<IAreaService, AreaService>();
+
+// Area Repository
+builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
+builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
@@ -201,15 +206,7 @@ builder.Services
         };
     });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
+
 
 
 var app = builder.Build();
