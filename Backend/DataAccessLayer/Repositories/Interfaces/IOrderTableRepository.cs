@@ -14,6 +14,14 @@ namespace DataAccessLayer.Repositories.Interfaces
         /// </summary>
         /// <param name="status">Trạng thái đặt bàn.</param>
         Task<IEnumerable<Reservation>> GetReservationsByStatusAsync(string status);
+
+        Task<(List<ReservationTable> Tables, int TotalCount)> GetPagedDistinctReservationTablesByStatusAsync(string status, int page, int pageSize);
+
+        Task<Reservation?> GetReservationByIdAndStatusAsync(int reservationId, string status); // lấy bàn khách theo id của reservation
+
+        Task<IEnumerable<MenuItem>> GetAvailableMenuWithCategoryAsync();
+
     }
+
 
 }
