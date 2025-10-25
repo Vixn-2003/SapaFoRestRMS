@@ -1,0 +1,372 @@
+@model WebSapaForestForStaff.DTOs.UserManagement.UserDetailsResponse
+
+@{
+    ViewData["Title"] = "Chi tiết người dùng";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Chi tiết người dùng</h1>
+            <p class="page-subtitle">Thông tin chi tiết về @Model.FullName</p>
+        </div>
+        <div class="page-actions">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.UserId" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Chỉnh sửa
+            </a>
+            @if (User.IsInRole("Admin") || User.IsInRole("Owner"))
+            {
+                <a asp-action="ResetPassword" asp-route-id="@Model.UserId" class="btn btn-info">
+                    <i class="bi bi-key"></i> Đặt lại mật khẩu
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- User Information -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person"></i> Thông tin cá nhân
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                    {
+                        <img src="@Model.AvatarUrl" alt="Avatar" class="avatar-lg mb-3" />
+                    }
+                    else
+                    {
+                        <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
+                            @Model.FullName.Substring(0, 1).ToUpper()
+                        </div>
+                    }
+                    
+                    <h4 class="mb-1">@Model.FullName</h4>
+                    <p class="text-muted mb-3">@Model.Email</p>
+                    
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                        <span class="badge role-badge role-@Model.RoleName?.ToLower()">
+                            @Model.RoleName
+                        </span>
+                        <span class="badge status-badge status-@Model.Status">
+                            @(Model.Status == 0 ? "Hoạt động" : Model.Status == 1 ? "Không hoạt động" : "Khóa")
+                        </span>
+                    </div>
+
+                    <div class="user-info">
+                        <div class="info-item">
+                            <i class="bi bi-telephone"></i>
+                            <span>@(Model.Phone ?? "Chưa cập nhật")</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="bi bi-calendar"></i>
+                            <span>Tham gia: @(Model.CreatedAt?.ToString("dd/MM/yyyy") ?? "N/A")</span>
+                        </div>
+                        @if (Model.LastLoginAt.HasValue)
+                        {
+                            <div class="info-item">
+                                <i class="bi bi-clock"></i>
+                                <span>Đăng nhập cuối: @Model.LastLoginAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="col-lg-8">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-info-circle"></i> Thông tin tài khoản
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">ID Người dùng</label>
+                                        <span class="info-value">@Model.UserId</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Vai trò</label>
+                                        <span class="info-value">
+                                            <span class="badge role-badge role-@Model.RoleName?.ToLower()">
+                                                @Model.RoleName
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Trạng thái</label>
+                                        <span class="info-value">
+                                            <span class="badge status-badge status-@Model.Status">
+                                                @(Model.Status == 0 ? "Hoạt động" : Model.Status == 1 ? "Không hoạt động" : "Khóa")
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Ngày tạo</label>
+                                        <span class="info-value">@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Cập nhật lần cuối</label>
+                                        <span class="info-value">@(Model.ModifiedAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa cập nhật")</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Đăng nhập cuối</label>
+                                        <span class="info-value">@(Model.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa đăng nhập")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login History -->
+            @if (Model.LoginHistory.Any())
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-clock-history"></i> Lịch sử đăng nhập
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Thời gian</th>
+                                                <th>IP Address</th>
+                                                <th>Trạng thái</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var login in Model.LoginHistory.Take(10))
+                                            {
+                                                <tr>
+                                                    <td>@login.LoginTime.ToString("dd/MM/yyyy HH:mm")</td>
+                                                    <td>@(login.IpAddress ?? "N/A")</td>
+                                                    <td>
+                                                        <span class="badge @(login.IsSuccessful ? "bg-success" : "bg-danger")">
+                                                            @(login.IsSuccessful ? "Thành công" : "Thất bại")
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Recent Activities -->
+            @if (Model.RecentActivities.Any())
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-activity"></i> Hoạt động gần đây
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="activity-timeline">
+                                    @foreach (var activity in Model.RecentActivities.Take(10))
+                                    {
+                                        <div class="activity-item">
+                                            <div class="activity-time">@activity.ActivityTime.ToString("dd/MM/yyyy HH:mm")</div>
+                                            <div class="activity-content">
+                                                <div class="activity-type">@activity.ActivityType</div>
+                                                <div class="activity-description">@activity.Description</div>
+                                                @if (!string.IsNullOrEmpty(activity.IpAddress))
+                                                {
+                                                    <div class="activity-ip">IP: @activity.IpAddress</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .header-content .page-title {
+        margin: 0;
+        color: #2f2f2f;
+        font-weight: 600;
+    }
+
+    .header-content .page-subtitle {
+        margin: 0.5rem 0 0 0;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .page-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .avatar-lg {
+        width: 80px;
+        height: 80px;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+
+    .user-info {
+        text-align: left;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        color: #6c757d;
+    }
+
+    .info-item i {
+        width: 16px;
+        color: #007bff;
+    }
+
+    .info-group {
+        margin-bottom: 1rem;
+    }
+
+    .info-label {
+        display: block;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-value {
+        color: #6c757d;
+    }
+
+    .role-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .role-owner { background-color: #6f42c1; color: white; }
+    .role-admin { background-color: #dc3545; color: white; }
+    .role-manager { background-color: #ffc107; color: #212529; }
+    .role-staff { background-color: #17a2b8; color: white; }
+    .role-customer { background-color: #28a745; color: white; }
+
+    .status-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-0 { background-color: #d4edda; color: #155724; }
+    .status-1 { background-color: #f8d7da; color: #721c24; }
+    .status-2 { background-color: #fff3cd; color: #856404; }
+
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #dee2e6;
+    }
+
+    .activity-item {
+        position: relative;
+        margin-bottom: 1rem;
+        padding-left: 1rem;
+    }
+
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -0.5rem;
+        top: 0.5rem;
+        width: 8px;
+        height: 8px;
+        background-color: #007bff;
+        border-radius: 50%;
+    }
+
+    .activity-time {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-type {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-description {
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-ip {
+        font-size: 0.75rem;
+        color: #adb5bd;
+    }
+</style>
