@@ -5,7 +5,7 @@ using WebSapaForestForStaff.Services;
 
 namespace WebSapaForestForStaff.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Owner")]
     public class AdminController : Controller
     {
         private readonly ApiService _apiService;

@@ -7,16 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
 
-builder.Services.AddHttpClient("API", client =>
-{
-    client.BaseAddress = new Uri("https://localhost:7096/");
-}).ConfigurePrimaryHttpMessageHandler(() =>
-{
-    return new HttpClientHandler
-    {
-        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-    };
-});
+// HttpClient is created directly in controllers following ManagerMenuController pattern
 builder.Services.AddHttpClient<ApiService>(); // để inject HttpClient
 builder.Services.AddScoped<ApiService>();     // để inject ApiService
 builder.Services.AddHttpContextAccessor();    // để dùng Session trong ApiService
@@ -40,9 +31,11 @@ builder.Services.AddAuthentication("Cookies")
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("Admin", p => p.RequireRole("Admin"));
-    options.AddPolicy("Manager", p => p.RequireRole("Manager"));
-    options.AddPolicy("Staff", p => p.RequireRole("Staff"));
+    options.AddPolicy("Owner", p => p.RequireRole("Owner"));
+    options.AddPolicy("Admin", p => p.RequireRole("Admin", "Owner"));
+    options.AddPolicy("Manager", p => p.RequireRole("Manager", "Admin", "Owner"));
+    options.AddPolicy("Staff", p => p.RequireRole("Staff", "Manager", "Admin", "Owner"));
+    options.AddPolicy("Customer", p => p.RequireRole("Customer"));
 });
 
 
