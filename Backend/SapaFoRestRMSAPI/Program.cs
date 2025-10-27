@@ -130,6 +130,10 @@ builder.Services.AddScoped<IEventService, EventService>();
 
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
+    builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
+
+
 
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();

@@ -19,6 +19,7 @@ namespace BusinessAccessLayer.Mapping
         {
 
             CreateMap<MenuItem, ManagerMenuDTO>();
+            CreateMap<ManagerMenuDTO, MenuItem>();
 
             CreateMap<Combo, ManagerComboDTO>();
             CreateMap<ComboItem, ManagerComboItemDTO>().ForMember(dest => dest.ManagerMenuItem,
@@ -26,6 +27,8 @@ namespace BusinessAccessLayer.Mapping
 
             CreateMap<MenuCategory, ManagerCategoryDTO>();
             CreateMap<ManagerCategoryDTO, MenuCategory>();
+            CreateMap<Recipe, RecipeDTO>();
+            CreateMap<RecipeDTO, Recipe>();
 
             CreateMap<InventoryBatch, InventoryIngredientWithBatchDTO>()
                 .ForMember(dest => dest.IngredientId, opt => opt.MapFrom(src => src.Ingredient.IngredientId))
