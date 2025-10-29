@@ -55,6 +55,81 @@ namespace SapaFoRestRMSAPI.Services
             }
             await context.SaveChangesAsync();
         }
+
+        public static async Task SeedPositionsAsync(SapaFoRestRmsContext context)
+        {
+            // Ensure table exists
+            if (!await context.Database.CanConnectAsync())
+            {
+                return;
+            }
+
+            // Desired seed positions
+            var desiredPositions = new List<Position>
+            {
+                new Position { PositionName = "Waiter/Waitress", Description = "Front-of-house service staff", Status = 0 },
+                new Position { PositionName = "Cashier", Description = "Handles billing and payments", Status = 0 },
+                new Position { PositionName = "Kitchen Staff", Description = "Back-of-house food preparation", Status = 0 },
+                new Position { PositionName = "Inventory Staff", Description = "Warehouse and stock management", Status = 0 }
+            };
+
+            foreach (var pos in desiredPositions)
+            {
+                var exists = await context.Positions.AnyAsync(p => p.PositionName == pos.PositionName);
+                if (!exists)
+                {
+                    await context.Positions.AddAsync(pos);
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        public static async Task SeedTestCustomerAsync(SapaFoRestRmsContext context)
+        {
+            // Ensure role 'Customer' exists or create it
+            var customerRoleId = await context.Roles.Where(r => r.RoleName == "Customer").Select(r => r.RoleId).FirstOrDefaultAsync();
+            if (customerRoleId == 0)
+            {
+                var role = new Role { RoleName = "Customer" };
+                await context.Roles.AddAsync(role);
+                await context.SaveChangesAsync();
+                customerRoleId = role.RoleId;
+            }
+
+            var phone = "0900000001";
+            var email = "test.customer@example.com";
+
+            var existing = await context.Users.FirstOrDefaultAsync(u => (u.Phone == phone || u.Email == email) && u.IsDeleted == false);
+            if (existing == null)
+            {
+                var user = new User
+                {
+                    FullName = "Test Customer",
+                    Email = email,
+                    Phone = phone,
+                    PasswordHash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(Guid.NewGuid().ToString()))),
+                    RoleId = customerRoleId,
+                    Status = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+                await context.Users.AddAsync(user);
+                await context.SaveChangesAsync();
+
+                var customer = await context.Customers.FirstOrDefaultAsync(c => c.UserId == user.UserId);
+                if (customer == null)
+                {
+                    await context.Customers.AddAsync(new Customer
+                    {
+                        UserId = user.UserId,
+                        LoyaltyPoints = 0,
+                        Notes = "Seeded test customer"
+                    });
+                }
+                await context.SaveChangesAsync();
+            }
+        }
     }
 }
 
