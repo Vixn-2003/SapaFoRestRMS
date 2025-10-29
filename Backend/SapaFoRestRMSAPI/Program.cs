@@ -147,21 +147,21 @@ builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
 
-            // Auth and User Management services
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IUserManagementService, UserManagementService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IVerificationService, VerificationService>();
-            builder.Services.AddScoped<IPasswordService, PasswordService>();
-            builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+// Auth and User Management services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVerificationService, VerificationService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
 builder.Services.AddScoped<BusinessAccessLayer.Services.OtpService>();
 builder.Services.AddScoped<BusinessAccessLayer.Services.Interfaces.IPhoneAuthService, BusinessAccessLayer.Services.PhoneAuthService>();
-            //Table Service/Repository
-            builder.Services.AddScoped<ITableRepository, TableRepository>();
-            builder.Services.AddScoped<ITableService, TableService>();
-            // Area Repository
-            builder.Services.AddScoped<IAreaRepository, AreaRepository>();
-            builder.Services.AddScoped<IAreaService, AreaService>();
+//Table Service/Repository
+builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<ITableService, TableService>();
+// Area Repository
+builder.Services.AddScoped<IAreaRepository, AreaRepository>();
+builder.Services.AddScoped<IAreaService, AreaService>();
 // Auth and User Management services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
