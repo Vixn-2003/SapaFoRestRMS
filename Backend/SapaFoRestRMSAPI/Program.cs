@@ -154,6 +154,8 @@ builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfW
             builder.Services.AddScoped<IVerificationService, VerificationService>();
             builder.Services.AddScoped<IPasswordService, PasswordService>();
             builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+builder.Services.AddScoped<BusinessAccessLayer.Services.OtpService>();
+builder.Services.AddScoped<BusinessAccessLayer.Services.Interfaces.IPhoneAuthService, BusinessAccessLayer.Services.PhoneAuthService>();
             //Table Service/Repository
             builder.Services.AddScoped<ITableRepository, TableRepository>();
             builder.Services.AddScoped<ITableService, TableService>();
@@ -235,6 +237,9 @@ using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    // Seed core lookup data
+    await DataSeeder.SeedPositionsAsync(ctx);
+    await DataSeeder.SeedTestCustomerAsync(ctx);
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
