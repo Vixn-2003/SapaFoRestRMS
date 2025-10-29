@@ -32,6 +32,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<MenuPageViewModel> GetMenuForTableAsync(int tableId, int? categoryId, string? searchString);
         // === THÊM HÀM MỚI NÀY ===
         Task<bool> CancelOrderItemAsync(int orderDetailId);
+
         // === THÊM HÀM MỚI NÀY ===
         /// <summary>
         /// Nhận giỏ hàng từ khách và tạo Order

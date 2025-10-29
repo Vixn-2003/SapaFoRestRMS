@@ -308,7 +308,6 @@ $(document).ready(function () {
                             ${detailsHtml}
                         </div>
                         <div class="actions">
-                            <a href="#" class="btn-details">Chi tiết</a>
                             <button class="btn-order btn-add-to-cart"
                                     data-item-id="${menuItemId}"
                                     data-item-name="${itemName}"

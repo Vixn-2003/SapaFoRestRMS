@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using WebSapaFoRestForCustomer.DTOs.OrderTable;
+using WebSapaFoRestForCustomer.Models;
 
 namespace WebSapaFoRestForCustomer.Controllers
 {
@@ -80,12 +82,42 @@ namespace WebSapaFoRestForCustomer.Controllers
 
                     return View(menuGrouped);
                 }
-                else
+                else // API trả về lỗi
                 {
-                    // Xử lý lỗi (ví dụ: Bàn không hợp lệ)
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    ViewBag.Error = $"Lỗi: {errorContent}";
-                    return View("Error"); // (Tạo một View Error.cshtml đơn giản)
+                    string errorMsg = $"Lỗi không xác định từ API ({response.StatusCode})."; // Default message
+                    try
+                    {
+                        // Cố gắng đọc JSON {"message": "..."}
+                        var errorResponse = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                        if (errorResponse != null && errorResponse.TryGetValue("message", out var messageValue))
+                        {
+                            // === CHỈ LẤY NỘI DUNG MESSAGE ===
+                            errorMsg = messageValue;
+                        }
+                        else
+                        {
+                            // Nếu không có key "message", đọc cả nội dung text
+                            errorMsg = await response.Content.ReadAsStringAsync();
+                        }
+                    }
+                    catch (System.Text.Json.JsonException) // Nếu không phải JSON hợp lệ
+                    {
+                        // Đọc lỗi dạng text thường
+                        errorMsg = await response.Content.ReadAsStringAsync();
+                    }
+                    catch (Exception readEx) // Các lỗi đọc khác
+                    {
+                        errorMsg = $"Lỗi khi đọc phản hồi từ API: {readEx.Message}";
+                    }
+
+
+                    ViewBag.Error = errorMsg; // Gán lỗi đã được cắt
+
+                    // Tạo và truyền ErrorViewModel
+                    return View("ErrorPage", new ErrorViewModel
+                    {
+                        RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                    });
                 }
             }
             catch (Exception ex)
