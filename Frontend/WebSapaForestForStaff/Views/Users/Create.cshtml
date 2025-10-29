@@ -1,0 +1,233 @@
+@model WebSapaForestForStaff.DTOs.UserManagement.UserCreateRequest
+
+@{
+    ViewData["Title"] = "Tạo người dùng mới";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Tạo người dùng mới</h1>
+            <p class="page-subtitle">Thêm tài khoản người dùng mới vào hệ thống</p>
+        </div>
+        <div class="page-actions">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-plus"></i> Thông tin người dùng
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post" id="createUserForm">
+                        @Html.AntiForgeryToken()
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FullName" class="form-label required"></label>
+                                    <input asp-for="FullName" class="form-control" placeholder="Nhập họ và tên" />
+                                    <span asp-validation-for="FullName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label required"></label>
+                                    <input asp-for="Email" type="email" class="form-control" placeholder="example@email.com" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Phone" class="form-label"></label>
+                                    <input asp-for="Phone" class="form-control" placeholder="Nhập số điện thoại" />
+                                    <span asp-validation-for="Phone" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="RoleId" class="form-label required"></label>
+                                    <select asp-for="RoleId" class="form-select" asp-items="@(new SelectList(ViewBag.Roles, "RoleId", "RoleName"))">
+                                        <option value="">-- Chọn vai trò --</option>
+                                    </select>
+                                    <span asp-validation-for="RoleId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Status" class="form-label"></label>
+                                    <select asp-for="Status" class="form-select">
+                                        <option value="0">Hoạt động</option>
+                                        <option value="1">Không hoạt động</option>
+                                        <option value="2">Khóa</option>
+                                    </select>
+                                    <span asp-validation-for="Status" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="TemporaryPassword" class="form-label"></label>
+                                    <input asp-for="TemporaryPassword" class="form-control" placeholder="Mật khẩu tạm thời (tùy chọn)" />
+                                    <div class="form-text">Để trống để hệ thống tự động tạo mật khẩu</div>
+                                    <span asp-validation-for="TemporaryPassword" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input asp-for="SendEmailNotification" class="form-check-input" type="checkbox" />
+                                <label asp-for="SendEmailNotification" class="form-check-label">
+                                    Gửi email thông báo tài khoản mới cho người dùng
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Hủy
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Tạo người dùng
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Hướng dẫn
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-lightbulb"></i> Lưu ý quan trọng:</h6>
+                        <ul class="mb-0">
+                            <li>Email phải là duy nhất trong hệ thống</li>
+                            <li>Nếu không nhập mật khẩu, hệ thống sẽ tự động tạo</li>
+                            <li>Người dùng sẽ nhận email thông báo nếu được bật</li>
+                            <li>Vai trò xác định quyền truy cập của người dùng</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-3">
+                        <h6>Vai trò trong hệ thống:</h6>
+                        <div class="role-info">
+                            <div class="role-item">
+                                <span class="badge bg-purple">Owner</span>
+                                <small class="text-muted">Toàn quyền hệ thống</small>
+                            </div>
+                            <div class="role-item">
+                                <span class="badge bg-danger">Admin</span>
+                                <small class="text-muted">Quản trị hệ thống</small>
+                            </div>
+                            <div class="role-item">
+                                <span class="badge bg-warning">Manager</span>
+                                <small class="text-muted">Quản lý nhân viên</small>
+                            </div>
+                            <div class="role-item">
+                                <span class="badge bg-info">Staff</span>
+                                <small class="text-muted">Nhân viên</small>
+                            </div>
+                            <div class="role-item">
+                                <span class="badge bg-success">Customer</span>
+                                <small class="text-muted">Khách hàng</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .header-content .page-title {
+        margin: 0;
+        color: #2f2f2f;
+        font-weight: 600;
+    }
+
+    .header-content .page-subtitle {
+        margin: 0.5rem 0 0 0;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .page-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+
+    .form-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .role-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .role-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+
+    .alert ul {
+        padding-left: 1rem;
+    }
+
+    .alert li {
+        margin-bottom: 0.25rem;
+    }
+</style>
+
+<script>
+    document.getElementById('createUserForm').addEventListener('submit', function(e) {
+        const roleId = document.getElementById('RoleId').value;
+        if (!roleId) {
+            e.preventDefault();
+            alert('Vui lòng chọn vai trò cho người dùng');
+            return;
+        }
+    });
+</script>
