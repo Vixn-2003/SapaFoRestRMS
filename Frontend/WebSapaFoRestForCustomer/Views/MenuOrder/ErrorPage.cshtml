@@ -1,0 +1,11 @@
+﻿@{
+    ViewData["Title"] = "Lỗi";
+    Layout = null;
+}
+
+<div class="text-center" style="padding: 50px;">
+    <h1 class="text-danger">Không thể gọi món!</h1>
+    <p style="font-size: 1.2rem;">Lý do: @ViewBag.Error</p>
+    <p>Vui lòng liên hệ nhân viên để được hỗ trợ.</p>
+    <a href="javascript:location.reload();" class="btn btn-primary">Thử lại</a>
+</div>

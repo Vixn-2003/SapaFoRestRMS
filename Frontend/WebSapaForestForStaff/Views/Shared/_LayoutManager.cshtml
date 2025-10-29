@@ -367,41 +367,31 @@
 
         <!-- page-body-wrapper ends -->
     </div
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <!-- vendor scripts -->
+<script src="~/assets/vendors/js/vendor.bundle.base.js"></script>
+<script src="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
+<script src="~/assets/vendors/chart.js/chart.umd.js"></script>
+<script src="~/assets/vendors/progressbar.js/progressbar.min.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<!-- jQuery (đặt lại ở đây để đảm bảo sẵn sàng trước JS custom) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- container-scroller -->
-    <!-- plugins:js -->
-    <script src="~/assets/vendors/js/vendor.bundle.base.js"></script>
-    <script src="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
-    <!-- endinject -->
-    <!-- Plugin js for this page -->
-    <script src="~/assets/vendors/chart.js/chart.umd.js"></script>
-    <script src="~/assets/vendors/progressbar.js/progressbar.min.js"></script>
-    <!-- End plugin js for this page -->
-    <script src="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
+<!-- toastr (phụ thuộc jQuery) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
-    <!-- jQuery -->
+<!-- custom scripts -->
+<script src="~/js/vouchers.js"></script>
+<script src="~/js/print-qr.js"></script>
 
-    <script src="~/js/vouchers.js"></script>
+<!-- framework scripts -->
+<script src="~/assets/js/off-canvas.js"></script>
+<script src="~/assets/js/template.js"></script>
+<script src="~/assets/js/settings.js"></script>
+<script src="~/assets/js/hoverable-collapse.js"></script>
+<script src="~/assets/js/todolist.js"></script>
+<script src="~/assets/js/jquery.cookie.js"></script>
+<script src="~/assets/js/dashboard.js"></script>
 
-
-
-    <!-- inject:js -->
-    <script src="~/assets/js/off-canvas.js"></script>
-    <script src="~/assets/js/template.js"></script>
-    <script src="~/assets/js/settings.js"></script>
-    <script src="~/assets/js/hoverable-collapse.js"></script>
-    <script src="~/assets/js/todolist.js"></script>
-    <!-- endinject -->
-    <!-- Custom js for this page-->
-
-    <script src="~/assets/js/jquery.cookie.js" type="text/javascript"></script>
-    <script src="~/assets/js/dashboard.js"></script>
-    <!-- <script src="assets/js/Chart.roundedBarCharts.js"></script> -->
-    <!-- End custom js for this page-->
-    @RenderSection("Scripts", required: false)
 
 </body>
 </html>

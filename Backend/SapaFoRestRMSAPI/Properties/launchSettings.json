@@ -9,22 +9,26 @@
     }
   },
   "profiles": {
-    "http": {
+    "http": { // Profile này đã đúng
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "swagger",
-      "applicationUrl": "http://localhost:5180",
+      "applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.1.47:7096;http://192.168.1.47:5180",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "https": {
+    "https": { // === LỖI CỦA BẠN NẰM Ở ĐÂY ===
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "swagger",
-      "applicationUrl": "https://localhost:7096;http://localhost:5180",
+
+      // === SỬA DÒNG NÀY (Thêm IP của bạn vào) ===
+      "applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.1.47:7096;http://192.168.1.47:5180",
+      // ===========================================
+
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

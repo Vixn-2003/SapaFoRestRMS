@@ -1,3 +1,5 @@
+﻿using System.Net.Http; // <-- Thêm using này
+
 namespace WebSapaFoRestForCustomer
 {
     public class Program
@@ -6,14 +8,35 @@ namespace WebSapaFoRestForCustomer
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddControllersWithViews();
-            builder.Services.AddHttpClient();
+            // Add services to the container.
+            builder.Services.AddControllersWithViews();
+            builder.Services.AddHttpClient(); // Dòng này đã có
 
-            var app = builder.Build();
+            // === THÊM KHỐI NÀY VÀO (Lấy từ dự án cũ) ===
+            // Cấu hình HttpClient tên "API"
+            builder.Services.AddHttpClient("API", client =>
+            {
+                // Lấy BaseUrl từ appsettings.json
+                // (ví dụ: "http://192.168.1.47:5180/api")
+                var baseUrl = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl");
+                var rootUrl = baseUrl.Replace("/api", "");
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+                client.BaseAddress = new Uri(rootUrl);
+            })
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                // Đây là phần QUAN TRỌNG: Bỏ qua lỗi chứng chỉ SSL
+                return new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                };
+            });
+            // ===============================================
+
+            var app = builder.Build();
+
+            // Configure the HTTP request pipeline.
+            if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
             }
@@ -24,8 +47,8 @@ namespace WebSapaFoRestForCustomer
             app.UseAuthorization();
 
             app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
+              name: "default",
+              pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.Run();
         }

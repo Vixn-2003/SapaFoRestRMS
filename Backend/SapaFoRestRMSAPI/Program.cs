@@ -161,6 +161,15 @@ builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 builder.Services.AddScoped<IAreaService, AreaService>();
 
+
+//voucher
+builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
+builder.Services.AddScoped<IVoucherService, VoucherService>();
+
+//Payrool
+builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
+builder.Services.AddScoped<IPayrollService, PayrollService>();
+
 // Area Repository
 builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
 builder.Services.AddScoped<IOrderTableService, OrderTableService>();
@@ -168,7 +177,8 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
-
+// Đăng ký dịch vụ chạy ngầm của chúng ta
+builder.Services.AddHostedService<OrderStatusUpdaterService>();
 
 
 builder.Services.AddAuthorization(options =>
@@ -206,8 +216,25 @@ builder.Services
         };
     });
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+// === 1. THÊM DỊCH VỤ CORS ===
+// === THAY THẾ TOÀN BỘ KHỐI NÀY ===
 
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    {
+        policy.WithOrigins(
+            "http://localhost:5054",    // 👈 Frontend bạn đang chạy
+            "http://localhost:5123",    // Razor nội bộ
+            "http://192.168.1.47:5123", // IP Razor
+            "http://192.168.1.47:5180"  // Swagger
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // 👈 Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
+    });
+});
 
 var app = builder.Build();
 
@@ -217,9 +244,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+
+app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 // Bật CORS
-app.UseCors("AllowFrontend");
+//app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
