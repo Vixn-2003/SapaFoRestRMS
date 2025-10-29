@@ -17,6 +17,10 @@ public partial class OrderDetail
 
     public string? Status { get; set; }
 
+    //new
+    public DateTime CreatedAt { get; set; }
+    public string? Notes { get; set; } // Thêm ? để cho phép null
+
     public virtual ICollection<KitchenTicketDetail> KitchenTicketDetails { get; set; } = new List<KitchenTicketDetail>();
 
     public virtual MenuItem MenuItem { get; set; } = null!;

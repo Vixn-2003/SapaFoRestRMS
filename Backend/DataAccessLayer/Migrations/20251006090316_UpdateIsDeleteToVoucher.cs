@@ -5,25 +5,25 @@
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class AddImageUrlToCombos : Migration
+    public partial class UpdateIsDeleteToVoucher : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "ImageUrl",
-                table: "Combos",
-                type: "nvarchar(500)",
-                maxLength: 500,
-                nullable: true);
+            migrationBuilder.AddColumn<bool>(
+                name: "IsDelete",
+                table: "Vouchers",
+                type: "bit",
+                nullable: true,
+                defaultValue: false);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "ImageUrl",
-                table: "Combos");
+                name: "IsDelete",
+                table: "Vouchers");
         }
     }
 }
