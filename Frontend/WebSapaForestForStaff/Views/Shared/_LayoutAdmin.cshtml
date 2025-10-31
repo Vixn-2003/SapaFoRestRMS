@@ -74,7 +74,11 @@
                             <img class="img-xs rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
                         </a>
                         <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
-                            <a class="dropdown-item" asp-controller="Auth" asp-action="Logout"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Đăng xuất</a>
+                            <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
+                                <button type="submit" class="btn btn-link dropdown-item p-0 m-0">
+                                    <i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Đăng xuất
+                                </button>
+                            </form>
                         </div>
                     </li>
                 </ul>

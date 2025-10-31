@@ -150,12 +150,13 @@ builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfW
             // Auth and User Management services
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+            builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IEmailService, EmailService>();
             builder.Services.AddScoped<IVerificationService, VerificationService>();
             builder.Services.AddScoped<IPasswordService, PasswordService>();
             builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
-builder.Services.AddScoped<BusinessAccessLayer.Services.OtpService>();
-builder.Services.AddScoped<BusinessAccessLayer.Services.Interfaces.IPhoneAuthService, BusinessAccessLayer.Services.PhoneAuthService>();
+builder.Services.AddScoped<OtpService>();
+builder.Services.AddScoped<IPhoneAuthService, PhoneAuthService>();
             //Table Service/Repository
             builder.Services.AddScoped<ITableRepository, TableRepository>();
             builder.Services.AddScoped<ITableService, TableService>();

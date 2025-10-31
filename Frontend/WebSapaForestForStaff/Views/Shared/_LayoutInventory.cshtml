@@ -256,7 +256,9 @@
                 </div>
             </div>
 
-            <button class="logout-btn" onclick="logout()">Đăng xuất</button>
+            <form id="logoutForm" action="/Auth/Logout" method="post">
+                <button type="submit" class="logout-btn">Đăng xuất</button>
+            </form>
         </aside>
 
         <!-- Main Content -->
@@ -268,11 +270,7 @@
     </div>
 
     <script>
-        function logout() {
-            if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
-                window.location.href = '/Logout';
-            }
-        }
+        // No JS needed; form posts to logout
 
         // Highlight active menu item based on current URL
         document.addEventListener('DOMContentLoaded', function() {
