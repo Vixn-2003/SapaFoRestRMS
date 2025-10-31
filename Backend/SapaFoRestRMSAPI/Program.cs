@@ -242,8 +242,10 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
             "http://localhost:5054",    // 👈 Frontend bạn đang chạy
             "http://localhost:5123",    // Razor nội bộ
-            "http://192.168.1.47:5123", // IP Razor
-            "http://192.168.1.47:5180"  // Swagger
+                                        "http://192.168.1.47:5123", // IP Razor Wifi nhà
+                                        "http://192.168.1.47:5180"  // Swagger wifi nhà
+                                                                    //"http://192.168.105.100:5123", // IP Razor
+                                                                    //"http://192.168.105.100:5180"  // Swagger
         )
         .AllowAnyHeader()
         .AllowAnyMethod()

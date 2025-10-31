@@ -90,8 +90,8 @@ namespace BusinessAccessLayer.Services
         public async Task<IEnumerable<MenuItemDto>> GetMenuForReservationAsync(
     int reservationId,
     string status,
-    int? categoryId,     
-    string? searchString) 
+    int? categoryId,
+    string? searchString)
         {
             // Kiểm tra reservation hợp lệ
             var reservation = await _orderTableRepository.GetReservationByIdAndStatusAsync(reservationId, status);
@@ -386,9 +386,44 @@ namespace BusinessAccessLayer.Services
         }
 
         // (Thêm hàm mới này vào OrderTableService.cs)
+        //public async Task<bool> CancelOrderItemAsync(int orderDetailId)
+        //{
+        //    // Lấy món ăn VÀ order cha của nó
+        //    var item = await _context.OrderDetails
+        //        .Include(od => od.Order)
+        //        .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
+
+        //    if (item == null)
+        //    {
+        //        throw new Exception("Không tìm thấy món ăn.");
+        //    }
+
+        //    // === LOGIC "THỜI GIAN ÂN HẬN" ===
+        //    if (item.Status == "Đã gửi")
+        //    {
+        //        item.Status = "Đã hủy";
+
+        //        // Cập nhật lại tổng tiền của Order
+        //        if (item.Order != null)
+        //        {
+        //            item.Order.TotalAmount -= (item.UnitPrice * item.Quantity);
+        //        }
+
+        //        await _context.SaveChangesAsync();
+
+        //        // (Sau này thêm SignalR ở đây để báo cho bếp/thu ngân)
+
+        //        return true;
+        //    }
+
+        //    // Nếu đã "Đang chế biến" hoặc "Đã lên bàn"
+        //    throw new Exception("Món ăn đã được gửi đến bếp, không thể hủy.");
+        //}
+
+        // (Trong file BusinessAccessLayer/Services/OrderTableService.cs)
+
         public async Task<bool> CancelOrderItemAsync(int orderDetailId)
         {
-            // Lấy món ăn VÀ order cha của nó
             var item = await _context.OrderDetails
                 .Include(od => od.Order)
                 .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
@@ -398,30 +433,89 @@ namespace BusinessAccessLayer.Services
                 throw new Exception("Không tìm thấy món ăn.");
             }
 
-            // === LOGIC "THỜI GIAN ÂN HẬN" ===
-            if (item.Status == "Đã gửi")
+            // === LOGIC KIỂM TRA MÀ BẠN ĐANG TÌM NẰM Ở ĐÂY ===
+
+            // 1. Kiểm tra trạng thái:
+            if (item.Status != "Đã gửi")
             {
-                item.Status = "Đã hủy";
-
-                // Cập nhật lại tổng tiền của Order
-                if (item.Order != null)
-                {
-                    item.Order.TotalAmount -= (item.UnitPrice * item.Quantity);
-                }
-
-                await _context.SaveChangesAsync();
-
-                // (Sau này thêm SignalR ở đây để báo cho bếp/thu ngân)
-
-                return true;
+                throw new Exception("Món ăn đang được chế biến, không thể hủy.");
             }
 
-            // Nếu đã "Đang chế biến" hoặc "Đã lên bàn"
-            throw new Exception("Món ăn đã được gửi đến bếp, không thể hủy.");
+            // 2. Tính thời gian đã trôi qua
+            var timeElapsed = DateTime.UtcNow - item.CreatedAt;
+
+            // 3. Đặt giới hạn 
+            const int cancelTimeLimitInMinutes = 2; // SỬA SỐ NÀY TỪ 2 THÀNH ?
+
+            if (timeElapsed.TotalMinutes > cancelTimeLimitInMinutes)
+            {
+                // Thông báo lỗi nếu quá thời gian
+                throw new Exception($"Đã quá {cancelTimeLimitInMinutes} phút, không thể hủy.");
+            }
+
+            // Nếu vượt qua kiểm tra -> Tiến hành hủy
+            item.Status = "Đã hủy";
+
+            if (item.Order != null)
+            {
+                item.Order.TotalAmount -= (item.UnitPrice * item.Quantity);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return true;
         }
+
+
+        // Gọi xử lý sự cố
+        // 
+
+        public async Task RequestAssistanceAsync(AssistanceRequestDto requestDto)
+        {
+            // 1. Kiểm tra Reservation
+            var reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(requestDto.TableId);
+            if (reservation == null)
+            {
+                throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
+            }
+
+            // 2. (CHỐNG SPAM) Kiểm tra 
+            bool alreadyPending = await _orderTableRepository.
+                HasPendingAssistanceRequestAsync(requestDto.TableId);
+            if (alreadyPending)
+            {
+                throw new Exception("Bạn đã gửi yêu cầu trước đó. Nhân viên sẽ đến ngay!");
+            }
+
+            // 3. Tạo yêu cầu mới
+            var newRequest = new AssistanceRequest
+            {
+                TableId = requestDto.TableId,
+                ReservationId = reservation.ReservationId,
+                RequestTime = DateTime.UtcNow,
+                Status = "Pending",
+                Note = requestDto.Note,
+                HandledTime = null
+            };
+
+            await _orderTableRepository.CreateAssistanceRequestAsync(newRequest);
+            await _context.SaveChangesAsync();
+
+            // (SignalR logic...)
+        }
+
 
         // (Trong BusinessAccessLayer/Services/OrderTableService.cs, lồng bên trong)
 
+        //Gọi xử lý sự cố
+        public class AssistanceRequestDto
+        {
+            [Required]
+            public int TableId { get; set; }
+
+            [StringLength(500)]
+            public string? Note { get; set; }
+        }
         // DTO này chứa toàn bộ dữ liệu cho trang Menu
         public class MenuPageViewModel
         {
@@ -503,7 +597,7 @@ namespace BusinessAccessLayer.Services
 
             public bool IsAvailable { get; set; }
 
-            public int Floor {  get; set; }
+            public int Floor { get; set; }
         }
 
         public class MenuItemDto
@@ -536,17 +630,17 @@ namespace BusinessAccessLayer.Services
             public int Capacity { get; set; }
             public string? Status { get; set; }
             public string? AreaName { get; set; }
-            public int? Floor {  get; set; }
+            public int? Floor { get; set; }
             public int NumberGuest { get; set; }
         }
         public class PagedTableOrderResult
         {
-            public int TotalCount { get; set; }              // Tổng số bàn sau Distinct
+            public int TotalCount { get; set; }
             public List<TableOrderDto> Items { get; set; } = new(); // Danh sách bàn trang hiện tại
             public int Page { get; set; }
             public int PageSize { get; set; }
             // Tự động tính tổng số trang
-    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+            public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
         }
 
 

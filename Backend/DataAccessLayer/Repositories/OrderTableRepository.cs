@@ -164,10 +164,22 @@ namespace DataAccessLayer.Repositories
             return await _context.Areas
 
                 .Select(a => (int?)a.Floor) // Ép kiểu a.Floor (int) thành (int?)
-
                 .Distinct()
                 .OrderBy(f => f)
                 .ToListAsync();
+        }
+        // gọi sử lý sự cố
+        public async Task<bool> HasPendingAssistanceRequestAsync(int tableId)
+        {
+            // Kiểm tra xem bàn này CÓ SẴN một yêu cầu đang "Pending" không
+            return await _context.AssistanceRequests
+                .AnyAsync(r => r.TableId == tableId && r.Status == "Pending");
+        }
+
+        public async Task CreateAssistanceRequestAsync(AssistanceRequest request)
+        {
+            await _context.AssistanceRequests.AddAsync(request);
+            // (Lưu ý: Hàm này không gọi SaveChanges, Service sẽ gọi)
         }
     }
 }

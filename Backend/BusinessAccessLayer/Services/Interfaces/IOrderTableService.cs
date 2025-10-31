@@ -39,5 +39,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         /// </summary>
         Task<OrderResultDto> SubmitOrderAsync(OrderSubmissionDto orderDto);
 
+        //Gọi xử lý sự cố
+        Task RequestAssistanceAsync(AssistanceRequestDto requestDto);
     }
 }

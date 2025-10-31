@@ -39,6 +39,10 @@ namespace DataAccessLayer.Repositories.Interfaces
         /// Lấy thông tin các món ăn từ một danh sách ID
         /// </summary>
         Task<IEnumerable<MenuItem>> GetMenuItemsByIdsAsync(List<int> menuItemIds);
+
+        //Gọi hỗ trợ
+        Task<bool> HasPendingAssistanceRequestAsync(int tableId);
+        Task CreateAssistanceRequestAsync(AssistanceRequest request);
     }
 
 

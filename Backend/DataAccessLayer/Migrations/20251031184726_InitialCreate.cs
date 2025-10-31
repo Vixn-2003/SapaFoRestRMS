@@ -3,14 +3,31 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
+
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class NewDB : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "Areas",
+                columns: table => new
+                {
+                    AreaId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AreaName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Floor = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Areas", x => x.AreaId);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Combos",
                 columns: table => new
@@ -54,6 +71,21 @@ namespace DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__MenuCate__19093A0BBB85F1C6", x => x.CategoryId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Positions",
+                columns: table => new
+                {
+                    PositionId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PositionName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false, defaultValue: 0)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Position__60BB9D7D", x => x.PositionId);
                 });
 
             migrationBuilder.CreateTable(
@@ -104,21 +136,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tables",
-                columns: table => new
-                {
-                    TableId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    TableNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Capacity = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Available")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Tables__7D5F01EE063230D4", x => x.TableId);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Vouchers",
                 columns: table => new
                 {
@@ -128,15 +145,38 @@ namespace DataAccessLayer.Migrations
                     Description = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     DiscountType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     DiscountValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    StartDate = table.Column<DateOnly>(type: "date", nullable: true),
-                    EndDate = table.Column<DateOnly>(type: "date", nullable: true),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     MinOrderValue = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     MaxDiscount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Active")
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Active"),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: true, defaultValue: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Vouchers__3AEE7921766B4882", x => x.VoucherId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tables",
+                columns: table => new
+                {
+                    TableId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TableNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Capacity = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Available"),
+                    AreaId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Tables__7D5F01EE063230D4", x => x.TableId);
+                    table.ForeignKey(
+                        name: "FK_Tables_Areas_AreaId",
+                        column: x => x.AreaId,
+                        principalTable: "Areas",
+                        principalColumn: "AreaId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -361,11 +401,19 @@ namespace DataAccessLayer.Migrations
                     CampaignId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     StartDate = table.Column<DateOnly>(type: "date", nullable: true),
                     EndDate = table.Column<DateOnly>(type: "date", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Active"),
-                    CreatedBy = table.Column<int>(type: "int", nullable: true)
+                    CreatedBy = table.Column<int>(type: "int", nullable: true),
+                    VoucherId = table.Column<int>(type: "int", nullable: true),
+                    Budget = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    CampaignType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    TargetAudience = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ViewCount = table.Column<int>(type: "int", nullable: true, defaultValue: 0),
+                    RevenueGenerated = table.Column<decimal>(type: "decimal(18,2)", nullable: true, defaultValue: 0m),
+                    TargetReach = table.Column<int>(type: "int", nullable: true),
+                    TargetRevenue = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -375,6 +423,12 @@ namespace DataAccessLayer.Migrations
                         column: x => x.CreatedBy,
                         principalTable: "Users",
                         principalColumn: "UserId");
+                    table.ForeignKey(
+                        name: "FK_MarketingCampaigns_Vouchers",
+                        column: x => x.VoucherId,
+                        principalTable: "Vouchers",
+                        principalColumn: "VoucherId",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -430,7 +484,6 @@ namespace DataAccessLayer.Migrations
                     StaffId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
-                    Position = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     HireDate = table.Column<DateOnly>(type: "date", nullable: false),
                     SalaryBase = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false, defaultValue: 0)
@@ -470,6 +523,29 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "VerificationCodes",
+                columns: table => new
+                {
+                    VerificationCodeId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<int>(type: "int", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsUsed = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    Purpose = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VerificationCodes", x => x.VerificationCodeId);
+                    table.ForeignKey(
+                        name: "FK_VerificationCodes_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PurchaseOrderDetails",
                 columns: table => new
                 {
@@ -503,14 +579,28 @@ namespace DataAccessLayer.Migrations
                     ReservationId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     CustomerId = table.Column<int>(type: "int", nullable: false),
+                    CustomerNameReservation = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    StaffId = table.Column<int>(type: "int", nullable: true),
+                    ReservationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TimeSlot = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     ReservationTime = table.Column<DateTime>(type: "datetime", nullable: false),
+                    ArrivalTime = table.Column<TimeSpan>(type: "time", nullable: true),
                     NumberOfGuests = table.Column<int>(type: "int", nullable: false),
+                    RequireDeposit = table.Column<bool>(type: "bit", nullable: false),
+                    DepositAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    DepositPaid = table.Column<bool>(type: "bit", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
-                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ZaloMessageId = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Reservat__B7EE5F24CA6A82D8", x => x.ReservationId);
+                    table.ForeignKey(
+                        name: "FK_Reservations_Users_StaffId",
+                        column: x => x.StaffId,
+                        principalTable: "Users",
+                        principalColumn: "UserId");
                     table.ForeignKey(
                         name: "FK__Reservati__Custo__395884C4",
                         column: x => x.CustomerId,
@@ -588,6 +678,30 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "StaffPositions",
+                columns: table => new
+                {
+                    StaffId = table.Column<int>(type: "int", nullable: false),
+                    PositionId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StaffPositions", x => new { x.StaffId, x.PositionId });
+                    table.ForeignKey(
+                        name: "FK_StaffPosition_Position",
+                        column: x => x.PositionId,
+                        principalTable: "Positions",
+                        principalColumn: "PositionId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_StaffPosition_Staff",
+                        column: x => x.StaffId,
+                        principalTable: "Staffs",
+                        principalColumn: "StaffId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "InventoryBatches",
                 columns: table => new
                 {
@@ -612,6 +726,35 @@ namespace DataAccessLayer.Migrations
                         column: x => x.PurchaseOrderDetailId,
                         principalTable: "PurchaseOrderDetails",
                         principalColumn: "PurchaseOrderDetailId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AssistanceRequests",
+                columns: table => new
+                {
+                    RequestId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TableId = table.Column<int>(type: "int", nullable: false),
+                    ReservationId = table.Column<int>(type: "int", nullable: true),
+                    RequestTime = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    HandledTime = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AssistanceRequests", x => x.RequestId);
+                    table.ForeignKey(
+                        name: "FK_AssistanceRequests_Reservations_ReservationId",
+                        column: x => x.ReservationId,
+                        principalTable: "Reservations",
+                        principalColumn: "ReservationId");
+                    table.ForeignKey(
+                        name: "FK_AssistanceRequests_Tables_TableId",
+                        column: x => x.TableId,
+                        principalTable: "Tables",
+                        principalColumn: "TableId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -665,6 +808,30 @@ namespace DataAccessLayer.Migrations
                         column: x => x.TableId,
                         principalTable: "Tables",
                         principalColumn: "TableId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ZaloMessages",
+                columns: table => new
+                {
+                    MessageId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ReservationId = table.Column<int>(type: "int", nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    MessageText = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    MessageType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ZaloMessageId = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ZaloMessages", x => x.MessageId);
+                    table.ForeignKey(
+                        name: "FK_ZaloMessages_Reservations_ReservationId",
+                        column: x => x.ReservationId,
+                        principalTable: "Reservations",
+                        principalColumn: "ReservationId");
                 });
 
             migrationBuilder.CreateTable(
@@ -727,7 +894,9 @@ namespace DataAccessLayer.Migrations
                     MenuItemId = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending")
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -801,10 +970,32 @@ namespace DataAccessLayer.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.InsertData(
+                table: "Roles",
+                columns: new[] { "RoleId", "RoleName" },
+                values: new object[,]
+                {
+                    { 1, "Owner" },
+                    { 2, "Admin" },
+                    { 3, "Manager" },
+                    { 4, "Staff" },
+                    { 5, "Customer" }
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Announcements_CreatedBy",
                 table: "Announcements",
                 column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AssistanceRequests_ReservationId",
+                table: "AssistanceRequests",
+                column: "ReservationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AssistanceRequests_TableId",
+                table: "AssistanceRequests",
+                column: "TableId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Attendance_StaffId",
@@ -865,6 +1056,11 @@ namespace DataAccessLayer.Migrations
                 name: "IX_MarketingCampaigns_CreatedBy",
                 table: "MarketingCampaigns",
                 column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MarketingCampaigns_VoucherId",
+                table: "MarketingCampaigns",
+                column: "VoucherId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MenuItems_CategoryId",
@@ -942,6 +1138,11 @@ namespace DataAccessLayer.Migrations
                 column: "CustomerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Reservations_StaffId",
+                table: "Reservations",
+                column: "StaffId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReservationTables_TableId",
                 table: "ReservationTables",
                 column: "TableId");
@@ -969,6 +1170,11 @@ namespace DataAccessLayer.Migrations
                 column: "StaffId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_StaffPositions_PositionId",
+                table: "StaffPositions",
+                column: "PositionId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Staffs_UserId",
                 table: "Staffs",
                 column: "UserId");
@@ -989,6 +1195,11 @@ namespace DataAccessLayer.Migrations
                 column: "CreatedBy");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Tables_AreaId",
+                table: "Tables",
+                column: "AreaId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_RoleId",
                 table: "Users",
                 column: "RoleId");
@@ -1000,10 +1211,21 @@ namespace DataAccessLayer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "UQ__Vouchers__A25C5AA74763DC38",
+                name: "IX_VerificationCodes_UserId",
+                table: "VerificationCodes",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "UQ_Vouchers_Code_StartDate_EndDate",
                 table: "Vouchers",
-                column: "Code",
-                unique: true);
+                columns: new[] { "Code", "StartDate", "EndDate" },
+                unique: true,
+                filter: "[StartDate] IS NOT NULL AND [EndDate] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ZaloMessages_ReservationId",
+                table: "ZaloMessages",
+                column: "ReservationId");
         }
 
         /// <inheritdoc />
@@ -1011,6 +1233,9 @@ namespace DataAccessLayer.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Announcements");
+
+            migrationBuilder.DropTable(
+                name: "AssistanceRequests");
 
             migrationBuilder.DropTable(
                 name: "Attendance");
@@ -1055,10 +1280,19 @@ namespace DataAccessLayer.Migrations
                 name: "Shifts");
 
             migrationBuilder.DropTable(
+                name: "StaffPositions");
+
+            migrationBuilder.DropTable(
                 name: "StockTransactions");
 
             migrationBuilder.DropTable(
                 name: "SystemLogos");
+
+            migrationBuilder.DropTable(
+                name: "VerificationCodes");
+
+            migrationBuilder.DropTable(
+                name: "ZaloMessages");
 
             migrationBuilder.DropTable(
                 name: "Combos");
@@ -1076,6 +1310,9 @@ namespace DataAccessLayer.Migrations
                 name: "Tables");
 
             migrationBuilder.DropTable(
+                name: "Positions");
+
+            migrationBuilder.DropTable(
                 name: "Staffs");
 
             migrationBuilder.DropTable(
@@ -1086,6 +1323,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "Orders");
+
+            migrationBuilder.DropTable(
+                name: "Areas");
 
             migrationBuilder.DropTable(
                 name: "PurchaseOrderDetails");

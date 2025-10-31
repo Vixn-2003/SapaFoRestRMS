@@ -84,7 +84,7 @@ namespace SapaFoRestRMSAPI.Controllers
         // GET: /api/OrderTable/floors
         // TRONG: SapaFoRestRMSAPI/Controllers/OrderTableController.cs
 
-        // === SỬA HÀM NÀY ===
+        // ===  ===
         [HttpGet("Filters/AreaNames")]
         public async Task<IActionResult> GetAreaNames()
         {
@@ -95,7 +95,7 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(names);
         }
 
-        // === VÀ SỬA HÀM NÀY ===
+        // ===  ===
         [HttpGet("Filters/Floors")]
         public async Task<IActionResult> GetFloors()
         {
@@ -210,7 +210,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-
+        //Hủy món ăn nhưng chỉ dc trong 2 phút sau khi đặt
         [HttpPost("CancelItem/{orderDetailId}")]
         public async Task<IActionResult> CancelOrderItem(int orderDetailId)
         {
@@ -218,6 +218,21 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 await _orderTableService.CancelOrderItemAsync(orderDetailId);
                 return Ok(new { message = "Đã hủy món thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Gọi xử lý sự cố
+        [HttpPost("RequestAssistance")]
+        public async Task<IActionResult> RequestAssistance([FromBody] AssistanceRequestDto requestDto)
+        {
+            try
+            {                
+                await _orderTableService.RequestAssistanceAsync(requestDto);
+                return Ok(new { message = "Đã gửi yêu cầu hỗ trợ. Vui lòng chờ trong giây lát!" });
             }
             catch (Exception ex)
             {

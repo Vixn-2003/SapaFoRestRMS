@@ -80,6 +80,44 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Areas");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.AssistanceRequest", b =>
+                {
+                    b.Property<int>("RequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
+
+                    b.Property<DateTime?>("HandledTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RequestTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReservationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("TableId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("ReservationId");
+
+                    b.HasIndex("TableId");
+
+                    b.ToTable("AssistanceRequests");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Attendance", b =>
                 {
                     b.Property<int>("AttendanceId")
@@ -1551,6 +1589,23 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK_Announcements_Users");
 
                     b.Navigation("CreatedByNavigation");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.AssistanceRequest", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId");
+
+                    b.HasOne("DomainAccessLayer.Models.Table", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
+
+                    b.Navigation("Table");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Attendance", b =>
