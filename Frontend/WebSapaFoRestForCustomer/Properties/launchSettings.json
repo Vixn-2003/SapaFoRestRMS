@@ -13,7 +13,12 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "applicationUrl": "http://localhost:5158",
+
+      // === SỬA DÒNG NÀY ===
+      // 1. Đổi port 5158 -> 5123 (để khớp với QR)
+      // 2. Thêm IP 192.168.1.47 (để điện thoại kết nối được)
+      "applicationUrl": "http://localhost:5123;http://192.168.1.47:5123",
+
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

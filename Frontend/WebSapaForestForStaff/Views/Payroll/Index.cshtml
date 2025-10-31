@@ -1,0 +1,380 @@
+﻿@using WebSapaForestForStaff.DTOs
+@model PagedResult<PayrollDTO>
+
+@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+
+    var selectedStaffName = Context.Request.Query["staffName"].ToString();
+    var selectedSortBy = Context.Request.Query["sortBy"].ToString();
+    var selectedDescending = Context.Request.Query["descending"].ToString();
+    var selectedMonthYear = Context.Request.Query["monthYear"].ToString();
+}
+<style>
+    #sortBy {
+        max-width: 180px; /* Giới hạn chiều ngang cố định */
+    }
+    /* Đổi màu chữ trong select */
+    select.form-select {
+        color: #212529 !important; /* màu đậm dễ nhìn hơn */
+    }
+
+        /* Đổi màu chữ trong các option */
+        select.form-select option {
+            color: #212529; /* có thể đổi thành trắng, đen, xanh... */
+            background-color: #fff; /* hoặc thêm nền tùy ý */
+        }
+
+        /* Khi focus hoặc hover */
+        select.form-select:focus {
+            border-color: #198754; /* viền xanh lá */
+            box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+        }
+
+</style>
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Bảng lương nhân viên</h2>
+    <!-- Nếu cần nút tạo mới Payroll thì thêm ở đây -->
+</div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <p>@error.ErrorMessage</p>
+        }
+    </div>
+}
+
+<form method="get" asp-action="Index" class="p-4 mb-4 rounded shadow-sm border bg-white" id="filterForm">
+    <h5 class="fw-bold mb-4 text-primary"><i class="mdi mdi-filter"></i> Bộ lọc nâng cao</h5>
+
+    <!-- Hàng đầu: Tên nhân viên và Tháng/Năm -->
+    <div class="row g-4 mb-3">
+        <div class="col-md-6 col-lg-4">
+            <label for="staffName" class="form-label fw-semibold text-secondary">Tên nhân viên</label>
+            <input type="text" class="form-control form-control-sm border-primary shadow-sm"
+                   id="staffName" name="staffName"
+                   value="@selectedStaffName"
+                   placeholder="Nhập tên nhân viên...">
+        </div>
+
+       <div class="col-md-6 col-lg-4">
+    <label for="monthYear" class="form-label fw-semibold text-secondary">Chọn tháng:</label>
+    <input type="month"
+           id="monthYear"
+           name="monthYear"
+           class="form-control form-control-sm border-primary shadow-sm"
+           value="@(Context.Request.Query["monthYear"].ToString())" />
+</div>
+
+
+
+        <div class="col-md-6 col-lg-4">
+            <label for="sortBy" class="form-label fw-semibold text-secondary">Sắp xếp theo</label>
+            <div class="row g-2 align-items-center">
+                <div class="col-8">
+                    <select id="sortBy" name="sortBy"
+                            class="form-select form-select-sm border-success fw-semibold shadow-sm">
+                        <option value="">-- Chọn trường sắp xếp --</option>
+                        <option value="StaffName" selected="@(selectedSortBy == "StaffName")">Tên nhân viên</option>
+                        <option value="BaseSalary" selected="@(selectedSortBy == "BaseSalary")">Lương cơ bản</option>
+                        <option value="TotalWorkDays" selected="@(selectedSortBy == "TotalWorkDays")">Số ngày làm việc</option>
+                        <option value="TotalBonus" selected="@(selectedSortBy == "TotalBonus")">Tiền thưởng</option>
+                        <option value="TotalPenalty" selected="@(selectedSortBy == "TotalPenalty")">Tiền phạt</option>
+                        <option value="NetSalary" selected="@(selectedSortBy == "NetSalary")">Lương thực nhận</option>
+                    </select>
+                </div>
+                <div class="col-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="descending" name="descending" value="true"
+                        @(selectedDescending == "true" ? "checked" : "")>
+                        <label class="form-check-label small" for="descending">Giảm dần</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Accordion lọc nâng cao -->
+    <div class="accordion mb-4" id="filterAccordion">
+
+        <!-- Lương cơ bản -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingSalary">
+                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseSalary" aria-expanded="false" aria-controls="collapseSalary">
+                    <i class="mdi mdi-cash-multiple me-2 text-success"></i> Lọc theo Lương cơ bản
+                </button>
+            </h2>
+            <div id="collapseSalary" class="accordion-collapse collapse" aria-labelledby="headingSalary"
+                 data-bs-parent="#filterAccordion">
+                <div class="accordion-body row g-3 pt-3">
+                    <div class="col-md-6">
+                        <label for="minBaseSalary" class="form-label fw-semibold">Tối thiểu</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               step="0.01" id="minBaseSalary" name="minBaseSalary"
+                               value="@Context.Request.Query["minBaseSalary"]"
+                               placeholder="VD: 10,000,000">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="maxBaseSalary" class="form-label fw-semibold">Tối đa</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               step="0.01" id="maxBaseSalary" name="maxBaseSalary"
+                               value="@Context.Request.Query["maxBaseSalary"]"
+                               placeholder="VD: 30,000,000">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ngày làm việc -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingWorkDays">
+                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseWorkDays" aria-expanded="false" aria-controls="collapseWorkDays">
+                    <i class="mdi mdi-calendar-clock me-2 text-info"></i> Lọc theo Ngày làm việc
+                </button>
+            </h2>
+            <div id="collapseWorkDays" class="accordion-collapse collapse" aria-labelledby="headingWorkDays"
+                 data-bs-parent="#filterAccordion">
+                <div class="accordion-body row g-3 pt-3">
+                    <div class="col-md-6">
+                        <label for="minWorkDays" class="form-label fw-semibold">Tối thiểu</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="minWorkDays" name="minWorkDays"
+                               value="@Context.Request.Query["minWorkDays"]" placeholder="VD: 15">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="maxWorkDays" class="form-label fw-semibold">Tối đa</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="maxWorkDays" name="maxWorkDays"
+                               value="@Context.Request.Query["maxWorkDays"]" placeholder="VD: 30">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thưởng & Phạt -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingBonusPenalty">
+                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseBonusPenalty" aria-expanded="false" aria-controls="collapseBonusPenalty">
+                    <i class="mdi mdi-currency-usd me-2 text-warning"></i> Lọc theo Tiền thưởng &amp; Tiền phạt
+                </button>
+            </h2>
+            <div id="collapseBonusPenalty" class="accordion-collapse collapse" aria-labelledby="headingBonusPenalty"
+                 data-bs-parent="#filterAccordion">
+                <div class="accordion-body row g-3 pt-3">
+                    <div class="col-md-3">
+                        <label for="minBonus" class="form-label fw-semibold">Thưởng tối thiểu</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="minBonus" name="minBonus"
+                               value="@Context.Request.Query["minBonus"]" placeholder="VD: 0">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="maxBonus" class="form-label fw-semibold">Thưởng tối đa</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="maxBonus" name="maxBonus"
+                               value="@Context.Request.Query["maxBonus"]" placeholder="VD: 5,000,000">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="minPenalty" class="form-label fw-semibold">Phạt tối thiểu</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="minPenalty" name="minPenalty"
+                               value="@Context.Request.Query["minPenalty"]" placeholder="VD: 0">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="maxPenalty" class="form-label fw-semibold">Phạt tối đa</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="maxPenalty" name="maxPenalty"
+                               value="@Context.Request.Query["maxPenalty"]" placeholder="VD: 1,000,000">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lương thực nhận -->
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingNetSalary">
+                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseNetSalary" aria-expanded="false" aria-controls="collapseNetSalary">
+                    <i class="mdi mdi-wallet me-2 text-primary"></i> Lọc theo Lương thực nhận
+                </button>
+            </h2>
+            <div id="collapseNetSalary" class="accordion-collapse collapse" aria-labelledby="headingNetSalary"
+                 data-bs-parent="#filterAccordion">
+                <div class="accordion-body row g-3 pt-3">
+                    <div class="col-md-6">
+                        <label for="minNetSalary" class="form-label fw-semibold">Tối thiểu</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="minNetSalary" name="minNetSalary"
+                               value="@Context.Request.Query["minNetSalary"]" placeholder="VD: 10,000,000">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="maxNetSalary" class="form-label fw-semibold">Tối đa</label>
+                        <input type="number" class="form-control form-control-sm border-secondary shadow-sm"
+                               id="maxNetSalary" name="maxNetSalary"
+                               value="@Context.Request.Query["maxNetSalary"]" placeholder="VD: 30,000,000">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nút Lọc -->
+    <div class="text-end d-flex justify-content-end gap-2">
+        <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold shadow-sm">
+            <i class="mdi mdi-filter-outline me-1"></i> Áp dụng bộ lọc
+        </button>
+
+        <a href="@Url.Action("Index", "Payroll")" class="btn btn-outline-secondary btn-sm px-4 fw-semibold shadow-sm" style="color:brown">
+            <i class="mdi mdi-filter-remove-outline me-1" style="color:brown"></i> Xóa bộ lọc
+        </a>
+    </div>
+
+</form>
+
+
+
+<table class="table table-striped table-bordered">
+    <thead class="thead-dark">
+        <tr>
+            <th>Mã Payroll</th>
+            <th>Tên Nhân Viên</th>
+            <th>Tháng/Năm</th>
+            <th>Lương cơ bản</th>
+            <th>Số ngày làm việc</th>
+            <th>Tiền thưởng</th>
+            <th>Tiền phạt</th>
+            <th>Lương thực nhận</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var payroll in Model.Data)
+        {
+            <tr>
+                <td>@payroll.PayrollId</td>
+                <td>@payroll.StaffName</td>
+                <td>@payroll.MonthYear</td>
+                <td>@string.Format("{0:N0} VND", payroll.BaseSalary)</td>
+                <td>@payroll.TotalWorkDays</td>
+                <td>@string.Format("{0:N0} VND", payroll.TotalBonus)</td>
+                <td>@string.Format("{0:N0} VND", payroll.TotalPenalty)</td>
+                <td>@string.Format("{0:N0} VND", payroll.NetSalary)</td>
+                <td>@payroll.Status</td>
+                <td>
+                    <a class="btn btn-sm btn-info" href="@Url.Action("Details", "Payroll", new { id = payroll.PayrollId })">
+                        <i class="mdi mdi-eye"></i>
+                    </a>
+                    <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", "Payroll", new { id = payroll.PayrollId })">
+                        <i class="mdi mdi-pencil"></i>
+                    </a>
+                 
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+
+@{
+    int totalPages = (Model.TotalCount + Model.PageSize - 1) / Model.PageSize;
+    int currentPage = Model.PageNumber;
+    int maxPagesToShow = 5;
+
+    int startPage = Math.Max(currentPage - 2, 1);
+    int endPage = Math.Min(startPage + maxPagesToShow - 1, totalPages);
+    startPage = Math.Max(endPage - maxPagesToShow + 1, 1);
+}
+
+<div class="d-flex justify-content-center mt-4">
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+
+            <!-- Nút "Trang trước" -->
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new {
+                    pageNumber = currentPage - 1,
+                    pageSize = Model.PageSize,
+                    staffName = Context.Request.Query["staffName"].ToString(),
+                    sortBy = Context.Request.Query["sortBy"].ToString(),
+                    descending = Context.Request.Query["descending"].ToString(),
+                    minBaseSalary = Context.Request.Query["minBaseSalary"].ToString(),
+                    maxBaseSalary = Context.Request.Query["maxBaseSalary"].ToString(),
+                    minWorkDays = Context.Request.Query["minWorkDays"].ToString(),
+                    maxWorkDays = Context.Request.Query["maxWorkDays"].ToString(),
+                    minBonus = Context.Request.Query["minBonus"].ToString(),
+                    maxBonus = Context.Request.Query["maxBonus"].ToString(),
+                    minPenalty = Context.Request.Query["minPenalty"].ToString(),
+                    maxPenalty = Context.Request.Query["maxPenalty"].ToString(),
+                    minNetSalary = Context.Request.Query["minNetSalary"].ToString(),
+                    maxNetSalary = Context.Request.Query["maxNetSalary"].ToString(),
+                    monthYear = Context.Request.Query["monthYear"].ToString()
+                })" aria-disabled="@(currentPage == 1 ? "true" : "false")">Trang trước</a>
+            </li>
+
+            <!-- Các số trang -->
+            @for (int i = startPage; i <= endPage; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")" aria-current="@(i == currentPage ? "page" : null)">
+                    <a class="page-link" href="@Url.Action("Index", new {
+                        pageNumber = i,
+                        pageSize = Model.PageSize,
+                        staffName = Context.Request.Query["staffName"].ToString(),
+                        sortBy = Context.Request.Query["sortBy"].ToString(),
+                        descending = Context.Request.Query["descending"].ToString(),
+                        minBaseSalary = Context.Request.Query["minBaseSalary"].ToString(),
+                        maxBaseSalary = Context.Request.Query["maxBaseSalary"].ToString(),
+                        minWorkDays = Context.Request.Query["minWorkDays"].ToString(),
+                        maxWorkDays = Context.Request.Query["maxWorkDays"].ToString(),
+                        minBonus = Context.Request.Query["minBonus"].ToString(),
+                        maxBonus = Context.Request.Query["maxBonus"].ToString(),
+                        minPenalty = Context.Request.Query["minPenalty"].ToString(),
+                        maxPenalty = Context.Request.Query["maxPenalty"].ToString(),
+                        minNetSalary = Context.Request.Query["minNetSalary"].ToString(),
+                        maxNetSalary = Context.Request.Query["maxNetSalary"].ToString(),
+                        monthYear = Context.Request.Query["monthYear"].ToString()
+                    })">@i</a>
+                </li>
+            }
+
+            <!-- Nút "Trang sau" -->
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link" href="@Url.Action("Index", new {
+                    pageNumber = currentPage + 1,
+                    pageSize = Model.PageSize,
+                    staffName = Context.Request.Query["staffName"].ToString(),
+                    sortBy = Context.Request.Query["sortBy"].ToString(),
+                    descending = Context.Request.Query["descending"].ToString(),
+                    minBaseSalary = Context.Request.Query["minBaseSalary"].ToString(),
+                    maxBaseSalary = Context.Request.Query["maxBaseSalary"].ToString(),
+                    minWorkDays = Context.Request.Query["minWorkDays"].ToString(),
+                    maxWorkDays = Context.Request.Query["maxWorkDays"].ToString(),
+                    minBonus = Context.Request.Query["minBonus"].ToString(),
+                    maxBonus = Context.Request.Query["maxBonus"].ToString(),
+                    minPenalty = Context.Request.Query["minPenalty"].ToString(),
+                    maxPenalty = Context.Request.Query["maxPenalty"].ToString(),
+                    minNetSalary = Context.Request.Query["minNetSalary"].ToString(),
+                    maxNetSalary = Context.Request.Query["maxNetSalary"].ToString(),
+                    monthYear = Context.Request.Query["monthYear"].ToString()
+                })" aria-disabled="@(currentPage == totalPages ? "true" : "false")">Trang sau</a>
+            </li>
+
+        </ul>
+    </nav>
+</div>

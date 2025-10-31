@@ -1,5 +1,4 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
-using WebSapaFoRestForCustomer.Services;
+﻿using System.Net.Http; // <-- Thêm using này
 
 namespace WebSapaFoRestForCustomer
 {
@@ -9,11 +8,32 @@ namespace WebSapaFoRestForCustomer
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddControllersWithViews();
-            builder.Services.AddHttpClient();
-            builder.Services.AddHttpContextAccessor();
+            // Add services to the container.
+            builder.Services.AddControllersWithViews();
+            builder.Services.AddHttpClient(); // Dòng này đã có
 
+            // === THÊM KHỐI NÀY VÀO (Lấy từ dự án cũ) ===
+            // Cấu hình HttpClient tên "API"
+            builder.Services.AddHttpClient("API", client =>
+            {
+                // Lấy BaseUrl từ appsettings.json
+                // (ví dụ: "http://192.168.1.47:5180/api")
+                var baseUrl = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl");
+                var rootUrl = baseUrl.Replace("/api", "");
+
+                client.BaseAddress = new Uri(rootUrl);
+            })
+            .ConfigurePrimaryHttpMessageHandler(() =>
+            {
+                // Đây là phần QUAN TRỌNG: Bỏ qua lỗi chứng chỉ SSL
+                return new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                };
+            });
+            // ===============================================
+
+            var app = builder.Build();
             // Register ApiService
             builder.Services.AddScoped<ApiService>();
 
@@ -39,8 +59,8 @@ namespace WebSapaFoRestForCustomer
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+            // Configure the HTTP request pipeline.
+            if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
             }
@@ -52,8 +72,8 @@ namespace WebSapaFoRestForCustomer
             app.UseAuthorization();
 
             app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
+              name: "default",
+              pattern: "{controller=Home}/{action=Index}/{id?}");
 
             app.Run();
         }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    [Migration("20251005122113_UpdateUserAuditFields")]
-    partial class UpdateUserAuditFields
+    [Migration("20251006090316_UpdateIsDeleteToVoucher")]
+    partial class UpdateIsDeleteToVoucher
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1273,6 +1273,12 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateOnly?>("EndDate")
                         .HasColumnType("date");
+
+                    b.Property<bool?>("IsDelete")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDelete");
 
                     b.Property<decimal?>("MaxDiscount")
                         .HasColumnType("decimal(18, 2)");

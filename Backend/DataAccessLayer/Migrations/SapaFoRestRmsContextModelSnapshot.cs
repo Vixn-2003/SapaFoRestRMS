@@ -599,8 +599,14 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderDetailId"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("MenuItemId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
@@ -1446,8 +1452,14 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("DiscountValue")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<DateOnly?>("EndDate")
-                        .HasColumnType("date");
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool?>("IsDelete")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDelete");
 
                     b.Property<decimal?>("MaxDiscount")
                         .HasColumnType("decimal(18, 2)");
@@ -1455,10 +1467,11 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("MinOrderValue")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<DateOnly?>("StartDate")
-                        .HasColumnType("date");
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
+                        .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
@@ -1467,8 +1480,10 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("VoucherId")
                         .HasName("PK__Vouchers__3AEE7921766B4882");
 
-                    b.HasIndex(new[] { "Code" }, "UQ__Vouchers__A25C5AA74763DC38")
-                        .IsUnique();
+                    b.HasIndex("Code", "StartDate", "EndDate")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_Vouchers_Code_StartDate_EndDate")
+                        .HasFilter("[StartDate] IS NOT NULL AND [EndDate] IS NOT NULL");
 
                     b.ToTable("Vouchers");
                 });
