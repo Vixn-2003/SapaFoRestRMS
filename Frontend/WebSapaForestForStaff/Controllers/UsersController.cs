@@ -24,6 +24,12 @@ namespace WebSapaForestForStaff.Controllers
             {
                 searchRequest ??= new UserSearchRequest();
                 
+                // Set ViewBag for form values
+                ViewBag.SearchTerm = searchRequest.SearchTerm;
+                ViewBag.RoleId = searchRequest.RoleId;
+                ViewBag.Status = searchRequest.Status;
+                ViewBag.PageSize = searchRequest.PageSize;
+                
                 var result = await _apiService.GetUsersWithPaginationAsync(searchRequest);
                 if (result == null)
                 {
@@ -150,107 +156,8 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Owner")]
-        public async Task<IActionResult> Edit(int id)
-        {
-            try
-            {
-                var user = await _apiService.GetUserAsync(id);
-                if (user == null)
-                {
-                    return NotFound();
-                }
-                return View(user);
-            }
-            catch
-            {
-                TempData["ErrorMessage"] = "Lỗi khi tải thông tin người dùng";
-                return RedirectToAction("Index");
-            }
-        }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,Manager,Owner")]
-        public async Task<IActionResult> Edit(User model)
-        {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-
-            try
-            {
-                var success = await _apiService.UpdateUserAsync(model);
-                if (success)
-                {
-                    TempData["SuccessMessage"] = "Cập nhật thông tin người dùng thành công!";
-                    return RedirectToAction("Index");
-                }
-                else
-                {
-                    ModelState.AddModelError("", "Lỗi khi cập nhật thông tin người dùng");
-                    return View(model);
-                }
-            }
-            catch (Exception ex)
-            {
-                ModelState.AddModelError("", "Lỗi kết nối. Vui lòng thử lại sau");
-                return View(model);
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,Manager,Owner")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            try
-            {
-                var success = await _apiService.DeleteUserAsync(id);
-                if (success)
-                {
-                    TempData["SuccessMessage"] = "Xóa người dùng thành công!";
-                }
-                else
-                {
-                    TempData["ErrorMessage"] = "Lỗi khi xóa người dùng";
-                }
-            }
-            catch
-            {
-                TempData["ErrorMessage"] = "Lỗi kết nối. Vui lòng thử lại sau";
-            }
-
-            return RedirectToAction("Index");
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,Manager,Owner")]
-        public async Task<IActionResult> ChangeStatus(int id, int status)
-        {
-            try
-            {
-                var success = await _apiService.ChangeUserStatusAsync(id, status);
-                if (success)
-                {
-                    TempData["SuccessMessage"] = "Thay đổi trạng thái người dùng thành công!";
-                }
-                else
-                {
-                    TempData["ErrorMessage"] = "Lỗi khi thay đổi trạng thái người dùng";
-                }
-            }
-            catch
-            {
-                TempData["ErrorMessage"] = "Lỗi kết nối. Vui lòng thử lại sau";
-            }
-
-            return RedirectToAction("Index");
-        }
-
+   
         // Enhanced User Management Actions
         [HttpGet]
         [Authorize(Roles = "Admin,Owner")]
@@ -352,82 +259,9 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,Manager,Owner")]
-        public async Task<IActionResult> Edit(UserUpdateRequest model)
-        {
-            if (!ModelState.IsValid)
-            {
-                try
-                {
-                    var roles = await _apiService.GetRolesAsync();
-                    ViewBag.Roles = roles ?? new List<Role>();
-                }
-                catch { }
-                return View(model);
-            }
+       
 
-            try
-            {
-                var success = await _apiService.UpdateUserAsync(model);
-                if (success)
-                {
-                    TempData["SuccessMessage"] = "Cập nhật thông tin người dùng thành công!";
-                    return RedirectToAction("Index");
-                }
-                else
-                {
-                    ModelState.AddModelError("", "Lỗi khi cập nhật thông tin người dùng");
-                    try
-                    {
-                        var roles = await _apiService.GetRolesAsync();
-                        ViewBag.Roles = roles ?? new List<Role>();
-                    }
-                    catch { }
-                    return View(model);
-                }
-            }
-            catch (Exception ex)
-            {
-                ModelState.AddModelError("", "Lỗi kết nối. Vui lòng thử lại sau");
-                try
-                {
-                    var roles = await _apiService.GetRolesAsync();
-                    ViewBag.Roles = roles ?? new List<Role>();
-                }
-                catch { }
-                return View(model);
-            }
-        }
-
-        [HttpGet]
-        [Authorize(Roles = "Admin,Owner")]
-        public async Task<IActionResult> ResetPassword(int id)
-        {
-            try
-            {
-                var user = await _apiService.GetUserAsync(id);
-                if (user == null)
-                {
-                    return NotFound();
-                }
-
-                var request = new PasswordResetRequest
-                {
-                    UserId = id,
-                    SendEmailNotification = true
-                };
-
-                return View(request);
-            }
-            catch
-            {
-                TempData["ErrorMessage"] = "Lỗi khi tải thông tin người dùng";
-                return RedirectToAction("Index");
-            }
-        }
-
+       
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Owner")]

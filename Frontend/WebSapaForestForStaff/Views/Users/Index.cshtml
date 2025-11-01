@@ -73,29 +73,29 @@
                     <label for="roleId" class="form-label">Vai trò</label>
                     <select class="form-select" id="roleId" name="roleId">
                         <option value="">Tất cả vai trò</option>
-                        <option value="1" @(ViewBag.RoleId == 1 ? "selected" : "")>Owner</option>
-                        <option value="2" @(ViewBag.RoleId == 2 ? "selected" : "")>Admin</option>
-                        <option value="3" @(ViewBag.RoleId == 3 ? "selected" : "")>Manager</option>
-                        <option value="4" @(ViewBag.RoleId == 4 ? "selected" : "")>Staff</option>
-                        <option value="5" @(ViewBag.RoleId == 5 ? "selected" : "")>Customer</option>
+                        @if (ViewBag.RoleId == 1) { <option value="1" selected>Owner</option> } else { <option value="1">Owner</option> }
+                        @if (ViewBag.RoleId == 2) { <option value="2" selected>Admin</option> } else { <option value="2">Admin</option> }
+                        @if (ViewBag.RoleId == 3) { <option value="3" selected>Manager</option> } else { <option value="3">Manager</option> }
+                        @if (ViewBag.RoleId == 4) { <option value="4" selected>Staff</option> } else { <option value="4">Staff</option> }
+                        @if (ViewBag.RoleId == 5) { <option value="5" selected>Customer</option> } else { <option value="5">Customer</option> }
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="status" class="form-label">Trạng thái</label>
                     <select class="form-select" id="status" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="0" @(ViewBag.Status == 0 ? "selected" : "")>Hoạt động</option>
-                        <option value="1" @(ViewBag.Status == 1 ? "selected" : "")>Không hoạt động</option>
-                        <option value="2" @(ViewBag.Status == 2 ? "selected" : "")>Khóa</option>
+                        @if (ViewBag.Status == 0) { <option value="0" selected>Hoạt động</option> } else { <option value="0">Hoạt động</option> }
+                        @if (ViewBag.Status == 1) { <option value="1" selected>Không hoạt động</option> } else { <option value="1">Không hoạt động</option> }
+                        @if (ViewBag.Status == 2) { <option value="2" selected>Khóa</option> } else { <option value="2">Khóa</option> }
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label for="pageSize" class="form-label">Số lượng/trang</label>
                     <select class="form-select" id="pageSize" name="pageSize">
-                        <option value="10" @(ViewBag.PageSize == 10 ? "selected" : "")>10</option>
-                        <option value="25" @(ViewBag.PageSize == 25 ? "selected" : "")>25</option>
-                        <option value="50" @(ViewBag.PageSize == 50 ? "selected" : "")>50</option>
-                        <option value="100" @(ViewBag.PageSize == 100 ? "selected" : "")>100</option>
+                        @if (ViewBag.PageSize == 10) { <option value="10" selected>10</option> } else { <option value="10">10</option> }
+                        @if (ViewBag.PageSize == 25) { <option value="25" selected>25</option> } else { <option value="25">25</option> }
+                        @if (ViewBag.PageSize == 50) { <option value="50" selected>50</option> } else { <option value="50">50</option> }
+                        @if (ViewBag.PageSize == 100) { <option value="100" selected>100</option> } else { <option value="100">100</option> }
                     </select>
                 </div>
                 <div class="col-12">

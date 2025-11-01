@@ -1,26 +1,22 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using WebSapaForestForStaff.DTOs.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
-using Newtonsoft.Json;
-using System.Text;
 using Microsoft.Extensions.Logging;
+using WebSapaForestForStaff.Services;
 
 namespace WebSapaForestForStaff.Controllers
 {
     public class AuthController : Controller
     {
-        private readonly HttpClient _httpClient;
         private readonly ILogger<AuthController> _logger;
+        private readonly ApiService _apiService;
 
-        public AuthController(ILogger<AuthController> logger)
+        public AuthController(ILogger<AuthController> logger, ApiService apiService)
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri("https://localhost:7096/")
-            };
             _logger = logger;
+            _apiService = apiService;
         }
         public string ReturnUrl { get; set; }
 
@@ -68,28 +64,24 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
-                var json = JsonConvert.SerializeObject(model);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await _httpClient.PostAsync("api/Auth/login", content);
-
-
-
-                if (response.IsSuccessStatusCode)
+                _logger.LogInformation(" Login attempt: Email = {Email}, Password(raw) = {Password}",
+                    model.Email, model.Password);
+                var authResponse = await _apiService.LoginAsync(model);
+                if (authResponse != null)
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var authResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
-
+                    // Tạo claims để xác thực cookie
                     var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, authResponse.UserId.ToString()),
-                        new Claim(ClaimTypes.Name, authResponse.FullName),
-                        new Claim(ClaimTypes.Email, authResponse.Email),
-                        new Claim(ClaimTypes.Role, GetRoleName(authResponse.RoleId)),
-                        new Claim("Token", authResponse.Token)
-                    };
+            {
+                new Claim(ClaimTypes.NameIdentifier, authResponse.UserId.ToString()),
+                new Claim(ClaimTypes.Name, authResponse.FullName ?? ""),
+                new Claim(ClaimTypes.Email, authResponse.Email ?? ""),
+                new Claim(ClaimTypes.Role, GetRoleName(authResponse.RoleId)),
+                new Claim("Token", authResponse.Token ?? "")
+            };
 
-                    var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                    var claimsIdentity = new ClaimsIdentity(
+                        claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
                     var authProperties = new AuthenticationProperties
                     {
                         IsPersistent = true,
@@ -101,17 +93,20 @@ namespace WebSapaForestForStaff.Controllers
                         new ClaimsPrincipal(claimsIdentity),
                         authProperties);
 
-                    _logger.LogInformation("User {Email} logged in successfully with role {Role}", authResponse.Email, authResponse.RoleId);
+                    // Token is already saved to Session inside ApiService.LoginAsync; keep claim copy above
 
-                    // Redirect based on role
+                    _logger.LogInformation(" User {Email} logged in successfully with role {RoleId}",
+                        authResponse.Email, authResponse.RoleId);
+
+                    // 🔁 Redirect theo Role
                     var redirectUrl = authResponse.RoleId switch
                     {
-                        1 => returnUrl ?? Url.Action("Index", "Admin"), // Owner -> Admin dashboard
-                        2 => returnUrl ?? Url.Action("Index", "Admin"), // Admin -> Admin dashboard
-                        3 => returnUrl ?? Url.Action("Index", "Users"), // Manager -> Users management
-                        4 => returnUrl ?? Url.Action("Index", "Home"), // Staff -> Home dashboard
-                        5 => returnUrl ?? Url.Action("Index", "Home"), // Customer -> Home dashboard
-                        _ => returnUrl ?? Url.Action("Index", "Home") // Default -> Home
+                        1 => returnUrl ?? Url.Action("Index", "Admin"),
+                        2 => returnUrl ?? Url.Action("Index", "Admin"),
+                        3 => returnUrl ?? Url.Action("Index", "Users"),
+                        4 => returnUrl ?? Url.Action("Index", "Home"),
+                        5 => returnUrl ?? Url.Action("Index", "Home"),
+                        _ => returnUrl ?? Url.Action("Index", "Home")
                     };
 
                     return LocalRedirect(redirectUrl);
@@ -122,17 +117,18 @@ namespace WebSapaForestForStaff.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred during login");
-                ModelState.AddModelError(string.Empty, "An error occurred during login. Please try again.");
+                _logger.LogError(ex, "Unexpected error during login");
+                ModelState.AddModelError(string.Empty, "An unexpected error occurred. Please try again.");
                 return View(model);
             }
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            HttpContext.Session.Clear();
+            _apiService.Logout();
             return RedirectToAction("Login");
         }
 
@@ -158,10 +154,6 @@ namespace WebSapaForestForStaff.Controllers
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                _httpClient?.Dispose();
-            }
             base.Dispose(disposing);
         }
     }

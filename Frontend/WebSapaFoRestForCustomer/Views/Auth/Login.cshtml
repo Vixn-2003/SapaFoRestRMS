@@ -1,0 +1,61 @@
+@model WebSapaFoRestForCustomer.Models.OtpRequestDto
+@{
+    Layout = null;
+    ViewData["Title"] = "Đăng nhập - SapaFoRest";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="~/css/auth/login.css" />
+</head>
+<body>
+    <div class="login-container">
+        <div class="left-section">
+            <img src="~/img/background_img/login_background.png" alt="SapaFoRest View" class="background-image" />
+        </div>
+
+        <div class="right-section">
+            <div class="login-box">
+                <h2>Chào mừng đến với</h2>
+                <h3><span>SapaFoRest</span></h3>
+                <p class="subtitle">Đăng nhập bằng số điện thoại</p>
+
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success">
+                        @TempData["SuccessMessage"]
+                    </div>
+                }
+
+                <form asp-action="RequestOtp" method="post" autocomplete="off">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group">
+                        <label>Số điện thoại</label>
+                        <div class="input-wrapper">
+                            <i class="bi bi-phone-fill"></i>
+                            <input asp-for="Phone" type="tel" placeholder="0900000000" required />
+                        </div>
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+
+                    <button type="submit" class="btn-login">Gửi mã OTP</button>
+                </form>
+
+                <div class="login-info">
+                    <p>Chúng tôi sẽ gửi mã xác thực đến số điện thoại của bạn</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/js/auth/login.js"></script>
+</body>
+</html>

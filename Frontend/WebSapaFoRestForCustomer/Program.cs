@@ -34,6 +34,30 @@ namespace WebSapaFoRestForCustomer
             // ===============================================
 
             var app = builder.Build();
+            // Register ApiService
+            builder.Services.AddScoped<ApiService>();
+
+            // Configure Authentication
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Auth/Login";
+                    options.LogoutPath = "/Auth/Logout";
+                    options.AccessDeniedPath = "/Auth/Login";
+                    options.ExpireTimeSpan = TimeSpan.FromHours(24);
+                    options.SlidingExpiration = true;
+                });
+
+            // Configure Authorization
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
+            });
+
+            // Configure API settings
+            builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
+
+            var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
@@ -44,6 +68,7 @@ namespace WebSapaFoRestForCustomer
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
@@ -52,5 +77,10 @@ namespace WebSapaFoRestForCustomer
 
             app.Run();
         }
+    }
+
+    public class ApiSettings
+    {
+        public string BaseUrl { get; set; } = "https://localhost:7096";
     }
 }

@@ -26,7 +26,19 @@ namespace WebSapaForestForStaff.Services
 
         private string? GetToken()
         {
-            return _httpContextAccessor.HttpContext?.Session.GetString("Token");
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null) return null;
+
+            // First try to get from Session (for backward compatibility with ApiService.LoginAsync)
+            var tokenFromSession = httpContext.Session.GetString("Token");
+            if (!string.IsNullOrEmpty(tokenFromSession))
+            {
+                return tokenFromSession;
+            }
+
+            // If not in Session, try to get from Claims (where AuthController stores it)
+            var tokenFromClaims = httpContext.User?.FindFirst("Token")?.Value;
+            return tokenFromClaims;
         }
 
         private void SetToken(string token)
@@ -134,7 +146,7 @@ namespace WebSapaForestForStaff.Services
             try
             {
                 using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/users");
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/Users");
                 
                 if (response.IsSuccessStatusCode)
                 {

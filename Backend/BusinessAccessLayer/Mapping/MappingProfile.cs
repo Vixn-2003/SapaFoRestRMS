@@ -3,6 +3,7 @@ using BusinessAccessLayer.DTOs.Inventory;
 using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.DTOs.UserManagement;
+using BusinessAccessLayer.DTOs.Users;
 using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
@@ -39,6 +40,10 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(d => d.PositionNames, m => m.MapFrom(s => s.Staff.SelectMany(st => st.Positions.Select(p => p.PositionName)).Distinct().ToList()))
                 .ForMember(d => d.DateOfBirth, m => m.Ignore())
                 .ForMember(d => d.Gender, m => m.Ignore());
+
+            // User mappings
+            CreateMap<User, UserDto>()
+                .ForMember(d => d.RoleName, m => m.Ignore()); // RoleName is loaded separately in service
       }
     }
 }

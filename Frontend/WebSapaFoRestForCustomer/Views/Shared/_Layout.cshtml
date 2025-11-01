@@ -141,6 +141,33 @@
                         <div class="me-3 hotline">
                             📞 <a href="tel:0123456789" class="text-decoration-none hotline">Hotline: 0123 456 789</a>
                         </div>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <div class="dropdown me-2">
+                                <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-circle"></i> @User.Identity.Name
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="@Url.Action("Index", "Profile")">
+                                        <i class="bi bi-person"></i> Thông tin cá nhân
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
+                                            <button type="submit" class="btn btn-link dropdown-item p-0 m-0">
+                                                <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-light me-2" href="@Url.Action("Login", "Auth")">
+                                <i class="bi bi-box-arrow-in-right"></i> Đăng nhập
+                            </a>
+                        }
                         <a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reservationModal">Đặt bàn</a>
                     </div>
                 </div>
