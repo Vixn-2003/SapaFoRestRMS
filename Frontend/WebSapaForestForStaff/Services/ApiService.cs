@@ -26,7 +26,19 @@ namespace WebSapaForestForStaff.Services
 
         private string? GetToken()
         {
-            return _httpContextAccessor.HttpContext?.Session.GetString("Token");
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null) return null;
+
+            // First try to get from Session (for backward compatibility with ApiService.LoginAsync)
+            var tokenFromSession = httpContext.Session.GetString("Token");
+            if (!string.IsNullOrEmpty(tokenFromSession))
+            {
+                return tokenFromSession;
+            }
+
+            // If not in Session, try to get from Claims (where AuthController stores it)
+            var tokenFromClaims = httpContext.User?.FindFirst("Token")?.Value;
+            return tokenFromClaims;
         }
 
         private void SetToken(string token)
@@ -41,14 +53,13 @@ namespace WebSapaForestForStaff.Services
 
         private HttpClient GetAuthenticatedClient()
         {
-            var client = new HttpClient();
             var token = GetToken();
             if (!string.IsNullOrEmpty(token))
             {
-                client.DefaultRequestHeaders.Authorization = 
+                _httpClient.DefaultRequestHeaders.Authorization = 
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             }
-            return client;
+            return _httpClient;
         }
 
         // Auth methods
@@ -135,7 +146,7 @@ namespace WebSapaForestForStaff.Services
             try
             {
                 using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/users");
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/Users");
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -273,6 +284,141 @@ namespace WebSapaForestForStaff.Services
             catch
             {
                 return false;
+            }
+        }
+
+        // Enhanced User Management Methods
+        public async Task<UserListResponse?> GetUsersWithPaginationAsync(UserSearchRequest request)
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var queryParams = new List<string>();
+                
+                if (!string.IsNullOrEmpty(request.SearchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
+                if (request.RoleId.HasValue)
+                    queryParams.Add($"roleId={request.RoleId.Value}");
+                if (request.Status.HasValue)
+                    queryParams.Add($"status={request.Status.Value}");
+                queryParams.Add($"page={request.Page}");
+                queryParams.Add($"pageSize={request.PageSize}");
+                queryParams.Add($"sortBy={request.SortBy}");
+                queryParams.Add($"sortOrder={request.SortOrder}");
+
+                var queryString = string.Join("&", queryParams);
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/users/search?{queryString}");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<UserListResponse>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<UserDetailsResponse?> GetUserDetailsAsync(int id)
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/users/{id}/details");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<UserDetailsResponse>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<bool> CreateUserAsync(UserCreateRequest request)
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{GetApiBaseUrl()}/users", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> UpdateUserAsync(UserUpdateRequest request)
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PutAsync($"{GetApiBaseUrl()}/users/{request.UserId}", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> ResetUserPasswordAsync(PasswordResetRequest request)
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await client.PostAsync($"{GetApiBaseUrl()}/users/{request.UserId}/reset-password", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<List<Role>?> GetRolesAsync()
+        {
+            try
+            {
+                using var client = GetAuthenticatedClient();
+                var response = await client.GetAsync($"{GetApiBaseUrl()}/roles");
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<List<Role>>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
             }
         }
     }

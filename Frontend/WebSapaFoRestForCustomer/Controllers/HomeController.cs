@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using WebSapaFoRestForCustomer.Models;
 
 namespace WebSapaFoRestForCustomer.Controllers
 {
+    [Authorize(Roles = "Customer")]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
