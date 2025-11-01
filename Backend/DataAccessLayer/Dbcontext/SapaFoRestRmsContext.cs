@@ -19,7 +19,7 @@ public partial class SapaFoRestRmsContext : DbContext
     {
         var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
         IConfigurationRoot configuration = builder.Build();
-        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyCnn"));
+        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyDatabase"));
     }
 
     public virtual DbSet<Announcement> Announcements { get; set; }

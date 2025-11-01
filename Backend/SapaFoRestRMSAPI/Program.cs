@@ -144,8 +144,8 @@ builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // Unit of Work and User Repository mapping
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
+builder.Services.AddScoped<IUserService, UserService>();
 
 // Auth and User Management services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -280,6 +280,8 @@ using (var scope = app.Services.CreateScope())
     await DataSeeder.SeedTestCustomerAsync(ctx);
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
+    Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);
+    Console.WriteLine("Environment: " + builder.Environment.EnvironmentName);
     if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
     {
         var adminRoleId = await ctx.Roles.Where(r => r.RoleName == "Admin").Select(r => r.RoleId).FirstOrDefaultAsync();
@@ -322,5 +324,6 @@ using (var scope = app.Services.CreateScope())
         await ctx.SaveChangesAsync();
     }
 }
+
 
 app.Run();
