@@ -21,6 +21,22 @@ using BusinessLogicLayer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// -----------------------------
+// ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
+// -----------------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins(
+            "http://localhost:5158",  // frontend chạy http
+            "https://localhost:5158"  // phòng khi chạy https
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+    );
+});
+
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
@@ -130,10 +146,13 @@ builder.Services.AddScoped<IEventService, EventService>();
 
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+builder.Services.AddScoped<IRestaurantIntroRepository, RestaurantIntroRepository>();
+builder.Services.AddScoped<IRestaurantIntroService, RestaurantIntroService>();
 
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
+
 //UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -162,9 +181,6 @@ builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfW
             builder.Services.AddScoped<IAreaService, AreaService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
-
-builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
-
 
 
 builder.Services.AddAuthorization(options =>

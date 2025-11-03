@@ -194,11 +194,11 @@ namespace WebSapaForestForStaff.Controllers
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();
-                TempData["Error"] = $"❌ Hủy đơn thất bại: {error}";
+                TempData["CancelReservationError"] = $"❌ Hủy đơn thất bại: {error}";
             }
             else
             {
-                TempData["Success"] = refund
+                TempData["CancelReservationSuccess"] = refund
                     ? "✅ Đã hủy đơn và hoàn cọc cho khách hàng."
                     : "✅ Đã hủy đơn (không hoàn cọc).";
             }

@@ -1,0 +1,129 @@
+﻿@model List<WebSapaForestForStaff.DTOs.AreaManage.AreaDto>
+
+@{
+    ViewData["Title"] = "Quản lý khu vực";
+    var currentPage = ViewBag.Page ?? 1;
+    var pageSize = ViewBag.PageSize ?? 10;
+    var total = ViewBag.TotalCount ?? 0;
+    var totalPages = (int)Math.Ceiling((double)total / pageSize);
+}
+
+<h2 class="mb-3">Danh sách khu vực</h2>
+<a asp-action="Create" class="btn btn-success mb-3">+ Thêm khu vực</a>
+
+<!-- 🔍 Form tìm kiếm & lọc tầng -->
+<form method="get" asp-action="Index" class="row g-2 mb-4">
+    <div class="col-md-4">
+        <input type="text" name="searchName" value="@ViewBag.SearchName" class="form-control" placeholder="Tìm theo tên khu vực..." />
+    </div>
+    <div class="col-md-3">
+        <select name="floor" class="form-select">
+            <option value="">-- Chọn tầng --</option>
+            @for (int i = 1; i <= 10; i++)
+            {
+                <option value="@i" selected="@(ViewBag.Floor == i )">Tầng @i</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Tìm kiếm</button>
+    </div>
+    <div class="col-md-2">
+        <a asp-action="Index" class="btn btn-secondary w-100">Làm mới</a>
+    </div>
+</form>
+
+<!-- ✅ Thông báo -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<!-- 🧾 Bảng dữ liệu -->
+<table class="table table-bordered table-striped align-middle">
+    <thead class="table-success">
+        <tr>
+            <th style="width: 80px;">Mã</th>
+            <th>Tên khu vực</th>
+            <th style="width: 120px;">Tầng</th>
+            <th>Mô tả</th>
+            <th style="width: 160px;">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Count == 0)
+        {
+            <tr>
+                <td colspan="5" class="text-center text-muted">Không có dữ liệu.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var area in Model)
+            {
+                <tr>
+                    <td>@area.AreaId</td>
+                    <td>@area.AreaName</td>
+                    <td>@area.Floor</td>
+                    <td>@area.Description</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@area.AreaId" class="btn btn-sm btn-primary me-2">Sửa</a>
+                        <form asp-action="Delete" asp-route-id="@area.AreaId" method="post" style="display:inline">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Bạn chắc muốn xóa khu vực này?')">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<p><strong>Tổng số khu vực:</strong> @ViewBag.TotalCount</p>
+
+<!-- 📄 Phân trang -->
+@if (totalPages > 1)
+{
+    <nav aria-label="Phân trang">
+        <ul class="pagination justify-content-center">
+            @if (currentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-searchName="@ViewBag.SearchName"
+                       asp-route-floor="@ViewBag.Floor"
+                       asp-route-page="@(currentPage - 1)"
+                       asp-route-pageSize="@pageSize">« Trước</a>
+                </li>
+            }
+
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-searchName="@ViewBag.SearchName"
+                       asp-route-floor="@ViewBag.Floor"
+                       asp-route-page="@i"
+                       asp-route-pageSize="@pageSize">@i</a>
+                </li>
+            }
+
+            @if (currentPage < totalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       asp-action="Index"
+                       asp-route-searchName="@ViewBag.SearchName"
+                       asp-route-floor="@ViewBag.Floor"
+                       asp-route-page="@(currentPage + 1)"
+                       asp-route-pageSize="@pageSize">Sau »</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

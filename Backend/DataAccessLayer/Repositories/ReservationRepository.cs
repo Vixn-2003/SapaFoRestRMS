@@ -141,6 +141,16 @@ namespace DataAccessLayer.Repositories
                          && r.TimeSlot == slot)
                 .ToListAsync();
         }
+        public async Task<List<Reservation>> GetReservationsByCustomerAsync(int customerId)
+        {
+            return await _context.Reservations
+                .Include(r => r.Customer)
+                    .ThenInclude(c => c.User)
+                .Where(r => r.CustomerId == customerId)
+                .OrderByDescending(r => r.ReservationDate)
+                .ToListAsync();
+        }
+
 
         public async Task SaveChangesAsync()
         {

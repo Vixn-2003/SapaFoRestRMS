@@ -27,6 +27,9 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<object> AssignTablesAsync(AssignTableDto dto);
         Task<object> ResetTablesAsync(int reservationId);
         Task<object> CancelReservationAsync(int reservationId, bool refund);
+        Task<object> GetReservationsByCustomerAsync(int customerId);
+        Task<object> UpdateReservationAsync(int reservationId, ReservationUpdateDto dto);
+        Task<object> CancelReservationByCustomerAsync(int reservationId);
 
     }
 }
