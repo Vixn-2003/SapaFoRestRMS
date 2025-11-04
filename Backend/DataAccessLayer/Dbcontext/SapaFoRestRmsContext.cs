@@ -7,9 +7,6 @@ namespace DataAccessLayer.Dbcontext;
 
 public partial class SapaFoRestRmsContext : DbContext
 {
-    public SapaFoRestRmsContext()
-    {
-    }
 
     public SapaFoRestRmsContext(DbContextOptions<SapaFoRestRmsContext> options)
         : base(options)
@@ -17,10 +14,22 @@ public partial class SapaFoRestRmsContext : DbContext
     }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-        IConfigurationRoot configuration = builder.Build();
-        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyDatabase"));
+        if (!optionsBuilder.IsConfigured)
+        {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+            IConfigurationRoot configuration = builder.Build();
+            var connectionString = configuration.GetConnectionString("MyDatabase");
+
+            if (!string.IsNullOrEmpty(connectionString))
+            {
+                optionsBuilder.UseSqlServer(connectionString);
+            }
+        }
     }
+
 
     public virtual DbSet<Announcement> Announcements { get; set; }
     public virtual DbSet<Area> Areas { get; set; } = null!;

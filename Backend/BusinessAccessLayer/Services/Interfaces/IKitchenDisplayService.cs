@@ -1,0 +1,40 @@
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using BusinessAccessLayer.DTOs.Kitchen;
+
+namespace BusinessAccessLayer.Services
+{
+    public interface IKitchenDisplayService
+    {
+        /// <summary>
+        /// Get all active orders for Sous Chef KDS screen
+        /// </summary>
+        Task<List<KitchenOrderCardDto>> GetActiveOrdersAsync();
+
+        /// <summary>
+        /// Get orders filtered by specific course type (for station screens)
+        /// </summary>
+        Task<List<KitchenOrderCardDto>> GetOrdersByCourseTypeAsync(string courseType);
+
+        /// <summary>
+        /// Update status of a single item (called from station screen)
+        /// This will trigger real-time update to Sous Chef screen
+        /// </summary>
+        Task<StatusUpdateResponse> UpdateItemStatusAsync(UpdateItemStatusRequest request);
+
+        /// <summary>
+        /// Mark entire order as completed (called by Sous Chef)
+        /// </summary>
+        Task<StatusUpdateResponse> CompleteOrderAsync(CompleteOrderRequest request);
+
+        /// <summary>
+        /// Get all available course types for filtering
+        /// </summary>
+        Task<List<string>> GetCourseTypesAsync();
+
+        /// <summary>
+        /// Get grouped items by menu item (theo từng món) - nhóm tất cả các món ăn từ tất cả các order
+        /// </summary>
+        Task<List<GroupedMenuItemDto>> GetGroupedItemsByMenuItemAsync();
+    }
+}

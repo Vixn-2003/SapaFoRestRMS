@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using DomainAccessLayer.Enums;
 using BusinessLogicLayer.Services.Interfaces;
 using BusinessLogicLayer.Services;
+using SapaFoRestRMSAPI.Hubs;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -133,6 +134,8 @@ builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
+builder.Services.AddScoped<IKitchenDisplayService, KitchenDisplayService>();
+
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
 //UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -194,6 +197,7 @@ builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
+builder.Services.AddSignalR();
 
 
 builder.Services.AddAuthorization(options =>
@@ -266,7 +270,7 @@ app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
-
+app.MapHub<KitchenHub>("/kitchenHub");
 
 app.MapControllers();
 
@@ -278,6 +282,7 @@ using (var scope = app.Services.CreateScope())
     // Seed core lookup data
     await DataSeeder.SeedPositionsAsync(ctx);
     await DataSeeder.SeedTestCustomerAsync(ctx);
+    await DataSeeder.SeedKitchenOrdersAsync(ctx);
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);

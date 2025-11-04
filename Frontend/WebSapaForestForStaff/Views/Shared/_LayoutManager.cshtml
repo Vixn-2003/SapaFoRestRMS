@@ -261,7 +261,34 @@
         </ul>
     </div>
 </li>
+<!-- Add this to your sidebar in _Layout.cshtml -->
 
+<li class="nav-item">
+    <a class="nav-link" data-bs-toggle="collapse" href="#kitchenMenu" aria-expanded="false" aria-controls="kitchenMenu">
+        <i class="menu-icon mdi mdi-chef-hat"></i>
+        <span class="menu-title">Màn hình bếp</span>
+        <i class="menu-arrow"></i>
+    </a>
+    <div class="collapse" id="kitchenMenu">
+        <ul class="nav flex-column sub-menu">
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Index">
+                    <i class="mdi mdi-monitor"></i> Bếp phó (KDS)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-courseType="MainCourse">
+                    <i class="mdi mdi-stove"></i> Trạm Xào
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-courseType="Appetizer">
+                    <i class="mdi mdi-leaf"></i> Trạm Lạnh
+                </a>
+            </li>
+        </ul>
+    </div>
+</li>
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
                             <i class="menu-icon mdi mdi-layers-outline"></i>
