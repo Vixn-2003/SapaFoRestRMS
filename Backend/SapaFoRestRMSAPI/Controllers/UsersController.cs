@@ -9,7 +9,6 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Manager")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -20,6 +19,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {
             var users = await _userService.GetAllAsync(ct);
@@ -27,6 +27,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpGet("search")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Search(
             [FromQuery] string? searchTerm = null,
             [FromQuery] int? roleId = null,
@@ -53,6 +54,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Get(int id, CancellationToken ct)
         {
             var user = await _userService.GetByIdAsync(id, ct);
@@ -61,6 +63,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Create([FromBody] UserCreateRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -80,6 +83,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Update(int id, [FromBody] UserUpdateRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -99,6 +103,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             try
@@ -113,6 +118,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPatch("{id:int}/status/{status:int}")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ChangeStatus(int id, int status, CancellationToken ct)
         {
             try
@@ -123,6 +129,53 @@ namespace SapaFoRestRMSAPI.Controllers
             catch (System.ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<IActionResult> GetProfile(CancellationToken ct)
+        {
+            // Try both claim types for compatibility
+            var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var user = await _userService.GetByIdAsync(userId, ct);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            return Ok(user);
+        }
+
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UserProfileUpdateRequest request, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Try both claim types for compatibility
+            var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            try
+            {
+                var updatedUser = await _userService.UpdateProfileAsync(userId, request, ct);
+                return Ok(updatedUser);
             }
             catch (System.InvalidOperationException ex)
             {

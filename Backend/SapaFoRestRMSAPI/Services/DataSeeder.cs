@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DataAccessLayer.Dbcontext;
 using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace SapaFoRestRMSAPI.Services
 {
@@ -129,6 +130,105 @@ namespace SapaFoRestRMSAPI.Services
                 }
                 await context.SaveChangesAsync();
             }
+        }
+
+        public static async Task SeedTestStaffAndManagerAsync(SapaFoRestRmsContext context)
+        {
+            // Ensure roles exist
+            async Task<int> EnsureRoleAsync(string roleName)
+            {
+                var roleId = await context.Roles.Where(r => r.RoleName == roleName)
+                    .Select(r => r.RoleId).FirstOrDefaultAsync();
+                if (roleId == 0)
+                {
+                    var role = new Role { RoleName = roleName };
+                    await context.Roles.AddAsync(role);
+                    await context.SaveChangesAsync();
+                    roleId = role.RoleId;
+                }
+                return roleId;
+            }
+
+            var staffRoleId = await EnsureRoleAsync("Staff");
+            var managerRoleId = await EnsureRoleAsync("Manager");
+
+            string HashPassword(string password)
+            {
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(hashedBytes);
+            }
+
+            // Seed Manager user
+            var managerEmail = "manager.seed@example.com";
+            var manager = await context.Users.FirstOrDefaultAsync(u => u.Email == managerEmail && u.IsDeleted == false);
+            if (manager == null)
+            {
+                manager = new User
+                {
+                    FullName = "Seed Manager",
+                    Email = managerEmail,
+                    Phone = "0900001001",
+                    PasswordHash = HashPassword("Password123!"),
+                    RoleId = managerRoleId,
+                    Status = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+                await context.Users.AddAsync(manager);
+            }
+            else
+            {
+                manager.RoleId = managerRoleId;
+            }
+
+            // Seed Staff user + Staff profile
+            var staffEmail = "staff.seed@example.com";
+            var staffUser = await context.Users.FirstOrDefaultAsync(u => u.Email == staffEmail && u.IsDeleted == false);
+            if (staffUser == null)
+            {
+                staffUser = new User
+                {
+                    FullName = "Seed Staff",
+                    Email = staffEmail,
+                    Phone = "0900001002",
+                    PasswordHash = HashPassword("Password123!"),
+                    RoleId = staffRoleId,
+                    Status = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+                await context.Users.AddAsync(staffUser);
+                await context.SaveChangesAsync();
+
+                // Create Staff record
+                var staffProfile = new Staff
+                {
+                    UserId = staffUser.UserId,
+                    HireDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+                    SalaryBase = 7000000m,
+                    Status = 0
+                };
+                await context.Staffs.AddAsync(staffProfile);
+            }
+            else
+            {
+                staffUser.RoleId = staffRoleId;
+                // Ensure staff profile exists
+                var hasProfile = await context.Staffs.AnyAsync(s => s.UserId == staffUser.UserId);
+                if (!hasProfile)
+                {
+                    await context.Staffs.AddAsync(new Staff
+                    {
+                        UserId = staffUser.UserId,
+                        HireDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+                        SalaryBase = 7000000m,
+                        Status = 0
+                    });
+                }
+            }
+
+            await context.SaveChangesAsync();
         }
     }
 }

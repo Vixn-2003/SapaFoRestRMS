@@ -9,9 +9,16 @@ namespace SapaFoRestRMSAPI.Services
 
         public CloudinaryService(IConfiguration config)
         {
-            var cloudName = config["Cloudinary:CloudName"];
-            var apiKey = config["Cloudinary:ApiKey"];
-            var apiSecret = config["Cloudinary:ApiSecret"];
+            // Prefer section "CloudinarySettings"; fallback to legacy keys "Cloudinary"
+            var cloudName = config["CloudinarySettings:CloudName"] ?? config["Cloudinary:CloudName"];
+            var apiKey = config["CloudinarySettings:ApiKey"] ?? config["Cloudinary:ApiKey"];
+            var apiSecret = config["CloudinarySettings:ApiSecret"] ?? config["Cloudinary:ApiSecret"];
+
+            if (string.IsNullOrWhiteSpace(cloudName) || string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(apiSecret))
+            {
+                throw new InvalidOperationException("Cloudinary configuration is missing. Please set CloudinarySettings:CloudName, ApiKey, and ApiSecret in appsettings.");
+            }
+
             var account = new Account(cloudName, apiKey, apiSecret);
             _cloudinary = new Cloudinary(account);
         }
