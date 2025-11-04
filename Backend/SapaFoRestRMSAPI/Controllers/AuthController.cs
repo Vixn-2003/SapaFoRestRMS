@@ -45,6 +45,31 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        public class RefreshTokenRequest { public string RefreshToken { get; set; } = string.Empty; }
+
+        [HttpPost("refresh-token")]
+        [AllowAnonymous]
+        public async Task<ActionResult<LoginResponse>> RefreshToken([FromBody] RefreshTokenRequest req, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(req.RefreshToken))
+            {
+                return BadRequest(new { message = "Refresh token is required" });
+            }
+            try
+            {
+                var resp = await _authService.RefreshTokenAsync(req.RefreshToken);
+                return Ok(resp);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "An error occurred while refreshing token" });
+            }
+        }
+
         [HttpPost("google-login")]
         [AllowAnonymous]
         public async Task<ActionResult<LoginResponse>> GoogleLogin([FromBody] GoogleLoginRequest request, CancellationToken ct)

@@ -4,7 +4,9 @@ using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.DTOs.UserManagement;
 using BusinessAccessLayer.DTOs.Users;
+using BusinessAccessLayer.DTOs.Positions;
 using DomainAccessLayer.Models;
+using Role = DomainAccessLayer.Models.Role;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,6 +46,15 @@ namespace BusinessAccessLayer.Mapping
             // User mappings
             CreateMap<User, UserDto>()
                 .ForMember(d => d.RoleName, m => m.Ignore()); // RoleName is loaded separately in service
+
+            // Position mappings
+            CreateMap<Position, PositionDto>();
+            CreateMap<PositionCreateRequest, Position>();
+            CreateMap<PositionUpdateRequest, Position>();
+
+            // Role mappings
+            CreateMap<Role, RoleDto>()
+                .ForMember(d => d.Description, m => m.MapFrom(s => string.Empty)); // Role model doesn't have Description
       }
     }
 }
