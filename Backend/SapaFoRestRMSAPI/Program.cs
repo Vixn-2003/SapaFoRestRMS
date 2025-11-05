@@ -112,6 +112,17 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Add Repositories
 builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IPositionRepository, PositionRepository>();
+builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
+// Role Management
+builder.Services.AddScoped<IRoleService, RoleService>();
+
+// Position Management
+builder.Services.AddScoped<IPositionService, PositionService>();
+
+// Các dịch vụ khác
+builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 // Add Services
 builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
@@ -134,6 +145,7 @@ builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
+
 //UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -276,6 +288,8 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
+    await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
+
     await DataSeeder.SeedPositionsAsync(ctx);
     await DataSeeder.SeedTestCustomerAsync(ctx);
     var adminEmail = config["AdminAccount:Email"];
