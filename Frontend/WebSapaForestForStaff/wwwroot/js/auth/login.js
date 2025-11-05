@@ -20,4 +20,43 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
+
+    // Form validation with Toast notifications
+    const loginForm = document.querySelector('form[asp-action="Login"]');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            const email = document.getElementById('Email')?.value.trim();
+            const password = document.getElementById('password')?.value.trim();
+
+            if (!email) {
+                e.preventDefault();
+                showErrorToast('Vui lòng nhập email');
+                document.getElementById('Email')?.focus();
+                return;
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                e.preventDefault();
+                showErrorToast('Email không hợp lệ');
+                document.getElementById('Email')?.focus();
+                return;
+            }
+
+            if (!password) {
+                e.preventDefault();
+                showErrorToast('Vui lòng nhập mật khẩu');
+                document.getElementById('password')?.focus();
+                return;
+            }
+
+            if (password.length < 6) {
+                e.preventDefault();
+                showErrorToast('Mật khẩu phải có ít nhất 6 ký tự');
+                document.getElementById('password')?.focus();
+                return;
+            }
+        });
+    }
 });

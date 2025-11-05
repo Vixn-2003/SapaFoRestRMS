@@ -25,10 +25,12 @@ namespace BusinessAccessLayer.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _configuration;
-        public AuthService(IUserRepository userRepository, IConfiguration configuration)
+        private readonly SapaFoRestRmsContext _dbContext;
+        public AuthService(IUserRepository userRepository, IConfiguration configuration, SapaFoRestRmsContext dbContext)
         {
             _userRepository = userRepository;
             _configuration = configuration;
+            _dbContext = dbContext;
         }
 
        
@@ -40,6 +42,20 @@ namespace BusinessAccessLayer.Services
 
             if (user.IsDeleted == true)
                 throw new UnauthorizedAccessException("This account has been deleted");
+
+            // Staff must have at least one assigned position to be allowed to login
+            var roleName = user.Role?.RoleName ?? string.Empty;
+            if (string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase))
+            {
+                var staff = await _dbContext.Staffs
+                    .Include(s => s.Positions)
+                    .FirstOrDefaultAsync(s => s.UserId == user.UserId);
+
+                if (staff == null || staff.Positions == null || staff.Positions.Count == 0)
+                {
+                    throw new UnauthorizedAccessException("Staff account has no assigned position. Please contact administrator.");
+                }
+            }
 
             return new LoginResponse
             {

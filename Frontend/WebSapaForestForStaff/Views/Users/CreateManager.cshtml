@@ -1,19 +1,19 @@
-@model WebSapaForestForStaff.DTOs.UserManagement.UserCreateRequest
+@model WebSapaForestForStaff.DTOs.UserManagement.CreateManagerRequest
 
 @{
-    ViewData["Title"] = "Tạo người dùng mới";
+    ViewData["Title"] = "Tạo quản lý mới";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
 }
 
 <div class="container-fluid">
     <div class="page-header">
         <div class="header-content">
-            <h1 class="page-title">Tạo người dùng mới</h1>
-            <p class="page-subtitle">Thêm tài khoản người dùng mới vào hệ thống</p>
+            <h1 class="page-title">Tạo quản lý mới</h1>
+            <p class="page-subtitle">Thêm tài khoản quản lý mới vào hệ thống</p>
         </div>
         <div class="page-actions">
             <a asp-action="Index" class="btn-secondary-custom btn-medium">
-                <i class="bi bi-arrow-left"></i> Quay lại
+                <i class="mdi mdi-arrow-left"></i> Quay lại
             </a>
         </div>
     </div>
@@ -23,11 +23,11 @@
             <div class="card-custom">
                 <div class="card-header-custom">
                     <h5 class="card-title mb-0 heading-h2">
-                        <i class="bi bi-person-plus"></i> Thông tin người dùng
+                        <i class="mdi mdi-account-supervisor"></i> Thông tin quản lý
                     </h5>
                 </div>
                 <div class="card-body-custom">
-                    <form asp-action="Create" method="post" id="createUserForm">
+                    <form asp-action="CreateManager" method="post" id="createManagerForm">
                         @Html.AntiForgeryToken()
                         
                         <div class="row">
@@ -57,52 +57,25 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label asp-for="RoleId" class="form-label-custom required"></label>
-                                    <select asp-for="RoleId" class="form-control-custom" asp-items="@(new SelectList(ViewBag.Roles, "RoleId", "RoleName"))">
-                                        <option value="">-- Chọn vai trò --</option>
+                                    <label asp-for="RoleId" class="form-label-custom"></label>
+                                    <select asp-for="RoleId" class="form-control-custom">
+                                        <option value="">-- Chọn vai trò (tùy chọn) --</option>
+                                        <option value="3" selected>Manager</option>
+                                        <option value="2">Admin</option>
+                                        <option value="1">Owner</option>
                                     </select>
+                                    <small class="body-small text-gray-custom mt-1">Mặc định: Manager</small>
                                     <span asp-validation-for="RoleId" class="text-danger body-small"></span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Status" class="form-label-custom"></label>
-                                    <select asp-for="Status" class="form-control-custom">
-                                        <option value="0">Hoạt động</option>
-                                        <option value="1">Không hoạt động</option>
-                                        <option value="2">Khóa</option>
-                                    </select>
-                                    <span asp-validation-for="Status" class="text-danger body-small"></span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="TemporaryPassword" class="form-label-custom"></label>
-                                    <input asp-for="TemporaryPassword" type="password" class="form-control-custom" placeholder="Mật khẩu tạm thời (tùy chọn)" />
-                                    <div class="body-small text-gray-custom mt-1">Để trống để hệ thống tự động tạo mật khẩu</div>
-                                    <span asp-validation-for="TemporaryPassword" class="text-danger body-small"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input asp-for="SendEmailNotification" class="form-check-input" type="checkbox" />
-                                <label asp-for="SendEmailNotification" class="form-check-label body-base">
-                                    Gửi email thông báo tài khoản mới cho người dùng
-                                </label>
-                            </div>
-                        </div>
-
                         <div class="d-flex justify-content-end gap-2">
                             <a asp-action="Index" class="btn-secondary-custom btn-medium">
-                                <i class="bi bi-x-circle"></i> Hủy
+                                <i class="mdi mdi-close"></i> Hủy
                             </a>
                             <button type="submit" class="btn-primary-custom btn-medium">
-                                <i class="bi bi-check-circle"></i> Tạo người dùng
+                                <i class="mdi mdi-content-save"></i> Tạo quản lý
                             </button>
                         </div>
                     </form>
@@ -114,44 +87,37 @@
             <div class="card-custom">
                 <div class="card-header-custom">
                     <h5 class="card-title mb-0 heading-h2">
-                        <i class="bi bi-info-circle"></i> Hướng dẫn
+                        <i class="mdi mdi-information-outline"></i> Hướng dẫn
                     </h5>
                 </div>
                 <div class="card-body-custom">
                     <div class="info-card">
                         <div class="alert alert-info" style="background-color: var(--primary-100); border-color: var(--primary-500);">
-                            <h6 class="heading-h2" style="color: var(--primary-700); margin-bottom: 8px;"><i class="bi bi-lightbulb"></i> Lưu ý quan trọng:</h6>
+                            <h6 class="heading-h2" style="color: var(--primary-700); margin-bottom: 8px;"><i class="mdi mdi-lightbulb-outline"></i> Lưu ý quan trọng:</h6>
                             <ul class="mb-0 body-base">
                                 <li>Email phải là duy nhất trong hệ thống</li>
-                                <li>Nếu không nhập mật khẩu, hệ thống sẽ tự động tạo</li>
-                                <li>Người dùng sẽ nhận email thông báo nếu được bật</li>
-                                <li>Vai trò xác định quyền truy cập của người dùng</li>
+                                <li>Hệ thống sẽ tự động tạo mật khẩu tạm thời</li>
+                                <li>Quản lý sẽ nhận email thông báo tài khoản mới</li>
+                                <li>Vai trò Manager mặc định được chọn</li>
+                                <li>Chỉ Admin và Owner mới có quyền tạo quản lý</li>
                             </ul>
                         </div>
                     </div>
 
                     <div class="mt-3">
-                        <h6 class="heading-h2">Vai trò trong hệ thống:</h6>
+                        <h6 class="heading-h2">Vai trò quản lý:</h6>
                         <div class="role-info">
                             <div class="role-item">
-                                <span class="badge-custom info">Owner</span>
-                                <small class="body-small text-gray-custom">Toàn quyền hệ thống</small>
+                                <span class="badge-custom warning">Manager</span>
+                                <small class="body-small text-gray-custom">Quản lý nhân viên (mặc định)</small>
                             </div>
                             <div class="role-item">
                                 <span class="badge-custom error">Admin</span>
                                 <small class="body-small text-gray-custom">Quản trị hệ thống</small>
                             </div>
                             <div class="role-item">
-                                <span class="badge-custom warning">Manager</span>
-                                <small class="body-small text-gray-custom">Quản lý nhân viên</small>
-                            </div>
-                            <div class="role-item">
-                                <span class="badge-custom info">Staff</span>
-                                <small class="body-small text-gray-custom">Nhân viên</small>
-                            </div>
-                            <div class="role-item">
-                                <span class="badge-custom success">Customer</span>
-                                <small class="body-small text-gray-custom">Khách hàng</small>
+                                <span class="badge-custom info">Owner</span>
+                                <small class="body-small text-gray-custom">Chủ sở hữu hệ thống</small>
                             </div>
                         </div>
                     </div>
@@ -163,10 +129,12 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/users.css">
+    <link rel="stylesheet" href="~/css/users/createManager.css">
 }
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script src="~/js/toast-notification.js"></script>
-    <script src="~/js/users/create.js"></script>
+    <script src="~/js/users/createManager.js"></script>
 }
+

@@ -29,6 +29,8 @@ namespace WebSapaForestForStaff.Controllers
                 ViewBag.RoleId = searchRequest.RoleId;
                 ViewBag.Status = searchRequest.Status;
                 ViewBag.PageSize = searchRequest.PageSize;
+                ViewBag.SortBy = searchRequest.SortBy ?? "FullName";
+                ViewBag.SortOrder = searchRequest.SortOrder ?? "asc";
                 
                 var result = await _apiService.GetUsersWithPaginationAsync(searchRequest);
                 if (result == null)
@@ -120,9 +122,106 @@ namespace WebSapaForestForStaff.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Manager,Admin,Owner")]
-        public IActionResult CreateStaff()
+        public async Task<IActionResult> CreateStaff()
         {
-            return View(new CreateStaffRequest());
+            try
+            {
+                // Load positions for the dropdown
+                var positions = await LoadPositionsAsync();
+                ViewBag.Positions = positions ?? new List<Position>();
+
+                // Set default hire date to today
+                var model = new CreateStaffRequest
+                {
+                    HireDate = DateOnly.FromDateTime(DateTime.Now)
+                };
+
+                return View(model);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Lỗi khi tải danh sách vị trí";
+                ViewBag.Positions = new List<Position>();
+                return View(new CreateStaffRequest { HireDate = DateOnly.FromDateTime(DateTime.Now) });
+            }
+        }
+
+        private async Task<List<Position>?> LoadPositionsAsync()
+        {
+            return await _apiService.GetPositionsAsync();
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Manager,Owner")]
+        public async Task<IActionResult> CreateUnified()
+        {
+            var roles = await _apiService.GetRolesAsync();
+            ViewBag.Roles = roles ?? new List<Role>();
+            ViewBag.Positions = await LoadPositionsAsync() ?? new List<Position>();
+            var model = new UnifiedCreateUserRequest
+            {
+                HireDate = DateOnly.FromDateTime(DateTime.Now)
+            };
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Manager,Owner")]
+        public async Task<IActionResult> CreateUnified(UnifiedCreateUserRequest model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Roles = await _apiService.GetRolesAsync() ?? new List<Role>();
+                ViewBag.Positions = await LoadPositionsAsync() ?? new List<Position>();
+                return View(model);
+            }
+
+            try
+            {
+                bool ok = false;
+                if (model.RoleId == 3) // Manager
+                {
+                    var req = new CreateManagerRequest { FullName = model.FullName, Email = model.Email, Phone = model.Phone };
+                    ok = await _apiService.CreateManagerAsync(req);
+                }
+                else if (model.RoleId == 4) // Staff
+                {
+                    var req = new CreateStaffRequest
+                    {
+                        FullName = model.FullName,
+                        Email = model.Email,
+                        Phone = model.Phone,
+                        HireDate = model.HireDate ?? DateOnly.FromDateTime(DateTime.Now),
+                        SalaryBase = model.SalaryBase ?? 0,
+                        PositionIds = model.PositionIds ?? new List<int>()
+                    };
+                    ok = await _apiService.CreateStaffAsync(req);
+                }
+                else
+                {
+                    var req = new UserCreateRequest { FullName = model.FullName, Email = model.Email, Phone = model.Phone, RoleId = model.RoleId, Status = 0 };
+                    ok = await _apiService.CreateUserAsync(req);
+                }
+
+                if (ok)
+                {
+                    TempData["SuccessMessage"] = "Tạo người dùng thành công!";
+                    return RedirectToAction("Index");
+                }
+
+                TempData["ErrorMessage"] = "Không thể tạo người dùng.";
+                ViewBag.Roles = await _apiService.GetRolesAsync() ?? new List<Role>();
+                ViewBag.Positions = await LoadPositionsAsync() ?? new List<Position>();
+                return View(model);
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Lỗi kết nối. Vui lòng thử lại sau";
+                ViewBag.Roles = await _apiService.GetRolesAsync() ?? new List<Role>();
+                ViewBag.Positions = await LoadPositionsAsync() ?? new List<Position>();
+                return View(model);
+            }
         }
 
         [HttpPost]
@@ -132,6 +231,9 @@ namespace WebSapaForestForStaff.Controllers
         {
             if (!ModelState.IsValid)
             {
+                // Reload positions for the view
+                var positions = await LoadPositionsAsync();
+                ViewBag.Positions = positions ?? new List<Position>();
                 return View(model);
             }
 
@@ -146,12 +248,16 @@ namespace WebSapaForestForStaff.Controllers
                 else
                 {
                     ModelState.AddModelError("", "Lỗi khi tạo tài khoản nhân viên");
+                    var positions = await LoadPositionsAsync();
+                    ViewBag.Positions = positions ?? new List<Position>();
                     return View(model);
                 }
             }
             catch (Exception ex)
             {
                 ModelState.AddModelError("", "Lỗi kết nối. Vui lòng thử lại sau");
+                var positions = await LoadPositionsAsync();
+                ViewBag.Positions = positions ?? new List<Position>();
                 return View(model);
             }
         }
@@ -259,9 +365,84 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-       
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Manager,Owner")]
+        public async Task<IActionResult> Edit(int id, UserUpdateRequest model)
+        {
+            if (!ModelState.IsValid)
+            {
+                try
+                {
+                    var roles = await _apiService.GetRolesAsync();
+                    ViewBag.Roles = roles ?? new List<Role>();
+                }
+                catch { }
+                return View(model);
+            }
 
-       
+            try
+            {
+                var success = await _apiService.UpdateUserAsync(model);
+                if (success)
+                {
+                    TempData["SuccessMessage"] = "Cập nhật thông tin người dùng thành công!";
+                    return RedirectToActionPreservingFilters();
+                }
+                else
+                {
+                    ModelState.AddModelError("", "Lỗi khi cập nhật thông tin người dùng");
+                    try
+                    {
+                        var roles = await _apiService.GetRolesAsync();
+                        ViewBag.Roles = roles ?? new List<Role>();
+                    }
+                    catch { }
+                    return View(model);
+                }
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", "Lỗi kết nối. Vui lòng thử lại sau");
+                try
+                {
+                    var roles = await _apiService.GetRolesAsync();
+                    ViewBag.Roles = roles ?? new List<Role>();
+                }
+                catch { }
+                return View(model);
+            }
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Owner")]
+        public async Task<IActionResult> ResetPassword(int id)
+        {
+            //try
+            //{
+            //    var user = await _apiService.GetUserAsync(id);
+            //    if (user == null)
+            //    {
+            //        TempData["ErrorMessage"] = "Không tìm thấy người dùng";
+            //        return RedirectToAction("Index");
+            //    }
+
+            //    var model = new PasswordResetRequest
+            //    {
+            //        UserId = user.UserId,
+            //        FullName = user.FullName,
+            //        Email = user.Email
+            //    };
+
+            //    return View(model);
+            //}
+            //catch
+            //{
+            //    TempData["ErrorMessage"] = "Lỗi khi tải thông tin người dùng";
+            return RedirectToAction("Index");
+            //}
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Owner")]
@@ -278,7 +459,7 @@ namespace WebSapaForestForStaff.Controllers
                 if (success)
                 {
                     TempData["SuccessMessage"] = "Đặt lại mật khẩu thành công!";
-                    return RedirectToAction("Index");
+                    return RedirectToActionPreservingFilters();
                 }
                 else
                 {
@@ -291,6 +472,71 @@ namespace WebSapaForestForStaff.Controllers
                 ModelState.AddModelError("", "Lỗi kết nối. Vui lòng thử lại sau");
                 return View(model);
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Owner")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                var user = await _apiService.GetUserAsync(id);
+                if (user == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy người dùng";
+                    return RedirectToAction("Index");
+                }
+
+                var success = await _apiService.DeleteUserAsync(id);
+                if (success)
+                {
+                    TempData["SuccessMessage"] = $"Xóa người dùng \"{user.FullName}\" thành công!";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Không thể xóa người dùng này";
+                }
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Lỗi khi xóa người dùng";
+            }
+
+            return RedirectToActionPreservingFilters();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Manager,Owner")]
+        public async Task<IActionResult> ChangeStatus(int id, int status)
+        {
+            try
+            {
+                var user = await _apiService.GetUserAsync(id);
+                if (user == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy người dùng";
+                    return RedirectToAction("Index");
+                }
+
+                var success = await _apiService.ChangeUserStatusAsync(id, status);
+                if (success)
+                {
+                    var statusText = status == 0 ? "kích hoạt" : "vô hiệu hóa";
+                    TempData["SuccessMessage"] = $"Đã {statusText} người dùng \"{user.FullName}\" thành công!";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Không thể thay đổi trạng thái người dùng này";
+                }
+            }
+            catch
+            {
+                TempData["ErrorMessage"] = "Lỗi khi thay đổi trạng thái người dùng";
+            }
+
+            return RedirectToActionPreservingFilters();
         }
 
         [HttpPost]
@@ -331,7 +577,7 @@ namespace WebSapaForestForStaff.Controllers
                 TempData["ErrorMessage"] = "Lỗi khi xóa người dùng";
             }
 
-            return RedirectToAction("Index");
+            return RedirectToActionPreservingFilters();
         }
 
         [HttpPost]
@@ -372,7 +618,49 @@ namespace WebSapaForestForStaff.Controllers
                 TempData["ErrorMessage"] = "Lỗi khi thay đổi trạng thái người dùng";
             }
 
-            return RedirectToAction("Index");
+            return RedirectToActionPreservingFilters();
+        }
+
+        /// <summary>
+        /// Redirect to Index action while preserving current search filters from Request
+        /// </summary>
+        private IActionResult RedirectToActionPreservingFilters()
+        {
+            var searchTerm = Request.Query["searchTerm"].ToString();
+            var roleIdStr = Request.Query["roleId"].ToString();
+            var statusStr = Request.Query["status"].ToString();
+            var pageStr = Request.Query["page"].ToString();
+            var pageSizeStr = Request.Query["pageSize"].ToString();
+            
+            int? roleId = null;
+            if (!string.IsNullOrEmpty(roleIdStr) && int.TryParse(roleIdStr, out int roleIdVal))
+                roleId = roleIdVal;
+            
+            int? status = null;
+            if (!string.IsNullOrEmpty(statusStr) && int.TryParse(statusStr, out int statusVal))
+                status = statusVal;
+            
+            int page = 1;
+            if (!string.IsNullOrEmpty(pageStr) && int.TryParse(pageStr, out int pageVal))
+                page = pageVal;
+            
+            int pageSize = 10;
+            if (!string.IsNullOrEmpty(pageSizeStr) && int.TryParse(pageSizeStr, out int pageSizeVal))
+                pageSize = pageSizeVal;
+
+            var searchRequest = new UserSearchRequest
+            {
+                SearchTerm = searchTerm,
+                RoleId = roleId,
+                Status = status,
+                Page = page,
+                PageSize = pageSize,
+                SortBy = Request.Query["sortBy"].ToString() ?? "FullName",
+                SortOrder = Request.Query["sortOrder"].ToString() ?? "asc"
+            };
+
+            return RedirectToAction("Index", searchRequest);
         }
     }
 }
+
