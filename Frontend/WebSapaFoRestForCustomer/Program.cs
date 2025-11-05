@@ -38,6 +38,7 @@ namespace WebSapaFoRestForCustomer
             // ===============================================
             // Register ApiService
             builder.Services.AddScoped<ApiService>();
+            builder.Services.AddSession();
 
             // Configure Authentication
             builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -59,15 +60,15 @@ namespace WebSapaFoRestForCustomer
             // Configure API settings
 
             var app = builder.Build();
-     
-            
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+
+            // Configure the HTTP request pipeline.
+            if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
             }
             app.UseStaticFiles();
+            app.UseSession();
 
             app.UseRouting();
 
