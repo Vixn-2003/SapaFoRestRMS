@@ -385,41 +385,7 @@ namespace BusinessAccessLayer.Services
             return result; // Trả về DTO (sạch, không có vòng lặp)
         }
 
-        // (Thêm hàm mới này vào OrderTableService.cs)
-        //public async Task<bool> CancelOrderItemAsync(int orderDetailId)
-        //{
-        //    // Lấy món ăn VÀ order cha của nó
-        //    var item = await _context.OrderDetails
-        //        .Include(od => od.Order)
-        //        .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
-
-        //    if (item == null)
-        //    {
-        //        throw new Exception("Không tìm thấy món ăn.");
-        //    }
-
-        //    // === LOGIC "THỜI GIAN ÂN HẬN" ===
-        //    if (item.Status == "Đã gửi")
-        //    {
-        //        item.Status = "Đã hủy";
-
-        //        // Cập nhật lại tổng tiền của Order
-        //        if (item.Order != null)
-        //        {
-        //            item.Order.TotalAmount -= (item.UnitPrice * item.Quantity);
-        //        }
-
-        //        await _context.SaveChangesAsync();
-
-        //        // (Sau này thêm SignalR ở đây để báo cho bếp/thu ngân)
-
-        //        return true;
-        //    }
-
-        //    // Nếu đã "Đang chế biến" hoặc "Đã lên bàn"
-        //    throw new Exception("Món ăn đã được gửi đến bếp, không thể hủy.");
-        //}
-
+      
         // (Trong file BusinessAccessLayer/Services/OrderTableService.cs)
 
         public async Task<bool> CancelOrderItemAsync(int orderDetailId)
@@ -569,7 +535,7 @@ namespace BusinessAccessLayer.Services
         {
             public int MenuItemId { get; set; }
             public int Quantity { get; set; }
-            public string? Notes { get; set; } // <-- Thêm dòng này
+            public string? Notes { get; set; } 
         }
         public class OrderSubmissionDto
         {
