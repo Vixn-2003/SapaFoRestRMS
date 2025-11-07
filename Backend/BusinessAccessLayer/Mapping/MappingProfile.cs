@@ -5,6 +5,7 @@ using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.DTOs.UserManagement;
 using BusinessAccessLayer.DTOs.Users;
 using BusinessAccessLayer.DTOs.Positions;
+using BusinessAccessLayer.DTOs.Payment;
 using DomainAccessLayer.Models;
 using Role = DomainAccessLayer.Models.Role;
 using System;
@@ -55,6 +56,24 @@ namespace BusinessAccessLayer.Mapping
             // Role mappings
             CreateMap<Role, RoleDto>()
                 .ForMember(d => d.Description, m => m.MapFrom(s => string.Empty)); // Role model doesn't have Description
+
+            // Payment mappings
+            CreateMap<Order, OrderDto>()
+                .ForMember(d => d.OrderCode, m => m.MapFrom(s => $"ORD-{s.OrderId:D6}"))
+                .ForMember(d => d.Subtotal, m => m.Ignore())
+                .ForMember(d => d.VatAmount, m => m.Ignore())
+                .ForMember(d => d.ServiceFee, m => m.Ignore())
+                .ForMember(d => d.DiscountAmount, m => m.Ignore())
+                .ForMember(d => d.CustomerName, m => m.Ignore())
+                .ForMember(d => d.TableNumber, m => m.Ignore())
+                .ForMember(d => d.StaffName, m => m.Ignore())
+                .ForMember(d => d.OrderItems, m => m.MapFrom(s => s.OrderDetails));
+
+            CreateMap<OrderDetail, OrderItemDto>()
+                .ForMember(d => d.MenuItemName, m => m.MapFrom(s => s.MenuItem != null ? s.MenuItem.Name : ""))
+                .ForMember(d => d.TotalPrice, m => m.MapFrom(s => s.UnitPrice * s.Quantity));
+
+            CreateMap<Transaction, TransactionDto>();
       }
     }
 }
