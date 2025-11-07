@@ -207,6 +207,10 @@ builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
+// SalaryChangeRequest Service/Repository
+builder.Services.AddScoped<ISalaryChangeRequestRepository, SalaryChangeRequestRepository>();
+builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestService>();
+
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();

@@ -86,6 +86,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Transaction> Transactions { get; set; }
 
+    public virtual DbSet<SalaryChangeRequest> SalaryChangeRequests { get; set; }
+
     public virtual DbSet<Supplier> Suppliers { get; set; }
 
     public virtual DbSet<SystemLogo> SystemLogos { get; set; }
@@ -652,6 +654,74 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasKey(e => e.PositionId).HasName("PK__Position__60BB9D7D");
             entity.Property(e => e.PositionName).HasMaxLength(100);
             entity.Property(e => e.Status).HasDefaultValue(0);
+            entity.Property(e => e.BaseSalary)
+                .HasDefaultValue(0m)
+                .HasColumnType("decimal(18, 2)");
+        });
+
+        modelBuilder.Entity<SalaryChangeRequest>(entity =>
+        {
+            entity.HasKey(e => e.RequestId).HasName("PK__SalaryChangeRequest__RequestId");
+
+            entity.ToTable("SalaryChangeRequests");
+
+            entity.Property(e => e.CurrentBaseSalary)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.ProposedBaseSalary)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.Reason)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending")
+                .IsRequired();
+
+            entity.Property(e => e.OwnerNotes)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            entity.Property(e => e.ReviewedAt)
+                .HasColumnType("datetime");
+
+            // Relationship: SalaryChangeRequest -> Position (Many-to-One)
+            entity.HasOne(d => d.Position)
+                .WithMany(p => p.SalaryChangeRequests)
+                .HasForeignKey(d => d.PositionId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__Position");
+
+            // Relationship: SalaryChangeRequest -> User (RequestedBy) (Many-to-One)
+            entity.HasOne(d => d.RequestedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.RequestedBy)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__RequestedBy");
+
+            // Relationship: SalaryChangeRequest -> User (ApprovedBy) (Many-to-One, nullable)
+            entity.HasOne(d => d.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__ApprovedBy");
+
+            // Indexes
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_SalaryChangeRequests_Status");
+
+            entity.HasIndex(e => e.PositionId)
+                .HasDatabaseName("IX_SalaryChangeRequests_PositionId");
+
+            entity.HasIndex(e => e.RequestedBy)
+                .HasDatabaseName("IX_SalaryChangeRequests_RequestedBy");
         });
 
         modelBuilder.Entity<Staff>()
