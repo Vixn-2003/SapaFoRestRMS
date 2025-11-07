@@ -84,6 +84,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
 
+    public virtual DbSet<Transaction> Transactions { get; set; }
+
     public virtual DbSet<Supplier> Suppliers { get; set; }
 
     public virtual DbSet<SystemLogo> SystemLogos { get; set; }
@@ -388,6 +390,63 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasOne(d => d.Voucher).WithMany(p => p.Payments)
                 .HasForeignKey(d => d.VoucherId)
                 .HasConstraintName("FK__Payments__Vouche__31B762FC");
+        });
+
+        modelBuilder.Entity<Transaction>(entity =>
+        {
+            entity.HasKey(e => e.TransactionId).HasName("PK__Transact__55433A6B");
+
+            entity.ToTable("Transactions");
+
+            entity.Property(e => e.TransactionCode)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(e => e.Amount)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.PaymentMethod)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending")
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            entity.Property(e => e.CompletedAt)
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.SessionId)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Notes)
+                .HasMaxLength(500);
+
+            // Relationship: Transaction -> Order (Many-to-One)
+            entity.HasOne(d => d.Order)
+                .WithMany(p => p.Transactions)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Restrict) // Không cho phép xóa Order nếu có Transaction
+                .HasConstraintName("FK__Transacti__Order__Transaction_OrderId");
+
+            // Index cho SessionId để tìm kiếm nhanh
+            entity.HasIndex(e => e.SessionId)
+                .HasDatabaseName("IX_Transactions_SessionId");
+
+            // Index cho OrderId
+            entity.HasIndex(e => e.OrderId)
+                .HasDatabaseName("IX_Transactions_OrderId");
+
+            // Index cho Status
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_Transactions_Status");
         });
 
         modelBuilder.Entity<Payroll>(entity =>
