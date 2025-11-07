@@ -20,6 +20,10 @@ namespace DataAccessLayer.UnitOfWork
 
         private IInventoryIngredientRepository _inventoryRepository;
 
+        private IManagerSupplierRepository _supplierRepository;
+
+        public IManagerSupplierRepository Supplier => _supplierRepository ??= new ManagerSupplierRepository(_context);
+
         public IManagerMenuRepository MenuItem => _menuRepository ??= new ManagerMenuRepository(_context);
         public IManagerCategoryRepository MenuCategory => _categoryRepository ??= new ManagerCategoryRepository(_context);
         public IManagerComboRepository Combo => _comboRepository ??= new ManagerComboRepository(_context);

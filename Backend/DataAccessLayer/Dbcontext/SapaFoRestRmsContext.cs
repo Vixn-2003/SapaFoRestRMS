@@ -199,6 +199,7 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.IngredientId).HasName("PK__Ingredie__BEAEB25ACD112DE2");
 
+            entity.Property(e => e.IngredientCode).HasMaxLength(50);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.ReorderLevel)
                 .HasDefaultValue(0m)
@@ -422,6 +423,19 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.SupplierId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PurchaseO__Suppl__3587F3E0");
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.IdCreator)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PurchaseOrders_Users_Creator");
+            entity.HasOne(d => d.Confirmer)
+                .WithMany()
+                .HasForeignKey(d => d.IdConfirm)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PurchaseOrders_Users_Confirmer");
+            entity.Property(e => e.UrlImg)
+                .HasMaxLength(500);
+
         });
 
         modelBuilder.Entity<PurchaseOrderDetail>(entity =>
@@ -641,6 +655,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.CodeSupplier).HasMaxLength(50);
         });
 
         modelBuilder.Entity<SystemLogo>(entity =>

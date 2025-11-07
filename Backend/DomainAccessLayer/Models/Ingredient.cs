@@ -6,6 +6,7 @@ namespace DomainAccessLayer.Models;
 public partial class Ingredient
 {
     public int IngredientId { get; set; }
+    public string IngredientCode { get; set; } = string.Empty!;
 
     public string Name { get; set; } = null!;
 

@@ -4,6 +4,7 @@ using DataAccessLayer.Dbcontext;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    partial class SapaFoRestRmsContextModelSnapshot : ModelSnapshot
+    [Migration("20251105121040_AddCreatorAndConfirmerToPurchaseOrders")]
+    partial class AddCreatorAndConfirmerToPurchaseOrders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -294,11 +297,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IngredientId"));
-
-                    b.Property<string>("IngredientCode")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -790,10 +788,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<int>("SupplierId")
                         .HasColumnType("int");
-
-                    b.Property<string>("UrlImg")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("PurchaseOrderId")
                         .HasName("PK__Purchase__036BACA49E3BAAAB");

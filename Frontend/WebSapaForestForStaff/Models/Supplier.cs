@@ -17,5 +17,7 @@ public partial class Supplier
 
     public string? Email { get; set; }
 
+    public string CodeSupplier { get; set; } = string.Empty!;
+
     public virtual ICollection<PurchaseOrder> PurchaseOrders { get; set; } = new List<PurchaseOrder>();
 }

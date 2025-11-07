@@ -3,6 +3,7 @@ using BusinessAccessLayer.DTOs.Inventory;
 using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,10 +23,22 @@ namespace BusinessAccessLayer.Services
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<InventoryIngredientWithBatchDTO>> GetAllIngredient()
+        public async Task<IEnumerable<InventoryIngredientDTO>> GetAllIngredient()
         {
-            var ingredient = await _unitOfWork.InventoryIngredient.GetAllAsync();
-            return _mapper.Map<IEnumerable<InventoryIngredientWithBatchDTO>>(ingredient);
+            var ingredients = await _unitOfWork.InventoryIngredient.GetAllAsync();
+                return _mapper.Map<IEnumerable<InventoryIngredientDTO>>(ingredients);
+        }
+
+        public Task<(decimal TImport, decimal TExport, decimal totalFirst)> GetImportExportBatchesId(int id, DateTime? StartDate , DateTime? EndDate)
+        {
+            var totalExIm = _unitOfWork.InventoryIngredient.GetTotalImportExportBatches(id, StartDate, EndDate);
+            return totalExIm;
+        }
+
+        public async Task<IEnumerable<BatchIngredientDTO>> GetBatchesAsync(int ingredientId)
+        {
+            var batches = await _unitOfWork.InventoryIngredient.getBatchById(ingredientId);
+            return _mapper.Map<IEnumerable<BatchIngredientDTO>>(batches);
         }
     }
 }

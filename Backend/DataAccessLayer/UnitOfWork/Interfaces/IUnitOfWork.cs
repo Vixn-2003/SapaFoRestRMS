@@ -15,6 +15,8 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IManagerCategoryRepository MenuCategory { get; }
         IInventoryIngredientRepository InventoryIngredient { get; }
 
+        IManagerSupplierRepository Supplier { get; }
+
         IManagerComboRepository Combo { get; }
         IUserRepository Users { get; }
         IStaffProfileRepository StaffProfiles { get; }

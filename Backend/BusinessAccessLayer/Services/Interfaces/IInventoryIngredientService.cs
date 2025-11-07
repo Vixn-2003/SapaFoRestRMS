@@ -10,7 +10,9 @@ namespace BusinessAccessLayer.Services.Interfaces
 {
     public interface IInventoryIngredientService
     {
-        Task<IEnumerable<InventoryIngredientWithBatchDTO>> GetAllIngredient();
+        Task<IEnumerable<InventoryIngredientDTO>> GetAllIngredient();
+        Task<(decimal TImport, decimal TExport, decimal totalFirst)> GetImportExportBatchesId(int id, DateTime? StartDate, DateTime? EndDate);
+        Task<IEnumerable<BatchIngredientDTO>> GetBatchesAsync(int id);
 
     }
 }

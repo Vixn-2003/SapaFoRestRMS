@@ -18,7 +18,8 @@ namespace DataAccessLayer.Repositories
         {
             _context = context;
         }
-        public Task AddAsync(InventoryBatch entity)
+
+        public Task AddAsync(Ingredient entity)
         {
             throw new NotImplementedException();
         }
@@ -28,12 +29,58 @@ namespace DataAccessLayer.Repositories
             throw new NotImplementedException();
         }
 
-        public async Task<IEnumerable<InventoryBatch>> GetAllAsync()
+        public async Task<IEnumerable<Ingredient>> GetAllAsync()
         {
-            return await _context.InventoryBatches
-               .Include(b => b.Ingredient)
-               .ToListAsync();
+            return await _context.Ingredients
+                .Include(i => i.InventoryBatches)
+                    .ThenInclude(b => b.StockTransactions)                    
+                .ToListAsync();
         }
+
+        public async Task<(decimal totalImport, decimal totalExport, decimal totalFirst)> GetTotalImportExportBatches( int BatchesId, DateTime? startDate, DateTime? endDate)
+        {
+            if (endDate == null)
+            {
+                endDate = DateTime.Now; 
+            }
+
+            if (startDate == null)
+            {
+                startDate = endDate.Value.AddDays(-7);
+            }
+
+            var transactions = await _context.StockTransactions
+                .Where(t => t.BatchId == BatchesId
+                            && t.TransactionDate >= startDate
+                            && t.TransactionDate <= endDate)
+                .ToListAsync();
+
+            decimal totalImport = transactions
+                .Where(t => t.Type == "Import")
+                .Sum(t => t.Quantity);
+
+            decimal totalExport = transactions
+                .Where(t => t.Type == "Export")
+                .Sum(t => t.Quantity);
+
+            var transactionExist = await _context.StockTransactions
+                .Where(t => t.BatchId == BatchesId
+                            && t.TransactionDate <= startDate)
+                .ToListAsync();
+
+            decimal totalImportE = transactionExist
+                .Where(t => t.Type == "Import")
+                .Sum(t => t.Quantity);
+
+            decimal totalExportE = transactionExist
+                .Where(t => t.Type == "Export")
+                .Sum(t => t.Quantity);
+
+            decimal totalFirst = totalImportE - totalExportE;
+
+            return (totalImport, totalExport, totalFirst);
+        }
+
 
         public Task<Ingredient?> GetByIdAsync(int id)
         {
@@ -45,14 +92,21 @@ namespace DataAccessLayer.Repositories
             throw new NotImplementedException();
         }
 
-        public Task UpdateAsync(InventoryBatch entity)
+        public Task UpdateAsync(Ingredient entity)
         {
             throw new NotImplementedException();
         }
 
-        Task<InventoryBatch?> IRepository<InventoryBatch>.GetByIdAsync(int id)
+        public async Task<IEnumerable<InventoryBatch>> getBatchById(int id)
         {
-            throw new NotImplementedException();
+            return await _context.InventoryBatches
+                .Include(i => i.Ingredient)
+                .Include(i => i.PurchaseOrderDetail)
+                    .ThenInclude(p => p.PurchaseOrder)
+                        .ThenInclude(o => o.Supplier)
+                .Where(i => i.IngredientId == id)
+                .ToListAsync();
         }
+
     }
 }

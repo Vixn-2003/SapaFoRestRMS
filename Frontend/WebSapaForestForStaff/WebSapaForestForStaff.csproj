@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="DTOs\Filter\" />
     <Folder Include="Views\Auth\" />
     <Folder Include="Views\Manager\" />
     <Folder Include="Views\Staff\" />

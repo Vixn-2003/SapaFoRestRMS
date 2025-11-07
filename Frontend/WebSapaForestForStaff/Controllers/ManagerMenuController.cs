@@ -1,4 +1,5 @@
 ﻿using BusinessAccessLayer.DTOs;
+using BusinessAccessLayer.DTOs.Inventory;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Text;
@@ -70,7 +71,7 @@ namespace WebSapaForestForStaff.Controllers
 
             var menu = JsonConvert.DeserializeObject<ManagerMenuDTO>(jsonData);
             var category = JsonConvert.DeserializeObject<List<ManagerCategoryDTO>>(jsonCategory);
-            var ingredient = JsonConvert.DeserializeObject<List<InventoryIngredientWithBatchDTO>>(jsonIngredient);
+            var ingredient = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(jsonIngredient);
             var recipe = JsonConvert.DeserializeObject<List<ManagerRecipeDTO>>(jsonRecipe);
 
             var vm = new MenuViewModel
@@ -184,7 +185,7 @@ namespace WebSapaForestForStaff.Controllers
     {
         public ManagerMenuDTO ProductsMenu { get; set; } = new();
 
-        public List<InventoryIngredientWithBatchDTO> Ingredient { get; set; } = new();
+        public List<InventoryIngredientDTO> Ingredient { get; set; } = new();
         public List<ManagerCategoryDTO> ProductsCategory { get; set; } = new();
         public List<ManagerRecipeDTO> Recipe { get; set; } = new();
     }

@@ -57,7 +57,7 @@
             }
 
         .filter-section {
-            background: #2c3e50;
+            background: #ffffff;
             padding: 20px 40px;
             display: flex;
             gap: 15px;
@@ -81,8 +81,6 @@
                 padding: 8px 12px;
                 border: 1px solid #34495e;
                 border-radius: 4px;
-                background: #34495e;
-                color: white;
                 font-size: 14px;
             }
 
@@ -394,7 +392,9 @@
     <div class="header">
         <h1>Quản Lý Nhập Hàng</h1>
         <p>Tổng quan và quản lý đơn nhập hàng</p>
-        <button class="btn-add">+ Tạo đơn nhập mới</button>
+        <button class="btn-add" onclick="window.location.href='@Url.Action("Index", "ImportInventory")'">
+                    <span>+ Thêm nguyên liệu</span>
+                </button>
     </div>
 
     <div class="filter-section">
