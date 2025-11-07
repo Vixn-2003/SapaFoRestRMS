@@ -1,0 +1,262 @@
+@{
+    // Partial view cho Promotion Modal
+    string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
+}
+
+<div class="modal fade" id="promotionModal" tabindex="-1" aria-labelledby="promotionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="promotionModalLabel">
+                    <i class="bi bi-tag-fill me-2"></i>Áp dụng ưu đãi / Mã giảm giá
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Nhập mã giảm giá -->
+                <div class="mb-4">
+                    <label for="discountCode" class="form-label fw-bold">
+                        <i class="bi bi-upc-scan me-2"></i>Nhập mã giảm giá
+                    </label>
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="discountCode" 
+                               placeholder="Nhập mã giảm giá...">
+                        <button class="btn btn-primary" type="button" onclick="validateDiscountCode()">
+                            <i class="bi bi-check-circle me-2"></i>Áp dụng
+                        </button>
+                    </div>
+                    <div id="discountCodeMessage" class="mt-2"></div>
+                </div>
+
+                <hr>
+
+                <!-- Danh sách chương trình ưu đãi -->
+                <div>
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-gift me-2"></i>Chương trình ưu đãi hiện có
+                    </h6>
+                    <div class="promotion-list" id="promotionList">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const apiBaseUrl = '@(ViewBag.ApiBaseUrl ?? "https://localhost:7000/api")';
+
+    // Load danh sách ưu đãi
+    async function loadPromotions() {
+        try {
+            // Có thể gọi API để lấy danh sách ưu đãi
+            // const response = await fetch(`${apiBaseUrl}/promotions/active`);
+            // const promotions = await response.json();
+            
+            // Mock data
+            const promotions = getMockPromotions();
+            renderPromotions(promotions);
+        } catch (error) {
+            console.error('Error loading promotions:', error);
+            const promotions = getMockPromotions();
+            renderPromotions(promotions);
+        }
+    }
+
+    // Mock data
+    function getMockPromotions() {
+        return [
+            {
+                id: 1,
+                name: 'Giảm 10% cho đơn trên 500.000đ',
+                description: 'Áp dụng cho đơn hàng từ 500.000đ trở lên',
+                discountType: 'percentage',
+                discountValue: 10,
+                minOrderAmount: 500000
+            },
+            {
+                id: 2,
+                name: 'Giảm 50.000đ',
+                description: 'Giảm trực tiếp 50.000đ cho đơn hàng bất kỳ',
+                discountType: 'fixed',
+                discountValue: 50000,
+                minOrderAmount: 0
+            },
+            {
+                id: 3,
+                name: 'Giảm 20% cuối tuần',
+                description: 'Áp dụng vào thứ 7 và Chủ nhật',
+                discountType: 'percentage',
+                discountValue: 20,
+                minOrderAmount: 300000
+            }
+        ];
+    }
+
+    // Render danh sách ưu đãi
+    function renderPromotions(promotions) {
+        const container = document.getElementById('promotionList');
+        
+        if (promotions.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">Không có ưu đãi nào</p>';
+            return;
+        }
+
+        container.innerHTML = promotions.map(promo => `
+            <div class="promotion-item" onclick="selectPromotion(${promo.id}, ${promo.discountValue}, '${promo.discountType}')">
+                <div class="promotion-name">${promo.name}</div>
+                <div class="promotion-desc">${promo.description}</div>
+            </div>
+        `).join('');
+    }
+
+    // Chọn ưu đãi
+    function selectPromotion(promoId, discountValue, discountType) {
+        // Lấy tổng tiền hiện tại từ OrderDetail
+        const subtotalElement = document.getElementById('subtotal');
+        if (!subtotalElement) {
+            showMessage('Vui lòng tải lại trang!', 'error');
+            return;
+        }
+
+        const subtotalText = subtotalElement.textContent;
+        const subtotal = parseFloat(subtotalText.replace(/[^\d]/g, ''));
+
+        let discountAmount = 0;
+        if (discountType === 'percentage') {
+            discountAmount = subtotal * (discountValue / 100);
+        } else {
+            discountAmount = discountValue;
+        }
+
+        // Áp dụng ưu đãi
+        if (window.applyDiscount) {
+            window.applyDiscount(discountAmount);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('promotionModal'));
+            modal.hide();
+        }
+    }
+
+    // Validate mã giảm giá
+    async function validateDiscountCode() {
+        const code = document.getElementById('discountCode').value.trim();
+        const messageDiv = document.getElementById('discountCodeMessage');
+
+        if (!code) {
+            messageDiv.innerHTML = '<div class="alert alert-warning mb-0">Vui lòng nhập mã giảm giá!</div>';
+            return;
+        }
+
+        try {
+            messageDiv.innerHTML = '<div class="text-info">Đang kiểm tra...</div>';
+
+            const response = await fetch(`${apiBaseUrl}/discounts/validate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ code: code })
+            });
+
+            if (!response.ok) {
+                // Mock validation
+                const mockResult = validateMockDiscountCode(code);
+                if (mockResult.valid) {
+                    messageDiv.innerHTML = `<div class="alert alert-success mb-0">${mockResult.message}</div>`;
+                    
+                    // Áp dụng giảm giá
+                    if (window.applyDiscount) {
+                        window.applyDiscount(mockResult.discountAmount);
+                        setTimeout(() => {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('promotionModal'));
+                            modal.hide();
+                        }, 1000);
+                    }
+                } else {
+                    messageDiv.innerHTML = `<div class="alert alert-danger mb-0">${mockResult.message}</div>`;
+                }
+                return;
+            }
+
+            const result = await response.json();
+            if (result.valid) {
+                messageDiv.innerHTML = `<div class="alert alert-success mb-0">${result.message}</div>`;
+                
+                if (window.applyDiscount) {
+                    window.applyDiscount(result.discountAmount);
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('promotionModal'));
+                        modal.hide();
+                    }, 1000);
+                }
+            } else {
+                messageDiv.innerHTML = `<div class="alert alert-danger mb-0">${result.message}</div>`;
+            }
+        } catch (error) {
+            console.error('Error validating discount code:', error);
+            messageDiv.innerHTML = '<div class="alert alert-danger mb-0">Có lỗi xảy ra. Vui lòng thử lại!</div>';
+        }
+    }
+
+    // Mock validate discount code
+    function validateMockDiscountCode(code) {
+        const validCodes = {
+            'GIAM10': { discountAmount: 50000, message: 'Mã hợp lệ! Giảm 50.000đ' },
+            'KHUYENMAI': { discountAmount: 100000, message: 'Mã hợp lệ! Giảm 100.000đ' },
+            'VIP2025': { discountAmount: 200000, message: 'Mã hợp lệ! Giảm 200.000đ' }
+        };
+
+        if (validCodes[code.toUpperCase()]) {
+            return {
+                valid: true,
+                discountAmount: validCodes[code.toUpperCase()].discountAmount,
+                message: validCodes[code.toUpperCase()].message
+            };
+        }
+
+        return {
+            valid: false,
+            message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn!'
+        };
+    }
+
+    // Show message
+    function showMessage(message, type = 'info') {
+        const alertClass = type === 'error' ? 'alert-danger' : 'alert-info';
+        // Có thể dùng toast notification
+        console.log(message);
+    }
+
+    // Load promotions khi modal được mở
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('promotionModal');
+        if (modal) {
+            modal.addEventListener('show.bs.modal', function() {
+                loadPromotions();
+            });
+        }
+
+        // Enter key để validate
+        const discountCodeInput = document.getElementById('discountCode');
+        if (discountCodeInput) {
+            discountCodeInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    validateDiscountCode();
+                }
+            });
+        }
+    });
+</script>
+

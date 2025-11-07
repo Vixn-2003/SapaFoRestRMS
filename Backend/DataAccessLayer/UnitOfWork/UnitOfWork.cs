@@ -41,6 +41,10 @@ namespace DataAccessLayer.UnitOfWork
 
         public IPositionRepository Positions => _positions ??= new PositionRepository(_context);
 
+        private IPaymentRepository _payments;
+
+        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
+
         public UnitOfWork(SapaFoRestRmsContext context)
         {
             _context = context;

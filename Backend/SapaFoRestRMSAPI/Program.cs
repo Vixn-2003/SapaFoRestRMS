@@ -203,6 +203,10 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
+// Payment Service/Repository
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
