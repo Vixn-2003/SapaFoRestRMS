@@ -12,5 +12,7 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<(decimal totalImport, decimal totalExport, decimal totalFirst)> GetTotalImportExportBatches(int ingredientId, DateTime? startDate, DateTime? endDate);
 
         Task<IEnumerable<InventoryBatch>> getBatchById(int id);
+
+        Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse);
     }
 }

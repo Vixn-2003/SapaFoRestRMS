@@ -84,6 +84,8 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<Table> Tables { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+    public DbSet<Warehouse> Warehouses { get; set; } = null!;
+
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
@@ -214,17 +216,44 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
-            entity.Property(e => e.QuantityRemaining).HasColumnType("decimal(18, 2)");
 
-            entity.HasOne(d => d.Ingredient).WithMany(p => p.InventoryBatches)
+            entity.Property(e => e.QuantityRemaining)
+                .HasColumnType("decimal(18, 2)");
+
+            // ====== Quan hệ Ingredient - InventoryBatch ======
+            entity.HasOne(d => d.Ingredient)
+                .WithMany(p => p.InventoryBatches)
                 .HasForeignKey(d => d.IngredientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Inventory__Ingre__2645B050");
 
-            entity.HasOne(d => d.PurchaseOrderDetail).WithMany(p => p.InventoryBatches)
+            // ====== Quan hệ PurchaseOrderDetail - InventoryBatch ======
+            entity.HasOne(d => d.PurchaseOrderDetail)
+                .WithMany(p => p.InventoryBatches)
                 .HasForeignKey(d => d.PurchaseOrderDetailId)
                 .HasConstraintName("FK__Inventory__Purch__2739D489");
+
+            // ====== 🔥 Thêm quan hệ Warehouse - InventoryBatch ======
+            entity.HasOne(d => d.Warehouse)
+                .WithMany(p => p.InventoryBatches)
+                .HasForeignKey(d => d.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict) // tránh xóa kho làm mất batch
+                .HasConstraintName("FK__Inventory__Wareh__WarehouseId");
         });
+
+
+        modelBuilder.Entity<Warehouse>(entity =>
+        {
+            entity.HasKey(e => e.WarehouseId).HasName("PK__Warehouse__ID");
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true);
+        });
+
 
         modelBuilder.Entity<KitchenTicket>(entity =>
         {

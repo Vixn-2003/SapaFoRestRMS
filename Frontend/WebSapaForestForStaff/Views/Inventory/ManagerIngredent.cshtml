@@ -6,8 +6,6 @@
 
 @model WebSapaForestForStaff.DTOs.InventoryPagedViewModel
 
-
-
 <style>
     * {
         margin: 0;
@@ -170,14 +168,6 @@
         letter-spacing: 0.05em;
     }
 
-    .table th.text-right {
-        text-align: center;
-    }
-
-    .table th.text-center {
-        text-align: center;
-    }
-
     .table tbody tr {
         border-bottom: 1px solid #e5e7eb;
         transition: background-color 0.15s;
@@ -195,19 +185,6 @@
 
     .table td.text-right {
         text-align: right;
-    }
-
-    .table td.text-center {
-        text-align: center;
-    }
-
-    .table td.font-medium {
-        font-weight: 500;
-        color: #111827;
-    }
-
-    .table td.text-gray {
-        color: #6b7280;
     }
 
     .action-buttons {
@@ -239,30 +216,6 @@
 
     .action-btn.view:hover {
         background-color: #faf5ff;
-    }
-
-    .action-btn.add {
-        color: #3b82f6;
-    }
-
-    .action-btn.add:hover {
-        background-color: #eff6ff;
-    }
-
-    .action-btn.remove {
-        color: #f97316;
-    }
-
-    .action-btn.remove:hover {
-        background-color: #fff7ed;
-    }
-
-    .action-btn.delete {
-        color: #ef4444;
-    }
-
-    .action-btn.delete:hover {
-        background-color: #fef2f2;
     }
 
     .pagination {
@@ -325,336 +278,277 @@
     .fa-spinner.fa-spin {
         animation: spin 1s linear infinite;
     }
-    
-    /* Style cho highlight */
-    .table td mark {
-        background-color: #fef3c7;
-        padding: 0.125rem 0.25rem;
-        border-radius: 0.125rem;
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+        backdrop-filter: blur(4px);
     }
-    /* Popup Modal - Cải tiến */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-    backdrop-filter: blur(4px);
-}
 
-.modal-content {
-    background: white;
-    border-radius: 12px;
-    width: 900px;
-    max-width: 95%;
-    max-height: 90vh;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.3s ease-out;
-    display: flex;
-    flex-direction: column;
-}
-
-.modal-header {
-    padding: 1.5rem 2rem;
-    border-bottom: 2px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px 12px 0 0;
-}
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.modal-header h2::before {
-    content: "📦";
-    font-size: 1.75rem;
-}
-
-.modal-body {
-    padding: 2rem;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.modal-footer {
-    padding: 1rem 2rem;
-    border-top: 2px solid #e5e7eb;
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    background-color: #f9fafb;
-    border-radius: 0 0 12px 12px;
-}
-
-.close-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.close-btn:hover {
-    background: rgba(239, 68, 68, 0.9);
-    border-color: #ef4444;
-    transform: rotate(90deg);
-}
-
-/* Info Header trong Modal */
-.info-header {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    padding: 1.5rem;
-    border-radius: 8px;
-    border-left: 4px solid #3b82f6;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
-}
-
-.info-header p {
-    margin: 0.5rem 0;
-    font-size: 1rem;
-    color: #1e40af;
-    display: flex;
-    align-items: center;
-}
-
-.info-header strong {
-    font-weight: 600;
-    color: #1e3a8a;
-    min-width: 140px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.info-header strong::before {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-}
-
-.info-header p:first-child strong::before {
-    content: "\f02b"; /* box icon */
-}
-
-.info-header p:last-child strong::before {
-    content: "\f681"; /* balance scale icon */
-}
-
-.info-header span {
-    font-weight: 500;
-    color: #1f2937;
-    background: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 6px;
-}
-
-/* Divider */
-.modal-body hr {
-    border: none;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
-    margin: 1.5rem 0;
-}
-
-.modal-body h4 {
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-    color: #1f2937;
-    font-size: 1.125rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.modal-body h4::before {
-    content: "📋";
-    font-size: 1.25rem;
-}
-
-/* Batch Table Container */
-.batch-table-container {
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.batch-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.batch-table thead {
-    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-}
-
-.batch-table thead tr {
-    border-bottom: 2px solid #d1d5db;
-}
-
-.batch-table th {
-    padding: 1rem;
-    text-align: left;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #374151;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.batch-table tbody tr {
-    border-bottom: 1px solid #f3f4f6;
-    transition: all 0.2s;
-}
-
-.batch-table tbody tr:hover {
-    background-color: #fef3c7;
-    transform: translateX(2px);
-}
-
-.batch-table tbody tr:last-child {
-    border-bottom: none;
-}
-
-.batch-table td {
-    padding: 1rem;
-    font-size: 0.875rem;
-    color: #4b5563;
-}
-
-.batch-table td:first-child {
-    font-weight: 600;
-    color: #3b82f6;
-}
-
-.batch-table tbody tr td {
-    text-align: left;
-}
-
-/* Empty state */
-.batch-table tbody td[colspan] {
-    text-align: center;
-    padding: 3rem;
-    color: #9ca3af;
-    font-style: italic;
-}
-
-/* Animations */
-@@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-/* Scrollbar cho modal body */
-.modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-/* Responsive */
-@@media (max-width: 768px) {
     .modal-content {
-        width: 95%;
-        max-height: 85vh;
+        background: white;
+        border-radius: 12px;
+        width: 900px;
+        max-width: 95%;
+        max-height: 90vh;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;
+        display: flex;
+        flex-direction: column;
     }
 
     .modal-header {
-        padding: 1rem 1.5rem;
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px 12px 0 0;
     }
 
     .modal-header h2 {
-        font-size: 1.25rem;
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .modal-body {
-        padding: 1.5rem;
+        padding: 2rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer {
+        padding: 1rem 2rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .close-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+        background: rgba(239, 68, 68, 0.9);
+        border-color: #ef4444;
+        transform: rotate(90deg);
     }
 
     .info-header {
-        padding: 1rem;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #3b82f6;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
     }
 
     .info-header p {
-        flex-direction: column;
-        align-items: flex-start;
+        margin: 0.5rem 0;
+        font-size: 1rem;
+        color: #1e40af;
+        display: flex;
+        align-items: center;
     }
 
     .info-header strong {
-        min-width: auto;
-        margin-bottom: 0.25rem;
+        font-weight: 600;
+        color: #1e3a8a;
+        min-width: 140px;
+    }
+
+    .info-header span {
+        font-weight: 500;
+        color: #1f2937;
+        background: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
     }
 
     .batch-table-container {
-        overflow-x: auto;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
     .batch-table {
-        min-width: 600px;
+        width: 100%;
+        border-collapse: collapse;
     }
 
-    .batch-table th,
-    .batch-table td {
-        padding: 0.75rem;
+    .batch-table thead {
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    }
+
+    .batch-table thead tr {
+        border-bottom: 2px solid #d1d5db;
+    }
+
+    .batch-table th {
+        padding: 1rem;
+        text-align: left;
         font-size: 0.8rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
-}
 
+    .batch-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s;
+    }
+
+    .batch-table tbody tr:hover {
+        background-color: #fef3c7;
+    }
+
+    .batch-table td {
+        padding: 1rem;
+        font-size: 0.875rem;
+        color: #4b5563;
+    }
+
+    /* Warehouse Select Styles */
+    .warehouse-select {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        background-color: white;
+        cursor: pointer;
+        min-width: 150px;
+        transition: all 0.2s;
+    }
+
+    .warehouse-select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .warehouse-select.changed {
+        border-color: #f59e0b;
+        background-color: #fffbeb;
+    }
+
+    .btn-save-warehouse {
+        padding: 0.4rem 0.8rem;
+        background-color: #10b981;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: none;
+    }
+
+    .btn-save-warehouse:hover {
+        background-color: #059669;
+        transform: translateY(-1px);
+    }
+
+    .btn-save-warehouse.show {
+        display: inline-block;
+    }
+
+    /* Confirmation popup */
+    .confirm-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .confirm-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        max-width: 400px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .confirm-content h3 {
+        margin-bottom: 1rem;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .confirm-content p {
+        margin-bottom: 1.5rem;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+
+    .confirm-buttons {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
 </style>
 
 <div class="container">
     <div class="max-width">
-        <!-- Header -->
         <div class="card">
             <h1 class="header-title">Nguyên liệu</h1>
             <p class="header-subtitle">Quản lý thông tin nguyên liệu</p>
         </div>
 
-        <!-- Filters -->
         <form method="post" asp-controller="ManagerIngredent" asp-action="FilterIngredent" class="card">
-    @Html.AntiForgeryToken()
-    <div class="filter-grid">
+            @Html.AntiForgeryToken()
+            <div class="filter-grid">
                 <div class="form-group">
                     <label class="form-label">Tìm kiếm</label>
                     <input type="text"
@@ -675,21 +569,18 @@
                     <input type="date" name="toDate" class="form-input"
                            value="@((Model.ToDate ?? DateTime.Now).ToString("yyyy-MM-dd"))" />
                 </div>
-    </div>
+            </div>
 
-    <div class="button-group">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-filter"></i> Tìm Kiếm
-        </button>
-        <a asp-page-handler="AddIngredient" class="btn btn-success">
-            <i class="fas fa-plus"></i> Thêm nguyên liệu
-        </a>
-    </div>
-</form>
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter"></i> Tìm Kiếm
+                </button>
+                <a asp-page-handler="AddIngredient" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Thêm nguyên liệu
+                </a>
+            </div>
+        </form>
 
-
-
-        <!-- Table -->
         <div class="table-container">
             <div class="table-wrapper">
                 <table class="table">
@@ -716,7 +607,7 @@
                             <tr>
                                 <td>@stt</td>
                                 <td>@item.IngredientCode</td>
-                                <td>@item.Name</td>                              
+                                <td>@item.Name</td>
                                 <td>@item.Unit</td>
                                 <td class="text-right">@item.TotalQuantity</td>
                                 <td class="text-right">@item.OriginalQuantity</td>
@@ -736,10 +627,8 @@
                         }
                     </tbody>
                 </table>
-
             </div>
 
-            <!-- Pagination -->
             <div class="pagination">
                 <div class="pagination-controls">
                     <span class="pagination-text">Trang</span>
@@ -760,10 +649,10 @@
                     trên @Model.TotalItems kết quả
                 </div>
             </div>
-
         </div>
     </div>
-    <!-- Popup chi tiết nguyên liệu -->
+
+    <!-- Modal chi tiết nguyên liệu -->
     <div id="ingredientModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
@@ -787,11 +676,12 @@
                                 <th>Ngày nhập</th>
                                 <th>Hạn sử dụng</th>
                                 <th>Số lượng còn</th>
-                                <th>Mã đơn nhập</th>
+                                <th>Thuộc kho</th>
+                                <th>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="batchTableBody">
-                            <tr><td colspan="6" style="text-align:center;">Chưa có dữ liệu</td></tr>
+                            <tr><td colspan="7" style="text-align:center;">Chưa có dữ liệu</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -802,387 +692,337 @@
             </div>
         </div>
     </div>
-
 </div>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
 
 <script>
+    let warehouseList = [];
+
+    // Load warehouse list khi trang được tải
+    async function loadWarehouses() {
+        try {
+            const response = await fetch('/api/Warehouse/GetAll');
+            if (response.ok) {
+                warehouseList = await response.json();
+                console.log('Loaded warehouses:', warehouseList);
+            }
+        } catch (error) {
+            console.error('Error loading warehouses:', error);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        loadWarehouses();
+
         const searchInput = document.querySelector('input[name="searchIngredent"]');
         const tableBody = document.querySelector('.table tbody');
-        const paginationInfo = document.querySelector('.pagination-info');
-        const form = searchInput.closest('form');
-
-        let debounceTimer;
-        let allData = []; // Lưu tất cả dữ liệu để tìm kiếm
-
-        // Lưu dữ liệu ban đầu từ bảng
-        function saveInitialData() {
-            const rows = tableBody.querySelectorAll('tr');
-            allData = Array.from(rows).map(row => {
-                const cells = row.querySelectorAll('td');
-                return {
-                    element: row.cloneNode(true),
-                    stt: cells[0]?.textContent.trim() || '',
-                    code: cells[1]?.textContent.trim() || '',
-                    name: cells[2]?.textContent.trim() || '',
-                    unit: cells[3]?.textContent.trim() || '',
-                    totalQty: cells[4]?.textContent.trim() || '',
-                    originalQty: cells[5]?.textContent.trim() || '',
-                    totalImport: cells[6]?.textContent.trim() || '',
-                    totalExport: cells[7]?.textContent.trim() || ''
-                };
-            });
-        }
-
-        saveInitialData();
-
-        // Xử lý sự kiện input với debounce
-        searchInput.addEventListener('input', function(e) {
-            clearTimeout(debounceTimer);
-
-            const searchTerm = e.target.value.trim().toLowerCase();
-
-            // Nếu trống thì hiển thị tất cả
-            if (searchTerm === '') {
-                displayAllData();
-                return;
-            }
-
-            // Debounce 300ms để tránh call API quá nhiều
-            debounceTimer = setTimeout(() => {
-                searchAndDisplay(searchTerm);
-            }, 300);
-        });
-
-        // Tìm kiếm và hiển thị kết quả
-        async function searchAndDisplay(searchTerm) {
-            // Hiển thị loading
-            showLoading();
-
-            try {
-                // Gọi API để tìm kiếm
-                const response = await fetch(`/api/InventoryIngredient/search?term=${encodeURIComponent(searchTerm)}`);
-
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-
-                const results = await response.json();
-
-                // Hiển thị kết quả
-                displayResults(results, searchTerm);
-
-            } catch (error) {
-                console.error('Error:', error);
-                // Nếu lỗi API, tìm kiếm local
-                searchLocal(searchTerm);
-            }
-        }
-
-        // Tìm kiếm local (nếu API lỗi hoặc chưa có API)
-        function searchLocal(searchTerm) {
-            const filtered = allData.filter(item => {
-                return item.name.toLowerCase().includes(searchTerm) ||
-                       item.code.toLowerCase().includes(searchTerm);
-            });
-
-            displayFilteredData(filtered, searchTerm);
-        }
-
-        // Hiển thị kết quả từ API
-        function displayResults(results, searchTerm) {
-            if (!results || results.length === 0) {
-                showNoResults();
-                return;
-            }
-
-            tableBody.innerHTML = results.map((item, index) => `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${highlightText(item.code || 'N/A', searchTerm)}</td>
-                    <td>${highlightText(item.name, searchTerm)}</td>
-                    <td>${item.unit}</td>
-                    <td class="text-right">${item.totalQuantity || 0}</td>
-                    <td class="text-right">${item.originalQuantity || 0}</td>
-                    <td class="text-right">${item.totalImport || 0}</td>
-                    <td class="text-right">${item.totalExport || 0}</td>
-                    <td class="text-center">
-                        <a href="/ManagerIngredent/Detail/${item.ingredientId}"
-                           class="action-btn view"
-                           title="Xem chi tiết">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    </td>
-                </tr>
-            `).join('');
-
-            updatePaginationInfo(results.length);
-        }
-
-        // Hiển thị dữ liệu đã lọc local
-        function displayFilteredData(filtered, searchTerm) {
-            if (filtered.length === 0) {
-                showNoResults();
-                return;
-            }
-
-            tableBody.innerHTML = filtered.map((item, index) => {
-                const row = item.element.cloneNode(true);
-                const cells = row.querySelectorAll('td');
-
-                // Update STT
-                cells[0].textContent = index + 1;
-
-                // Highlight search term
-                cells[1].innerHTML = highlightText(item.code, searchTerm);
-                cells[2].innerHTML = highlightText(item.name, searchTerm);
-
-                return row.outerHTML;
-            }).join('');
-
-            updatePaginationInfo(filtered.length);
-        }
-
-        // Hiển thị tất cả dữ liệu
-        function displayAllData() {
-            if (allData.length === 0) {
-                showNoResults();
-                return;
-            }
-
-            tableBody.innerHTML = allData.map((item, index) => {
-                const row = item.element.cloneNode(true);
-                const cells = row.querySelectorAll('td');
-                cells[0].textContent = index + 1;
-                return row.outerHTML;
-            }).join('');
-
-            updatePaginationInfo(allData.length);
-        }
-
-        // Hiển thị loading
-        function showLoading() {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" style="text-align: center; padding: 2rem; color: #6b7280;">
-                        <i class="fas fa-spinner fa-spin"></i> Đang tìm kiếm...
-                    </td>
-                </tr>
-            `;
-        }
-
-        // Hiển thị không có kết quả
-        function showNoResults() {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" style="text-align: center; padding: 2rem; color: #9ca3af;">
-                        <i class="fas fa-search"></i> Không tìm thấy kết quả nào
-                    </td>
-                </tr>
-            `;
-            updatePaginationInfo(0);
-        }
-
-        // Highlight từ khóa tìm kiếm
-        function highlightText(text, searchTerm) {
-            if (!searchTerm || !text) return text;
-
-            const regex = new RegExp(`(${searchTerm})`, 'gi');
-            return text.replace(regex, '<span style="background-color: #fef3c7; padding: 0.125rem 0.25rem; border-radius: 0.125rem;">$1</span>');
-        }
-
-        // Cập nhật thông tin phân trang
-        function updatePaginationInfo(total) {
-            if (paginationInfo) {
-                if (total === 0) {
-                    paginationInfo.textContent = 'Hiển thị 0 kết quả';
-                } else {
-                    paginationInfo.textContent = `Hiển thị 1 - ${total} trên ${total} kết quả`;
-                }
-            }
-        }
-
-        // Ngăn form submit khi đang tìm kiếm
-        form.addEventListener('submit', function(e) {
-            const searchTerm = searchInput.value.trim();
-            if (searchTerm !== '') {
-                // Nếu đang tìm kiếm, không submit form
-                e.preventDefault();
-            }
-        });
-    });
-
-    document.addEventListener("DOMContentLoaded", function () {
         const modal = document.getElementById("ingredientModal");
         const closeBtns = [document.getElementById("closeModal"), document.getElementById("closeModalFooter")];
 
-        // Close modal handlers
-        closeBtns.forEach(btn => btn.addEventListener("click", () => modal.style.display = "none"));
+        closeBtns.forEach(btn => {
+            if (btn) {
+                btn.addEventListener("click", () => modal.style.display = "none");
+            }
+        });
+
         window.addEventListener("click", e => {
             if (e.target === modal) modal.style.display = "none";
         });
 
-        // View detail button handlers
+        attachDetailViewListeners();
+    });
+
+    function attachDetailViewListeners() {
         document.querySelectorAll(".action-btn.view").forEach(button => {
             button.addEventListener("click", async function (e) {
                 e.preventDefault();
-
-                // Get ingredient ID from href
                 const href = this.getAttribute("href");
                 const ingredientId = href.split('/').pop();
-                const url = `/api/InventoryIngredient/BatchIngredient/${ingredientId}`;
+                await showIngredientDetail(ingredientId);
+            });
+        });
+    }
 
-                console.log("🔍 Fetching data from:", url);
+    async function showIngredientDetail(ingredientId) {
+        const modal = document.getElementById("ingredientModal");
+        const tbody = document.getElementById("batchTableBody");
+        const url = `/api/InventoryIngredient/BatchIngredient/${ingredientId}`;
 
-                try {
-                    // Show loading state
-                    const tbody = document.getElementById("batchTableBody");
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="6" style="text-align:center;padding:2rem;">
-                                <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...
-                            </td>
-                        </tr>
-                    `;
-                    modal.style.display = "flex";
+        try {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:2rem;">
+                        <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...
+                    </td>
+                </tr>
+            `;
+            modal.style.display = "flex";
 
-                    // Fetch data
-                    const response = await fetch(url);
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+            const data = await response.json();
+            console.log("Batch data received:", data);
 
-                    const data = await response.json();
-                    console.log("📦 Data received:", data);
+            if (!Array.isArray(data) || data.length === 0) {
+                displayNoData(tbody);
+                return;
+            }
 
-                    // Validate data
-                    if (!Array.isArray(data) || data.length === 0) {
-                        console.warn("⚠️ Empty or invalid data");
-                        displayNoData(tbody);
-                        return;
-                    }
+            // Display ingredient info
+            const firstBatch = data[0];
+            document.getElementById("mName").textContent = firstBatch.ingredientName || "---";
+            document.getElementById("mUnit").textContent = firstBatch.ingredientUnit || "---";
 
-                    // Display ingredient info (from first item)
-                    const firstBatch = data[0];
-                    document.getElementById("mName").textContent = firstBatch.ingredientName || "---";
-                    document.getElementById("mUnit").textContent = firstBatch.ingredientUnit || "---";
+            // Clear and populate table
+            tbody.innerHTML = "";
 
-                    // Clear and populate table
-                    tbody.innerHTML = "";
+            data.forEach((batch) => {
+                const row = document.createElement("tr");
+                row.dataset.batchId = batch.batchId;
+                row.dataset.originalWarehouseId = batch.warehouseId;
 
-                    data.forEach((batch, index) => {
-                        const row = document.createElement("tr");
+                const createdDate = formatDate(batch.createdAt);
+                const expiryDate = formatDate(batch.expiryDate);
+                const quantity = formatNumber(batch.quantityRemaining);
 
-                        // Format dates safely
-                        const createdDate = formatDate(batch.createdAt);
-                        const expiryDate = formatDate(batch.expiryDate);
+                // Tạo options cho select từ warehouse list
+                const warehouseOptions = warehouseList
+                    .filter(w => w.isActive)
+                    .map(w => `<option value="${w.warehouseId}" ${w.warehouseId === batch.warehouseId ? 'selected' : ''}>${w.name}</option>`)
+                    .join('');
 
-                        // Format quantity
-                        const quantity = formatNumber(batch.quantityRemaining);
+                row.innerHTML = `
+                    <td style="font-weight: 600; color: #3b82f6;">${batch.batchId}</td>
+                    <td>${batch.supplierName || 'N/A'}</td>
+                    <td>${createdDate}</td>
+                    <td>${expiryDate}</td>
+                    <td style="text-align: right; font-weight: 500;">${quantity}</td>
+                    <td>
+                        <select class="warehouse-select" data-batch-id="${batch.batchId}">
+                            ${warehouseOptions}
+                        </select>
+                    </td>
+                    <td style="text-align: center;">
+                        <button class="btn-save-warehouse" data-batch-id="${batch.batchId}">
+                            <i class="fas fa-save"></i> Lưu
+                        </button>
+                    </td>
+                `;
 
-                        row.innerHTML = `
-                            <td style="font-weight: 600; color: #3b82f6;">${batch.batchId || 'N/A'}</td>
-                            <td>${batch.supplierName || 'N/A'}</td>
-                            <td>${createdDate}</td>
-                            <td>${expiryDate}</td>
-                            <td style="text-align: right; font-weight: 500;">${quantity}</td>
-                            <td>${batch.purchaseOrderId || 'N/A'}</td>
-                        `;
+                tbody.appendChild(row);
+            });
 
-                        tbody.appendChild(row);
-                    });
+            attachWarehouseEventListeners();
+            console.log(`Successfully displayed ${data.length} batches`);
 
-                    console.log(`✅ Successfully displayed ${data.length} batches`);
+        } catch (error) {
+            console.error("Error:", error);
+            displayError(tbody, error.message);
+        }
+    }
 
-                } catch (error) {
-                    console.error("💥 Error:", error);
-                    displayError(document.getElementById("batchTableBody"), error.message);
+    function attachWarehouseEventListeners() {
+        // Lắng nghe sự kiện thay đổi warehouse
+        document.querySelectorAll('.warehouse-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const row = this.closest('tr');
+                const originalWarehouseId = parseInt(row.dataset.originalWarehouseId);
+                const newWarehouseId = parseInt(this.value);
+                const saveBtn = row.querySelector('.btn-save-warehouse');
+
+                if (newWarehouseId !== originalWarehouseId) {
+                    this.classList.add('changed');
+                    saveBtn.classList.add('show');
+                } else {
+                    this.classList.remove('changed');
+                    saveBtn.classList.remove('show');
                 }
             });
         });
 
-        // Helper function to format dates
-        function formatDate(dateValue) {
-            if (!dateValue) return 'N/A';
+        // Lắng nghe sự kiện click nút Lưu
+        document.querySelectorAll('.btn-save-warehouse').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const batchId = this.dataset.batchId;
+                const row = this.closest('tr');
+                const select = row.querySelector('.warehouse-select');
+                const newWarehouseId = parseInt(select.value);
+                const newWarehouseName = select.options[select.selectedIndex].text;
 
+                showConfirmDialog(batchId, newWarehouseId, newWarehouseName, row);
+            });
+        });
+    }
+
+    function showConfirmDialog(batchId, newWarehouseId, newWarehouseName, row) {
+        const confirmHtml = `
+            <div class="confirm-popup" id="confirmPopup">
+                <div class="confirm-content">
+                    <h3>
+                        <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
+                        Xác nhận thay đổi kho
+                    </h3>
+                    <p>
+                        Bạn có chắc chắn muốn chuyển lô <strong>#${batchId}</strong> 
+                        sang kho <strong>${newWarehouseName}</strong>?
+                    </p>
+                    <div class="confirm-buttons">
+                        <button class="btn btn-danger" id="cancelBtn">
+                            <i class="fas fa-times"></i> Hủy
+                        </button>
+                        <button class="btn btn-success" id="confirmBtn">
+                            <i class="fas fa-check"></i> Xác nhận
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', confirmHtml);
+
+        const popup = document.getElementById('confirmPopup');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+
+        cancelBtn.addEventListener('click', () => {
+            popup.remove();
+        });
+
+        confirmBtn.addEventListener('click', async () => {
             try {
-                let date;
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
 
-                // Handle different date formats
-                if (typeof dateValue === 'string') {
-                    // DateOnly format: "2025-11-07"
-                    if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                        date = new Date(dateValue + 'T00:00:00');
-                    } else {
-                        date = new Date(dateValue);
-                    }
+                await updateBatchWarehouse(batchId, newWarehouseId, row);
+
+                popup.remove();
+            } catch (error) {
+                alert('Có lỗi xảy ra: ' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận';
+            }
+        });
+    }
+
+    async function updateBatchWarehouse(batchId, newWarehouseId, row) {
+        try {
+            const response = await fetch('/ManagerIngredent/UpdateBatchWarehouse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    batchId: batchId,
+                    warehouseId: newWarehouseId
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể cập nhật kho');
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                row.dataset.originalWarehouseId = newWarehouseId;
+                const select = row.querySelector('.warehouse-select');
+                const saveBtn = row.querySelector('.btn-save-warehouse');
+
+                select.classList.remove('changed');
+                saveBtn.classList.remove('show');
+
+                showSuccessMessage('Cập nhật kho thành công!');
+            } else {
+                throw new Error(result.message || 'Có lỗi xảy ra');
+            }
+
+        } catch (error) {
+            console.error('Error updating warehouse:', error);
+            throw error;
+        }
+    }
+
+    function showSuccessMessage(message) {
+        const successHtml = `
+            <div style="position: fixed; top: 20px; right: 20px; background: #10b981; color: white;
+                        padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        z-index: 10000; animation: slideIn 0.3s ease-out;" id="successMsg">
+                <i class="fas fa-check-circle"></i> ${message}
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', successHtml);
+
+        setTimeout(() => {
+            const msg = document.getElementById('successMsg');
+            if (msg) msg.remove();
+        }, 3000);
+    }
+
+    function formatDate(dateValue) {
+        if (!dateValue) return 'N/A';
+
+        try {
+            let date;
+            if (typeof dateValue === 'string') {
+                if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    date = new Date(dateValue + 'T00:00:00');
                 } else {
                     date = new Date(dateValue);
                 }
-
-                // Check if date is valid
-                if (isNaN(date.getTime())) {
-                    console.warn("Invalid date:", dateValue);
-                    return 'N/A';
-                }
-
-                // Format to Vietnamese locale
-                return date.toLocaleDateString('vi-VN', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-            } catch (e) {
-                console.error("Error formatting date:", dateValue, e);
-                return 'N/A';
+            } else {
+                date = new Date(dateValue);
             }
-        }
 
-        // Helper function to format numbers
-        function formatNumber(value) {
-            if (value === null || value === undefined) return '0.00';
+            if (isNaN(date.getTime())) return 'N/A';
 
-            try {
-                const num = Number(value);
-                if (isNaN(num)) return '0.00';
-                return num.toLocaleString('vi-VN', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-            } catch (e) {
-                console.error("Error formatting number:", value, e);
-                return '0.00';
-            }
+            return date.toLocaleDateString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return 'N/A';
         }
+    }
 
-        // Helper function to display no data message
-        function displayNoData(tbody) {
-            document.getElementById("mName").textContent = "---";
-            document.getElementById("mUnit").textContent = "---";
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align:center;padding:2rem;color:#9ca3af;">
-                        <i class="fas fa-inbox"></i><br>
-                        Không có dữ liệu lô nhập
-                    </td>
-                </tr>
-            `;
-        }
+    function formatNumber(value) {
+        if (value === null || value === undefined) return '0.00';
 
-        // Helper function to display error message
-        function displayError(tbody, message) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align:center;padding:2rem;color:#ef4444;">
-                        <i class="fas fa-exclamation-circle"></i><br>
-                        Có lỗi xảy ra: ${message}
-                    </td>
-                </tr>
-            `;
+        try {
+            const num = Number(value);
+            if (isNaN(num)) return '0.00';
+            return num.toLocaleString('vi-VN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        } catch (e) {
+            return '0.00';
         }
-    });
+    }
+
+    function displayNoData(tbody) {
+        document.getElementById("mName").textContent = "---";
+        document.getElementById("mUnit").textContent = "---";
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center;padding:2rem;color:#9ca3af;">
+                    <i class="fas fa-inbox"></i><br>
+                    Không có dữ liệu lô nhập
+                </td>
+            </tr>
+        `;
+    }
+
+    function displayError(tbody, message) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center;padding:2rem;color:#ef4444;">
+                    <i class="fas fa-exclamation-circle"></i><br>
+                    Có lỗi xảy ra: ${message}
+                </td>
+            </tr>
+        `;
+    }
 </script>
-

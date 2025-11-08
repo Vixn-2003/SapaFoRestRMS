@@ -15,10 +15,12 @@ namespace SapaFoRestRMSAPI.Controllers
     {
 
         private readonly IInventoryIngredientService _inventoryIngredientService;
+        private readonly IWarehouseService _warehouseService;
 
-        public InventoryIngredientController(IInventoryIngredientService inventoryIngredientService)
+        public InventoryIngredientController(IInventoryIngredientService inventoryIngredientService, IWarehouseService warehouseService)
         {
             _inventoryIngredientService = inventoryIngredientService;
+            _warehouseService = warehouseService;
         }
 
         [HttpGet]
@@ -131,6 +133,89 @@ namespace SapaFoRestRMSAPI.Controllers
                     error = ex.Message
                 });
             }
+        }
+
+        [HttpPut("UpdateBatchWarehouse")]
+        public async Task<IActionResult> UpdateBatchWarehouse([FromBody] UpdateBatchWarehouseRequest request)
+        {
+            try
+            {
+               // _logger.LogInformation($"Nhận request cập nhật kho: BatchId={request.BatchId}, WarehouseId={request.WarehouseId}");
+
+                // Validate request
+                if (request.BatchId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "BatchId không hợp lệ"
+                    });
+                }
+
+                if (request.WarehouseId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "WarehouseId không hợp lệ"
+                    });
+                }
+
+                // Kiểm tra warehouse có tồn tại và active không
+                var warehouseExists = await _warehouseService.GetWarehouseById(request.WarehouseId);
+                if (warehouseExists == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = $"Không tìm thấy kho #{request.WarehouseId}"
+                    });
+                }
+
+                // Cập nhật warehouse cho batch
+                var result = await _inventoryIngredientService.UpdateBatchWarehouse(request.BatchId, request.WarehouseId);
+
+                if (result)
+                {
+                   // _logger.LogInformation($"Cập nhật kho thành công: BatchId={request.BatchId}, WarehouseId={request.WarehouseId}");
+
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Cập nhật kho thành công",
+                        data = new
+                        {
+                            batchId = request.BatchId,
+                            warehouseId = request.WarehouseId
+                        }
+                    });
+                }
+                else
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Không thể cập nhật kho"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+               // _logger.LogError(ex, $"Lỗi khi cập nhật kho cho batch {request.BatchId}");
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra khi cập nhật kho",
+                    error = ex.Message
+                });
+            }
+        }
+
+        public class UpdateBatchWarehouseRequest
+        {
+            public int BatchId { get; set; }
+            public int WarehouseId { get; set; }
         }
     }
 

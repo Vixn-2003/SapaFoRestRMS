@@ -142,5 +142,83 @@ namespace WebSapaForestForStaff.Controllers
                 });
             }
         }
+
+        // Thêm vào ManagerIngredentController.cs
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateBatchWarehouse([FromBody] UpdateBatchWarehouseRequest request)
+        {
+            try
+            {
+                var content = new StringContent(
+                    JsonConvert.SerializeObject(request),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await _httpClient.PutAsync(
+                    "api/InventoryIngredient/UpdateBatchWarehouse",
+                    content
+                );
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return Json(new
+                    {
+                        success = false,
+                        message = $"Không thể cập nhật kho: {errorContent}"
+                    });
+                }
+
+                var result = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonConvert.DeserializeObject<dynamic>(result);
+
+                return Json(new
+                {
+                    success = true,
+                    message = "Cập nhật kho thành công"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"Có lỗi xảy ra: {ex.Message}"
+                });
+            }
+        }
+
+
+        // Model class
+        public class UpdateBatchWarehouseRequest
+        {
+            public int BatchId { get; set; }
+            public int WarehouseId { get; set; }
+        }
+
+        // Thêm API endpoint để lấy danh sách kho
+        [HttpGet]
+        [Route("api/Warehouse/GetAll")]
+        public async Task<IActionResult> GetAllWarehouses()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/Warehouse");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return NotFound(new { message = "Không tìm thấy danh sách kho" });
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                return Content(json, "application/json");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
     }
 }

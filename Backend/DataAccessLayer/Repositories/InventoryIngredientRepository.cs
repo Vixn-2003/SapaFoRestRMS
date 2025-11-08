@@ -99,13 +99,29 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<InventoryBatch>> getBatchById(int id)
         {
-            return await _context.InventoryBatches
-                .Include(i => i.Ingredient)
+            return await _context.InventoryBatches.Include(x => x.Warehouse)
+                .Include(i => i.Ingredient)                
                 .Include(i => i.PurchaseOrderDetail)
                     .ThenInclude(p => p.PurchaseOrder)
                         .ThenInclude(o => o.Supplier)
                 .Where(i => i.IngredientId == id)
                 .ToListAsync();
+        }
+
+        public async Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse)
+        {
+            var batch = await _context.InventoryBatches
+                .FirstOrDefaultAsync(b => b.BatchId == idBatch);
+
+            if (batch == null)
+                return false;
+
+
+            batch.WarehouseId = idWarehouse;
+
+            await _context.SaveChangesAsync();
+
+            return true;
         }
 
     }

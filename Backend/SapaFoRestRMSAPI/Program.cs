@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using DomainAccessLayer.Enums;
 using BusinessLogicLayer.Services.Interfaces;
 using BusinessLogicLayer.Services;
+using Microsoft.AspNetCore.Http.Features;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -133,6 +134,7 @@ builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
 builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
 builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 
 
 
@@ -170,6 +172,16 @@ builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 
+
+// ✅ Đảm bảo hỗ trợ multipart form data
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
+
+// ✅ Cấu hình kích thước file upload (nếu cần)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 52428800; // 50MB
+});
 
 
 builder.Services.AddAuthorization(options =>

@@ -1490,6 +1490,26 @@
             display: inline-block;
         }
 
+    .ip-warehouse-select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #475569;
+        border-radius: 4px;
+        background: #1e293b;
+        color: white;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+        .ip-warehouse-select:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .ip-warehouse-select option {
+            background: #1e293b;
+            color: white;
+        }
 </style>
 
 <body>
@@ -1580,6 +1600,7 @@
                                 <th style="width: 50px;">STT</th>
                                 <th style="width: 100px;">Mã NL</th>
                                 <th>Tên nguyên liệu</th>
+                                <th style="width: 150px;">Kho nhập</th>
                                 <th style="width: 90px;">Số lượng</th>
                                 <th style="width: 70px;">Đơn vị</th>
                                 <th style="width: 100px;">Đơn giá</th>
@@ -1814,11 +1835,13 @@
         // ===== DỮ LIỆU TỪ SERVER =====
         const supplierList = @Html.Raw(JsonConvert.SerializeObject(Model.SupplierDTOs));
         const ingredientList = @Html.Raw(JsonConvert.SerializeObject(Model.InventoryIngredientDTOs));
+        const warehouseList = @Html.Raw(JsonConvert.SerializeObject(Model.WarehouseDTOs));
 
         // ===== BIẾN GLOBAL =====
         let ipImportList = [];
         let ipSelectedMaterial = null;
         let ipIsNewMaterial = false;
+        let ipSelectedSupplier = null;
 
         // ===== TOAST NOTIFICATION =====
         function showToast(type, title, message) {
@@ -1901,7 +1924,10 @@
                         CodeSupplier: card.dataset.code
                     };
 
-                    // Cập nhật thông tin nhà cung cấp đã chọn
+                    // ✅ LƯU SUPPLIER ĐÃ CHỌN
+                    ipSelectedSupplier = supplier;
+
+                    // ✅ CẬP NHẬT THÔNG TIN NHÀ CUNG CẤP ĐÃ CHỌN
                     document.getElementById('ipSupplierBtnText').textContent = supplier.Name;
                     document.getElementById('ipSupplierDetail').style.display = 'block';
                     document.getElementById('ipDetailName').textContent = supplier.Name;
@@ -1911,6 +1937,7 @@
                     document.getElementById('ipDetailEmail').textContent = supplier.Email || '-';
                     document.getElementById('ipDetailAddress').textContent = supplier.Address || '-';
 
+                    // ✅ ĐÓNG POPUP VÀ HIỂN thị THÔNG BÁO
                     spClosePopup();
                     showToast('success', 'Đã chọn nhà cung cấp', `Bạn đã chọn ${supplier.Name}`);
                 });
@@ -2166,7 +2193,7 @@
             }
 
             // Tạo object nguyên liệu
-            const material = { code, name, unit, quantity, unitPrice };
+            const material = { code, name, unit, quantity, unitPrice, warehouseId: warehouseList.length > 0 ? warehouseList[0].WarehouseId : 0 };
 
             // Kiểm tra nếu đã có trong danh sách nhập (theo mã)
             const existingIndex = ipImportList.findIndex(item => item.code === code);
@@ -2202,23 +2229,36 @@
             const tbody = document.getElementById('ipMaterialsTableBody');
 
             if (ipImportList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="ip-empty-state">Chưa có nguyên liệu nào. Nhấn "Thêm nguyên liệu" để bắt đầu.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="ip-empty-state">Chưa có nguyên liệu nào. Nhấn "Thêm nguyên liệu" để bắt đầu.</td></tr>';
                 ipUpdateTotal();
                 return;
             }
 
+            // THÊM DÒNG NÀY - Quan trọng!
             tbody.innerHTML = ipImportList.map((item, i) => `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td>${item.code}</td>
-                            <td>${item.name}</td>
-                            <td><input type="number" class="ip-quantity-input" value="${item.quantity}" min="0" step="0.01" data-index="${i}" data-field="quantity"></td>
-                            <td>${item.unit}</td>
-                            <td><input type="number" class="ip-quantity-input" value="${item.unitPrice}" min="0" step="1000" data-index="${i}" data-field="unitPrice"></td>
-                            <td style="font-weight:600;color:#10b981;">${ipFormatCurrency(item.quantity * item.unitPrice)}</td>
-                            <td><button class="ip-btn-remove" data-index="${i}">×</button></td>
-                        </tr>
-                    `).join('');
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${item.code}</td>
+                    <td>${item.name}</td>
+
+                    <!-- CỘT SELECT KHO -->
+                            <td>
+            <select class="ip-warehouse-select" data-index="${i}">
+                ${warehouseList.map(w => `
+                    <option value="${w.WarehouseId}" ${w.WarehouseId === item.warehouseId ? 'selected' : ''}>
+                        ${w.Name}
+                    </option>
+                `).join('')}
+            </select>
+        </td>
+
+                    <td><input type="number" class="ip-quantity-input" value="${item.quantity}" min="0" step="0.01" data-index="${i}" data-field="quantity"></td>
+                    <td>${item.unit}</td>
+                    <td><input type="number" class="ip-quantity-input" value="${item.unitPrice}" min="0" step="1000" data-index="${i}" data-field="unitPrice"></td>
+                    <td style="font-weight:600;color:#10b981;">${ipFormatCurrency(item.quantity * item.unitPrice)}</td>
+                    <td><button class="ip-btn-remove" data-index="${i}">×</button></td>
+                </tr>
+            `).join('');
 
             // Event cho input số lượng và đơn giá
             tbody.querySelectorAll('input').forEach(input => {
@@ -2226,14 +2266,24 @@
                     const idx = e.target.dataset.index;
                     const field = e.target.dataset.field;
                     const value = parseFloat(e.target.value) || 0;
-
                     if (value < 0) {
                         e.target.value = 0;
                         return;
                     }
-
                     ipImportList[idx][field] = value;
                     ipRenderImportTable();
+                });
+            });
+
+            // Event cho select kho
+            tbody.querySelectorAll('.ip-warehouse-select').forEach(select => {
+                select.addEventListener('change', e => {
+                    const idx = e.target.dataset.index;
+                    const warehouseId = parseInt(e.target.value);
+                    ipImportList[idx].warehouseId = warehouseId;
+
+                    const warehouseName = warehouseList.find(w => w.WarehouseId === warehouseId)?.Name || '';
+                    showToast('success', 'Đã cập nhật kho', `${ipImportList[idx].name} → ${warehouseName}`);
                 });
             });
 
@@ -2251,13 +2301,12 @@
             ipUpdateTotal();
         }
 
-        // ===== TỔNG TIỀN =====
         function ipUpdateTotal() {
             const total = ipImportList.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
             document.getElementById('ipTotalAmount').textContent = ipFormatCurrency(total);
         }
 
-        // ===== CẬP NHẬT THÀNH TIỀN TRONG MODAL =====
+
         function ipUpdateModalTotal() {
             const qty = parseFloat(document.getElementById('ipFormQuantity').value) || 0;
             const price = parseFloat(document.getElementById('ipFormUnitPrice').value) || 0;
@@ -2322,7 +2371,7 @@
                 const fileInput = document.getElementById('uploadProof');
                 const hasImage = fileInput.files.length > 0;
 
-                // Kiểm tra điều kiện bắt buộc
+                // ✅ 1. KIỂM TRA ĐIỀU KIỆN BẮT BUỘC
                 if (!hasSupplier) {
                     showToast('error', 'Thiếu thông tin', 'Vui lòng chọn nhà cung cấp.');
                     return;
@@ -2344,7 +2393,11 @@
                     return;
                 }
 
-                // Lấy dữ liệu người tạo & người kiểm
+                // ✅ 2. CHUẨN BỊ DỮ LIỆU
+                const importCode = 'PO-2025-001';
+                const importDate = document.querySelector('input[type="datetime-local"]').value;
+                const supplierId = ipSelectedSupplier ? ipSelectedSupplier.SupplierId : 0;
+
                 const creator = {
                     name: 'Nguyễn Văn C',
                     phone: '0123456789'
@@ -2354,11 +2407,13 @@
                     phone: '0123456788'
                 };
 
-                // Lấy file hình ảnh
                 const proofFile = fileInput.files[0];
-                const formData = new FormData();
 
-                // Thêm dữ liệu vào formData
+                // ✅ 3. TẠO FormData
+                const formData = new FormData();
+                formData.append('ImportCode', importCode);
+                formData.append('ImportDate', importDate);
+                formData.append('SupplierId', supplierId.toString());
                 formData.append('SupplierName', supplierName);
                 formData.append('CreatorName', creator.name);
                 formData.append('CreatorPhone', creator.phone);
@@ -2366,25 +2421,90 @@
                 formData.append('CheckerPhone', checker.phone);
                 formData.append('ProofFile', proofFile);
 
-                // Thêm danh sách nguyên liệu (JSON)
-                formData.append('ImportList', JSON.stringify(ipImportList));
+                // ✅ 4. CONVERT DANH SÁCH NGUYÊN LIỆU (PascalCase)
+                const importListFormatted = ipImportList.map(item => ({
+                    Code: item.code,
+                    Name: item.name,
+                    Unit: item.unit,
+                    Quantity: item.quantity,
+                    UnitPrice: item.unitPrice,
+                    WarehouseId: item.warehouseId
+                }));
+
+                const importListJson = JSON.stringify(importListFormatted);
+                formData.append('ImportList', importListJson);
+
+                // ✅ 5. LOG ĐỂ DEBUG (QUAN TRỌNG!)
+                console.log('=== DEBUGGING INFO ===');
+                console.log('ipImportList:', ipImportList);
+                console.log('importListFormatted:', importListFormatted);
+                console.log('ImportList JSON:', importListJson);
+                console.log('ImportList JSON length:', importListJson.length);
+                console.log('FormData entries:');
+                for (let pair of formData.entries()) {
+                    if (pair[1] instanceof File) {
+                        console.log(pair[0] + ': File - ' + pair[1].name + ' (' + pair[1].size + ' bytes)');
+                    } else {
+                        console.log(pair[0] + ':', pair[1]);
+                    }
+                }
 
                 try {
+                    // ✅ 6. HIỂN THỊ LOADING
+                    showToast('warning', 'Đang xử lý...', 'Vui lòng đợi trong giây lát');
+
+                    // ✅ 7. GỬI REQUEST
                     const response = await fetch('/ImportInventory/SubmitImport', {
                         method: 'POST',
                         body: formData
                     });
 
+                    console.log('Response status:', response.status);
+                    console.log('Response ok:', response.ok);
+
+                    // ✅ 8. XỬ LÝ KẾT QUẢ
                     if (response.ok) {
-                        showToast('success', 'Thành công', 'Đơn nhập hàng đã được gửi lên server.');
+                        const result = await response.json();
+                        console.log('✅ Success result:', result);
+                        showToast('success', 'Thành công!', result.message || 'Đơn nhập hàng đã được tạo thành công!');
+
+                        // ✅ 9. RESET FORM SAU KHI THÀNH CÔNG
                         ipImportList = [];
+                        ipSelectedSupplier = null;
                         ipRenderImportTable();
+
+                        document.getElementById('ipSupplierBtnText').textContent = '-- Chọn nhà cung cấp --';
+                        document.getElementById('ipSupplierDetail').style.display = 'none';
+                        document.getElementById('chkCreator').checked = false;
+                        document.getElementById('chkChecker').checked = false;
+                        document.getElementById('creatorInfo').style.display = 'none';
+                        document.getElementById('checkerInfo').style.display = 'none';
+                        fileInput.value = '';
+                        document.getElementById('proofPreview').innerHTML = '';
+
                     } else {
-                        showToast('error', 'Lỗi', 'Không thể gửi đơn nhập hàng lên server.');
+                        // ✅ 10. XỬ LÝ LỖI TỪ SERVER
+                        let errorMessage = 'Không thể gửi đơn nhập hàng.';
+
+                        try {
+                            const errorData = await response.json();
+                            console.log('❌ Error result:', errorData);
+                            errorMessage = errorData.message || errorMessage;
+                        } catch (e) {
+                            // Nếu response không phải JSON, đọc text
+                            const errorText = await response.text();
+                            console.log('❌ Error text:', errorText);
+                            errorMessage = errorText || errorMessage;
+                        }
+
+                        showToast('error', 'Lỗi!', errorMessage);
                     }
+
                 } catch (err) {
-                    console.error(err);
-                    showToast('error', 'Lỗi kết nối', 'Không thể kết nối đến server.');
+                    console.error('❌ Fetch error:', err);
+                    console.error('Error details:', err.message);
+                    console.error('Stack trace:', err.stack);
+                    showToast('error', 'Lỗi kết nối!', 'Không thể kết nối đến server: ' + err.message);
                 }
             });
 

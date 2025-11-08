@@ -57,6 +57,7 @@ namespace BusinessAccessLayer.Mapping
             CreateMap<InventoryBatch, BatchIngredientDTO>()
                 .ForMember(dest => dest.IngredientName, opt => opt.MapFrom(src => src.Ingredient.Name))
                 .ForMember(dest => dest.IngredientUnit, opt => opt.MapFrom(src => src.Ingredient.Unit))
+                .ForMember(dest => dest.WarehouseName, opt => opt.MapFrom(src => src.Warehouse.Name))
                 .ForMember(dest => dest.PurchaseOrderId, opt => opt.MapFrom(src => src.PurchaseOrderDetail.PurchaseOrderId))
                 .ForMember(dest => dest.OrderDate, opt => opt.MapFrom(src => src.PurchaseOrderDetail.PurchaseOrder.OrderDate))
                 .ForMember(dest => dest.OrderStatus, opt => opt.MapFrom(src => src.PurchaseOrderDetail.PurchaseOrder.Status))
@@ -64,6 +65,8 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.PurchaseOrderDetail.PurchaseOrder.Supplier.Name))
                 .ForMember(dest => dest.SupplierCode, opt => opt.MapFrom(src => src.PurchaseOrderDetail.PurchaseOrder.Supplier.CodeSupplier))
                 .ForMember(dest => dest.SupplierPhone, opt => opt.MapFrom(src => src.PurchaseOrderDetail.PurchaseOrder.Supplier.Phone));
+            CreateMap<WarehouseDTO, Warehouse>();
+            CreateMap<Warehouse, WarehouseDTO>();
         }
     }
 }

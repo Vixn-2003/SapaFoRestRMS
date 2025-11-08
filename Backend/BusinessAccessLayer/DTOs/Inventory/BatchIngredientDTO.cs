@@ -14,6 +14,9 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public DateOnly? ExpiryDate { get; set; }
         public DateTime? CreatedAt { get; set; }
 
+        public int WarehouseId { get; set; }
+        public string WarehouseName { get; set; }
+
         // Thông tin nguyên liệu
         public int IngredientId { get; set; }
         public string IngredientName { get; set; } = string.Empty;

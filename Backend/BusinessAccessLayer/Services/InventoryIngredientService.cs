@@ -40,5 +40,11 @@ namespace BusinessAccessLayer.Services
             var batches = await _unitOfWork.InventoryIngredient.getBatchById(ingredientId);
             return _mapper.Map<IEnumerable<BatchIngredientDTO>>(batches);
         }
+
+        public async Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse)
+        {
+            var result = await _unitOfWork.InventoryIngredient.UpdateBatchWarehouse(idBatch,idWarehouse);
+            return result;
+        }
     }
 }

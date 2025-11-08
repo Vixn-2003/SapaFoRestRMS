@@ -13,6 +13,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<IEnumerable<InventoryIngredientDTO>> GetAllIngredient();
         Task<(decimal TImport, decimal TExport, decimal totalFirst)> GetImportExportBatchesId(int id, DateTime? StartDate, DateTime? EndDate);
         Task<IEnumerable<BatchIngredientDTO>> GetBatchesAsync(int id);
+        Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse);
 
     }
 }

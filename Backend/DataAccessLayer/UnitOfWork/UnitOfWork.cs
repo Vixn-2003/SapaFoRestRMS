@@ -22,6 +22,10 @@ namespace DataAccessLayer.UnitOfWork
 
         private IManagerSupplierRepository _supplierRepository;
 
+        private IWarehouseRepository _warehouseRepository;
+
+
+        public IWarehouseRepository Warehouse => _warehouseRepository ??= new WarehouseRepository(_context);
         public IManagerSupplierRepository Supplier => _supplierRepository ??= new ManagerSupplierRepository(_context);
 
         public IManagerMenuRepository MenuItem => _menuRepository ??= new ManagerMenuRepository(_context);

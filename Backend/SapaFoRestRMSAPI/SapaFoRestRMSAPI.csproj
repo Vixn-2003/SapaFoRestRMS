@@ -10,6 +10,7 @@
 		<PackageReference Include="Google.Apis.Drive.v3" Version="1.71.0.3905" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.16" />
 		<PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="8.0.11" />
 		<PackageReference Include="Microsoft.AspNetCore.OData" Version="8.2.5" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.16">
 			<PrivateAssets>all</PrivateAssets>
