@@ -51,5 +51,15 @@ namespace BusinessAccessLayer.Services
         /// Get all menu categories for stations
         /// </summary>
         Task<List<string>> GetStationCategoriesAsync();
+
+        /// <summary>
+        /// Lấy danh sách các order đã hoàn thành gần đây (trong X phút)
+        /// </summary>
+        Task<List<KitchenOrderCardDto>> GetRecentlyFulfilledOrdersAsync(int minutesAgo = 10);
+
+        /// <summary>
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// </summary>
+        Task<StatusUpdateResponse> RecallOrderDetailAsync(RecallOrderDetailRequest request);
     }
 }

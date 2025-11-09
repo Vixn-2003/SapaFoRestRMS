@@ -1,7 +1,7 @@
 ﻿// Kitchen Display System JavaScript - FIXED VERSION
 // File: wwwroot/js/kitchenDisplay.js
 
-const API_BASE = 'https://localhost:7096/api';
+const API_BASE = window.API_BASE_URL || 'https://localhost:7096/api';
 let signalRConnection = null;
 let currentOrders = [];
 let currentGroupedItems = [];
@@ -25,6 +25,12 @@ let currentViewMode = 'all';
                     loadGroupedItems();
                 } else {
                     loadActiveOrders();
+                }
+                
+                // Auto-refresh completed orders nếu đang hiển thị
+                const completedColumn = document.getElementById('completedOrdersColumn');
+                if (completedColumn && !completedColumn.classList.contains('hidden')) {
+                    loadRecentlyFulfilledOrders();
                 }
             }, 30000);
 
@@ -270,6 +276,12 @@ async function completeOrder(orderId) {
         if (result.success) {
             showSuccess('Đơn hàng đã hoàn thành!');
             removeOrder(orderId);
+            
+            // Tự động reload đơn vừa hoàn thành nếu đang hiển thị
+            const completedColumn = document.getElementById('completedOrdersColumn');
+            if (completedColumn && !completedColumn.classList.contains('hidden')) {
+                loadRecentlyFulfilledOrders();
+            }
         } else {
             showError(result.message);
         }
@@ -711,6 +723,12 @@ async function fulfillSelectedItems() {
         selectedModalItems.clear();
         loadActiveOrders();
         closeOrderModal();
+        
+        // Tự động reload đơn vừa hoàn thành nếu đang hiển thị
+        const completedColumn = document.getElementById('completedOrdersColumn');
+        if (completedColumn && !completedColumn.classList.contains('hidden')) {
+            loadRecentlyFulfilledOrders();
+        }
     } catch (error) {
         showError('Không thể hoàn thành món');
     }
@@ -787,5 +805,204 @@ function showError(message) {
         toastr.error(message);
     } else {
         console.error('ERROR:', message);
+    }
+}
+
+// ===========================
+// RECENTLY FULFILLED ORDERS
+// ===========================
+
+// Toggle hiển thị đơn vừa hoàn thành (cột bên trái)
+function toggleRecentlyFulfilled() {
+    const column = document.getElementById('completedOrdersColumn');
+    const btn = document.getElementById('btnShowRecentlyFulfilled');
+    
+    if (!column) {
+        showError('Không tìm thấy cột đơn vừa hoàn thành');
+        return;
+    }
+
+    // Toggle hiển thị
+    if (column.classList.contains('hidden')) {
+        // Hiển thị cột
+        column.classList.remove('hidden');
+        if (btn) {
+            btn.classList.remove('btn-outline-info');
+            btn.classList.add('btn-info');
+        }
+        // Load data
+        loadRecentlyFulfilledOrders();
+    } else {
+        // Ẩn cột
+        column.classList.add('hidden');
+        if (btn) {
+            btn.classList.remove('btn-info');
+            btn.classList.add('btn-outline-info');
+        }
+    }
+}
+
+// Load danh sách đơn vừa hoàn thành
+async function loadRecentlyFulfilledOrders() {
+    const gridContainer = document.getElementById('completedOrdersGrid');
+    if (!gridContainer) return;
+
+    try {
+        gridContainer.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="mdi mdi-loading mdi-spin" style="font-size: 24px;"></i>
+                <p class="mt-2">Đang tải...</p>
+            </div>
+        `;
+
+        const response = await fetch(`${API_BASE}/KitchenDisplay/recently-fulfilled-orders?minutesAgo=10`);
+        const result = await response.json();
+
+        if (result.success) {
+            renderRecentlyFulfilledOrders(result.data);
+        } else {
+            gridContainer.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="mdi mdi-alert"></i> ${result.message || 'Không thể tải danh sách'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading recently fulfilled orders:', error);
+        gridContainer.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="mdi mdi-alert-circle"></i> Lỗi kết nối: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// Render danh sách đơn vừa hoàn thành (style giống hình - màu xanh lá, có checkmark)
+function renderRecentlyFulfilledOrders(orders) {
+    const gridContainer = document.getElementById('completedOrdersGrid');
+    const countBadge = document.getElementById('completedOrdersCount');
+    
+    if (!gridContainer) return;
+
+    if (!orders || orders.length === 0) {
+        gridContainer.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="mdi mdi-check-circle" style="font-size: 48px; color: #28a745;"></i>
+                <p class="mt-3">Không có đơn nào hoàn thành trong 10 phút gần đây</p>
+            </div>
+        `;
+        if (countBadge) countBadge.textContent = '0';
+        return;
+    }
+
+    // Update count
+    if (countBadge) countBadge.textContent = orders.length;
+
+    let html = '';
+    
+    orders.forEach(order => {
+        // Kiểm tra và lấy items (có thể là Items hoặc items)
+        const items = order.Items || order.items || [];
+        
+        // Bỏ qua order không có items
+        if (!items || items.length === 0) {
+            console.warn('Order without items:', order);
+            return;
+        }
+        
+        const waitingMinutes = order.WaitingMinutes || order.waitingMinutes || 0;
+        const minutes = Math.floor(waitingMinutes);
+        const seconds = Math.floor((waitingMinutes - minutes) * 60);
+        const timeDisplay = `${minutes}:${String(seconds).padStart(2, '0')}`;
+        
+        const orderNumber = order.OrderNumber || order.orderNumber || `#${order.OrderId || order.orderId || 'N/A'}`;
+        
+        html += `
+            <div class="completed-order-card">
+                <div class="order-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>#${orderNumber}</span>
+                        <span>${timeDisplay}</span>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <strong>Dine In</strong>
+                </div>
+                <div class="mb-2">
+                    <strong>ENTREES</strong>
+                </div>
+                <div>
+        `;
+
+        items.forEach(item => {
+            const menuItemName = item.MenuItemName || item.menuItemName || 'N/A';
+            const quantity = item.Quantity || item.quantity || 1;
+            const orderDetailId = item.OrderDetailId || item.orderDetailId || 0;
+            const notes = item.Notes || item.notes || '';
+            
+            const itemNameEscaped = menuItemName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const notesEscaped = notes ? notes.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+            const menuItemNameEscaped = menuItemName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            html += `
+                    <div class="completed-item">
+                        <i class="mdi mdi-check-circle completed-item-check"></i>
+                        <div class="flex-grow-1">
+                            <span><strong>${quantity}</strong> ${menuItemNameEscaped}</span>
+                            ${notes ? `<br><small class="text-muted"><i class="mdi mdi-note-text"></i> ${notesEscaped}</small>` : ''}
+                        </div>
+                        <button class="btn btn-sm btn-outline-warning ms-2" 
+                                onclick="recallOrderDetail(${orderDetailId}, '${itemNameEscaped}')"
+                                title="Khôi phục món này">
+                            <i class="mdi mdi-restore"></i>
+                        </button>
+                    </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    gridContainer.innerHTML = html;
+}
+
+// Khôi phục (Recall) một order detail
+async function recallOrderDetail(orderDetailId, itemName) {
+    if (!confirm(`Xác nhận khôi phục món "${itemName}"?\n\nMón này sẽ quay lại trạng thái đang xử lý.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/KitchenDisplay/recall-order-detail`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                orderDetailId: orderDetailId,
+                userId: 1 // TODO: Lấy từ session/user context
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess(`Đã khôi phục món "${itemName}" thành công`);
+            // Reload danh sách đơn vừa hoàn thành
+            const column = document.getElementById('completedOrdersColumn');
+            if (column && !column.classList.contains('hidden')) {
+                loadRecentlyFulfilledOrders();
+            }
+            // Reload orders chính
+            refreshOrders();
+        } else {
+            showError(result.message || 'Không thể khôi phục món');
+        }
+    } catch (error) {
+        console.error('Error recalling order detail:', error);
+        showError('Lỗi kết nối: ' + error.message);
     }
 }

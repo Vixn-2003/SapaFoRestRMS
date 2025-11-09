@@ -657,14 +657,15 @@ namespace SapaFoRestRMSAPI.Services
             var menuItemCourseTypeMap = menuItems.ToDictionary(m => m.MenuItemId, m => m.CourseType);
 
             // Define specific items for each order to ensure variety
+            // MenuItems index: 0-3 (Nướng), 4-9 (Xào-Chiên), 10 (Lẩu), 11-13 (Canh), 14-15 (Khai Vị - Salad), 16-17 (Tráng miệng)
             var orderItemsConfig = new List<List<int>>
             {
-                // Order 1: 7 món (nhiều món)
-                new List<int> { 0, 1, 4, 5, 6, 8, 9 }, // Thịt nướng, Gà nướng, Rau xào, Mực xào, Thịt bò xào, Canh chua cá, Lẩu thái
-                // Order 2: 8 món (rất nhiều món)
-                new List<int> { 0, 2, 3, 4, 5, 6, 7, 8, 10 }, // Nhiều món đa dạng
-                // Order 3: 6 món (nhiều món vừa phải)
-                new List<int> { 1, 3, 5, 7, 9, 11 } // Gà nướng, Cá nướng, Mực xào, Gà xào sả ớt, Lẩu thái, Canh chua tôm
+                // Order 1: 7 món (bao gồm Khai Vị)
+                new List<int> { 0, 1, 4, 5, 6, 8, 14 }, // Thịt nướng, Gà nướng, Rau xào, Mực xào, Thịt bò xào, Khoai tây chiên, Salad rau củ (Khai Vị)
+                // Order 2: 9 món (bao gồm Khai Vị và Tráng miệng)
+                new List<int> { 0, 2, 3, 4, 5, 6, 7, 15, 16 }, // Nhiều món đa dạng + Salad tôm (Khai Vị) + Chè đậu xanh (Tráng miệng)
+                // Order 3: 6 món (bao gồm Khai Vị)
+                new List<int> { 1, 3, 5, 7, 9, 14 } // Gà nướng, Cá nướng, Mực xào, Gà xào sả ớt, Cá chiên, Salad rau củ (Khai Vị)
             };
 
             for (int i = 0; i < orders.Count; i++)

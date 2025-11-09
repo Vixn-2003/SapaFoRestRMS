@@ -231,5 +231,57 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// GET: api/KitchenDisplay/recently-fulfilled-orders?minutesAgo=10
+        /// Lấy danh sách các order đã hoàn thành gần đây (trong X phút)
+        /// </summary>
+        [HttpGet("recently-fulfilled-orders")]
+        public async Task<IActionResult> GetRecentlyFulfilledOrders([FromQuery] int minutesAgo = 10)
+        {
+            try
+            {
+                var orders = await _kitchenService.GetRecentlyFulfilledOrdersAsync(minutesAgo);
+                return Ok(new { success = true, data = orders });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/recall-order-detail
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// </summary>
+        [HttpPost("recall-order-detail")]
+        public async Task<IActionResult> RecallOrderDetail([FromBody] RecallOrderDetailRequest request)
+        {
+            try
+            {
+                var response = await _kitchenService.RecallOrderDetailAsync(request);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                // Broadcast real-time update via SignalR
+                await _hubContext.Clients.All.SendAsync("ItemStatusChanged", new KitchenStatusChangeNotification
+                {
+                    OrderId = 0,
+                    OrderDetailId = request.OrderDetailId,
+                    NewStatus = "Pending",
+                    Timestamp = DateTime.Now,
+                    ChangedBy = $"User {request.UserId}"
+                });
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }
