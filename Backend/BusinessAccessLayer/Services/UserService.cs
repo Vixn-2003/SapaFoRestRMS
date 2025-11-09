@@ -5,13 +5,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
-using BusinessAccessLayer.Common.Pagination;
 using BusinessAccessLayer.DTOs.Users;
 using BusinessAccessLayer.Services.Interfaces;
-using DataAccessLayer.Dbcontext;
+using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace BusinessAccessLayer.Services
 {
@@ -19,13 +17,15 @@ namespace BusinessAccessLayer.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly SapaFoRestRmsContext _context;
+        private readonly IRoleRepository _roleRepository;
+        private readonly IEmailService _emailService;
 
-        public UserService(IUnitOfWork unitOfWork, IMapper mapper, SapaFoRestRmsContext context)
+        public UserService(IUnitOfWork unitOfWork, IMapper mapper, IRoleRepository roleRepository, IEmailService emailService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _context = context;
+            _roleRepository = roleRepository;
+            _emailService = emailService;
         }
 
         public async Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct = default)
@@ -38,7 +38,7 @@ namespace BusinessAccessLayer.Services
             {
                 var userDto = _mapper.Map<UserDto>(user);
                 // Load Role name
-                var role = await _context.Roles.FindAsync(new object[] { user.RoleId }, ct);
+                var role = await _roleRepository.GetByIdAsync(user.RoleId);
                 userDto.RoleName = role?.RoleName ?? "Unknown";
                 userDtos.Add(userDto);
             }
@@ -56,7 +56,7 @@ namespace BusinessAccessLayer.Services
 
             var userDto = _mapper.Map<UserDto>(user);
             // Load Role name
-            var role = await _context.Roles.FindAsync(new object[] { user.RoleId }, ct);
+            var role = await _roleRepository.GetByIdAsync(user.RoleId);
             userDto.RoleName = role?.RoleName ?? "Unknown";
 
             return userDto;
@@ -64,79 +64,79 @@ namespace BusinessAccessLayer.Services
 
         public async Task<UserListResponse> SearchAsync(UserSearchRequest request, CancellationToken ct = default)
         {
-            // Start with base query - only non-deleted users
-            var query = _context.Users
-                .Include(u => u.Role)
-                .Where(u => u.IsDeleted == false)
-                .AsQueryable();
+            // Get all users from repository (already filtered by IsDeleted = false)
+            var allUsers = await _unitOfWork.Users.GetAllAsync();
+            var usersList = allUsers.ToList();
 
             // Apply search term (search in FullName, Email, Phone)
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
             {
                 var searchTerm = request.SearchTerm.Trim().ToLower();
-                query = query.Where(u =>
+                usersList = usersList.Where(u =>
                     (u.FullName != null && u.FullName.ToLower().Contains(searchTerm)) ||
                     (u.Email != null && u.Email.ToLower().Contains(searchTerm)) ||
                     (u.Phone != null && u.Phone.ToLower().Contains(searchTerm))
-                );
+                ).ToList();
             }
 
             // Apply RoleId filter
             if (request.RoleId.HasValue)
             {
-                query = query.Where(u => u.RoleId == request.RoleId.Value);
+                usersList = usersList.Where(u => u.RoleId == request.RoleId.Value).ToList();
             }
 
             // Apply Status filter
             if (request.Status.HasValue)
             {
-                query = query.Where(u => u.Status == request.Status.Value);
+                usersList = usersList.Where(u => u.Status == request.Status.Value).ToList();
             }
 
             // Apply sorting
             var sortBy = string.IsNullOrWhiteSpace(request.SortBy) ? "FullName" : request.SortBy;
             var sortOrder = string.IsNullOrWhiteSpace(request.SortOrder) ? "asc" : request.SortOrder.ToLower();
 
-            query = sortOrder == "desc" ? sortBy switch
+            var sortedUsers = sortOrder == "desc" ? sortBy switch
             {
-                "FullName" => query.OrderByDescending(u => u.FullName),
-                "Email" => query.OrderByDescending(u => u.Email),
-                "Phone" => query.OrderByDescending(u => u.Phone),
-                "RoleId" => query.OrderByDescending(u => u.RoleId),
-                "Status" => query.OrderByDescending(u => u.Status),
-                "CreatedAt" => query.OrderByDescending(u => u.CreatedAt),
-                _ => query.OrderByDescending(u => u.FullName)
+                "FullName" => usersList.OrderByDescending(u => u.FullName),
+                "Email" => usersList.OrderByDescending(u => u.Email),
+                "Phone" => usersList.OrderByDescending(u => u.Phone),
+                "RoleId" => usersList.OrderByDescending(u => u.RoleId),
+                "Status" => usersList.OrderByDescending(u => u.Status),
+                "CreatedAt" => usersList.OrderByDescending(u => u.CreatedAt),
+                _ => usersList.OrderByDescending(u => u.FullName)
             } : sortBy switch
             {
-                "FullName" => query.OrderBy(u => u.FullName),
-                "Email" => query.OrderBy(u => u.Email),
-                "Phone" => query.OrderBy(u => u.Phone),
-                "RoleId" => query.OrderBy(u => u.RoleId),
-                "Status" => query.OrderBy(u => u.Status),
-                "CreatedAt" => query.OrderBy(u => u.CreatedAt),
-                _ => query.OrderBy(u => u.FullName)
+                "FullName" => usersList.OrderBy(u => u.FullName),
+                "Email" => usersList.OrderBy(u => u.Email),
+                "Phone" => usersList.OrderBy(u => u.Phone),
+                "RoleId" => usersList.OrderBy(u => u.RoleId),
+                "Status" => usersList.OrderBy(u => u.Status),
+                "CreatedAt" => usersList.OrderBy(u => u.CreatedAt),
+                _ => usersList.OrderBy(u => u.FullName)
             };
 
             // Get total count before pagination
-            var totalCount = await query.CountAsync(ct);
+            var totalCount = sortedUsers.Count();
 
             // Apply pagination
             var page = request.Page <= 0 ? 1 : request.Page;
             var pageSize = request.PageSize <= 0 ? 10 : request.PageSize;
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-            var users = await query
+            var paginatedUsers = sortedUsers
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync(ct);
+                .ToList();
 
-            // Map to DTOs
-            var userDtos = users.Select(user =>
+            // Map to DTOs and load Role names
+            var userDtos = new List<UserDto>();
+            foreach (var user in paginatedUsers)
             {
                 var userDto = _mapper.Map<UserDto>(user);
-                userDto.RoleName = user.Role?.RoleName ?? "Unknown";
-                return userDto;
-            }).ToList();
+                var role = await _roleRepository.GetByIdAsync(user.RoleId);
+                userDto.RoleName = role?.RoleName ?? "Unknown";
+                userDtos.Add(userDto);
+            }
 
             return new UserListResponse
             {
@@ -177,9 +177,35 @@ namespace BusinessAccessLayer.Services
             await _unitOfWork.Users.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
+            // Send credentials to user's email (best-effort)
+            try
+            {
+                var subject = "Tài khoản SapaFoRestRMS đã được tạo";
+                var body = $@"
+<div style='font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;'>
+  <p>Chào {request.FullName},</p>
+  <p>Tài khoản của bạn đã được tạo trên hệ thống SapaFoRest RMS.</p>
+  <p><strong>Thông tin đăng nhập:</strong></p>
+  <ul>
+    <li>Email: <strong>{request.Email}</strong></li>
+    <li>Mật khẩu tạm thời: <strong>{request.Password}</strong></li>
+  </ul>
+  <p>Vui lòng đăng nhập và đổi mật khẩu sau lần đăng nhập đầu tiên để đảm bảo an toàn.</p>
+  <p>Trân trọng,</p>
+  <p>SapaFoRest RMS</p>
+  <hr />
+  <small>Đây là email tự động, vui lòng không trả lời.</small>
+</div>";
+                await _emailService.SendAsync(request.Email, subject, body);
+            }
+            catch
+            {
+                // Intentionally swallow email errors to not block account creation
+            }
+
             // Map to DTO for response
             var userDto = _mapper.Map<UserDto>(user);
-            var role = await _context.Roles.FindAsync(new object[] { user.RoleId }, ct);
+            var role = await _roleRepository.GetByIdAsync(user.RoleId);
             userDto.RoleName = role?.RoleName ?? "Unknown";
 
             return userDto;
@@ -209,6 +235,33 @@ namespace BusinessAccessLayer.Services
 
             await _unitOfWork.Users.UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<UserDto> UpdateProfileAsync(int id, UserProfileUpdateRequest request, CancellationToken ct = default)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.IsDeleted == true)
+            {
+                throw new InvalidOperationException("User not found");
+            }
+
+            // Only update profile fields (FullName, Phone, AvatarUrl if supported)
+            user.FullName = request.FullName;
+            if (!string.IsNullOrWhiteSpace(request.Phone))
+            {
+                user.Phone = request.Phone;
+            }
+            user.ModifiedAt = DateTime.UtcNow;
+
+            await _unitOfWork.Users.UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Return updated user DTO
+            var userDto = _mapper.Map<UserDto>(user);
+            var role = await _roleRepository.GetByIdAsync(user.RoleId);
+            userDto.RoleName = role?.RoleName ?? "Unknown";
+
+            return userDto;
         }
 
         public async Task DeleteAsync(int id, CancellationToken ct = default)

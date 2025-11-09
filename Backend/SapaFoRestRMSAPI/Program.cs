@@ -113,6 +113,17 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Add Repositories
 builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IPositionRepository, PositionRepository>();
+builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
+// Role Management
+builder.Services.AddScoped<IRoleService, RoleService>();
+
+// Position Management
+builder.Services.AddScoped<IPositionService, PositionService>();
+
+// Các dịch vụ khác
+builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 // Add Services
 builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
@@ -137,6 +148,7 @@ builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>(
 builder.Services.AddScoped<IKitchenDisplayService, KitchenDisplayService>();
 
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
+
 //UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -193,6 +205,10 @@ builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
 builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
+
+// Payment Service/Repository
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
@@ -280,6 +296,8 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
+    await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
+
     await DataSeeder.SeedPositionsAsync(ctx);
     await DataSeeder.SeedTestCustomerAsync(ctx);
     await DataSeeder.SeedKitchenOrdersAsync(ctx);

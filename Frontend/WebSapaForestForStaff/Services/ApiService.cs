@@ -3,6 +3,7 @@ using System.Text.Json;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.DTOs.Auth;
 using WebSapaForestForStaff.DTOs.UserManagement;
+using WebSapaForestForStaff.DTOs.Positions;
 
 namespace WebSapaForestForStaff.Services
 {
@@ -49,6 +50,7 @@ namespace WebSapaForestForStaff.Services
         private void ClearToken()
         {
             _httpContextAccessor.HttpContext?.Session.Remove("Token");
+            _httpContextAccessor.HttpContext?.Session.Remove("RefreshToken");
         }
 
         private HttpClient GetAuthenticatedClient()
@@ -89,6 +91,10 @@ namespace WebSapaForestForStaff.Services
                     if (loginResponse != null)
                     {
                         SetToken(loginResponse.Token);
+                        if (!string.IsNullOrEmpty(loginResponse.RefreshToken))
+                        {
+                            _httpContextAccessor.HttpContext?.Session.SetString("RefreshToken", loginResponse.RefreshToken);
+                        }
                     }
 
                     return loginResponse;
@@ -101,6 +107,49 @@ namespace WebSapaForestForStaff.Services
             }
         }
 
+        private async Task<bool> TryRefreshTokenAsync()
+        {
+            try
+            {
+                var refreshToken = _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken");
+                if (string.IsNullOrEmpty(refreshToken)) return false;
+
+                var payload = new { RefreshToken = refreshToken };
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"{GetApiBaseUrl()}/Auth/refresh-token", content);
+                if (!response.IsSuccessStatusCode) return false;
+
+                var body = await response.Content.ReadAsStringAsync();
+                var refreshed = JsonSerializer.Deserialize<LoginResponse>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (refreshed == null || string.IsNullOrEmpty(refreshed.Token)) return false;
+
+                SetToken(refreshed.Token);
+                if (!string.IsNullOrEmpty(refreshed.RefreshToken))
+                {
+                    _httpContextAccessor.HttpContext?.Session.SetString("RefreshToken", refreshed.RefreshToken);
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private async Task<HttpResponseMessage> SendWithAutoRefreshAsync(Func<HttpClient, Task<HttpResponseMessage>> send)
+        {
+            using var client = GetAuthenticatedClient();
+            var response = await send(client);
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                if (await TryRefreshTokenAsync())
+                {
+                    using var client2 = GetAuthenticatedClient();
+                    response = await send(client2);
+                }
+            }
+            return response;
+        }
+
         public void Logout()
         {
             ClearToken();
@@ -111,11 +160,10 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{GetApiBaseUrl()}/auth/admin/create-manager", content);
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/auth/admin/create-manager", content));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -128,11 +176,10 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{GetApiBaseUrl()}/auth/manager/create-staff", content);
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/auth/manager/create-staff", content));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -145,8 +192,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/Users");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/Users"));
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -168,8 +214,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/users");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/users"));
                 if (!response.IsSuccessStatusCode) return 0;
                 var content = await response.Content.ReadAsStringAsync();
                 var users = JsonSerializer.Deserialize<List<User>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -185,8 +230,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/events");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/events"));
                 if (!response.IsSuccessStatusCode) return 0;
                 var content = await response.Content.ReadAsStringAsync();
                 var events = JsonSerializer.Deserialize<List<object>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -202,8 +246,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/reservationstaff/reservations/pending-confirmed?page=1&pageSize=1");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/reservationstaff/reservations/pending-confirmed?page=1&pageSize=1"));
                 if (!response.IsSuccessStatusCode) return 0;
                 var content = await response.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(content);
@@ -223,8 +266,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/users/{id}");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/users/{id}"));
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -246,11 +288,10 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
                 var json = JsonSerializer.Serialize(user);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PutAsync($"{GetApiBaseUrl()}/users/{user.UserId}", content);
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/{user.UserId}", content));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -263,8 +304,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.DeleteAsync($"{GetApiBaseUrl()}/users/{id}");
+                var response = await SendWithAutoRefreshAsync(c => c.DeleteAsync($"{GetApiBaseUrl()}/users/{id}"));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -277,8 +317,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.PatchAsync($"{GetApiBaseUrl()}/users/{id}/status/{status}", null);
+                var response = await SendWithAutoRefreshAsync(c => c.PatchAsync($"{GetApiBaseUrl()}/users/{id}/status/{status}", null));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -292,7 +331,6 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
                 var queryParams = new List<string>();
                 
                 if (!string.IsNullOrEmpty(request.SearchTerm))
@@ -307,7 +345,7 @@ namespace WebSapaForestForStaff.Services
                 queryParams.Add($"sortOrder={request.SortOrder}");
 
                 var queryString = string.Join("&", queryParams);
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/users/search?{queryString}");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/users/search?{queryString}"));
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -329,8 +367,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/users/{id}/details");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/users/{id}/details"));
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -352,11 +389,10 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{GetApiBaseUrl()}/users", content);
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/users", content));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -369,11 +405,10 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PutAsync($"{GetApiBaseUrl()}/users/{request.UserId}", content);
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/{request.UserId}", content));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -386,11 +421,10 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
                 var json = JsonSerializer.Serialize(request);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PostAsync($"{GetApiBaseUrl()}/users/{request.UserId}/reset-password", content);
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/users/{request.UserId}/reset-password", content));
                 return response.IsSuccessStatusCode;
             }
             catch
@@ -403,8 +437,7 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/roles");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/roles"));
                 
                 if (response.IsSuccessStatusCode)
                 {
@@ -420,6 +453,151 @@ namespace WebSapaForestForStaff.Services
             {
                 return null;
             }
+        }
+
+        // User Profile Methods
+        public async Task<User?> GetUserProfileAsync()
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/users/profile"));
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<User>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<User?> UpdateUserProfileAsync(UserProfileUpdateRequest request)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/profile", content));
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<User>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<List<Position>?> GetPositionsAsync()
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/positions"));
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<List<Position>>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // Positions Management
+        public async Task<PositionListResponse?> SearchPositionsAsync(PositionSearchRequest request)
+        {
+            try
+            {
+                var query = new List<string>();
+                if (!string.IsNullOrEmpty(request.SearchTerm)) query.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
+                if (request.Status.HasValue) query.Add($"status={request.Status.Value}");
+                query.Add($"page={request.Page}");
+                query.Add($"pageSize={request.PageSize}");
+                var qs = string.Join("&", query);
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/positions/search?{qs}"));
+                if (!response.IsSuccessStatusCode) return null;
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<PositionListResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch { return null; }
+        }
+
+        public async Task<PositionDto?> GetPositionAsync(int id)
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/positions/{id}"));
+                if (!response.IsSuccessStatusCode) return null;
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<PositionDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch { return null; }
+        }
+
+        public async Task<bool> CreatePositionAsync(PositionCreateRequest request)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/positions", content));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> UpdatePositionAsync(PositionUpdateRequest request)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/positions/{request.PositionId}", content));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> DeletePositionAsync(int id)
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.DeleteAsync($"{GetApiBaseUrl()}/positions/{id}"));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<bool> ChangePositionStatusAsync(int id, int status)
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.PatchAsync($"{GetApiBaseUrl()}/positions/{id}/status/{status}", null));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
         }
     }
 }

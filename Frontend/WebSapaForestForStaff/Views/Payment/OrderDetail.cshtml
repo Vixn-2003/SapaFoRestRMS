@@ -1,0 +1,231 @@
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    int orderId = ViewBag.OrderId ?? 0;
+    string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/payment.css" asp-append-version="true" />
+}
+
+<div class="payment-container">
+    <div class="breadcrumb-nav">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                    <a href="/Payment/OrderSelection">Đơn hàng</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Chi tiết đơn hàng</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="order-detail-container">
+        <!-- Danh sách món ăn -->
+        <div class="order-items-card">
+            <h4 class="mb-4">
+                <i class="bi bi-list-ul me-2"></i>Danh sách món ăn
+            </h4>
+            <div id="order-items-list">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tóm tắt hóa đơn -->
+        <div class="order-summary-card">
+            <h4 class="mb-4">
+                <i class="bi bi-receipt me-2"></i>Tóm tắt hóa đơn
+            </h4>
+            
+            <div class="summary-row">
+                <span class="summary-label">Tạm tính:</span>
+                <span class="summary-value" id="subtotal">0 ₫</span>
+            </div>
+            
+            <div class="summary-row">
+                <span class="summary-label">VAT (10%):</span>
+                <span class="summary-value" id="vat">0 ₫</span>
+            </div>
+            
+            <div class="summary-row">
+                <span class="summary-label">Phí dịch vụ (5%):</span>
+                <span class="summary-value" id="serviceFee">0 ₫</span>
+            </div>
+            
+            <div class="summary-row">
+                <span class="summary-label">Ưu đãi:</span>
+                <span class="summary-value text-danger" id="discount">-0 ₫</span>
+            </div>
+            
+            <div class="summary-row summary-total">
+                <span>Tổng cộng:</span>
+                <span id="total">0 ₫</span>
+            </div>
+
+            <div class="action-buttons mt-4">
+                <button type="button" 
+                        class="btn btn-outline-primary btn-action-primary" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#promotionModal">
+                    <i class="bi bi-tag me-2"></i>Áp dụng ưu đãi
+                </button>
+                <button type="button" 
+                        class="btn btn-primary btn-action-primary" 
+                        onclick="proceedToPayment()">
+                    <i class="bi bi-cash-coin me-2"></i>Thanh toán
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Promotion Modal -->
+@{
+    ViewBag.ApiBaseUrl = apiBaseUrl;
+}
+@await Html.PartialAsync("PromotionModal")
+
+<!-- Toast Notification -->
+<div class="toast-container">
+    <div id="toastNotification" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBaseUrl = '@apiBaseUrl';
+        const orderId = @orderId;
+        let orderData = null;
+        let appliedDiscount = 0;
+
+        // Load chi tiết đơn hàng
+        async function loadOrderDetail() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/orders/${orderId}/details`);
+                
+                if (!response.ok) {
+                    // Dùng mock data
+                    orderData = getMockOrderDetail();
+                } else {
+                    orderData = await response.json();
+                }
+                
+                renderOrderItems(orderData.items || []);
+                calculateBill();
+            } catch (error) {
+                console.error('Error loading order detail:', error);
+                orderData = getMockOrderDetail();
+                renderOrderItems(orderData.items || []);
+                calculateBill();
+            }
+        }
+
+        // Mock data
+        function getMockOrderDetail() {
+            return {
+                id: orderId,
+                orderCode: 'ORD-001',
+                tableNumber: 'Bàn 5',
+                staffName: 'Nguyễn Văn A',
+                items: [
+                    { id: 1, name: 'Phở Bò', quantity: 2, price: 85000, total: 170000 },
+                    { id: 2, name: 'Bánh Mì Thịt Nướng', quantity: 1, price: 45000, total: 45000 },
+                    { id: 3, name: 'Coca Cola', quantity: 3, price: 25000, total: 75000 },
+                    { id: 4, name: 'Gỏi Cuốn', quantity: 2, price: 80000, total: 160000 }
+                ]
+            };
+        }
+
+        // Render danh sách món ăn
+        function renderOrderItems(items) {
+            const container = document.getElementById('order-items-list');
+            
+            if (items.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center">Không có món nào</p>';
+                return;
+            }
+
+            container.innerHTML = items.map(item => `
+                <div class="order-item">
+                    <div class="order-item-info">
+                        <div class="order-item-name">${item.name}</div>
+                        <div class="order-item-quantity">Số lượng: ${item.quantity}</div>
+                    </div>
+                    <div class="order-item-price">${formatCurrency(item.total)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Tính toán hóa đơn
+        function calculateBill() {
+            if (!orderData || !orderData.items) return;
+
+            const subtotal = orderData.items.reduce((sum, item) => sum + item.total, 0);
+            const vat = subtotal * 0.1;
+            const serviceFee = subtotal * 0.05;
+            const total = subtotal + vat + serviceFee - appliedDiscount;
+
+            document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('vat').textContent = formatCurrency(vat);
+            document.getElementById('serviceFee').textContent = formatCurrency(serviceFee);
+            document.getElementById('discount').textContent = `-${formatCurrency(appliedDiscount)}`;
+            document.getElementById('total').textContent = formatCurrency(total);
+
+            // Lưu vào orderData để dùng sau
+            orderData.subtotal = subtotal;
+            orderData.vat = vat;
+            orderData.serviceFee = serviceFee;
+            orderData.total = total;
+        }
+
+        // Áp dụng ưu đãi (sẽ được gọi từ PromotionModal)
+        window.applyDiscount = function(discountAmount) {
+            appliedDiscount = discountAmount;
+            calculateBill();
+            showToast('Áp dụng ưu đãi thành công!', 'success');
+        };
+
+        // Chuyển đến màn hình thanh toán
+        function proceedToPayment() {
+            if (!orderData || orderData.total <= 0) {
+                showToast('Vui lòng kiểm tra lại đơn hàng!', 'error');
+                return;
+            }
+            window.location.href = `/Payment/PaymentMethod?orderId=${orderId}`;
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(amount);
+        }
+
+        // Show toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            
+            const toastInstance = new bootstrap.Toast(toast);
+            toastInstance.show();
+        }
+
+        // Load khi trang được tải
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOrderDetail();
+        });
+    </script>
+}
+

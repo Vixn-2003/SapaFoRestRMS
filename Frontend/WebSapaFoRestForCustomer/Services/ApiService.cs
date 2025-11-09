@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using WebSapaFoRestForCustomer.DTOs;
 using WebSapaFoRestForCustomer.Models;
 
 namespace WebSapaFoRestForCustomer.Services
@@ -36,6 +37,51 @@ namespace WebSapaFoRestForCustomer.Services
             }
 
             return client;
+        }
+
+        private async Task<bool> TryRefreshTokenAsync()
+        {
+            try
+            {
+                var refreshToken = _httpContextAccessor.HttpContext?.User?.FindFirst("RefreshToken")?.Value
+                    ?? _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken");
+                if (string.IsNullOrEmpty(refreshToken)) return false;
+
+                var payload = new { RefreshToken = refreshToken };
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"{GetApiBaseUrl()}/api/Auth/refresh-token", content);
+                if (!response.IsSuccessStatusCode) return false;
+
+                var data = await response.Content.ReadAsStringAsync();
+                var refreshed = JsonSerializer.Deserialize<LoginResponse>(data, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (refreshed == null || string.IsNullOrEmpty(refreshed.Token)) return false;
+
+                // store new tokens
+                _httpContextAccessor.HttpContext?.Session.SetString("Token", refreshed.Token);
+                if (!string.IsNullOrEmpty(refreshed.RefreshToken))
+                {
+                    _httpContextAccessor.HttpContext?.Session.SetString("RefreshToken", refreshed.RefreshToken);
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private async Task<HttpResponseMessage> SendWithAutoRefreshAsync(Func<HttpClient, Task<HttpResponseMessage>> send)
+        {
+            using var client = GetAuthenticatedClient();
+            var response = await send(client);
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                if (await TryRefreshTokenAsync())
+                {
+                    using var client2 = GetAuthenticatedClient();
+                    response = await send(client2);
+                }
+            }
+            return response;
         }
 
         // Customer Authentication Methods
@@ -81,181 +127,136 @@ namespace WebSapaFoRestForCustomer.Services
             }
         }
 
-        // Customer Profile Methods
-        public async Task<CustomerProfile?> GetCustomerProfileAsync()
-        {
-            try
-            {
-                using var client = GetAuthenticatedClient();
-                var response = await client.GetAsync($"{GetApiBaseUrl()}/api/Customer/profile");
+        //Customer Profile Methods
+        //public async Task<CustomerProfile?> GetCustomerProfileAsync()
+        //{
+        //    try
+        //    {
+        //        var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/api/Customer/profile"));
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
-                return null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
+        //        if (response.IsSuccessStatusCode)
+        //        {
+        //            var responseContent = await response.Content.ReadAsStringAsync();
+        //            return JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
+        //            {
+        //                PropertyNameCaseInsensitive = true
+        //            });
+        //        }
+        //        return null;
+        //    }
+        //    catch
+        //    {
+        //        return null;
+        //    }
+        //}
 
-        public async Task<bool> UpdateCustomerProfileAsync(CustomerProfileUpdate profile)
-        {
-            try
-            {
-                using var client = GetAuthenticatedClient();
-                var json = JsonSerializer.Serialize(profile);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+        //public async Task<bool> UpdateCustomerProfileAsync(CustomerProfileUpdate profile)
+        //{
+        //    try
+        //    {
+        //        var json = JsonSerializer.Serialize(profile);
+        //        var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await client.PutAsync($"{GetApiBaseUrl()}/api/Customer/profile", content);
-                return response.IsSuccessStatusCode;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        //        var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/api/Customer/profile", content));
+        //        return response.IsSuccessStatusCode;
+        //    }
+        //    catch
+        //    {
+        //        return false;
+        //    }
+        //}
 
-        // Customer Orders Methods
-        public async Task<List<CustomerOrder>?> GetCustomerOrdersAsync(string? status = null)
-        {
-            try
-            {
-                using var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/Customer/orders";
-                if (!string.IsNullOrEmpty(status))
-                {
-                    url += $"?status={Uri.EscapeDataString(status)}";
-                }
+        //Customer Orders Methods
+        //public async Task<List<CustomerOrder>?> GetCustomerOrdersAsync(string? status = null)
+        //{
+        //    try
+        //    {
+        //        var url = $"{GetApiBaseUrl()}/api/Customer/orders";
+        //        if (!string.IsNullOrEmpty(status))
+        //        {
+        //            url += $"?status={Uri.EscapeDataString(status)}";
+        //        }
 
-                var response = await client.GetAsync(url);
+        //        var response = await SendWithAutoRefreshAsync(c => c.GetAsync(url));
 
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<List<CustomerOrder>>(responseContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
-                return null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
+        //        if (response.IsSuccessStatusCode)
+        //        {
+        //            var responseContent = await response.Content.ReadAsStringAsync();
+        //            return JsonSerializer.Deserialize<List<CustomerOrder>>(responseContent, new JsonSerializerOptions
+        //            {
+        //                PropertyNameCaseInsensitive = true
+        //            });
+        //        }
+        //        return null;
+        //    }
+        //    catch
+        //    {
+        //        return null;
+        //    }
+        //}
 
-        // Menu and Restaurant Info Methods
-        public async Task<List<MenuItemDto>?> GetMenuItemsAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/MenuItems");
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<List<MenuItemDto>>(responseContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
-                return null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
+        //Menu and Restaurant Info Methods
+        //public async Task<List<MenuItemDto>?> GetMenuItemsAsync()
+        //{
+        //    try
+        //    {
+        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/MenuItems");
+        //        if (response.IsSuccessStatusCode)
+        //        {
+        //            var responseContent = await response.Content.ReadAsStringAsync();
+        //            return JsonSerializer.Deserialize<List<MenuItemDto>>(responseContent, new JsonSerializerOptions
+        //            {
+        //                PropertyNameCaseInsensitive = true
+        //            });
+        //        }
+        //        return null;
+        //    }
+        //    catch
+        //    {
+        //        return null;
+        //    }
+        //}
 
-        public async Task<List<ComboDto>?> GetCombosAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Combos");
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<List<ComboDto>>(responseContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
-                return null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
+        //public async Task<List<ComboDto>?> GetCombosAsync()
+        //{
+        //    try
+        //    {
+        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Combos");
+        //        if (response.IsSuccessStatusCode)
+        //        {
+        //            var responseContent = await response.Content.ReadAsStringAsync();
+        //            return JsonSerializer.Deserialize<List<ComboDto>>(responseContent, new JsonSerializerOptions
+        //            {
+        //                PropertyNameCaseInsensitive = true
+        //            });
+        //        }
+        //        return null;
+        //    }
+        //    catch
+        //    {
+        //        return null;
+        //    }
+        //}
 
-        public async Task<List<EventDto>?> GetEventsAsync()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Events");
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<List<EventDto>>(responseContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-                }
-                return null;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-    }
-
-    // DTOs for API responses
-    public class LoginResponse
-    {
-        public int UserId { get; set; }
-        public string FullName { get; set; } = null!;
-        public string Email { get; set; } = null!;
-        public string Token { get; set; } = null!;
-        public int RoleId { get; set; }
-    }
-
-    public class CustomerProfile
-    {
-        public int UserId { get; set; }
-        public string FullName { get; set; } = null!;
-        public string Email { get; set; } = null!;
-        public string Phone { get; set; } = null!;
-        public int LoyaltyPoints { get; set; }
-        public string? Notes { get; set; }
-    }
-
-    public class CustomerProfileUpdate
-    {
-        public string FullName { get; set; } = null!;
-        public string Email { get; set; } = null!;
-    }
-
-    public class CustomerOrder
-    {
-        public int OrderId { get; set; }
-        public DateTime OrderDate { get; set; }
-        public string Status { get; set; } = null!;
-        public decimal TotalAmount { get; set; }
-        public List<OrderItem> Items { get; set; } = new();
-    }
-
-    public class OrderItem
-    {
-        public string ItemName { get; set; } = null!;
-        public int Quantity { get; set; }
-        public decimal Price { get; set; }
+        //public async Task<List<EventDto>?> GetEventsAsync()
+        //{
+        //    try
+        //    {
+        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Events");
+        //        if (response.IsSuccessStatusCode)
+        //        {
+        //            var responseContent = await response.Content.ReadAsStringAsync();
+        //            return JsonSerializer.Deserialize<List<EventDto>>(responseContent, new JsonSerializerOptions
+        //            {
+        //                PropertyNameCaseInsensitive = true
+        //            });
+        //        }
+        //        return null;
+        //    }
+        //    catch
+        //    {
+        //        return null;
+        //    }
+        //}
     }
 }

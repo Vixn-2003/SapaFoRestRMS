@@ -1,0 +1,52 @@
+/**
+ * User Profile Page - CSS
+ * Specific styles for UserProfile view
+ */
+
+.profile-field-value {
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.avatar-container {
+    position: relative;
+}
+
+.required::after {
+    content: " *";
+    color: var(--semantic-error);
+}
+
+.badge.bg-success {
+    background-color: var(--semantic-success) !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--semantic-warning) !important;
+    color: var(--neutral-black);
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.page-header {
+    padding: 1.5rem 0;
+}
+
+.page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    color: var(--neutral-gray-600);
+    margin-bottom: 0;
+}
+

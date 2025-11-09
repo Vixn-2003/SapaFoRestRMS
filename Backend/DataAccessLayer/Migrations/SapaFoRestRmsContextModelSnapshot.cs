@@ -1321,6 +1321,68 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Tables");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Transaction", b =>
+                {
+                    b.Property<int>("TransactionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TransactionId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("TransactionCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("TransactionId")
+                        .HasName("PK__Transact__55433A6B");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_Transactions_OrderId");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("IX_Transactions_SessionId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_Transactions_Status");
+
+                    b.ToTable("Transactions", (string)null);
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -1927,6 +1989,18 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Area");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Transaction", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Order", "Order")
+                        .WithMany("Transactions")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK__Transacti__Order__Transaction_OrderId");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Role", "Role")
@@ -2034,6 +2108,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("OrderDetails");
 
                     b.Navigation("Payments");
+
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.OrderDetail", b =>

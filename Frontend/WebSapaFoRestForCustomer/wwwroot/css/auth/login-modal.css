@@ -1,0 +1,13 @@
+.modal-content {
+    border-radius: 12px;
+}
+
+#loginModal .modal-title {
+    font-weight: 700;
+}
+
+#loginModal .btn {
+    border-radius: 8px;
+}
+
+

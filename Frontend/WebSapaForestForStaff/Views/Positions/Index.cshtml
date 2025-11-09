@@ -1,0 +1,166 @@
+@model WebSapaForestForStaff.DTOs.Positions.PositionListResponse
+@{
+    ViewData["Title"] = "Quản lý vị trí";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+    var searchTerm = ViewBag.SearchTerm as string;
+    int? status = ViewBag.Status as int?;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/design-system.css" />
+    <link rel="stylesheet" href="~/css/users.css" />
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center page-header mb-3">
+        <h2 class="heading-h2 m-0">Vị trí công việc</h2>
+        <a asp-action="Create" class="btn-primary-custom" data-bs-toggle="tooltip" data-bs-placement="top" title="Tạo vị trí">
+            <i class="bi bi-plus-circle"></i>
+        </a>
+    </div>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-4">
+            <input name="searchTerm" value="@searchTerm" class="form-control form-control-custom" placeholder="Tìm theo tên..." />
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select form-control-custom">
+                <option value="">-- Trạng thái --</option>
+                @if (status == 0)
+                {
+                    <option value="0" selected>Hoạt động</option>
+                }
+                else
+                {
+                    <option value="0">Hoạt động</option>
+                }
+                @if (status == 1)
+                {
+                    <option value="1" selected>Tạm dừng</option>
+                }
+                else
+                {
+                    <option value="1">Tạm dừng</option>
+                }
+                @if (status == 2)
+                {
+                    <option value="2" selected>Đã ẩn</option>
+                }
+                else
+                {
+                    <option value="2">Đã ẩn</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn-secondary-custom">Lọc</button>
+            <a asp-action="Index" class="btn-text-custom">Xóa lọc</a>
+        </div>
+    </form>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <script>document.addEventListener('DOMContentLoaded',()=>showSuccessToast('@TempData["SuccessMessage"]'));</script>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>document.addEventListener('DOMContentLoaded',()=>showErrorToast('@TempData["ErrorMessage"]'));</script>
+    }
+
+    @if (Model == null || Model.Items == null || !Model.Items.Any())
+    {
+        <div class="empty-state">
+            <p class="text-muted">Không có vị trí nào phù hợp.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card card-custom">
+            <div class="table-responsive">
+                <table class="table table-hover users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên vị trí</th>
+                            <th>Mô tả</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.Items)
+                        {
+                            <tr>
+                                <td>@p.PositionId</td>
+                                <td>@p.PositionName</td>
+                                <td>@p.Description</td>
+                                <td>
+                                    @switch (p.Status)
+                                    {
+                                        case 0:
+                                            @:<span class="badge-custom success">Hoạt động</span>
+                                            break;
+                                        case 1:
+                                            @:<span class="badge-custom warning">Tạm dừng</span>
+                                            break;
+                                        default:
+                                            @:<span class="badge-custom gray">Đã ẩn</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-end action-buttons">
+                                    <a asp-action="Details" asp-route-id="@p.PositionId" class="btn-text-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Chi tiết">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@p.PositionId" class="btn-secondary-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form asp-action="ChangeStatus" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.PositionId" />
+                                        <input type="hidden" name="status" value="@(p.Status == 0 ? 1 : 0)" />
+                                        <button type="submit" class="btn-primary-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Đổi trạng thái">
+                                            <i class="bi bi-shuffle"></i>
+                                        </button>
+                                    </form>
+                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Xóa vị trí này?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.PositionId" />
+                                        <button type="submit" class="btn-error-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Xóa">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <div class="text-muted body-small">Tổng: @Model.TotalCount</div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = searchTerm, status = status, page = Model.Page - 1, pageSize = Model.PageSize })">Trước</a>
+                        </li>
+                        <li class="page-item disabled"><span class="page-link">@Model.Page / @Model.TotalPages</span></li>
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = searchTerm, status = status, page = Model.Page + 1, pageSize = Model.PageSize })">Sau</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/toast-notification.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+        });
+    </script>
+}

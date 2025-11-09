@@ -1,0 +1,39 @@
+/* Customer Design System overrides - Green palette */
+:root {
+    --primary-500: #2E7D32;
+    --primary-100: #E8F5E9;
+    --primary-700: #1B5E20;
+}
+
+.btn-primary,
+.bg-primary,
+.text-bg-primary {
+    background-color: var(--primary-500) !important;
+    border-color: var(--primary-500) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--primary-700) !important;
+    border-color: var(--primary-700) !important;
+}
+
+.link-primary { color: var(--primary-500) !important; }
+.border-primary { border-color: var(--primary-500) !important; }
+
+/* Form focus outline */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 .2rem rgba(46, 125, 50, .25);
+}
+
+/* Navbar (if using custom) */
+.navbar-custom { background-color: var(--primary-700) !important; }
+.navbar-custom .nav-link:hover { color: #FFD54F !important; }
+
+/* Badges and alerts harmony */
+.badge.bg-primary { background-color: var(--primary-500) !important; }
+.alert-primary { background-color: var(--primary-100); border-color: var(--primary-500); color: var(--primary-700); }
+
+

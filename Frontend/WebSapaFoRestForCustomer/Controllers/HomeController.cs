@@ -17,6 +17,7 @@ namespace WebSapaFoRestForCustomer.Controllers
             _httpClient.BaseAddress = new Uri("https://localhost:7096/");
         }
 
+        [AllowAnonymous]
         public async Task<IActionResult> Index()
         {
             try

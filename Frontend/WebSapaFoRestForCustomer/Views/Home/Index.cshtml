@@ -9,6 +9,21 @@
     <link rel="stylesheet" href="~/css/home.css" />
 
 }
+@if (!(User?.Identity?.IsAuthenticated ?? false))
+{
+    <div class="container mt-3">
+        <div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
+            <div>
+                <i class="bi bi-info-circle me-2"></i>
+                Login to see table reservation history.
+            </div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
+                Đăng nhập
+            </button>
+        </div>
+    </div>
+}
+
 <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-inner" id="bannerContainer">
         <!-- JS sẽ render banners -->
