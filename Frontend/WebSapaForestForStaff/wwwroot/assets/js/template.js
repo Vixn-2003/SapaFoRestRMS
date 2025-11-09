@@ -109,12 +109,24 @@
         }
       }
     });
+    // Safely initialize datepicker only if it exists
     if ($("#datepicker-popup").length) {
-      $('#datepicker-popup').datepicker({
-        enableOnReadonly: true,
-        todayHighlight: true,
-      });
-      $("#datepicker-popup").datepicker("setDate", "0");
+      // Wait a bit for datepicker plugin to load
+      setTimeout(function() {
+        try {
+          if (typeof $.fn.datepicker !== 'undefined' && $.fn.datepicker) {
+            $('#datepicker-popup').datepicker({
+              enableOnReadonly: true,
+              todayHighlight: true,
+            });
+            $("#datepicker-popup").datepicker("setDate", "0");
+          } else {
+            console.warn('Datepicker plugin not available, skipping initialization');
+          }
+        } catch (e) {
+          console.warn('Datepicker initialization failed (non-critical):', e.message);
+        }
+      }, 500);
     }
 
   });

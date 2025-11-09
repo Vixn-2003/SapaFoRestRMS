@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace WebSapaForestForStaff.Models;
@@ -15,3 +15,4 @@ public partial class KitchenTicketDetail
 
     public virtual KitchenTicket Ticket { get; set; } = null!;
 }
+

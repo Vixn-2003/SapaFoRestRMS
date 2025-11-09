@@ -1,4 +1,6 @@
-﻿using System.Net.Http; // <-- Thêm using này
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Net.Http;
+using WebSapaFoRestForCustomer.Services; // <-- Thêm using này
 
 namespace WebSapaFoRestForCustomer
 {
@@ -11,6 +13,8 @@ namespace WebSapaFoRestForCustomer
             // Add services to the container.
             builder.Services.AddControllersWithViews();
             builder.Services.AddHttpClient(); // Dòng này đã có
+            // Needed for ApiService to access HttpContext.User claims
+            builder.Services.AddHttpContextAccessor();
 
             // === THÊM KHỐI NÀY VÀO (Lấy từ dự án cũ) ===
             // Cấu hình HttpClient tên "API"
@@ -32,10 +36,9 @@ namespace WebSapaFoRestForCustomer
                 };
             });
             // ===============================================
-
-            var app = builder.Build();
             // Register ApiService
             builder.Services.AddScoped<ApiService>();
+            builder.Services.AddSession();
 
             // Configure Authentication
             builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -55,16 +58,17 @@ namespace WebSapaFoRestForCustomer
             });
 
             // Configure API settings
-            builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+
+            // Configure the HTTP request pipeline.
+            if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
             }
             app.UseStaticFiles();
+            app.UseSession();
 
             app.UseRouting();
 

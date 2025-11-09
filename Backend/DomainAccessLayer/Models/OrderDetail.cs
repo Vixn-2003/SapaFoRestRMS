@@ -20,6 +20,11 @@ public partial class OrderDetail
     //new
     public DateTime CreatedAt { get; set; }
     public string? Notes { get; set; } // Thêm ? để cho phép null
+    
+    /// <summary>
+    /// Đánh dấu order được yêu cầu làm ngay từ bếp phó
+    /// </summary>
+    public bool IsUrgent { get; set; } = false;
 
     public virtual ICollection<KitchenTicketDetail> KitchenTicketDetails { get; set; } = new List<KitchenTicketDetail>();
 

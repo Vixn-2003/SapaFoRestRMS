@@ -292,8 +292,34 @@ namespace SapaFoRestRMSAPI.Services
                 await context.SaveChangesAsync();
             }
 
-            // Get or create MenuCategory
-            var category = await context.MenuCategories.FirstOrDefaultAsync();
+            // Get or create MenuCategories for different stations
+            // Tên trạm: Khai Vị, Lẩu, Nướng than, Xào – Chiên, Trạm Cơm – Canh, Tráng Miệng
+            var categories = new List<MenuCategory>();
+            var categoryNames = new[] { "Khai Vị", "Lẩu", "Nướng than", "Xào – Chiên", "Trạm Cơm – Canh", "Tráng Miệng" };
+            
+            foreach (var categoryName in categoryNames)
+            {
+                var existingCategory = await context.MenuCategories
+                    .FirstOrDefaultAsync(c => c.CategoryName == categoryName);
+                
+                if (existingCategory == null)
+                {
+                    var newCategory = new MenuCategory
+                    {
+                        CategoryName = categoryName
+                    };
+                    await context.MenuCategories.AddAsync(newCategory);
+                    await context.SaveChangesAsync();
+                    categories.Add(newCategory);
+                }
+                else
+                {
+                    categories.Add(existingCategory);
+                }
+            }
+            
+            // Use first category as default if no categories were created
+            var category = categories.FirstOrDefault() ?? await context.MenuCategories.FirstOrDefaultAsync();
             if (category == null)
             {
                 category = new MenuCategory
@@ -302,130 +328,198 @@ namespace SapaFoRestRMSAPI.Services
                 };
                 await context.MenuCategories.AddAsync(category);
                 await context.SaveChangesAsync();
+                categories.Add(category);
             }
+            
+            // Map categories by name
+            var khaiViCategory = categories.FirstOrDefault(c => c.CategoryName == "Khai Vị") ?? category;
+            var lauCategory = categories.FirstOrDefault(c => c.CategoryName == "Lẩu") ?? category;
+            var nuongThanCategory = categories.FirstOrDefault(c => c.CategoryName == "Nướng than") ?? category;
+            var xaoChienCategory = categories.FirstOrDefault(c => c.CategoryName == "Xào – Chiên") ?? category;
+            var comCanhCategory = categories.FirstOrDefault(c => c.CategoryName == "Trạm Cơm – Canh") ?? category;
+            var trangMiengCategory = categories.FirstOrDefault(c => c.CategoryName == "Tráng Miệng") ?? category;
 
             // Create MenuItems with different CourseTypes
+            // CourseType: Khai vị, Món chính, Tráng miệng
             var menuItems = new List<MenuItem>();
             
             // Check if menu items already exist
             var existingMenuItems = await context.MenuItems
-                .Where(m => m.CourseType == "Xào" || m.CourseType == "Nướng" || m.CourseType == "Nấu")
+                .Where(m => m.CourseType == "Khai vị" || m.CourseType == "Món chính" || m.CourseType == "Tráng miệng")
                 .ToListAsync();
 
             if (existingMenuItems.Count == 0)
             {
                 menuItems = new List<MenuItem>
                 {
-                    // Món Nướng
+                    // Món Nướng (Món chính) -> Trạm "Nướng than"
                     new MenuItem
                     {
                         Name = "Thịt nướng",
                         Description = "Thịt nướng thơm ngon",
                         Price = 150000,
-                        CourseType = "Nướng",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Gà nướng",
                         Description = "Gà nướng nguyên con",
                         Price = 250000,
-                        CourseType = "Nướng",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Tôm nướng",
                         Description = "Tôm nướng bơ tỏi",
                         Price = 200000,
-                        CourseType = "Nướng",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Cá nướng",
                         Description = "Cá nướng muối ớt",
                         Price = 180000,
-                        CourseType = "Nướng",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId
                     },
-                    // Món Xào
+                    // Món Xào (Món chính) -> Trạm "Xào – Chiên"
                     new MenuItem
                     {
                         Name = "Rau xào",
                         Description = "Rau xào tươi ngon",
                         Price = 80000,
-                        CourseType = "Xào",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Mực xào",
                         Description = "Mực xào rau muống",
                         Price = 180000,
-                        CourseType = "Xào",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Thịt bò xào",
                         Description = "Thịt bò xào hành tây",
                         Price = 220000,
-                        CourseType = "Xào",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Gà xào sả ớt",
                         Description = "Gà xào sả ớt cay",
                         Price = 190000,
-                        CourseType = "Xào",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId
                     },
-                    // Món Nấu
+                    // Món Chiên (Món chính) -> Trạm "Xào – Chiên"
                     new MenuItem
                     {
-                        Name = "Canh chua cá",
-                        Description = "Canh chua cá bông lau",
-                        Price = 120000,
-                        CourseType = "Nấu",
+                        Name = "Khoai tây chiên",
+                        Description = "Khoai tây chiên giòn",
+                        Price = 70000,
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId
                     },
+                    new MenuItem
+                    {
+                        Name = "Cá chiên",
+                        Description = "Cá chiên giòn",
+                        Price = 160000,
+                        CourseType = "Món chính",
+                        IsAvailable = true,
+                        CategoryId = xaoChienCategory.CategoryId
+                    },
+                    // Lẩu (Món chính) -> Trạm "Lẩu"
                     new MenuItem
                     {
                         Name = "Lẩu thái",
                         Description = "Lẩu thái chua cay",
                         Price = 300000,
-                        CourseType = "Nấu",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = lauCategory.CategoryId
+                    },
+                    // Canh (Món chính) -> Trạm "Trạm Cơm – Canh"
+                    new MenuItem
+                    {
+                        Name = "Canh chua cá",
+                        Description = "Canh chua cá bông lau",
+                        Price = 120000,
+                        CourseType = "Món chính",
+                        IsAvailable = true,
+                        CategoryId = comCanhCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Canh khổ qua",
                         Description = "Canh khổ qua nhồi thịt",
                         Price = 100000,
-                        CourseType = "Nấu",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = comCanhCategory.CategoryId
                     },
                     new MenuItem
                     {
                         Name = "Canh chua tôm",
                         Description = "Canh chua tôm cà",
                         Price = 130000,
-                        CourseType = "Nấu",
+                        CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = category.CategoryId
+                        CategoryId = comCanhCategory.CategoryId
+                    },
+                    // Salad (Khai vị) -> Trạm "Khai Vị"
+                    new MenuItem
+                    {
+                        Name = "Salad rau củ",
+                        Description = "Salad rau củ tươi",
+                        Price = 90000,
+                        CourseType = "Khai vị",
+                        IsAvailable = true,
+                        CategoryId = khaiViCategory.CategoryId
+                    },
+                    new MenuItem
+                    {
+                        Name = "Salad tôm",
+                        Description = "Salad tôm tươi",
+                        Price = 150000,
+                        CourseType = "Khai vị",
+                        IsAvailable = true,
+                        CategoryId = khaiViCategory.CategoryId
+                    },
+                    // Tráng miệng -> Trạm "Tráng Miệng"
+                    new MenuItem
+                    {
+                        Name = "Chè đậu xanh",
+                        Description = "Chè đậu xanh ngọt mát",
+                        Price = 50000,
+                        CourseType = "Tráng miệng",
+                        IsAvailable = true,
+                        CategoryId = trangMiengCategory.CategoryId
+                    },
+                    new MenuItem
+                    {
+                        Name = "Kem dừa",
+                        Description = "Kem dừa thơm mát",
+                        Price = 60000,
+                        CourseType = "Tráng miệng",
+                        IsAvailable = true,
+                        CategoryId = trangMiengCategory.CategoryId
                     }
                 };
 
@@ -595,6 +689,7 @@ namespace SapaFoRestRMSAPI.Services
                 foreach (var menuItem in selectedItems)
                 {
                     var quantity = random.Next(1, 4); // 1-3 phần mỗi món
+                    var isUrgent = random.Next(0, 10) == 0; // 10% chance of being urgent
                     var orderDetail = new OrderDetail
                     {
                         OrderId = order.OrderId,
@@ -603,7 +698,8 @@ namespace SapaFoRestRMSAPI.Services
                         UnitPrice = menuItem.Price,
                         Status = "Pending",
                         CreatedAt = order.CreatedAt ?? DateTime.Now,
-                        Notes = random.Next(0, 4) == 0 ? "Không cay" : (random.Next(0, 4) == 1 ? "Ít muối" : null) // Some items have notes
+                        Notes = random.Next(0, 4) == 0 ? "Không cay" : (random.Next(0, 4) == 1 ? "Ít muối" : null), // Some items have notes
+                        IsUrgent = isUrgent // Some items are marked as urgent
                     };
                     orderDetails.Add(orderDetail);
                 }

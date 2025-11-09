@@ -25,7 +25,6 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     /// </summary>
     public class KitchenOrderItemDto
     {
-        public int TicketDetailId { get; set; }
         public int OrderDetailId { get; set; }
         public string MenuItemName { get; set; } = string.Empty;
         public int Quantity { get; set; }
@@ -34,6 +33,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
         public string CourseType { get; set; } = string.Empty; // Trạm nào (Xào, Nướng...)
         public DateTime? StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
+        public bool IsUrgent { get; set; } // Đánh dấu được yêu cầu từ bếp phó
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     /// </summary>
     public class UpdateItemStatusRequest
     {
-        public int TicketDetailId { get; set; }
+        public int OrderDetailId { get; set; }
         public string NewStatus { get; set; } = string.Empty; // "Cooking" or "Done"
         public int UserId { get; set; } // Who pressed the button
     }
@@ -71,7 +71,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     public class KitchenStatusChangeNotification
     {
         public int OrderId { get; set; }
-        public int TicketDetailId { get; set; }
+        public int OrderDetailId { get; set; }
         public string NewStatus { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
         public string ChangedBy { get; set; } = string.Empty;
@@ -95,7 +95,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     /// </summary>
     public class GroupedItemDetailDto
     {
-        public int TicketDetailId { get; set; }
+        public int OrderDetailId { get; set; }
         public int OrderId { get; set; }
         public string OrderNumber { get; set; } = string.Empty;
         public string TableNumber { get; set; } = string.Empty;
@@ -104,5 +104,45 @@ namespace BusinessAccessLayer.DTOs.Kitchen
         public string? Notes { get; set; }
         public DateTime CreatedAt { get; set; }
         public int WaitingMinutes { get; set; }
+    }
+
+    /// <summary>
+    /// DTO cho Station screen - mỗi item trong trạm
+    /// </summary>
+    public class StationItemDto
+    {
+        public int OrderDetailId { get; set; }
+        public int OrderId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string TableNumber { get; set; } = string.Empty;
+        public string MenuItemName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public string Status { get; set; } = "Pending"; // Pending, Cooking, Done
+        public string? Notes { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string CreatedAtTime { get; set; } = string.Empty; // Format: HH:mm
+        public int WaitingMinutes { get; set; }
+        public bool IsUrgent { get; set; } // Đánh dấu được yêu cầu từ bếp phó
+        public DateTime? StartedAt { get; set; } // Thời gian bắt đầu nấu (khi bếp phó fire)
+        public string FireTime { get; set; } = string.Empty; // Format: HH:mm - thời gian fire
+    }
+
+    /// <summary>
+    /// Response cho Station screen - có 2 luồng
+    /// </summary>
+    public class StationItemsResponse
+    {
+        public string CategoryName { get; set; } = string.Empty;
+        public List<StationItemDto> AllItems { get; set; } = new(); // Luồng 1: Tất cả orders
+        public List<StationItemDto> UrgentItems { get; set; } = new(); // Luồng 2: Orders được yêu cầu
+    }
+
+    /// <summary>
+    /// Request để đánh dấu order cần làm ngay
+    /// </summary>
+    public class MarkAsUrgentRequest
+    {
+        public int OrderDetailId { get; set; }
+        public bool IsUrgent { get; set; }
     }
 }

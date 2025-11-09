@@ -82,7 +82,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 await _hubContext.Clients.All.SendAsync("ItemStatusChanged", new KitchenStatusChangeNotification
                 {
                     OrderId = 0, // Will be filled from updated item
-                    TicketDetailId = request.TicketDetailId,
+                    OrderDetailId = request.OrderDetailId,
                     NewStatus = request.NewStatus,
                     Timestamp = DateTime.Now,
                     ChangedBy = $"User {request.UserId}"
@@ -152,6 +152,79 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 var groupedItems = await _kitchenService.GetGroupedItemsByMenuItemAsync();
                 return Ok(new { success = true, data = groupedItems });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET: api/KitchenDisplay/station-items?categoryName=Xào
+        /// Get station items by category name (có 2 luồng: tất cả và urgent)
+        /// </summary>
+        [HttpGet("station-items")]
+        public async Task<IActionResult> GetStationItems([FromQuery] string categoryName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(categoryName))
+                {
+                    return BadRequest(new { success = false, message = "Category name is required" });
+                }
+
+                var response = await _kitchenService.GetStationItemsByCategoryAsync(categoryName);
+                return Ok(new { success = true, data = response });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/mark-as-urgent
+        /// Mark order detail as urgent/not urgent (yêu cầu từ bếp phó)
+        /// </summary>
+        [HttpPost("mark-as-urgent")]
+        public async Task<IActionResult> MarkAsUrgent([FromBody] MarkAsUrgentRequest request)
+        {
+            try
+            {
+                var response = await _kitchenService.MarkAsUrgentAsync(request);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                // Broadcast update via SignalR
+                await _hubContext.Clients.All.SendAsync("ItemUrgentStatusChanged", new
+                {
+                    OrderDetailId = request.OrderDetailId,
+                    IsUrgent = request.IsUrgent,
+                    Timestamp = DateTime.Now
+                });
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET: api/KitchenDisplay/station-categories
+        /// Get all menu categories for stations
+        /// </summary>
+        [HttpGet("station-categories")]
+        public async Task<IActionResult> GetStationCategories()
+        {
+            try
+            {
+                var categories = await _kitchenService.GetStationCategoriesAsync();
+                return Ok(new { success = true, data = categories });
             }
             catch (Exception ex)
             {

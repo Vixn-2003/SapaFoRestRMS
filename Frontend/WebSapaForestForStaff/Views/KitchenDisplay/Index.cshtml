@@ -279,6 +279,238 @@
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
         }
+
+        /* Order Card Clickable */
+        .order-card {
+            cursor: pointer;
+        }
+
+        /* Modal Popup Styles */
+        .order-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .order-modal-overlay.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Ensure modal is visible when shown */
+        #orderModalOverlay.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Force modal to be on top */
+        #orderModalOverlay {
+            position: fixed !important;
+            z-index: 99999 !important;
+        }
+
+        .order-modal {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .order-modal-header {
+            padding: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .order-modal-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .order-modal-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .order-modal-time {
+            font-size: 18px;
+            color: #666;
+        }
+
+        .order-modal-header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-rush, .btn-print {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-rush {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-rush:hover {
+            background: #f57c00;
+        }
+
+        .btn-rush.active {
+            background: #f57c00;
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-print {
+            background: #757575;
+            color: white;
+        }
+
+        .btn-print:hover {
+            background: #616161;
+        }
+
+        .order-modal-body {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            max-height: calc(90vh - 200px);
+        }
+
+        .order-modal-items {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .order-modal-item {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .order-modal-item:hover {
+            background: #f5f5f5;
+        }
+
+        .order-modal-item.selected {
+            background: #e3f2fd;
+            border: 2px solid #1976d2;
+        }
+
+        .order-modal-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .order-modal-item-text {
+            flex: 1;
+            font-size: 16px;
+        }
+
+        .order-modal-footer {
+            padding: 20px;
+            border-top: 2px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            min-width: 100px;
+        }
+
+        .btn-modal-cancel {
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .btn-modal-cancel:hover {
+            background: #757575;
+        }
+
+        .btn-modal-select-all {
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .btn-modal-select-all:hover {
+            background: #757575;
+        }
+
+        .btn-modal-fire {
+            background: #64b5f6;
+            color: white;
+        }
+
+        .btn-modal-fire:hover {
+            background: #42a5f5;
+        }
+
+        .btn-modal-unfulfill {
+            background: #64b5f6;
+            color: white;
+        }
+
+        .btn-modal-unfulfill:hover {
+            background: #42a5f5;
+        }
+
+        .btn-modal-fulfill {
+            background: #1976d2;
+            color: white;
+        }
+
+        .btn-modal-fulfill:hover {
+            background: #1565c0;
+        }
+
+        .btn-modal:disabled {
+            background: #e0e0e0;
+            color: #9e9e9e;
+            cursor: not-allowed;
+        }
     </style>
 }
 
@@ -325,4 +557,14 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
     <script src="~/js/kitchenDisplay.js"></script>
+    <script>
+        // Ensure kitchenDisplay initializes even if other scripts have errors
+        window.addEventListener('error', function(e) {
+            // Don't block execution on datepicker errors
+            if (e.message && e.message.includes('datepicker')) {
+                console.warn('Datepicker error ignored:', e.message);
+                e.preventDefault();
+            }
+        }, true);
+    </script>
 }

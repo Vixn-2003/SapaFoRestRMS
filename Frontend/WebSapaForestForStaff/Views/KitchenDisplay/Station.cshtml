@@ -1,0 +1,251 @@
+@{
+    ViewData["Title"] = "Trạm Bếp - " + (ViewBag.CategoryName ?? "N/A");
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+@section Styles {
+    <style>
+        .station-container {
+            padding: 20px;
+        }
+
+        .station-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .station-title {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .station-subtitle {
+            font-size: 18px;
+            color: #6c757d;
+        }
+
+        .stream-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 100%;
+        }
+
+        .stream-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .stream-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stream-count {
+            background: #1976d2;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .items-table thead {
+            background: #f8f9fa;
+        }
+
+        .items-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .items-table tbody tr {
+            transition: background 0.2s;
+        }
+
+        .items-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .items-table tbody tr.urgent-row {
+            background: #fff3cd;
+            border-left: 4px solid #ff9800;
+        }
+
+        .items-table tbody tr.urgent-row:hover {
+            background: #ffe69c;
+        }
+
+        .notes-text {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .time-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1976d2;
+        }
+
+        .grouped-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .grouped-item-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #1976d2;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .grouped-item-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .grouped-item-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .grouped-item-quantity {
+            font-size: 20px;
+            color: #ff9800;
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+    </style>
+}
+
+<div class="station-container">
+    <div class="station-header">
+        <h1 class="station-title" id="stationTitle">Trạm @(ViewBag.CategoryName ?? "N/A")</h1>
+        <p class="station-subtitle" id="stationSubtitle">Món đang nấu (<span id="cookingCount">0</span>)</p>
+    </div>
+
+    <!-- 2 Luồng: Món đang order và Món cần nấu ngay -->
+    <div class="row">
+        <!-- Luồng 1: Món đang trong quá trình order (grouped by dish) -->
+        <div class="col-md-6 mb-4">
+            <div class="card stream-section">
+                <div class="card-body">
+                    <div class="stream-header">
+                        <span class="stream-title">Món đang order</span>
+                        <span class="badge bg-primary stream-count" id="allCount">0</span>
+                    </div>
+                    <div style="max-height: 600px; overflow-y: auto; padding: 10px;">
+                        <div id="allItemsList" class="grouped-items-list">
+                            <div class="empty-state">Đang tải...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Luồng 2: Món cần nấu ngay (đã được fire) -->
+        <div class="col-md-6 mb-4">
+            <div class="card stream-section">
+                <div class="card-body">
+                    <div class="stream-header">
+                        <span class="stream-title">Cần nấu ngay</span>
+                        <span class="badge bg-danger stream-count" id="urgentCount">0</span>
+                    </div>
+                    <div style="max-height: 600px; overflow-y: auto;">
+                        <div class="table-responsive">
+                            <table class="table items-table">
+                                <thead>
+                                    <tr>
+                                        <th>Thời gian bắt đầu</th>
+                                        <th>Bàn</th>
+                                        <th>Món</th>
+                                        <th>Ghi chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="urgentItemsTable">
+                                    <tr>
+                                        <td colspan="4" class="empty-state">Đang tải...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button class="btn btn-success btn-lg" onclick="completeSelectedItems()">
+            <i class="mdi mdi-check-circle"></i> Hoàn thành
+        </button>
+        <button class="btn btn-secondary btn-lg" onclick="sendBackToSousChef()">
+            <i class="mdi mdi-arrow-left"></i> Gửi lại bếp phó
+        </button>
+        <button class="btn btn-warning btn-lg" onclick="reportMissingIngredients()">
+            <i class="mdi mdi-alert"></i> Thiếu nguyên liệu
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script>
+        // Inject API base URL from server configuration
+        window.API_BASE_URL = '@ViewBag.ApiBaseUrl' || 'https://localhost:7096/api';
+        window.SIGNALR_HUB_URL = '@ViewBag.SignalRHubUrl' || 'https://localhost:7096/kitchenHub';
+    </script>
+    <script src="~/js/kitchenStation.js"></script>
+    <script>
+        $(document).ready(function() {
+            const categoryName = '@ViewBag.CategoryName';
+            if (!categoryName || categoryName === 'N/A') {
+                console.error('Category name is missing!');
+                showError('Không tìm thấy tên trạm. Vui lòng kiểm tra lại URL.');
+                return;
+            }
+            console.log('Initializing station with category:', categoryName);
+            console.log('API Base URL:', window.API_BASE_URL);
+            initializeStation(categoryName);
+        });
+    </script>
+}
+

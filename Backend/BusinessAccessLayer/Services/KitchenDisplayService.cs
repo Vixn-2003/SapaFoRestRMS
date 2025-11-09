@@ -23,10 +23,8 @@ namespace BusinessAccessLayer.Services
             var now = DateTime.Now;
 
             var activeOrders = await _context.Orders
-                .Include(o => o.KitchenTickets)
-                    .ThenInclude(kt => kt.KitchenTicketDetails)
-                        .ThenInclude(ktd => ktd.OrderDetail)
-                            .ThenInclude(od => od.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User) // For customer name
                 .Include(o => o.Reservation)
@@ -42,24 +40,23 @@ namespace BusinessAccessLayer.Services
 
             foreach (var order in activeOrders)
             {
-                // Get all tickets for this order (one ticket per CourseType)
-                var tickets = order.KitchenTickets.ToList();
-                if (!tickets.Any()) continue;
+                // Get all order details directly
+                var orderDetails = order.OrderDetails.ToList();
+                if (!orderDetails.Any()) continue;
 
-                // Get all items from all tickets
-                var items = tickets
-                    .SelectMany(ticket => ticket.KitchenTicketDetails)
-                    .Select(ktd => new KitchenOrderItemDto
+                // Map OrderDetail to KitchenOrderItemDto
+                var items = orderDetails
+                    .Select(od => new KitchenOrderItemDto
                     {
-                        TicketDetailId = ktd.TicketDetailId,
-                        OrderDetailId = ktd.OrderDetailId,
-                        MenuItemName = ktd.OrderDetail.MenuItem.Name,
-                        Quantity = ktd.OrderDetail.Quantity,
-                        Status = ktd.Status,
-                        Notes = ktd.OrderDetail.Notes,
-                        CourseType = ktd.OrderDetail.MenuItem.CourseType ?? "Other",
-                        StartedAt = ktd.StartedAt,
-                        CompletedAt = ktd.CompletedAt
+                        OrderDetailId = od.OrderDetailId,
+                        MenuItemName = od.MenuItem.Name,
+                        Quantity = od.Quantity,
+                        Status = od.Status ?? "Pending", // Default to Pending if null
+                        Notes = od.Notes,
+                        CourseType = od.MenuItem.CourseType ?? "Other",
+                        StartedAt = null, // OrderDetail doesn't have StartedAt
+                        CompletedAt = null, // OrderDetail doesn't have CompletedAt
+                        IsUrgent = od.IsUrgent
                     })
                     .ToList();
 
@@ -107,12 +104,11 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
-                var detail = await _context.KitchenTicketDetails
-                    .Include(ktd => ktd.OrderDetail)
-                        .ThenInclude(od => od.MenuItem)
-                    .FirstOrDefaultAsync(ktd => ktd.TicketDetailId == request.TicketDetailId);
+                var orderDetail = await _context.OrderDetails
+                    .Include(od => od.MenuItem)
+                    .FirstOrDefaultAsync(od => od.OrderDetailId == request.OrderDetailId);
 
-                if (detail == null)
+                if (orderDetail == null)
                 {
                     return new StatusUpdateResponse
                     {
@@ -121,18 +117,8 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Update status
-                detail.Status = request.NewStatus;
-                detail.AssignedUserId = request.UserId;
-
-                if (request.NewStatus == "Cooking" && detail.StartedAt == null)
-                {
-                    detail.StartedAt = DateTime.Now;
-                }
-                else if (request.NewStatus == "Done" && detail.CompletedAt == null)
-                {
-                    detail.CompletedAt = DateTime.Now;
-                }
+                // Update status trên OrderDetail (nguồn chính)
+                orderDetail.Status = request.NewStatus;
 
                 await _context.SaveChangesAsync();
 
@@ -142,15 +128,15 @@ namespace BusinessAccessLayer.Services
                     Message = "Status updated successfully",
                     UpdatedItem = new KitchenOrderItemDto
                     {
-                        TicketDetailId = detail.TicketDetailId,
-                        OrderDetailId = detail.OrderDetailId,
-                        MenuItemName = detail.OrderDetail.MenuItem.Name,
-                        Quantity = detail.OrderDetail.Quantity,
-                        Status = detail.Status,
-                        Notes = detail.OrderDetail.Notes,
-                        CourseType = detail.OrderDetail.MenuItem.CourseType ?? "Other",
-                        StartedAt = detail.StartedAt,
-                        CompletedAt = detail.CompletedAt
+                        OrderDetailId = orderDetail.OrderDetailId,
+                        MenuItemName = orderDetail.MenuItem.Name,
+                        Quantity = orderDetail.Quantity,
+                        Status = orderDetail.Status ?? "Pending",
+                        Notes = orderDetail.Notes,
+                        CourseType = orderDetail.MenuItem.CourseType ?? "Other",
+                        StartedAt = null, // Không dùng KitchenTicketDetail nữa
+                        CompletedAt = null, // Không dùng KitchenTicketDetail nữa
+                        IsUrgent = orderDetail.IsUrgent
                     }
                 };
             }
@@ -169,8 +155,7 @@ namespace BusinessAccessLayer.Services
             try
             {
                 var order = await _context.Orders
-                    .Include(o => o.KitchenTickets)
-                        .ThenInclude(kt => kt.KitchenTicketDetails)
+                    .Include(o => o.OrderDetails)
                     .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
 
                 if (order == null)
@@ -182,18 +167,17 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                var ticket = order.KitchenTickets.FirstOrDefault();
-                if (ticket == null)
+                if (!order.OrderDetails.Any())
                 {
                     return new StatusUpdateResponse
                     {
                         Success = false,
-                        Message = "Kitchen ticket not found"
+                        Message = "Order has no items"
                     };
                 }
 
                 // Check if all items are done
-                var allDone = ticket.KitchenTicketDetails.All(ktd => ktd.Status == "Done");
+                var allDone = order.OrderDetails.All(od => od.Status == "Done");
                 if (!allDone)
                 {
                     return new StatusUpdateResponse
@@ -203,9 +187,8 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Update order and ticket status
+                // Update order status
                 order.Status = "Completed";
-                ticket.Status = "Completed";
 
                 await _context.SaveChangesAsync();
 
@@ -239,12 +222,10 @@ namespace BusinessAccessLayer.Services
         {
             var now = DateTime.Now;
 
-            // Lấy tất cả active orders với items
+            // Lấy tất cả active orders với order details
             var activeOrders = await _context.Orders
-                .Include(o => o.KitchenTickets)
-                    .ThenInclude(kt => kt.KitchenTicketDetails)
-                        .ThenInclude(ktd => ktd.OrderDetail)
-                            .ThenInclude(od => od.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User)
                 .Include(o => o.Reservation)
@@ -256,19 +237,16 @@ namespace BusinessAccessLayer.Services
                 .Where(o => o.Status == "Processing" || o.Status == "Preparing")
                 .ToListAsync();
 
-            // Flatten tất cả items từ tất cả orders
-            var allItems = new List<(KitchenTicketDetail Detail, Order Order, OrderDetail OrderDetail, MenuItem MenuItem)>();
+            // Flatten tất cả order details từ tất cả orders
+            var allItems = new List<(Order Order, OrderDetail OrderDetail, MenuItem MenuItem)>();
 
             foreach (var order in activeOrders)
             {
-                foreach (var ticket in order.KitchenTickets)
+                foreach (var orderDetail in order.OrderDetails)
                 {
-                    foreach (var detail in ticket.KitchenTicketDetails)
+                    if (orderDetail.MenuItem != null)
                     {
-                        if (detail.OrderDetail?.MenuItem != null)
-                        {
-                            allItems.Add((detail, order, detail.OrderDetail, detail.OrderDetail.MenuItem));
-                        }
+                        allItems.Add((order, orderDetail, orderDetail.MenuItem));
                     }
                 }
             }
@@ -291,12 +269,12 @@ namespace BusinessAccessLayer.Services
                     TotalQuantity = g.Sum(item => item.OrderDetail.Quantity),
                     ItemDetails = g.Select(item => new GroupedItemDetailDto
                     {
-                        TicketDetailId = item.Detail.TicketDetailId,
+                        OrderDetailId = item.OrderDetail.OrderDetailId,
                         OrderId = item.Order.OrderId,
                         OrderNumber = $"A{item.Order.OrderId:D2}",
                         TableNumber = GetTableNumber(item.Order),
                         Quantity = item.OrderDetail.Quantity,
-                        Status = item.Detail.Status,
+                        Status = item.OrderDetail.Status ?? "Pending", // Default to Pending if null
                         Notes = item.OrderDetail.Notes,
                         CreatedAt = item.Order.CreatedAt ?? DateTime.Now,
                         WaitingMinutes = (int)((now - (item.Order.CreatedAt ?? now)).TotalMinutes)
@@ -358,6 +336,191 @@ namespace BusinessAccessLayer.Services
             if (waitingMinutes > 15) return "Critical";  // Red - >15 phút
             if (waitingMinutes >= 10) return "Warning";  // Yellow - 10-15 phút
             return "Normal";                             // White/Light - 1-10 phút
+        }
+
+        public async Task<StationItemsResponse> GetStationItemsByCategoryAsync(string categoryName)
+        {
+            var now = DateTime.Now;
+
+            // Lấy tất cả active orders với order details thuộc category này
+            var activeOrders = await _context.Orders
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.MenuItem)
+                        .ThenInclude(mi => mi.Category)
+                .Include(o => o.Customer)
+                    .ThenInclude(c => c.User)
+                .Include(o => o.Reservation)
+                    .ThenInclude(r => r.Customer)
+                        .ThenInclude(c => c.User)
+                .Include(o => o.Reservation)
+                    .ThenInclude(r => r.ReservationTables)
+                        .ThenInclude(rt => rt.Table)
+                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .ToListAsync();
+
+            var allItems = new List<StationItemDto>();
+            var urgentItems = new List<StationItemDto>();
+
+            // Debug: Log số lượng orders
+            Console.WriteLine($"[GetStationItemsByCategoryAsync] Found {activeOrders.Count} active orders");
+            Console.WriteLine($"[GetStationItemsByCategoryAsync] Filtering by categoryName: {categoryName}");
+            
+            // Log tổng số order details trước khi filter
+            var totalOrderDetails = activeOrders.Sum(o => o.OrderDetails.Count);
+            Console.WriteLine($"[GetStationItemsByCategoryAsync] Total order details before filter: {totalOrderDetails}");
+
+            foreach (var order in activeOrders)
+            {
+                // Lọc order details theo category name
+                var orderDetails = order.OrderDetails
+                    .Where(od => od.MenuItem != null && 
+                                 od.MenuItem.Category != null && 
+                                 od.MenuItem.Category.CategoryName.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                
+                // Debug: Log số lượng order details
+                if (orderDetails.Any())
+                {
+                    Console.WriteLine($"[GetStationItemsByCategoryAsync] Order {order.OrderId} has {orderDetails.Count} items in category {categoryName}");
+                }
+                else
+                {
+                    // Debug: Log để kiểm tra tại sao không có items
+                    var allOrderDetails = order.OrderDetails.ToList();
+                    Console.WriteLine($"[GetStationItemsByCategoryAsync] Order {order.OrderId} has {allOrderDetails.Count} total items");
+                    foreach (var od in allOrderDetails)
+                    {
+                        if (od.MenuItem?.Category != null)
+                        {
+                            Console.WriteLine($"[GetStationItemsByCategoryAsync]   - Item: {od.MenuItem.Name}, Category: {od.MenuItem.Category.CategoryName}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[GetStationItemsByCategoryAsync]   - Item: {od.MenuItem?.Name}, Category: NULL");
+                        }
+                    }
+                }
+
+                foreach (var orderDetail in orderDetails)
+                {
+                    var waitingMinutes = (int)((now - (order.CreatedAt ?? now)).TotalMinutes);
+                    var createdAtTime = (order.CreatedAt ?? DateTime.Now).ToString("HH:mm");
+
+                    // Lấy status từ OrderDetail (nguồn chính)
+                    var status = orderDetail.Status ?? "Pending";
+                    
+                    // Hiển thị thời gian hiện tại khi status = "Cooking" (thời gian bắt đầu nấu)
+                    // Không lưu StartedAt, chỉ hiển thị real-time
+                    var fireTime = string.Empty;
+                    DateTime? startedAt = null;
+                    
+                    // Nếu status = "Cooking", hiển thị thời gian hiện tại
+                    if (status == "Cooking" || status == "Đang chế biến")
+                    {
+                        // Có thể dùng CreatedAt của OrderDetail làm thời gian fire
+                        // Hoặc hiển thị thời gian hiện tại (real-time)
+                        // Ở đây dùng CreatedAt của OrderDetail (thời gian tạo order detail)
+                        startedAt = orderDetail.CreatedAt;
+                        fireTime = orderDetail.CreatedAt.ToString("HH:mm");
+                    }
+
+                    var item = new StationItemDto
+                    {
+                        OrderDetailId = orderDetail.OrderDetailId,
+                        OrderId = order.OrderId,
+                        OrderNumber = $"A{order.OrderId:D2}",
+                        TableNumber = GetTableNumber(order),
+                        MenuItemName = orderDetail.MenuItem.Name,
+                        Quantity = orderDetail.Quantity,
+                        Status = status, // Lấy từ OrderDetail
+                        Notes = orderDetail.Notes,
+                        CreatedAt = order.CreatedAt ?? DateTime.Now,
+                        CreatedAtTime = createdAtTime,
+                        WaitingMinutes = waitingMinutes,
+                        IsUrgent = orderDetail.IsUrgent,
+                        StartedAt = startedAt,
+                        FireTime = fireTime
+                    };
+
+                    allItems.Add(item);
+
+                    // Thêm vào urgent items nếu được đánh dấu urgent
+                    if (orderDetail.IsUrgent)
+                    {
+                        urgentItems.Add(item);
+                    }
+                }
+            }
+
+            // Sắp xếp: urgent trước, sau đó theo thời gian chờ giảm dần
+            allItems = allItems
+                .OrderByDescending(i => i.IsUrgent)
+                .ThenByDescending(i => i.WaitingMinutes)
+                .ToList();
+
+            urgentItems = urgentItems
+                .OrderByDescending(i => i.WaitingMinutes)
+                .ToList();
+
+            // Debug: Log kết quả
+            Console.WriteLine($"[GetStationItemsByCategoryAsync] Total items found: {allItems.Count}");
+            Console.WriteLine($"[GetStationItemsByCategoryAsync] Items by status:");
+            var statusGroups = allItems.GroupBy(i => i.Status ?? "NULL");
+            foreach (var group in statusGroups)
+            {
+                Console.WriteLine($"[GetStationItemsByCategoryAsync]   - {group.Key}: {group.Count()} items");
+            }
+
+            return new StationItemsResponse
+            {
+                CategoryName = categoryName,
+                AllItems = allItems,
+                UrgentItems = urgentItems
+            };
+        }
+
+        public async Task<StatusUpdateResponse> MarkAsUrgentAsync(MarkAsUrgentRequest request)
+        {
+            try
+            {
+                var orderDetail = await _context.OrderDetails
+                    .FirstOrDefaultAsync(od => od.OrderDetailId == request.OrderDetailId);
+
+                if (orderDetail == null)
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = false,
+                        Message = "Order detail not found"
+                    };
+                }
+
+                orderDetail.IsUrgent = request.IsUrgent;
+                await _context.SaveChangesAsync();
+
+                return new StatusUpdateResponse
+                {
+                    Success = true,
+                    Message = request.IsUrgent ? "Đã đánh dấu cần làm ngay" : "Đã bỏ đánh dấu cần làm ngay"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new StatusUpdateResponse
+                {
+                    Success = false,
+                    Message = $"Error: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<List<string>> GetStationCategoriesAsync()
+        {
+            return await _context.MenuCategories
+                .Select(c => c.CategoryName)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
         }
     }
 }

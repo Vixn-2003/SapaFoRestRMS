@@ -36,5 +36,20 @@ namespace BusinessAccessLayer.Services
         /// Get grouped items by menu item (theo từng món) - nhóm tất cả các món ăn từ tất cả các order
         /// </summary>
         Task<List<GroupedMenuItemDto>> GetGroupedItemsByMenuItemAsync();
+
+        /// <summary>
+        /// Get station items by category name (theo MenuCategory) - có 2 luồng: tất cả và urgent
+        /// </summary>
+        Task<StationItemsResponse> GetStationItemsByCategoryAsync(string categoryName);
+
+        /// <summary>
+        /// Mark order detail as urgent/not urgent (yêu cầu từ bếp phó)
+        /// </summary>
+        Task<StatusUpdateResponse> MarkAsUrgentAsync(MarkAsUrgentRequest request);
+
+        /// <summary>
+        /// Get all menu categories for stations
+        /// </summary>
+        Task<List<string>> GetStationCategoriesAsync();
     }
 }
