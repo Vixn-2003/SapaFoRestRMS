@@ -43,6 +43,10 @@ namespace DataAccessLayer.Repositories.Interfaces
         //Gọi hỗ trợ
         Task<bool> HasPendingAssistanceRequestAsync(int tableId);
         Task CreateAssistanceRequestAsync(AssistanceRequest request);
+
+        Task<Combo> GetComboWithDetailsAsync(int comboId);
+
+        Task<MenuItem> GetMenuItemWithDetailsAsync(int menuItemId);
     }
 
 

@@ -188,7 +188,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
         // === API MỚI: NHẬN GIỎ HÀNG (ORDER) ===
         [HttpPost("SubmitOrder")]
-        public async Task<IActionResult> SubmitOrder([FromBody] OrderSubmissionDto orderDto)
+        public async Task<IActionResult> SubmitOrder([FromBody] SubmitOrderRequest orderDto)
         {
             if (orderDto == null || orderDto.Items == null || !orderDto.Items.Any())
             {
@@ -197,15 +197,12 @@ namespace SapaFoRestRMSAPI.Controllers
 
             try
             {
-                // Gọi service
-                var createdOrder = await _orderTableService.SubmitOrderAsync(orderDto);
-
-                // Trả về 200 OK cùng thông tin order đã tạo
-                return Ok(createdOrder);
+                // Hàm service của bạn giờ đã khớp hoàn hảo
+                var result = await _orderTableService.SubmitOrderAsync(orderDto);
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                // Báo lỗi 400 nếu có lỗi nghiệp vụ (ví dụ: bàn không hợp lệ)
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -237,6 +234,40 @@ namespace SapaFoRestRMSAPI.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Đặt hàm này gần các hàm GET khác
+
+        [HttpGet("ComboDetails/{comboId}")]
+        public async Task<IActionResult> GetComboDetails(int comboId)
+        {
+            try
+            {
+                // Chỉ cần gọi Service
+                var comboDetails = await _orderTableService.GetComboDetailsAsync(comboId);
+                return Ok(comboDetails);
+            }
+            catch (Exception ex)
+            {
+                // Nếu comboId không tìm thấy, Service sẽ throw Exception
+                // Chúng ta bắt lại và trả về 404 Not Found
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("MenuItemDetails/{menuItemId}")]
+        public async Task<IActionResult> GetMenuItemDetails(int menuItemId)
+        {
+            try
+            {
+                var details = await _orderTableService.GetMenuItemDetailsAsync(menuItemId);
+                return Ok(details);
+            }
+            catch (Exception ex)
+            {
+                // Nếu không tìm thấy, Service sẽ throw Exception
+                return NotFound(new { message = ex.Message });
             }
         }
     }

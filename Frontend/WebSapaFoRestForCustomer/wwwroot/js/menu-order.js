@@ -95,19 +95,6 @@ $(document).ready(function () {
         updateCartBadge();
         updateStatusBadge();
     }
-    //function saveCart() {
-    //    try {
-    //        localStorage.setItem('cart_' + tableId, JSON.stringify(cart));
-    //        // Chỉ gọi updateCartUI nếu trang giỏ hàng đang hiển thị
-    //        if (!$cartPage.hasClass('page-hidden')) {
-    //            updateCartUI();
-    //        }
-    //        updateCartBadge(); // Luôn cập nhật badge
-    //    } catch (e) {
-    //        console.error("Lỗi khi lưu giỏ hàng:", e);
-    //        alert("Đã xảy ra lỗi khi lưu giỏ hàng.");
-    //    }
-    //}
 
     // === Hàm lưu giỏ hàng ===
     function saveCart() {
@@ -149,6 +136,7 @@ $(document).ready(function () {
     }
 
     // (ĐÃ SỬA) Hàm vẽ lại giỏ hàng (phiên bản mới nhất theo mockup)
+    // (ĐÃ SỬA HOÀN CHỈNH) Hàm vẽ lại giỏ hàng
     function updateCartUI() {
         if (!$cartPage || $cartPage.hasClass('page-hidden') || !Array.isArray(cart)) return;
 
@@ -159,22 +147,23 @@ $(document).ready(function () {
 
         if (cart.length === 0) {
             cartHtml += '<p class="text-center text-muted mt-4">Giỏ hàng của bạn đang trống.</p>';
-            // Footer khi giỏ hàng rỗng
+            // Footer khi giỏ hàng rỗng (Code của bạn đã đúng)
             cartHtml += `
-        <div class="cart-footer mt-4" style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <div class="d-flex justify-content-between mb-3 align-items-center">
-                <h6 class="mb-0 text-muted">Tổng tiền:</h6>
-                <h6 class="mb-0 text-danger fw-bold">0đ</h6>
-            </div>
-            <div class="d-flex gap-2">
-                <button id="btn-back-to-menu" class="btn btn-secondary flex-fill fw-bold">Tiếp tục chọn món</button>
-                <button id="btn-submit-order" class="btn flex-fill fw-bold disabled" disabled style="background-color: var(--brand-gold); color:white;">Xác nhận gọi món</button>
-            </div>
-        </div>`;
+    <div class="cart-footer mt-4" style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <div class="d-flex justify-content-between mb-3 align-items-center">
+            <h6 class="mb-0 text-muted">Tổng tiền:</h6>
+            <h6 class="mb-0 text-danger fw-bold">0đ</h6>
+        </div>
+        <div class="d-flex gap-2">
+            <button id="btn-back-to-menu" class="btn btn-secondary flex-fill fw-bold">Tiếp tục chọn món</button>
+            <button id="btn-submit-order" class="btn flex-fill fw-bold disabled" disabled style="background-color: var(--brand-gold); color:white;">Xác nhận gọi món</button>
+        </div>
+    </div>`;
             $cartPage.html(cartHtml);
             return;
         }
 
+        // === PHẦN SỬA LỖI NẰM Ở ĐÂY ===
         // Vẽ các món
         for (const item of cart) {
             if (!item || typeof item.id === 'undefined' || typeof item.price !== 'number' || typeof item.quantity !== 'number' || item.quantity <= 0) continue;
@@ -184,9 +173,11 @@ $(document).ready(function () {
             const imageUrl = item.imageUrl || 'https://via.placeholder.com/100';
             const itemName = item.name || 'Chưa có tên';
             const itemPriceDisplay = item.price.toLocaleString('vi-VN');
+            const itemType = item.type || 'item'; // Lấy type (item hoặc combo)
 
+            // Đây là code HTML đầy đủ cho một món hàng
             cartHtml += `
-        <div class="cart-item mb-3 p-3" data-item-id="${item.id}" style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <div class="cart-item mb-3 p-3" data-item-id="${item.id}" data-item-type="${itemType}" style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <div class="row g-3 align-items-start">
                 <div class="col-auto">
                     <img src="${imageUrl}" alt="${itemName}" style="width:60px;height:60px;border-radius:6px;object-fit:cover;">
@@ -195,9 +186,9 @@ $(document).ready(function () {
                     <h6 class="fw-bold mb-1" style="font-size:0.95rem;">${itemName}</h6>
                     <div class="d-flex align-items-center mb-2">
                         <div class="qty-selector">
-                            <button class="btn btn-outline-secondary btn-sm btn-cart-qty-minus py-0 px-2" data-item-id="${item.id}">-</button>
+                            <button class="btn btn-outline-secondary btn-sm btn-cart-qty-minus py-0 px-2" data-item-id="${item.id}" data-item-type="${itemType}">-</button>
                             <span class="mx-2 fw-bold" style="min-width:20px;text-align:center;">${item.quantity}</span>
-                            <button class="btn btn-outline-secondary btn-sm btn-cart-qty-plus py-0 px-2" data-item-id="${item.id}">+</button>
+                            <button class="btn btn-outline-secondary btn-sm btn-cart-qty-plus py-0 px-2" data-item-id="${item.id}" data-item-type="${itemType}">+</button>
                         </div>
                     </div>
                     <div class="cart-item-notes">
@@ -206,13 +197,14 @@ $(document).ready(function () {
                 </div>
                 <div class="col-auto text-end d-flex flex-column align-items-end">
                     <p class="fw-bold mb-1" style="color:var(--brand-green);font-size:0.9rem;">${itemPriceDisplay}đ</p>
-                    <a href="#" class="btn-cart-remove small mt-auto" data-item-id="${item.id}" style="color:#6c757d;text-decoration:none;">Xóa</a>
+                    <a href="#" class="btn-cart-remove small mt-auto" data-item-id="${item.id}" data-item-type="${itemType}" style="color:#6c757d;text-decoration:none;">Xóa</a>
                 </div>
             </div>
         </div>`;
         }
+        // === HẾT PHẦN SỬA LỖI ===
 
-        // Footer khi có món
+        // Footer khi có món (Code của bạn đã đúng)
         cartHtml += `
     <div class="cart-footer mt-4" style="background:#fff;padding:15px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
         <div class="d-flex justify-content-between mb-3 align-items-center">
@@ -228,7 +220,7 @@ $(document).ready(function () {
         $cartPage.html(cartHtml);
     }
 
-
+    // === 4. SỰ KIỆN "GỌI MÓN" ===
     // === 4. SỰ KIỆN "GỌI MÓN" ===
     $(document).on('click', '.btn-add-to-cart', function () {
         const button = $(this);
@@ -239,22 +231,75 @@ $(document).ready(function () {
 
         if (typeof itemId === 'undefined' || !itemName || isNaN(itemPrice)) {
             console.error("Dữ liệu item không hợp lệ:", button.data());
-            showMobileToast("Lỗi: Không thể thêm món này.", "error"); // Thay alert
+            showMobileToast("Lỗi: Không thể thêm món này.", "error");
             return;
         }
 
-        const existingItem = cart.find(i => i.id === itemId);
-        if (existingItem) {
-            existingItem.quantity++;
-        } else {
-            cart.push({ id: itemId, name: itemName, price: itemPrice, quantity: 1, notes: "", imageUrl: imageUrl });
-        }
-        saveCart(); // Gọi saveCart để cập nhật
+        // Xác nhận trước khi thêm món
+        showMobileConfirm(`Bạn có chắc chắn muốn gọi món: "${itemName}" không?`, function () {
+            const existingItem = cart.find(i => i.id === itemId && i.type === 'item');
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({
+                    id: itemId,
+                    name: itemName,
+                    price: itemPrice,
+                    quantity: 1,
+                    notes: "",
+                    imageUrl: imageUrl,
+                    type: 'item'
+                });
+            }
 
-        button.prop('disabled', true).text('Đã thêm');
-        setTimeout(function () {
-            button.prop('disabled', false).text('Gọi món');
-        }, 1000);
+            saveCart();
+
+            button.prop('disabled', true).text('Đã thêm');
+            setTimeout(() => {
+                button.prop('disabled', false).text('Gọi món');
+            }, 1000);
+        });
+    });
+
+    // === 5. SỰ KIỆN "GỌI COMBO" (MỚI) ===
+    // === 5. SỰ KIỆN "GỌI COMBO" ===
+    $(document).on('click', '.btn-add-combo-to-cart', function () {
+        const button = $(this);
+        const comboId = button.data('combo-id');
+        const comboName = button.data('combo-name');
+        const comboPrice = parseFloat(button.data('combo-price'));
+        const imageUrl = button.data('combo-image');
+
+        if (typeof comboId === 'undefined' || !comboName || isNaN(comboPrice)) {
+            console.error("Dữ liệu combo không hợp lệ:", button.data());
+            showMobileToast("Lỗi: Không thể thêm combo này.", "error");
+            return;
+        }
+
+        // Xác nhận trước khi thêm combo
+        showMobileConfirm(`Bạn có chắc chắn muốn gọi combo: "${comboName}" không?`, function () {
+            const existingCombo = cart.find(i => i.id === comboId && i.type === 'combo');
+            if (existingCombo) {
+                existingCombo.quantity++;
+            } else {
+                cart.push({
+                    id: comboId,
+                    name: comboName,
+                    price: comboPrice,
+                    quantity: 1,
+                    notes: "",
+                    imageUrl: imageUrl,
+                    type: 'combo'
+                });
+            }
+
+            saveCart();
+
+            button.prop('disabled', true).text('Đã thêm');
+            setTimeout(() => {
+                button.prop('disabled', false).text('Gọi combo');
+            }, 1000);
+        });
     });
 
 
@@ -262,11 +307,7 @@ $(document).ready(function () {
 
     // === THAY THẾ TOÀN BỘ HÀM NÀY ===
     function renderMenu(menuItems) {
-        $menuListContainer.empty();
-        if (!Array.isArray(menuItems) || menuItems.length === 0) {
-            $menuListContainer.html('<p class="text-center text-muted mt-4">Không tìm thấy món ăn nào.</p>');
-            return;
-        }
+
 
         const categories = {};
         menuItems.forEach(item => {
@@ -322,7 +363,7 @@ $(document).ready(function () {
                                     ${detailsHtml}
                                 </div>
                                 <div class="actions">
-                                    <a href="#" class="btn-details">Chi tiết</a>
+                                    <a href="#" class="btn-details" data-item-id="${menuItemId}">Chi tiết</a>
                                     <button class="btn-order btn-add-to-cart"
                                             data-item-id="${menuItemId}"
                                             data-item-name="${itemName}"
@@ -346,28 +387,142 @@ $(document).ready(function () {
         });
     }
 
+
+    function renderCombos(combos) {
+        let categoryTitleHtml = '<h3 class="category-title">Combos & Ưu Đãi</h3>';
+        let categoryListHtml = '<div class="menu-item-list mt-3">';
+
+        combos.forEach(combo => {
+            const comboId = combo.comboId;
+            const comboName = combo.name || 'Combo';
+            const comboPrice = typeof combo.price === 'number' ? combo.price : 0;
+            const imageUrl = combo.imageUrl || 'https://via.placeholder.com/100';
+            const description = combo.description || '';
+
+            // === PHẦN SỬA LẠI ===
+
+            // 1. Lấy giá trị mới từ API
+            const originalPrice = typeof combo.originalPrice === 'number' ? combo.originalPrice : 0;
+
+            // 2. Tạo HTML cho giá
+            let priceHtml = `<p class="price-new" style="color:green">Giá ưu đãi: ${comboPrice.toLocaleString('vi-VN')} VNĐ</p>`;
+
+            // Nếu có giá gốc và nó cao hơn giá combo, thì hiển thị
+            if (originalPrice > 0 && originalPrice > comboPrice) {
+                priceHtml = `
+                ${priceHtml} 
+                <p class="price-old" style="color:red"> Giá cũ: <s>${originalPrice.toLocaleString('vi-VN')} VNĐ</s></p>
+            `;
+            }
+
+            // 3. Logic "Đã gọi" (Giữ nguyên)
+            let orderedQty = 0;
+            if (Array.isArray(initialOrderedItems)) {
+                initialOrderedItems.forEach(orderedItem => {
+                    if (orderedItem && orderedItem.comboId === comboId) {
+                        const qty = typeof orderedItem.quantity === 'number' ? orderedItem.quantity : (typeof orderedItem.Quantity === 'number' ? orderedItem.Quantity : 0);
+                        orderedQty += qty;
+                    }
+                });
+            }
+            let detailsHtml = '';
+            if (orderedQty > 0) {
+                detailsHtml += `<span class="item-ordered text-success fw-bold">Đã gọi: ${orderedQty}</span>`;
+            }
+
+            // 4. Tạo HTML cho thẻ combo (Đã sửa)
+            categoryListHtml += `
+        <div class="menu-item-card">
+            <img src="${imageUrl}" alt="${comboName}" />
+            <div class="details">
+                <h5>${comboName}</h5>
+                
+                ${priceHtml} ${detailsHtml} 
+            </div>
+            <div class="actions">
+                <a href="#" class="btn-details btn-combo-details" 
+                   data-combo-id="${comboId}">
+                   Chi tiết
+                </a>
+                
+                <button class="btn-order btn-add-combo-to-cart"
+                        data-combo-id="${comboId}"
+                        data-combo-name="${comboName}"
+                        data-combo-price="${comboPrice}"
+                        data-combo-image="${imageUrl}">
+                    Gọi combo
+                </button>
+            </div>
+        </div>`;
+        });
+
+        categoryListHtml += '</div>'; // Đóng .menu-item-list
+        $menuListContainer.append(categoryTitleHtml + categoryListHtml);
+    }
+
     function performFilter() {
         const searchString = $searchInput.val();
         const categoryId = $categoryTabs.filter('.active').data('id');
 
         let url = `${apiBaseUrl}/api/OrderTable/MenuOrder/${tableId}?`;
-        if (categoryId) { url += `categoryId=${categoryId}&`; }
-        if (searchString) { url += `searchString=${encodeURIComponent(searchString)}`; }
 
+        // === ĐÃ SỬA LỖI LOGIC (if categoryId): Chấp nhận số 0 ===
+        if (categoryId !== undefined && categoryId !== null && categoryId !== "") {
+            url += `categoryId=${categoryId}&`;
+        }
+
+        if (searchString) {
+            url += `searchString=${encodeURIComponent(searchString)}`;
+        }
+
+        // Hiển thị "Đang tải..."
         $menuListContainer.html('<p class="text-center text-muted mt-4">Đang tải...</p>');
+
+        // Gọi AJAX
         $.ajax({
             url: url,
             type: 'GET',
             dataType: 'json',
             success: function (response) {
-                if (response && Array.isArray(response.menuItems)) {
-                    renderMenu(response.menuItems);
-                } else {
+
+                // 1. Xóa "Đang tải..."
+                $menuListContainer.empty();
+
+                if (response) {
+                    let hasContent = false;
+
+                    // 2. Render Combos (nếu có)
+                    if (response.combos && Array.isArray(response.combos) && response.combos.length > 0) {
+                        renderCombos(response.combos);
+                        hasContent = true;
+                    }
+
+                    // 3. Render MenuItems (nếu có)
+                    if (response.menuItems && Array.isArray(response.menuItems) && response.menuItems.length > 0) {
+                        renderMenu(response.menuItems);
+                        hasContent = true;
+                    }
+
+                    // 4. Xử lý khi không có gì
+                    if (!hasContent) {
+                        const currentCatId = $categoryTabs.filter('.active').data('id');
+                        if (currentCatId == -1) { // Tab Combo
+                            $menuListContainer.html('<p class="text-center text-muted mt-4">Không có combo nào để hiển thị.</p>');
+                        } else { // Các tab khác
+                            $menuListContainer.html('<p class="text-center text-muted mt-4">Không tìm thấy món ăn nào.</p>');
+                        }
+                    }
+                }
+                else {
+                    // Xử lý API trả về rỗng
+                    $menuListContainer.empty();
                     console.error("API response không hợp lệ:", response);
                     $menuListContainer.html('<p class="text-center text-danger mt-4">Lỗi: Dữ liệu menu không đúng.</p>');
                 }
             },
             error: function (xhr, status, error) {
+                // Xử lý lỗi (Giữ nguyên)
+                $menuListContainer.empty();
                 console.error("Lỗi AJAX:", status, error, xhr.responseText);
                 let errorMsg = "Lỗi khi tải menu.";
                 if (xhr.responseJSON && xhr.responseJSON.message) {
@@ -379,7 +534,6 @@ $(document).ready(function () {
             }
         });
     }
-
     // Sự kiện Lọc/Search
     $searchIconBtn.on('click', function () {
         $searchBar.toggleClass('page-hidden');
@@ -404,26 +558,31 @@ $(document).ready(function () {
     // === 6. CÁC SỰ KIỆN CŨ (Đã sửa nút Xóa) ===
     $(document).on('click', '.btn-cart-qty-plus', function () {
         const itemId = $(this).data('item-id');
+        const itemType = $(this).data('item-type'); // <-- LẤY TYPE
         if (typeof itemId === 'undefined') return;
-        const item = cart.find(i => i.id === itemId);
+        const item = cart.find(i => i.id === itemId && i.type === itemType);
         if (item) {
             item.quantity++;
             saveCart(); // Gọi saveCart
         }
     });
-   
+
     $(document).on('click', '.btn-cart-qty-minus', function () {
         const itemId = $(this).data('item-id');
+        const itemType = $(this).data('item-type'); // <-- LẤY TYPE
         if (typeof itemId === 'undefined') return;
-        const itemIndex = cart.findIndex(i => i.id === itemId);
+
+        // TÌM CHÍNH XÁC BẰNG CẢ ID VÀ TYPE
+        const itemIndex = cart.findIndex(i => i.id === itemId && i.type === itemType);
+
         if (itemIndex > -1) {
             if (cart[itemIndex].quantity > 1) {
                 cart[itemIndex].quantity--;
-                saveCart(); // Gọi saveCart
+                saveCart();
             } else {
                 showMobileConfirm('Xóa món này khỏi giỏ hàng?', function () {
                     cart.splice(itemIndex, 1);
-                    saveCart(); // Gọi saveCart
+                    saveCart();
                 });
             }
         }
@@ -431,45 +590,79 @@ $(document).ready(function () {
     $(document).on('click', '.btn-cart-remove', function (e) {
         e.preventDefault();
         const itemId = $(this).data('item-id');
+        const itemType = $(this).data('item-type'); // <-- LẤY TYPE
         if (typeof itemId === 'undefined') return;
+
         showMobileConfirm('Xóa món này khỏi giỏ hàng?', function () {
-            const itemIndex = cart.findIndex(i => i.id === itemId);
+            // TÌM CHÍNH XÁC BẰNG CẢ ID VÀ TYPE
+            const itemIndex = cart.findIndex(i => i.id === itemId && i.type === itemType);
             if (itemIndex > -1) {
                 cart.splice(itemIndex, 1);
-                saveCart(); // Gọi saveCart
+                saveCart();
             }
         });
     });
 
-    //Xác nhận gọi mon
+
+    // === HÀM SUBMIT ORDER xác nhận gọi món ===
     $(document).on('click', '#btn-submit-order', function () {
         if (!Array.isArray(cart) || cart.length === 0) {
             showMobileToast("Giỏ hàng của bạn đang trống!", "error");
             return;
         }
 
-        // Hiển thị xác nhận trước khi submit
+        // Hiển thị xác nhận
         showMobileConfirm("Bạn có chắc chắn muốn gọi món này không?", function () {
-            // Callback khi người dùng bấm "Đồng ý"
             const btn = $('#btn-submit-order');
             btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang gửi...');
 
-            const orderData = {
-                tableId: parseInt(tableId),
-                items: cart.filter(item => item && typeof item.id !== 'undefined' && typeof item.quantity === 'number' && item.quantity > 0)
-                    .map(item => ({
-                        menuItemId: item.id,
-                        quantity: item.quantity,
-                        notes: item.notes || ""
-                    }))
-            };
+            // 1. Lọc ra 2 danh sách (Giữ nguyên logic của bạn)
+            const orderItems = cart
+                .filter(item => item && item.type === 'item' && item.quantity > 0)
+                .map(item => ({
+                    menuItemId: item.id,
+                    quantity: item.quantity,
+                    notes: item.notes || ""
+                }));
 
-            if (orderData.items.length === 0) {
+            const orderCombos = cart
+                .filter(item => item && item.type === 'combo' && item.quantity > 0)
+                .map(item => ({
+                    comboId: item.id,
+                    quantity: item.quantity,
+                    notes: item.notes || ""
+                }));
+
+            // === BƯỚC 2: SỬA LỖI TẠI ĐÂY ===
+
+            // Kiểm tra giỏ hàng rỗng (Sử dụng 2 mảng gốc)
+            if (orderItems.length === 0 && orderCombos.length === 0) {
                 showMobileToast("Giỏ hàng không có món hợp lệ để gửi.", "error");
-                btn.prop('disabled', false).html('<i class="fas fa-check me-2"></i> Xác nhận gọi món');
+                btn.prop('disabled', false).html('Xác nhận gọi món');
                 return;
             }
 
+            // Tạo đối tượng data mới (ĐÃ SỬA)
+            const orderData = {
+                tableId: parseInt(tableId),
+
+                // Hack: Nếu mảng 'items' rỗng, hãy gửi một món "ảo"
+                // (Đúng như cách cURL của bạn đã test thành công)
+                items: (orderItems.length > 0)
+                    ? orderItems
+                    : [{ menuItemId: 0, quantity: 0, notes: "string" }],
+
+                combos: orderCombos
+            };
+
+            // === HẾT PHẦN SỬA ===
+
+            // (Thêm dòng này để bạn tự kiểm tra)
+            console.log("=== DỮ LIỆU SẮP GỬI (ĐÃ SỬA) ===");
+            console.log(JSON.stringify(orderData, null, 2));
+
+
+            // 3. Gửi AJAX (Giữ nguyên code của bạn)
             $.ajax({
                 url: apiBaseUrl + '/api/OrderTable/SubmitOrder',
                 type: 'POST',
@@ -490,11 +683,12 @@ $(document).ready(function () {
                         try { const err = JSON.parse(xhr.responseText); if (err.message) errorMsg = err.message; } catch (e) { }
                     }
                     showMobileToast('Lỗi! ' + errorMsg, 'error');
-                    btn.prop('disabled', false).html('<i class="fas fa-check me-2"></i> Xác nhận gọi món');
+                    btn.prop('disabled', false).html('Xác nhận gọi món');
                 }
             });
         });
     });
+
 
     function showMobileConfirm(message, onConfirm) {
         // Xóa confirm cũ nếu có
@@ -661,7 +855,7 @@ $(document).ready(function () {
         });
     });
 
-    
+
     // === (MỚI) THÊM SỰ KIỆN CLICK CHO NÚT "HIỂN THỊ THÊM" ===
     $(document).on('click', '.btn-show-more', function (e) {
         e.preventDefault();
@@ -746,7 +940,7 @@ $(document).ready(function () {
                 tableId: parseInt(tableId), // chắc chắn tableId có giá trị
                 note: note
             };
-           
+
             $.ajax({
                 url: apiBaseUrl + '/api/OrderTable/RequestAssistance',
                 type: 'POST',
@@ -769,10 +963,233 @@ $(document).ready(function () {
 
         });
     });
+    document.getElementById("search-icon-btn").addEventListener("click", function () {
+        const bar = document.getElementById("search-bar");
+        if (bar.style.display === "block") {
+            bar.style.display = "none";
+        } else {
+            bar.style.display = "block";
+        }
+    });
+
+    // === DÁN HÀM NÀY VÀO menu-order.js ===
+
+    function showComboDetailsModal(comboId) {
+        const modal = new bootstrap.Modal(document.getElementById('comboDetailModal'));
+        const $modal = $('#comboDetailModal');
+
+        // 1️⃣ Reset modal
+        $modal.find('.modal-title').text('Đang tải chi tiết combo...');
+        $modal.find('#combo-modal-image-container').html('');
+        $modal.find('#combo-modal-items').html('<p class="text-center text-muted py-3">Đang tải...</p>');
+        $modal.find('#combo-modal-pricing').html('');
+        $modal.find('#combo-modal-footer').html('');
+
+        modal.show();
+
+        // 2️⃣ Gọi API
+        $.ajax({
+            url: `${apiBaseUrl}/api/OrderTable/ComboDetails/${comboId}`,
+            type: 'GET',
+            success: function (combo) {
+                // --- Tiêu đề ---
+                $modal.find('.modal-title').text(combo.name || 'Chi tiết Combo');
+
+                // --- Ảnh combo ---
+                if (combo.imageUrl) {
+                    $modal.find('#combo-modal-image-container').html(`
+                    <div class="text-center mb-3">
+                        <img src="${combo.imageUrl}" 
+                             alt="${combo.name}" 
+                             class="img-fluid rounded shadow-sm" 
+                             style="max-height: 160px; width: 90%; object-fit: cover;">
+                    </div>
+                `);
+                }
+                let itemsHtml = '<h6><i class="fas fa-clipboard-list me-2"></i>Bao gồm các món:</h6>';
+                itemsHtml += '<ul class="list-group list-group-flush" style="margin-top: 10px;">';
+                // --- Danh sách món ăn trong combo ---
+
+                combo.items.forEach(item => {
+                    const itemImage = item.imageUrl || 'https://via.placeholder.com/80?text=No+Image';
+                    const totalPrice = (item.unitPrice * item.quantity).toLocaleString('vi-VN');
+
+                    itemsHtml += `
+                    <div class="d-flex align-items-center border-bottom py-2">
+                        <img src="${itemImage}" 
+                             alt="${item.itemName}" 
+                             class="rounded me-3" 
+                             style="width: 60px; height: 60px; object-fit: cover;">
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">${item.itemName}</div>
+                            <div class="text-muted small">Số lượng: ${item.quantity}</div>
+                        </div>
+                        <div class="text-end text-muted small">${totalPrice}đ</div>
+                    </div>
+                `;
+                });
+                itemsHtml += `</div>`;
+                $modal.find('#combo-modal-items').html(itemsHtml);
+
+                // --- Chi tiết giá ---
+                let pricingHtml = `
+                <div class="combo-pricing mt-3">
+                    <div class="d-flex justify-content-between border-bottom py-1">
+                        <span>Tổng giá gốc:</span>
+                        <span class="text-muted"><s>${combo.originalPrice?.toLocaleString('vi-VN') || 0}đ</s></span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom py-1">
+                        <span class="text-success fw-bold">Tiết kiệm:</span>
+                        <span class="text-success fw-bold">-${combo.savedAmount?.toLocaleString('vi-VN') || 0}đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-2">
+                        <span class="fw-bold fs-5">Giá Combo:</span>
+                        <span class="fw-bold fs-5 text-danger">${combo.comboPrice.toLocaleString('vi-VN')}đ</span>
+                    </div>
+                </div>
+            `;
+                $modal.find('#combo-modal-pricing').html(pricingHtml);
+
+                // --- Nút footer ---
+                let footerHtml = `
+    <div class="d-flex justify-content-center gap-2 mt-2">
+        <button class="btn btn-light flex-fill" 
+                style="max-width: 130px; font-size: 0.9rem; padding: 6px 12px;"
+                data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Đóng
+        </button>
+        <button class="btn text-white btn-add-combo-to-cart flex-fill"
+                data-combo-id="${combo.comboId}"
+                data-combo-name="${combo.name}"
+                data-combo-price="${combo.comboPrice}"
+                data-combo-image="${combo.imageUrl}"
+                style="background-color: var(--brand-gold); font-weight: 600; max-width: 150px; font-size: 0.9rem; padding: 6px 12px;">
+            <i class="fas fa-shopping-cart me-1"></i> Gọi combo
+        </button>
+    </div>
+`;
+
+                $modal.find('#combo-modal-footer').html(`
+                <div class="d-flex gap-2 mt-2">${footerHtml}</div>
+            `);
+            },
+            error: function (xhr) {
+                modal.hide();
+                const errorMsg = xhr.responseJSON?.message || "Không thể tải chi tiết combo.";
+                showMobileToast(errorMsg, "error");
+            }
+        });
+    }
+
+    // === DÁN SỰ KIỆN NÀY VÀO menu-order.js ===
+
+    $(document).on('click', '.btn-combo-details', function (e) {
+        e.preventDefault(); // Ngăn trình duyệt nhảy trang
+
+        const comboId = $(this).data('combo-id');
+        if (comboId) {
+            showComboDetailsModal(comboId);
+        }
+    });
+
+
+    // === DÁN HÀM NÀY VÀO menu-order.js ===
+
+    function showMenuItemDetailsModal(menuItemId) {
+        const modal = new bootstrap.Modal(document.getElementById('comboDetailModal'));
+
+        // 1. Reset Modal về trạng thái "Đang tải"
+        const $modal = $('#comboDetailModal');
+        $modal.find('.modal-title').text('Đang tải chi tiết món...');
+        $modal.find('#combo-modal-image-container').html('');
+        $modal.find('#combo-modal-items').html('<p class="text-center text-muted">Đang tải...</p>');
+        $modal.find('#combo-modal-pricing').html('');
+        $modal.find('#combo-modal-footer').html('');
+
+        modal.show(); // Hiển thị modal
+
+        // 2. Gọi API mới
+        $.ajax({
+            url: `${apiBaseUrl}/api/OrderTable/MenuItemDetails/${menuItemId}`,
+            type: 'GET',
+            success: function (item) {
+
+                // 3. Đổ dữ liệu MÓN ĂN vào Modal
+                $modal.find('.modal-title').text('Tên món: '+item.name);
+
+                // Thêm ảnh (nếu có)
+                if (item.imageUrl) {
+                    $modal.find('#combo-modal-image-container').html(
+                        `<img src="${item.imageUrl}" alt="${item.name}" class="img-fluid rounded" style="max-height: 200px;">`
+                    );
+                }
+
+                // Thêm mô tả (thay vì danh sách món)
+                let descriptionHtml = `
+                <p><strong>Danh mục:</strong> ${item.categoryName}</p>
+                <p><strong>Mô tả: </strong> ${item.description || 'Món ăn này chưa có mô tả.'}</p>
+            `;
+                $modal.find('#combo-modal-items').html(descriptionHtml);
+
+                // Thêm giá (chỉ 1 dòng)
+                let pricingHtml = `
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="fw-bold fs-5">Giá:</span>
+                        <span class="fw-bold fs-5 text-danger">${item.price.toLocaleString('vi-VN')}đ</span>
+                    </li>
+                </ul>`;
+                $modal.find('#combo-modal-pricing').html(pricingHtml);
+
+                // Thêm nút "Gọi Món" vào footer
+                // (Nút này y hệt nút .btn-add-to-cart)
+                let footerHtml = `
+<div class="d-flex justify-content-center gap-2 mt-2">
+    <button class="btn btn-secondary flex-fill" 
+            style="max-width: 140px; font-size: 0.9rem; padding: 6px 12px;"
+            data-bs-dismiss="modal">
+        Đóng
+    </button>
+    <button class="btn-order btn-add-to-cart flex-fill"
+            data-item-id="${item.menuItemId}"
+            data-item-name="${item.name}"
+            data-item-price="${item.price}"
+            data-item-image="${item.imageUrl}"
+            style="background-color: var(--brand-gold); color: white; max-width: 140px; font-size: 0.9rem; padding: 6px 12px;">
+        <i class="fas fa-shopping-cart me-1"></i> Gọi Món này
+    </button>
+</div>
+`;
+
+
+
+                $modal.find('#combo-modal-footer').html(footerHtml);
+            },
+            error: function (xhr) {
+                modal.hide(); // Ẩn modal nếu lỗi
+                const errorMsg = xhr.responseJSON?.message || "Không thể tải chi tiết món ăn.";
+                showMobileToast(errorMsg, "error");
+            }
+        });
+    }
+
+    // === DÁN SỰ KIỆN NÀY VÀO menu-order.js ===
+
+    // Đây là nút "Chi tiết" của MÓN ĂN LẺ
+    $(document).on('click', '.btn-details', function (e) {
+        e.preventDefault();
+
+        // (Chúng ta đã sửa 'renderMenu' để thêm data-item-id vào)
+        const menuItemId = $(this).data('item-id');
+
+        if (menuItemId) {
+            showMenuItemDetailsModal(menuItemId);
+        }
+    });
 
 
 
     // === 7. CHẠY LẦN ĐẦU ===
     loadCart(); // Tải giỏ hàng từ localStorage
-
+    performFilter();
 }); // End of $(document).ready

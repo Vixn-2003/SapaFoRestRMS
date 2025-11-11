@@ -1,0 +1,209 @@
+﻿@model WebSapaForestForStaff.DTOs.DashboardDataDto
+@{
+    ViewData["Title"] = "Quản lý bàn";
+    var currentFloor = ViewData["CurrentFloor"] as int?;
+    var currentArea = ViewData["CurrentArea"] as string;
+    var currentStatus = ViewData["CurrentStatus"] as string;
+   
+}
+
+<style>
+    /* CSS của bạn đã đúng, giữ nguyên */
+    .table-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .table-card {
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .status-trong {
+        background-color: #f0f0f0;
+        border-left: 5px solid gray;
+    }
+
+    .status-hoat-dong {
+        background-color: #e0f8e0;
+        border-left: 5px solid green;
+    }
+
+    .filter-link {
+        display: block;
+        padding: 8px;
+        text-decoration: none;
+        color: black;
+    }
+
+        .filter-link.active {
+            background-color: #f0ad4e;
+            color: white;
+        }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-3 filter-sidebar">
+            <h3>Vị trí bàn</h3>
+            <div>
+                <a class="filter-link @(currentFloor == null ? "active" : "")"
+                   asp-controller="DashboardTable" asp-action="Index"
+                   asp-route-floor=""
+                   asp-route-areaName="@currentArea"
+                   asp-route-status="@currentStatus">
+                    Tất cả Tầng
+                </a>
+
+                @* Các tầng khác *@
+                @foreach (var floor in Model.Floors.OrderBy(f => f))
+                {
+                    <a class="filter-link @(currentFloor == floor ? "active" : "")"
+                       asp-controller="DashboardTable" asp-action="Index"
+                       asp-route-floor="@floor"
+                       asp-route-areaName="@currentArea"
+                       asp-route-status="@currentStatus">
+                        Tầng @floor
+                    </a>
+                }
+            </div>
+
+            <h3>Khu vực</h3>
+            <div>
+                <a class="filter-link @(string.IsNullOrEmpty(currentArea) ? "active" : "")"
+                   asp-controller="DashboardTable" asp-action="Index"
+                   asp-route-areaName=""
+                   asp-route-floor="@currentFloor"
+                   asp-route-status="@currentStatus">
+                    Tất cả Khu vực
+                </a>
+
+                @* Các khu vực khác *@
+                @foreach (var area in Model.AreaNames.OrderBy(a => a))
+                {
+                    <a class="filter-link @(currentArea == area ? "active" : "")"
+                       asp-controller="DashboardTable" asp-action="Index"
+                       asp-route-areaName="@area"
+                       asp-route-floor="@currentFloor"
+                       asp-route-status="@currentStatus">
+                        Khu @area
+                    </a>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-9">
+
+            <div>
+                <a class="btn @(currentStatus == "Available" ? "btn-secondary" : "btn-outline-secondary")"
+                   asp-controller="DashboardTable" asp-action="Index"
+                   asp-route-status="Available"
+                   asp-route-floor="@currentFloor"
+                   asp-route-areaName="@currentArea">Đang trống</a>
+
+                <a class="btn @(currentStatus == "Active" ? "btn-success" : "btn-outline-success")"
+                   asp-controller="DashboardTable" asp-action="Index"
+                   asp-route-status="Active"
+                   asp-route-floor="@currentFloor"
+                   asp-route-areaName="@currentArea">Đang phục vụ</a>
+
+                <a class="btn btn-outline-dark"
+                   asp-controller="DashboardTable" asp-action="Index"
+                   asp-route-status=""
+                   asp-route-floor="@currentFloor"
+                   asp-route-areaName="@currentArea">Bỏ lọc TT</a>
+
+                <a class="btn btn-danger"
+                   asp-controller="DashboardTable" asp-action="Index"
+                   asp-route-status=""
+                   asp-route-floor=""
+                   asp-route-areaName="">
+                    Xóa tất cả bộ lọc
+                </a>
+            </div>
+
+            <hr />
+
+            <div class="table-grid">
+                @foreach (var table in Model.Tables)
+                {
+                    var statusClass = table.Status.ToLower() != "available" ? "status-hoat-dong" : "status-trong";
+                    var statusColor = table.Status.ToLower() != "available" ? "text-success" : "text-secondary";
+
+                    <div class="table-card @statusClass">
+                        <strong>Tên bàn: @table.TableNumber</strong>
+                        <div>Sức chứa: @table.Capacity</div>
+
+                        @* ⚙️ Đặt đoạn xử lý hiển thị trạng thái ở đây *@
+                        @{
+                            var displayStatus = table.Status.ToLower() == "active"
+                            ? "Đang hoạt động"
+                            : table.Status.ToLower() == "available" || table.Status.ToLower() == "available"
+                            ? "Đang trống"
+                            : table.Status;
+                        }
+
+                        <div class="@statusColor">Trạng thái: @displayStatus</div>
+
+                        <div>Số khách: @table.GuestCount</div>
+                        <div>Thời gian: @table.GuestSeatedTime</div>
+                    </div>
+                }
+
+
+                @if (!Model.Tables.Any())
+                {
+                    <p>Không tìm thấy bàn nào khớp với điều kiện lọc.</p>
+                }
+            </div>
+
+            <hr />
+            @{
+                var currentPage = (int)ViewData["CurrentPage"];
+                var pageSize = (int)ViewData["PageSize"];
+                var totalPages = (Model.TotalCount > 0)
+                ? (int)Math.Ceiling((double)Model.TotalCount / pageSize)
+                : 1;
+            }
+
+            @if (totalPages > 1)
+            {
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <a class="page-link"
+                               asp-controller="DashboardTable" asp-action="Index"
+                               asp-route-page="@(currentPage - 1)"
+                               asp-route-floor="@currentFloor"
+                               asp-route-areaName="@currentArea"
+                               asp-route-status="@currentStatus">Trước</a>
+                        </li>
+
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+                                <a class="page-link"
+                                   asp-controller="DashboardTable" asp-action="Index"
+                                   asp-route-page="@i"
+                                   asp-route-floor="@currentFloor"
+                                   asp-route-areaName="@currentArea"
+                                   asp-route-status="@currentStatus">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                            <a class="page-link"
+                               asp-controller="DashboardTable" asp-action="Index"
+                               asp-route-page="@(currentPage + 1)"
+                               asp-route-floor="@currentFloor"
+                               asp-route-areaName="@currentArea"
+                               asp-route-status="@currentStatus">Sau</a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>

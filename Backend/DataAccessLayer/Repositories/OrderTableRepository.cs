@@ -181,5 +181,28 @@ namespace DataAccessLayer.Repositories
             await _context.AssistanceRequests.AddAsync(request);
             // (Lưu ý: Hàm này không gọi SaveChanges, Service sẽ gọi)
         }
+
+        // Đặt hàm này ở cuối file Repository
+        public async Task<Combo> GetComboWithDetailsAsync(int comboId)
+        {
+            // Chúng ta cần .Include() 2 cấp:
+            // 1. Lấy danh sách ComboItems (bảng trung gian)
+            // 2. Từ ComboItems, lấy MenuItem (món ăn thật)
+            return await _context.Combos
+                .Include(c => c.ComboItems)
+                    .ThenInclude(ci => ci.MenuItem)
+                .Where(c => c.ComboId == comboId && c.IsAvailable == true)
+                .AsNoTracking() // Dùng AsNoTracking vì đây là thao tác đọc (read-only)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<MenuItem> GetMenuItemWithDetailsAsync(int menuItemId)
+        {
+            // Chúng ta Include(Category) để lấy tên Category
+            return await _context.MenuItems
+                .Include(m => m.Category)
+                .AsNoTracking() // Dùng AsNoTracking vì đây là thao tác đọc
+                .FirstOrDefaultAsync(m => m.MenuItemId == menuItemId);
+        }
     }
 }

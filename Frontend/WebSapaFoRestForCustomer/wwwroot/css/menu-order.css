@@ -1,0 +1,83 @@
+﻿body {
+}
+
+/* === BƯỚC 1: DÁN CSS NÀY VÀO FILE CỦA BẠN === */
+
+/* 1. Style cho cụm nút tăng/giảm (Stepper) */
+.qty-stepper {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+    .qty-stepper button {
+        background-color: #f8f9fa;
+        border: none;
+        color: #495057;
+        font-size: 1.2rem; /* To hơn, dễ bấm */
+        font-weight: bold;
+        width: 40px; /* Kích thước cố định */
+        height: 40px; /* Kích thước cố định */
+        cursor: pointer;
+        line-height: 1; /* Căn giữa dấu - và + */
+    }
+
+        .qty-stepper button:hover {
+            background-color: #e9ecef;
+        }
+
+    .qty-stepper .qty-value {
+        display: inline-block;
+        width: 40px; /* Chiều rộng cho số */
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #000;
+    }
+
+    /* Bo góc cho nút */
+    .qty-stepper .btn-cart-qty-minus {
+        border-top-left-radius: 7px;
+        border-bottom-left-radius: 7px;
+        border-right: 1px solid #ddd; /* Thêm đường kẻ */
+    }
+
+    .qty-stepper .btn-cart-qty-plus {
+        border-top-right-radius: 7px;
+        border-bottom-right-radius: 7px;
+        border-left: 1px solid #ddd; /* Thêm đường kẻ */
+    }
+
+
+/* 2. Style cho phần Ghi chú */
+.btn-edit-note {
+    /* Nút "Thêm ghi chú" */
+    font-size: 0.85rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px; /* Khoảng cách giữa icon và chữ */
+}
+
+.item-note-display {
+    /* Hiển thị ghi chú đã lưu */
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: 8px;
+    margin-bottom: 0;
+    font-style: italic;
+    word-break: break-word; /* Tránh vỡ layout nếu ghi chú quá dài */
+}
+
+/* 3. Layout mới cho Cart Item (Căn chỉnh) */
+.cart-item-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 100%; /* Quan trọng: để đẩy nút Xóa lên trên, Stepper xuống dưới */
+}
