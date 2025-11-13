@@ -20,6 +20,8 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IStaffProfileRepository StaffProfiles { get; }
         IPositionRepository Positions { get; }
         IPaymentRepository Payments { get; }
+        IOrderRepository Orders { get; }
+        IOrderDetailRepository OrderDetails { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

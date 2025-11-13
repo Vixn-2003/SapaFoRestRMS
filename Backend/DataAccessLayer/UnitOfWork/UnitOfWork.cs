@@ -45,6 +45,14 @@ namespace DataAccessLayer.UnitOfWork
 
         public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
 
+        private IOrderRepository _orders;
+
+        public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
+
+        private IOrderDetailRepository _orderDetails;
+
+        public IOrderDetailRepository OrderDetails => _orderDetails ??= new OrderDetailRepository(_context);
+
         public UnitOfWork(SapaFoRestRmsContext context)
         {
             _context = context;

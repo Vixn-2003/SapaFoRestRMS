@@ -140,15 +140,21 @@ namespace SapaFoRestRMSAPI.Services
                 return;
             }
 
-            // Check if seed data already exists
-            var existingOrders = await context.Orders
-                .Include(o => o.Reservation)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
-                .ToListAsync();
+            // Check if seed data already exists by looking for the test customer
+            var testCustomer = await context.Customers
+                .Include(c => c.User)
+                .Where(c => c.User != null && (c.User.Email == "customer.test@example.com" || c.User.Phone == "0900000002"))
+                .FirstOrDefaultAsync();
 
-            // If orders exist, ensure their reservations have StaffId
-            if (existingOrders.Any())
+            // If test customer already exists, skip creating new seed data
+            // (even if orders were deleted or completed, we don't want to create duplicate seed data)
+            if (testCustomer != null)
             {
+                // Check if there are any orders linked to this test customer
+                var existingSeedOrders = await context.Orders
+                    .Where(o => o.CustomerId == testCustomer.CustomerId)
+                    .ToListAsync();
+
                 // Get or create staff user first
                 var existingStaffRoleId = await context.Roles
                     .Where(r => r.RoleName == "Staff")
@@ -200,28 +206,35 @@ namespace SapaFoRestRMSAPI.Services
                 }
 
                 // Update existing reservations to have StaffId
-                var reservationsToUpdate = existingOrders
-                    .Where(o => o.Reservation != null && o.Reservation.StaffId == null)
-                    .Select(o => o.Reservation!)
+                var reservationsToUpdate = existingSeedOrders
+                    .Where(o => o.ReservationId != null)
+                    .Select(o => o.ReservationId)
                     .Distinct()
                     .ToList();
 
-                foreach (var res in reservationsToUpdate)
-                {
-                    res.StaffId = existingStaffUser.UserId;
-                    context.Reservations.Update(res);
-                }
-
                 if (reservationsToUpdate.Any())
                 {
-                    await context.SaveChangesAsync();
+                    var reservations = await context.Reservations
+                        .Where(r => reservationsToUpdate.Contains(r.ReservationId) && r.StaffId == null)
+                        .ToListAsync();
+
+                    foreach (var res in reservations)
+                    {
+                        res.StaffId = existingStaffUser.UserId;
+                        context.Reservations.Update(res);
+                    }
+
+                    if (reservations.Any())
+                    {
+                        await context.SaveChangesAsync();
+                    }
                 }
 
-                // Skip creating new seed data if orders already exist
+                // Skip creating new seed data if test customer already exists
                 return;
             }
 
-            // Get or create customer
+            // Get or create customer SPECIFICALLY for kitchen orders
             var customerRoleId = await context.Roles
                 .Where(r => r.RoleName == "Customer")
                 .Select(r => r.RoleId)
@@ -235,8 +248,10 @@ namespace SapaFoRestRMSAPI.Services
                 customerRoleId = customerRole.RoleId;
             }
 
+            // Check if customer with specific email/phone already exists
             var customer = await context.Customers
                 .Include(c => c.User)
+                .Where(c => c.User != null && (c.User.Email == "customer.test@example.com" || c.User.Phone == "0900000002"))
                 .FirstOrDefaultAsync();
 
             if (customer == null)
@@ -263,6 +278,18 @@ namespace SapaFoRestRMSAPI.Services
                 };
                 await context.Customers.AddAsync(customer);
                 await context.SaveChangesAsync();
+            }
+            
+            // Check if this customer already has seed orders
+            // If yes, skip creating new orders to avoid duplicates
+            var existingOrders = await context.Orders
+                .Where(o => o.CustomerId == customer.CustomerId)
+                .ToListAsync();
+            
+            if (existingOrders.Any())
+            {
+                // Customer already has orders, skip creating new seed data
+                return;
             }
 
             // Get or create Area and Table
@@ -361,7 +388,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 150000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId,
+                        TimeCook = 25
                     },
                     new MenuItem
                     {
@@ -370,7 +398,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 250000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId,
+                        TimeCook = 30
                     },
                     new MenuItem
                     {
@@ -379,7 +408,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 200000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId,
+                        TimeCook = 20
                     },
                     new MenuItem
                     {
@@ -388,7 +418,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 180000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId
+                        CategoryId = nuongThanCategory.CategoryId,
+                        TimeCook = 22
                     },
                     // Món Xào (Món chính) -> Trạm "Xào – Chiên"
                     new MenuItem
@@ -398,7 +429,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 80000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId,
+                        TimeCook = 10
                     },
                     new MenuItem
                     {
@@ -407,7 +439,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 180000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId,
+                        TimeCook = 12
                     },
                     new MenuItem
                     {
@@ -416,7 +449,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 220000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId,
+                        TimeCook = 15
                     },
                     new MenuItem
                     {
@@ -425,7 +459,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 190000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId,
+                        TimeCook = 15
                     },
                     // Món Chiên (Món chính) -> Trạm "Xào – Chiên"
                     new MenuItem
@@ -435,7 +470,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 70000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId,
+                        TimeCook = 12
                     },
                     new MenuItem
                     {
@@ -444,7 +480,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 160000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId
+                        CategoryId = xaoChienCategory.CategoryId,
+                        TimeCook = 15
                     },
                     // Lẩu (Món chính) -> Trạm "Lẩu"
                     new MenuItem
@@ -454,7 +491,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 300000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = lauCategory.CategoryId
+                        CategoryId = lauCategory.CategoryId,
+                        TimeCook = 20
                     },
                     // Canh (Món chính) -> Trạm "Trạm Cơm – Canh"
                     new MenuItem
@@ -464,7 +502,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 120000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = comCanhCategory.CategoryId
+                        CategoryId = comCanhCategory.CategoryId,
+                        TimeCook = 18
                     },
                     new MenuItem
                     {
@@ -473,7 +512,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 100000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = comCanhCategory.CategoryId
+                        CategoryId = comCanhCategory.CategoryId,
+                        TimeCook = 20
                     },
                     new MenuItem
                     {
@@ -482,7 +522,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 130000,
                         CourseType = "Món chính",
                         IsAvailable = true,
-                        CategoryId = comCanhCategory.CategoryId
+                        CategoryId = comCanhCategory.CategoryId,
+                        TimeCook = 15
                     },
                     // Salad (Khai vị) -> Trạm "Khai Vị"
                     new MenuItem
@@ -492,7 +533,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 90000,
                         CourseType = "Khai vị",
                         IsAvailable = true,
-                        CategoryId = khaiViCategory.CategoryId
+                        CategoryId = khaiViCategory.CategoryId,
+                        TimeCook = 8
                     },
                     new MenuItem
                     {
@@ -501,7 +543,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 150000,
                         CourseType = "Khai vị",
                         IsAvailable = true,
-                        CategoryId = khaiViCategory.CategoryId
+                        CategoryId = khaiViCategory.CategoryId,
+                        TimeCook = 10
                     },
                     // Tráng miệng -> Trạm "Tráng Miệng"
                     new MenuItem
@@ -511,7 +554,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 50000,
                         CourseType = "Tráng miệng",
                         IsAvailable = true,
-                        CategoryId = trangMiengCategory.CategoryId
+                        CategoryId = trangMiengCategory.CategoryId,
+                        TimeCook = 5
                     },
                     new MenuItem
                     {
@@ -520,7 +564,8 @@ namespace SapaFoRestRMSAPI.Services
                         Price = 60000,
                         CourseType = "Tráng miệng",
                         IsAvailable = true,
-                        CategoryId = trangMiengCategory.CategoryId
+                        CategoryId = trangMiengCategory.CategoryId,
+                        TimeCook = 3
                     }
                 };
 
@@ -530,6 +575,43 @@ namespace SapaFoRestRMSAPI.Services
             else
             {
                 menuItems = existingMenuItems;
+                
+                // Update TimeCook for existing menu items if they don't have it
+                var timeCookMap = new Dictionary<string, int>
+                {
+                    // Món Nướng
+                    { "Thịt nướng", 25 },
+                    { "Gà nướng", 30 },
+                    { "Tôm nướng", 20 },
+                    { "Cá nướng", 22 },
+                    // Món Xào
+                    { "Rau xào", 10 },
+                    { "Mực xào", 12 },
+                    { "Thịt bò xào", 15 },
+                    { "Gà xào sả ớt", 15 },
+                    // Món Chiên
+                    { "Khoai tây chiên", 12 },
+                    { "Cá chiên", 15 },
+                    // Lẩu
+                    { "Lẩu thái", 20 },
+                    // Canh
+                    { "Canh chua cá", 18 },
+                    { "Canh khổ qua", 20 },
+                    { "Canh chua tôm", 15 },
+                    // Salad
+                    { "Salad rau củ", 8 },
+                    { "Salad tôm", 10 },
+                    // Tráng miệng
+                    { "Chè đậu xanh", 5 },
+                    { "Kem dừa", 3 }
+                };
+                
+                foreach (var item in existingMenuItems.Where(m => m.TimeCook == null && timeCookMap.ContainsKey(m.Name)))
+                {
+                    item.TimeCook = timeCookMap[item.Name];
+                }
+                
+                await context.SaveChangesAsync();
             }
 
             // Get or create Staff user for reservation

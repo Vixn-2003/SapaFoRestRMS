@@ -229,7 +229,7 @@ function createCookingTableRow(item) {
             <td>${item.tableNumber}</td>
             <td>
                 <strong>${item.menuItemName}</strong> x${item.quantity}
-                ${item.isUrgent ? '<span class="badge bg-danger ms-2">RUSH</span>' : ''}
+                ${item.isUrgent ? '<span class="badge bg-danger ms-2">CẦN LÀM NGAY</span>' : ''}
             </td>
             <td class="notes-text">${item.notes || '-'}</td>
         </tr>

@@ -74,6 +74,14 @@ namespace DataAccessLayer.Repositories
             throw new NotImplementedException();
         }
 
-        
+        public async Task<List<string>> GetCourseTypesAsync()
+        {
+            return await _context.MenuItems
+                .Where(m => !string.IsNullOrEmpty(m.CourseType))
+                .Select(m => m.CourseType!)
+                .Distinct()
+                .OrderBy(ct => ct)
+                .ToListAsync();
+        }
     }
 }

@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using DataAccessLayer.Dbcontext;
+using DataAccessLayer.UnitOfWork.Interfaces;
 using BusinessAccessLayer.DTOs.Kitchen;
 using DomainAccessLayer.Models;
 
@@ -11,30 +10,18 @@ namespace BusinessAccessLayer.Services
 {
     public class KitchenDisplayService : IKitchenDisplayService
     {
-        private readonly SapaFoRestRmsContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public KitchenDisplayService(SapaFoRestRmsContext context)
+        public KitchenDisplayService(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<List<KitchenOrderCardDto>> GetActiveOrdersAsync()
         {
             var now = DateTime.Now;
 
-            var activeOrders = await _context.Orders
-                .Include(o => o.OrderDetails)
-                    .ThenInclude(od => od.MenuItem)
-                .Include(o => o.Customer)
-                    .ThenInclude(c => c.User) // For customer name
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.Customer)
-                        .ThenInclude(c => c.User) // For reservation customer name
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.Staff) // For staff who created reservation/order
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
-                .OrderBy(o => o.CreatedAt)
-                .ToListAsync();
+            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
 
             var result = new List<KitchenOrderCardDto>();
 
@@ -56,7 +43,8 @@ namespace BusinessAccessLayer.Services
                         CourseType = od.MenuItem.CourseType ?? "Other",
                         StartedAt = null, // OrderDetail doesn't have StartedAt
                         CompletedAt = null, // OrderDetail doesn't have CompletedAt
-                        IsUrgent = od.IsUrgent
+                        IsUrgent = od.IsUrgent,
+                        TimeCook = od.MenuItem.TimeCook // Thời gian nấu (phút)
                     })
                     .ToList();
 
@@ -104,9 +92,35 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
-                var orderDetail = await _context.OrderDetails
-                    .Include(od => od.MenuItem)
-                    .FirstOrDefaultAsync(od => od.OrderDetailId == request.OrderDetailId);
+                // Validate request
+                if (request == null)
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = false,
+                        Message = "Request is required"
+                    };
+                }
+
+                if (request.OrderDetailId <= 0)
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = false,
+                        Message = "OrderDetailId is required and must be greater than 0"
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(request.NewStatus))
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = false,
+                        Message = "NewStatus is required"
+                    };
+                }
+
+                var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
 
                 if (orderDetail == null)
                 {
@@ -117,10 +131,53 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
+                // Validate status transition: Pending → Cooking → Done
+                var currentStatus = orderDetail.Status ?? "Pending";
+                var newStatus = request.NewStatus;
+
+                // Validate status transitions
+                if (currentStatus == "Pending")
+                {
+                    // From Pending, only allow transition to Cooking
+                    if (newStatus != "Cooking")
+                    {
+                        return new StatusUpdateResponse
+                        {
+                            Success = false,
+                            Message = $"Không thể chuyển từ trạng thái 'Chờ' sang '{newStatus}'. Phải chuyển sang 'Đang nấu' trước."
+                        };
+                    }
+                }
+                else if (currentStatus == "Cooking")
+                {
+                    // From Cooking, only allow transition to Done
+                    if (newStatus != "Done")
+                    {
+                        return new StatusUpdateResponse
+                        {
+                            Success = false,
+                            Message = $"Không thể chuyển từ trạng thái 'Đang nấu' sang '{newStatus}'. Chỉ có thể chuyển sang 'Hoàn thành'."
+                        };
+                    }
+                }
+                else if (currentStatus == "Done")
+                {
+                    // From Done, only allow transition back to Cooking (unfulfill)
+                    if (newStatus != "Cooking")
+                    {
+                        return new StatusUpdateResponse
+                        {
+                            Success = false,
+                            Message = $"Không thể chuyển từ trạng thái 'Hoàn thành' sang '{newStatus}'. Chỉ có thể quay lại 'Đang nấu'."
+                        };
+                    }
+                }
+
                 // Update status trên OrderDetail (nguồn chính)
                 orderDetail.Status = request.NewStatus;
 
-                await _context.SaveChangesAsync();
+                await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                await _unitOfWork.SaveChangesAsync();
 
                 return new StatusUpdateResponse
                 {
@@ -136,7 +193,8 @@ namespace BusinessAccessLayer.Services
                         CourseType = orderDetail.MenuItem.CourseType ?? "Other",
                         StartedAt = null, // Không dùng KitchenTicketDetail nữa
                         CompletedAt = null, // Không dùng KitchenTicketDetail nữa
-                        IsUrgent = orderDetail.IsUrgent
+                        IsUrgent = orderDetail.IsUrgent,
+                        TimeCook = orderDetail.MenuItem.TimeCook // Thời gian nấu (phút)
                     }
                 };
             }
@@ -154,9 +212,7 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
-                var order = await _context.Orders
-                    .Include(o => o.OrderDetails)
-                    .FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
+                var order = await _unitOfWork.Orders.GetByIdWithOrderDetailsAsync(request.OrderId);
 
                 if (order == null)
                 {
@@ -190,7 +246,8 @@ namespace BusinessAccessLayer.Services
                 // Update order status
                 order.Status = "Completed";
 
-                await _context.SaveChangesAsync();
+                await _unitOfWork.Orders.UpdateAsync(order);
+                await _unitOfWork.SaveChangesAsync();
 
                 return new StatusUpdateResponse
                 {
@@ -210,12 +267,7 @@ namespace BusinessAccessLayer.Services
 
         public async Task<List<string>> GetCourseTypesAsync()
         {
-            return await _context.MenuItems
-                .Where(m => !string.IsNullOrEmpty(m.CourseType))
-                .Select(m => m.CourseType!)
-                .Distinct()
-                .OrderBy(ct => ct)
-                .ToListAsync();
+            return await _unitOfWork.MenuItem.GetCourseTypesAsync();
         }
 
         public async Task<List<GroupedMenuItemDto>> GetGroupedItemsByMenuItemAsync()
@@ -223,19 +275,7 @@ namespace BusinessAccessLayer.Services
             var now = DateTime.Now;
 
             // Lấy tất cả active orders với order details
-            var activeOrders = await _context.Orders
-                .Include(o => o.OrderDetails)
-                    .ThenInclude(od => od.MenuItem)
-                .Include(o => o.Customer)
-                    .ThenInclude(c => c.User)
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.Customer)
-                        .ThenInclude(c => c.User)
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.ReservationTables)
-                        .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
-                .ToListAsync();
+            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForGroupingAsync();
 
             // Flatten tất cả order details từ tất cả orders
             var allItems = new List<(Order Order, OrderDetail OrderDetail, MenuItem MenuItem)>();
@@ -244,7 +284,10 @@ namespace BusinessAccessLayer.Services
             {
                 foreach (var orderDetail in order.OrderDetails)
                 {
-                    if (orderDetail.MenuItem != null)
+                    // Chỉ lấy những món chưa nấu (status = "Pending" hoặc null)
+                    // Món đã nấu (Cooking) hoặc đã hoàn thành (Done) sẽ không được thêm vào
+                    var status = orderDetail.Status ?? "Pending";
+                    if (orderDetail.MenuItem != null && status == "Pending")
                     {
                         allItems.Add((order, orderDetail, orderDetail.MenuItem));
                     }
@@ -252,13 +295,16 @@ namespace BusinessAccessLayer.Services
             }
 
             // Nhóm theo MenuItemId
+            // Lưu ý: allItems chỉ chứa những orderDetail có status = "Pending"
+            // Do đó TotalQuantity sẽ chỉ tính tổng số lượng của những món chưa nấu
             var grouped = allItems
                 .GroupBy(item => new
                 {
                     item.MenuItem.MenuItemId,
                     item.MenuItem.Name,
                     item.MenuItem.ImageUrl,
-                    item.MenuItem.CourseType
+                    item.MenuItem.CourseType,
+                    item.MenuItem.TimeCook
                 })
                 .Select(g => new GroupedMenuItemDto
                 {
@@ -266,6 +312,9 @@ namespace BusinessAccessLayer.Services
                     MenuItemName = g.Key.Name,
                     ImageUrl = g.Key.ImageUrl,
                     CourseType = g.Key.CourseType ?? "Other",
+                    TimeCook = g.Key.TimeCook, // Thời gian nấu (phút)
+                    // TotalQuantity chỉ tính những món còn Pending (chưa nấu)
+                    // Ví dụ: có 7 món mực xào, đã nấu 2 món → chỉ hiển thị x5
                     TotalQuantity = g.Sum(item => item.OrderDetail.Quantity),
                     ItemDetails = g.Select(item => new GroupedItemDetailDto
                     {
@@ -280,6 +329,7 @@ namespace BusinessAccessLayer.Services
                         WaitingMinutes = (int)((now - (item.Order.CreatedAt ?? now)).TotalMinutes)
                     }).OrderByDescending(d => d.WaitingMinutes).ToList() // Sắp xếp theo thời gian chờ giảm dần
                 })
+                .Where(g => g.TotalQuantity > 0) // Chỉ lấy những món có ít nhất 1 item Pending
                 .OrderByDescending(g => g.TotalQuantity) // Sắp xếp theo tổng số lượng giảm dần
                 .ToList();
 
@@ -290,15 +340,14 @@ namespace BusinessAccessLayer.Services
         private string GetTableNumber(Order order)
         {
             // PRIORITY 1: Get from reservation table
-            if (order.Reservation != null)
+            if (order.Reservation != null && order.Reservation.ReservationTables != null)
             {
-                var table = _context.ReservationTables
-                    .Include(rt => rt.Table)
-                    .FirstOrDefault(rt => rt.ReservationId == order.ReservationId);
+                var reservationTable = order.Reservation.ReservationTables
+                    .FirstOrDefault(rt => rt.Table != null);
 
-                if (table != null)
+                if (reservationTable?.Table != null)
                 {
-                    return table.Table.TableNumber ?? "N/A";
+                    return reservationTable.Table.TableNumber ?? "N/A";
                 }
 
                 // Fallback to customer name from reservation
@@ -377,20 +426,7 @@ namespace BusinessAccessLayer.Services
             Console.WriteLine($"[GetStationItemsByCategoryAsync] CategoryName length: {categoryName.Length}");
             
             // Lấy tất cả active orders với order details thuộc category này
-            var activeOrders = await _context.Orders
-                .Include(o => o.OrderDetails)
-                    .ThenInclude(od => od.MenuItem)
-                        .ThenInclude(mi => mi.Category)
-                .Include(o => o.Customer)
-                    .ThenInclude(c => c.User)
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.Customer)
-                        .ThenInclude(c => c.User)
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.ReservationTables)
-                        .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
-                .ToListAsync();
+            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForStationAsync();
 
             var allItems = new List<StationItemDto>();
             var urgentItems = new List<StationItemDto>();
@@ -404,7 +440,7 @@ namespace BusinessAccessLayer.Services
             Console.WriteLine($"[GetStationItemsByCategoryAsync] Total order details before filter: {totalOrderDetails}");
             
             // Log tất cả categories có trong database để debug
-            var allCategories = await _context.MenuCategories.Select(c => c.CategoryName).ToListAsync();
+            var allCategories = await _unitOfWork.MenuCategory.GetCategoryNamesAsync();
             Console.WriteLine($"[GetStationItemsByCategoryAsync] All categories in DB: {string.Join(", ", allCategories)}");
 
             foreach (var order in activeOrders)
@@ -489,7 +525,8 @@ namespace BusinessAccessLayer.Services
                         WaitingMinutes = waitingMinutes,
                         IsUrgent = orderDetail.IsUrgent,
                         StartedAt = startedAt,
-                        FireTime = fireTime
+                        FireTime = fireTime,
+                        TimeCook = orderDetail.MenuItem.TimeCook // Thời gian nấu (phút)
                     };
 
                     allItems.Add(item);
@@ -533,8 +570,7 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
-                var orderDetail = await _context.OrderDetails
-                    .FirstOrDefaultAsync(od => od.OrderDetailId == request.OrderDetailId);
+                var orderDetail = await _unitOfWork.OrderDetails.GetByIdAsync(request.OrderDetailId);
 
                 if (orderDetail == null)
                 {
@@ -546,7 +582,8 @@ namespace BusinessAccessLayer.Services
                 }
 
                 orderDetail.IsUrgent = request.IsUrgent;
-                await _context.SaveChangesAsync();
+                await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                await _unitOfWork.SaveChangesAsync();
 
                 return new StatusUpdateResponse
                 {
@@ -566,11 +603,8 @@ namespace BusinessAccessLayer.Services
 
         public async Task<List<string>> GetStationCategoriesAsync()
         {
-            return await _context.MenuCategories
-                .Select(c => c.CategoryName)
-                .Distinct()
-                .OrderBy(c => c)
-                .ToListAsync();
+            var categories = await _unitOfWork.MenuCategory.GetCategoryNamesAsync();
+            return categories.Distinct().OrderBy(c => c).ToList();
         }
 
         /// <summary>
@@ -583,23 +617,7 @@ namespace BusinessAccessLayer.Services
             // Lấy các orders có ít nhất một item Done
             // Không filter theo thời gian vì không có CompletedAt field
             // Chỉ lấy các order đang active hoặc completed (không lấy orders quá cũ đã thanh toán)
-            var orders = await _context.Orders
-                .Include(o => o.OrderDetails)
-                    .ThenInclude(od => od.MenuItem)
-                        .ThenInclude(mi => mi.Category)
-                .Include(o => o.Customer)
-                    .ThenInclude(c => c.User)
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.Customer)
-                        .ThenInclude(c => c.User)
-                .Include(o => o.Reservation)
-                    .ThenInclude(r => r.ReservationTables)
-                        .ThenInclude(rt => rt.Table)
-                .Where(o => (o.Status == "Processing" || o.Status == "Preparing" || o.Status == "Completed"))
-                .Where(o => o.OrderDetails.Any(od => od.Status == "Done" || od.Status == "Hoàn thành"))
-                .OrderByDescending(o => o.CreatedAt)
-                .Take(50) // Giới hạn 50 orders gần nhất để tránh quá nhiều dữ liệu
-                .ToListAsync();
+            var orders = await _unitOfWork.Orders.GetRecentlyFulfilledOrdersAsync(minutesAgo);
 
             var result = new List<KitchenOrderCardDto>();
             var now = DateTime.Now;
@@ -612,6 +630,21 @@ namespace BusinessAccessLayer.Services
                     .ToList();
 
                 if (!doneItems.Any()) continue;
+
+                // Chỉ hiển thị order nếu TẤT CẢ các món đều hoàn thành
+                var allItemsDone = order.OrderDetails.All(od =>
+                {
+                    var status = (od.Status ?? string.Empty).Trim();
+                    return status.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
+                           status.Equals("Hoàn thành", StringComparison.OrdinalIgnoreCase) ||
+                           status.Equals("Xong", StringComparison.OrdinalIgnoreCase);
+                });
+
+                if (!allItemsDone)
+                {
+                    // Nếu còn món chưa hoàn thành, bỏ qua order này
+                    continue;
+                }
 
                 var orderCard = new KitchenOrderCardDto
                 {
@@ -633,7 +666,8 @@ namespace BusinessAccessLayer.Services
                         Notes = od.Notes,
                         CourseType = od.MenuItem.CourseType ?? "Other",
                         IsUrgent = od.IsUrgent,
-                        CompletedAt = od.CreatedAt // Dùng CreatedAt làm proxy (không chính xác 100%)
+                        CompletedAt = od.CreatedAt, // Dùng CreatedAt làm proxy (không chính xác 100%)
+                        TimeCook = od.MenuItem.TimeCook // Thời gian nấu (phút)
                     }).ToList()
                 };
 
@@ -650,10 +684,18 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
-                var orderDetail = await _context.OrderDetails
-                    .Include(od => od.Order)
-                    .Include(od => od.MenuItem)
-                    .FirstOrDefaultAsync(od => od.OrderDetailId == request.OrderDetailId);
+                var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
+                
+                // Load Order separately if needed
+                if (orderDetail?.OrderId != null)
+                {
+                    var order = await _unitOfWork.Orders.GetByIdWithOrderDetailsAsync(orderDetail.OrderId);
+                    if (order != null)
+                    {
+                        // Note: OrderDetail doesn't have navigation property to Order in this context
+                        // We'll check order status separately
+                    }
+                }
 
                 if (orderDetail == null)
                 {
@@ -677,15 +719,18 @@ namespace BusinessAccessLayer.Services
                 orderDetail.Status = "Pending";
 
                 // Đảm bảo Order status là Processing hoặc Preparing
-                if (orderDetail.Order != null)
+                if (orderDetail.OrderId != null)
                 {
-                    if (orderDetail.Order.Status == "Completed")
+                    var order = await _unitOfWork.Orders.GetByIdWithOrderDetailsAsync(orderDetail.OrderId);
+                    if (order != null && order.Status == "Completed")
                     {
-                        orderDetail.Order.Status = "Processing";
+                        order.Status = "Processing";
+                        await _unitOfWork.Orders.UpdateAsync(order);
                     }
                 }
 
-                await _context.SaveChangesAsync();
+                await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                await _unitOfWork.SaveChangesAsync();
 
                 return new StatusUpdateResponse
                 {
@@ -699,7 +744,8 @@ namespace BusinessAccessLayer.Services
                         Status = orderDetail.Status ?? "Pending",
                         Notes = orderDetail.Notes,
                         CourseType = orderDetail.MenuItem.CourseType ?? "Other",
-                        IsUrgent = orderDetail.IsUrgent
+                        IsUrgent = orderDetail.IsUrgent,
+                        TimeCook = orderDetail.MenuItem.TimeCook // Thời gian nấu (phút)
                     }
                 };
             }

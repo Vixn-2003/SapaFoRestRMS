@@ -10,6 +10,8 @@ builder.Services.AddHttpClient();
 // HttpClient is created directly in controllers following ManagerMenuController pattern
 builder.Services.AddHttpClient<ApiService>(); // để inject HttpClient
 builder.Services.AddScoped<ApiService>();     // để inject ApiService
+builder.Services.AddHttpClient<KitchenDisplayService>(); // để inject HttpClient cho KitchenDisplayService
+builder.Services.AddScoped<KitchenDisplayService>();     // để inject KitchenDisplayService
 builder.Services.AddHttpContextAccessor();    // để dùng Session trong ApiService
 builder.Services.AddSession();
 
