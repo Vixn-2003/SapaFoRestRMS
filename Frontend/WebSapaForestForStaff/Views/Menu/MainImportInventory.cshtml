@@ -1,4 +1,5 @@
-﻿@{
+﻿@using Newtonsoft.Json
+@{
     Layout = "_LayoutInventory";
     ViewData["Title"] = "Quản Lý Nhập Hàng";
 }
@@ -386,6 +387,10 @@
             .history-table::-webkit-scrollbar-thumb:hover {
                 background: #94a3b8;
             }
+
+        .status-cancelled {
+            background: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -453,110 +458,10 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title">Đơn hàng đang xử lý</h2>
-                <span class="badge brown">8 đơn hàng</span>
+                <span class="badge brown" id="processingCount">0 đơn hàng</span>
             </div>
-            <div class="order-list">
-                <div class="order-item">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">PO-2025-0045</div>
-                            <div class="order-details">NCC: Công ty Hải Sản Biển Đông</div>
-                        </div>
-                        <span class="order-status status-pending">Chờ duyệt</span>
-                    </div>
-                    <div class="order-details">Ngày tạo: 03/10/2025 09:30</div>
-                    <div class="order-details">Người tạo: Nguyễn Văn A</div>
-                    <div class="order-footer">
-                        <span class="order-price">12,500,000đ</span>
-                        <span class="order-details">15 mặt hàng</span>
-                        <button class="btn-view">Xem</button>
-                    </div>
-                </div>
-
-                <div class="order-item">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">PO-2025-0044</div>
-                            <div class="order-details">NCC: Công ty Lương Thực Miền Nam</div>
-                        </div>
-                        <span class="order-status status-processing">Đang giao</span>
-                    </div>
-                    <div class="order-details">Ngày tạo: 02/10/2025 14:20</div>
-                    <div class="order-details">Người tạo: Trần Thị B</div>
-                    <div class="order-footer">
-                        <span class="order-price">28,400,000đ</span>
-                        <span class="order-details">8 gói hàng</span>
-                        <button class="btn-view">Xem</button>
-                    </div>
-                </div>
-
-                <div class="order-item">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">PO-2025-0043</div>
-                            <div class="order-details">NCC: Rau Sạch Đà Lạt</div>
-                        </div>
-                        <span class="order-status status-pending">Chờ duyệt</span>
-                    </div>
-                    <div class="order-details">Ngày tạo: 02/10/2025 10:15</div>
-                    <div class="order-details">Người tạo: Lê Văn C</div>
-                    <div class="order-footer">
-                        <span class="order-price">5,300,000đ</span>
-                        <span class="order-details">12 mặt hàng</span>
-                        <button class="btn-view">Xem</button>
-                    </div>
-                </div>
-
-                <div class="order-item">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">PO-2025-0042</div>
-                            <div class="order-details">NCC: Thịt Sản Biển Đông</div>
-                        </div>
-                        <span class="order-status status-completed">Hoàn thành</span>
-                    </div>
-                    <div class="order-details">Ngày tạo: 01/10/2025 16:45</div>
-                    <div class="order-details">Người tạo: Phạm Thị D</div>
-                    <div class="order-footer">
-                        <span class="order-price">16,400,000đ</span>
-                        <span class="order-details">10 mặt hàng</span>
-                        <button class="btn-view">Xem</button>
-                    </div>
-                </div>
-
-                <div class="order-item">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">PO-2025-0041</div>
-                            <div class="order-details">NCC: Lương Thực Miền Nam</div>
-                        </div>
-                        <span class="order-status status-completed">Hoàn thành</span>
-                    </div>
-                    <div class="order-details">Ngày tạo: 01/10/2025 08:30</div>
-                    <div class="order-details">Người tạo: Hoàng Văn E</div>
-                    <div class="order-footer">
-                        <span class="order-price">8,200,000đ</span>
-                        <span class="order-details">6 mặt hàng</span>
-                        <button class="btn-view">Xem</button>
-                    </div>
-                </div>
-
-                <div class="order-item">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">PO-2025-0040</div>
-                            <div class="order-details">NCC: Gia Vị Việt Nam</div>
-                        </div>
-                        <span class="order-status status-processing">Đang giao</span>
-                    </div>
-                    <div class="order-details">Ngày tạo: 30/09/2025 15:20</div>
-                    <div class="order-details">Người tạo: Võ Thị F</div>
-                    <div class="order-footer">
-                        <span class="order-price">3,600,000đ</span>
-                        <span class="order-details">20 mặt hàng</span>
-                        <button class="btn-view">Xem</button>
-                    </div>
-                </div>
+            <div class="order-list" id="processingOrdersList">
+                <!-- Dữ liệu sẽ được render bằng JavaScript -->
             </div>
             <a href="#" class="link-button">Xem tất cả đơn đang xử lý</a>
         </div>
@@ -565,83 +470,10 @@
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">Danh Sách Đơn Nhập Hàng</h2>
-                    <span class="badge gray">34 đơn</span>
+                    <span class="badge gray" id="allOrdersCount">0 đơn</span>
                 </div>
-                <div class="order-list">
-                    <div class="order-item">
-                        <div class="order-header">
-                            <div>
-                                <div class="order-id">PO-2025-0045</div>
-                                <div class="order-details">Hải Sản Biển Đông</div>
-                            </div>
-                            <span class="order-status status-pending">Chờ duyệt</span>
-                        </div>
-                        <div class="order-footer">
-                            <span class="order-price">12,500,000đ</span>
-                            <span class="order-details">03/10/2025</span>
-                            <button class="btn-view">Xem</button>
-                        </div>
-                    </div>
-
-                    <div class="order-item">
-                        <div class="order-header">
-                            <div>
-                                <div class="order-id">PO-2025-0044</div>
-                                <div class="order-details">Lương Thực Miền Nam</div>
-                            </div>
-                            <span class="order-status status-processing">Đang giao</span>
-                        </div>
-                        <div class="order-footer">
-                            <span class="order-price">28,400,000đ</span>
-                            <span class="order-details">02/10/2025</span>
-                            <button class="btn-view">Xem</button>
-                        </div>
-                    </div>
-
-                    <div class="order-item">
-                        <div class="order-header">
-                            <div>
-                                <div class="order-id">PO-2025-0043</div>
-                                <div class="order-details">Rau Sạch Đà Lạt</div>
-                            </div>
-                            <span class="order-status status-pending">Chờ duyệt</span>
-                        </div>
-                        <div class="order-footer">
-                            <span class="order-price">5,300,000đ</span>
-                            <span class="order-details">02/10/2025</span>
-                            <button class="btn-view">Xem</button>
-                        </div>
-                    </div>
-
-                    <div class="order-item">
-                        <div class="order-header">
-                            <div>
-                                <div class="order-id">PO-2025-0042</div>
-                                <div class="order-details">Thịt Sản Biển Đông</div>
-                            </div>
-                            <span class="order-status status-completed">Hoàn thành</span>
-                        </div>
-                        <div class="order-footer">
-                            <span class="order-price">16,400,000đ</span>
-                            <span class="order-details">02/10/2025</span>
-                            <button class="btn-view">Xem</button>
-                        </div>
-                    </div>
-
-                    <div class="order-item">
-                        <div class="order-header">
-                            <div>
-                                <div class="order-id">PO-2025-0041</div>
-                                <div class="order-details">Lương Thực Miền Nam</div>
-                            </div>
-                            <span class="order-status status-completed">Hoàn thành</span>
-                        </div>
-                        <div class="order-footer">
-                            <span class="order-price">8,200,000đ</span>
-                            <span class="order-details">01/10/2025</span>
-                            <button class="btn-view">Xem</button>
-                        </div>
-                    </div>
+                <div class="order-list" id="allOrdersList">
+                    <!-- Dữ liệu sẽ được render bằng JavaScript -->
                 </div>
                 <a href="#" class="link-button">Xem tất cả 34 đơn hàng →</a>
             </div>
@@ -665,74 +497,291 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>PO-2025-0042</td>
-                        <td>Hải Sản Biển Đông</td>
-                        <td>02/10/2025</td>
-                        <td class="price-completed">15,400,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
-                    <tr>
-                        <td>PO-2025-0041</td>
-                        <td>Lương Thực Miền Nam</td>
-                        <td>01/10/2025</td>
-                        <td class="price-completed">8,200,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
-                    <tr>
-                        <td>PO-2025-0040</td>
-                        <td>Rau Sạch Đà Lạt</td>
-                        <td>30/09/2025</td>
-                        <td class="price-completed">5,600,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
-                    <tr>
-                        <td>PO-2025-0039</td>
-                        <td>Gia Vị Việt Nam</td>
-                        <td>29/09/2025</td>
-                        <td class="price-completed">3,800,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
-                    <tr>
-                        <td>PO-2025-0038</td>
-                        <td>Hải Sản Biển Đông</td>
-                        <td>28/09/2025</td>
-                        <td class="price-completed">11,200,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
-                    <tr>
-                        <td>PO-2025-0037</td>
-                        <td>Thịt Sạch Miền Bắc</td>
-                        <td>27/09/2025</td>
-                        <td class="price-completed">9,500,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
-                    <tr>
-                        <td>PO-2025-0036</td>
-                        <td>Rau Củ Đà Lạt</td>
-                        <td>26/09/2025</td>
-                        <td class="price-completed">4,300,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
-                    <tr>
-                        <td>PO-2025-0035</td>
-                        <td>Lương Thực Việt Nam</td>
-                        <td>25/09/2025</td>
-                        <td class="price-completed">18,700,000đ</td>
-                        <td><span class="order-status status-completed">Hoàn thành</span></td>
-                        <td><button class="btn-view">Xem</button></td>
-                    </tr>
+                   
                 </tbody>
             </table>
             <a href="#" class="link-button">Xem tất cả lịch sử</a>
         </div>
     </div>
+
+
+    <script>
+        // Dữ liệu từ server
+        const purchaseList = @Html.Raw(JsonConvert.SerializeObject(Model));
+
+        console.log('Purchase List:', purchaseList);
+
+        // Hàm format số tiền
+        function formatCurrency(value) {
+            return parseFloat(value || 0).toLocaleString('vi-VN') + 'đ';
+        }
+
+        // Hàm format ngày
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+
+            const date = new Date(dateString);
+
+            if (isNaN(date.getTime())) return '-';
+
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // Hàm tính tổng tiền đơn hàng - ✅ SỬA: Dùng PascalCase
+        function calculateTotal(order) {
+            const details = order.PurchaseOrderDetails || order.purchaseOrderDetails;
+            if (!details || details.length === 0) {
+                return 0;
+            }
+            return details.reduce((sum, detail) => {
+                const subtotal = detail.Subtotal || detail.subtotal;
+                const quantity = detail.Quantity || detail.quantity;
+                const unitPrice = detail.UnitPrice || detail.unitPrice;
+                return sum + (subtotal || (quantity * unitPrice));
+            }, 0);
+        }
+
+        // Hàm lấy tên nhà cung cấp
+        function getSupplierName(supplierId) {
+            if (!supplierId) return 'Chưa xác định';
+
+            const supplierMap = {
+                1: "Công ty Hải Sản Biển Đông",
+                2: "Công ty Lương Thực Miền Nam",
+                3: "Rau Sạch Đà Lạt",
+                4: "Thịt Sản Biển Đông",
+                5: "Gia Vị Việt Nam",
+                6: "Thịt Sạch Miền Bắc",
+                7: "Rau Củ Đà Lạt",
+                8: "Lương Thực Việt Nam",
+                9: "Hải Sản Tươi Sống",
+                10: "Gia Vị Truyền Thống"
+            };
+            return supplierMap[supplierId] || `NCC #${supplierId}`;
+        }
+
+        // Hàm lấy class trạng thái
+        function getStatusClass(status) {
+            if (!status) return 'status-pending';
+
+            switch (status.toLowerCase()) {
+                case 'pending': return 'status-pending';
+                case 'processing': return 'status-processing';
+                case 'completed': return 'status-completed';
+                case 'cancelled': return 'status-cancelled';
+                default: return 'status-pending';
+            }
+        }
+
+        // Hàm lấy tên trạng thái tiếng Việt
+        function getStatusText(status) {
+            if (!status) return 'Chờ duyệt';
+
+            switch (status.toLowerCase()) {
+                case 'pending': return 'Chờ duyệt';
+                case 'processing': return 'Đang xử lý';
+                case 'completed': return 'Hoàn thành';
+                case 'cancelled': return 'Đã hủy';
+                default: return status;
+            }
+        }
+
+        // ✅ Render đơn đang xử lý - SỬA: Dùng PascalCase
+        function renderProcessingOrders() {
+            const processingOrders = purchaseList.filter(p => {
+                const status = (p.Status || p.status || '').toLowerCase();
+                return status === 'processing' || status === 'pending';
+            });
+
+            const container = document.getElementById('processingOrdersList');
+
+            if (!container) {
+                console.error('Container processingOrdersList không tồn tại!');
+                return;
+            }
+
+            if (processingOrders.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Không có đơn hàng đang xử lý</div>';
+                document.getElementById('processingCount').textContent = '0 đơn hàng';
+                return;
+            }
+
+            container.innerHTML = processingOrders.map(order => {
+                const total = calculateTotal(order);
+                const details = order.PurchaseOrderDetails || order.purchaseOrderDetails || [];
+                const itemCount = details.length;
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierId = order.SupplierId || order.supplierId || 0;
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+                const idCreator = order.IdCreator || order.idCreator;
+
+                return `
+                        <div class="order-item">
+                            <div class="order-header">
+                                <div>
+                                    <div class="order-id">${orderId}</div>
+                                    <div class="order-details">NCC: ${getSupplierName(supplierId)}</div>
+                                </div>
+                                <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                            </div>
+                            <div class="order-details">Ngày tạo: ${formatDate(orderDate)}</div>
+                            <div class="order-details">Người tạo: ${idCreator ? `User #${idCreator}` : '-'}</div>
+                            <div class="order-footer">
+                                <span class="order-price">${formatCurrency(total)}</span>
+                                <span class="order-details">${itemCount} mặt hàng</span>
+                                <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                            </div>
+                        </div>
+                    `;
+            }).join('');
+
+            document.getElementById('processingCount').textContent = `${processingOrders.length} đơn hàng`;
+        }
+
+        // ✅ Render tất cả đơn hàng - SỬA: Dùng PascalCase
+        function renderAllOrders(filteredList = null) {
+            const orders = filteredList || purchaseList;
+            const container = document.getElementById('allOrdersList');
+
+            if (!container) {
+                console.error('Container allOrdersList không tồn tại!');
+                return;
+            }
+
+            if (orders.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Không tìm thấy đơn hàng nào</div>';
+                document.getElementById('allOrdersCount').textContent = '0 đơn';
+                return;
+            }
+
+            container.innerHTML = orders.map(order => {
+                const total = calculateTotal(order);
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierId = order.SupplierId || order.supplierId || 0;
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+
+                return `
+                        <div class="order-item">
+                            <div class="order-header">
+                                <div>
+                                    <div class="order-id">${orderId}</div>
+                                    <div class="order-details">${getSupplierName(supplierId)}</div>
+                                </div>
+                                <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                            </div>
+                            <div class="order-footer">
+                                <span class="order-price">${formatCurrency(total)}</span>
+                                <span class="order-details">${formatDate(orderDate)}</span>
+                                <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                            </div>
+                        </div>
+                    `;
+            }).join('');
+
+            document.getElementById('allOrdersCount').textContent = `${orders.length} đơn`;
+        }
+
+        // ✅ Render lịch sử hoàn thành - SỬA: Dùng PascalCase
+        function renderCompletedHistory() {
+            const completedOrders = purchaseList.filter(p => {
+                const status = (p.Status || p.status || '').toLowerCase();
+                return status === 'completed';
+            });
+
+            const tbody = document.querySelector('.history-table tbody');
+
+            if (completedOrders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">Chưa có đơn hàng hoàn thành</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = completedOrders.map(order => {
+                const total = calculateTotal(order);
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierId = order.SupplierId || order.supplierId || 0;
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+
+                return `
+                        <tr>
+                            <td>${orderId}</td>
+                            <td>${getSupplierName(supplierId)}</td>
+                            <td>${formatDate(orderDate)}</td>
+                            <td class="price-completed">${formatCurrency(total)}</td>
+                            <td><span class="order-status status-completed">${getStatusText(status)}</span></td>
+                            <td><button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button></td>
+                        </tr>
+                    `;
+            }).join('');
+        }
+
+        // Tìm kiếm đơn hàng
+        function searchOrders(keyword) {
+            keyword = keyword.trim().toLowerCase();
+
+            if (!keyword) {
+                renderAllOrders();
+                return;
+            }
+
+            const filtered = purchaseList.filter(order => {
+                const orderId = (order.PurchaseOrderId || order.purchaseOrderId || '').toLowerCase();
+                const supplierId = order.SupplierId || order.supplierId || 0;
+                const supplierName = getSupplierName(supplierId).toLowerCase();
+
+                return orderId.includes(keyword) || supplierName.includes(keyword);
+            });
+
+            renderAllOrders(filtered);
+        }
+
+        // Xem chi tiết đơn hàng - REDIRECT dựa trên trạng thái
+        function viewOrder(orderId) {
+            // Tìm đơn hàng trong danh sách
+            const order = purchaseList.find(o =>
+                (o.PurchaseOrderId || o.purchaseOrderId) === orderId
+            );
+
+            if (!order) {
+                alert('Không tìm thấy đơn hàng!');
+                return;
+            }
+
+            const status = (order.Status || order.status || '').toLowerCase();
+
+            // Nếu đã hoàn thành hoặc bị hủy -> Chuyển sang màn hình Done
+            if (status === 'completed' || status === 'cancelled') {
+                window.location.href = `/DetailImport/Done/${orderId}`;
+            }
+            // Nếu đang xử lý -> Chuyển sang màn hình Detail (xác nhận)
+            else {
+                window.location.href = `/DetailImport/Detail/${orderId}`;
+            }
+        }
+
+        // Khởi tạo khi load trang
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!purchaseList || purchaseList.length === 0) {
+                console.warn('Không có dữ liệu purchaseList');
+            }
+
+            renderProcessingOrders();
+            renderAllOrders();
+            renderCompletedHistory();
+
+            // Gắn sự kiện tìm kiếm
+            const searchInput = document.querySelector('.search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    searchOrders(e.target.value);
+                });
+            }
+        });
+    </script>
 </body>
 </html>

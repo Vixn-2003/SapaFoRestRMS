@@ -23,7 +23,7 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string? IngredientUnit { get; set; }
 
         // Thông tin đơn hàng
-        public int? PurchaseOrderId { get; set; }
+        public string? PurchaseOrderId { get; set; }
         public DateTime? OrderDate { get; set; }
         public string? OrderStatus { get; set; }
 

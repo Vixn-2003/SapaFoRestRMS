@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,7 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string? Email { get; set; }
         public string CodeSupplier { get; set; } = string.Empty!;
 
+        [JsonIgnore]
         public List<PurchaseOrderDTO> PurchaseOrders { get; set; }
     }
 }

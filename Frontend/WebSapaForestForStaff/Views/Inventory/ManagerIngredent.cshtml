@@ -537,10 +537,201 @@
             transform: translateY(0) scale(1);
         }
     }
+
+    /* Alert/Notification Styles */
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease-out;
+    position: relative;
+}
+
+.alert-error {
+    background-color: #fee2e2;
+    border-left: 4px solid #ef4444;
+    color: #991b1b;
+}
+
+.alert-info {
+    background-color: #dbeafe;
+    border-left: 4px solid #3b82f6;
+    color: #1e40af;
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    border-left: 4px solid #10b981;
+    color: #065f46;
+}
+
+.alert-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    /* ... */
+}
+
+@@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+    .action-btn.edit {
+        color: #3b82f6;
+    }
+
+        .action-btn.edit:hover {
+            background-color: #eff6ff;
+        }
+
+    /* Edit Modal Styles */
+    .edit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1001;
+        backdrop-filter: blur(4px);
+    }
+
+        .edit-modal-overlay.active {
+            display: flex;
+        }
+
+    .edit-modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 500px;
+        max-width: 95%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .edit-modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border-radius: 12px 12px 0 0;
+    }
+
+        .edit-modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+    .edit-modal-body {
+        padding: 2rem;
+    }
+
+    .edit-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .edit-form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .edit-form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+        .edit-form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .edit-form-input:disabled {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+        }
+
+    .edit-modal-footer {
+        padding: 1rem 2rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0 12px 12px;
+    }
 </style>
 
 <div class="container">
     <div class="max-width">
+        <!-- Notification messages -->
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-error" id="alertMessage">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>@TempData["ErrorMessage"]</span>
+                <button class="alert-close" onclick="closeAlert()">&times;</button>
+            </div>
+        }
+
+        @if (TempData["InfoMessage"] != null)
+        {
+            <div class="alert alert-info" id="alertMessage">
+                <i class="fas fa-info-circle"></i>
+                <span>@TempData["InfoMessage"]</span>
+                <button class="alert-close" onclick="closeAlert()">&times;</button>
+            </div>
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success" id="alertMessage">
+                <i class="fas fa-check-circle"></i>
+                <span>@TempData["SuccessMessage"]</span>
+                <button class="alert-close" onclick="closeAlert()">&times;</button>
+            </div>
+        }
         <div class="card">
             <h1 class="header-title">Nguyên liệu</h1>
             <p class="header-subtitle">Quản lý thông tin nguyên liệu</p>
@@ -575,7 +766,7 @@
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-filter"></i> Tìm Kiếm
                 </button>
-                <a asp-page-handler="AddIngredient" class="btn btn-success">
+                <a href="/ImportInventory" class="btn btn-success">
                     <i class="fas fa-plus"></i> Thêm nguyên liệu
                 </a>
             </div>
@@ -598,9 +789,22 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @{
-                            int stt = (Model.CurrentPage - 1) * Model.ItemsPerPage + 1;
+                        @if (Model.Ingredients == null || !Model.Ingredients.Any())
+                        {
+                            <tr>
+                                <td colspan="9" style="text-align:center; padding:3rem; color:#6b7280;">
+                                    <i class="fas fa-inbox" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
+                                    <br>
+                                    <strong style="font-size:1.1rem; color:#374151;">Không tìm thấy nguyên liệu nào</strong>
+                                    <br>
+                                    <span style="font-size:0.875rem;">Vui lòng thử lại với điều kiện tìm kiếm khác</span>
+                                </td>
+                            </tr>
                         }
+                        else
+                        {
+                            int stt = (Model.CurrentPage - 1) * Model.ItemsPerPage + 1;
+                        
 
                         @foreach (var item in Model.Ingredients)
                         {
@@ -613,17 +817,28 @@
                                 <td class="text-right">@item.OriginalQuantity</td>
                                 <td class="text-right">@item.TotalImport</td>
                                 <td class="text-right">@item.TotalExport</td>
-                                <td class="text-center">
-                                    <a asp-controller="ManagerIngredent"
-                                       asp-action="Detail"
-                                       asp-route-id="@item.IngredientId"
-                                       class="action-btn view"
-                                       title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </td>
+                                    <td class="text-center">
+                                        <div class="action-buttons">
+                                            <a href="#"
+                                               data-ingredient-id="@item.IngredientId"
+                                               data-ingredient-code="@item.IngredientCode"
+                                               data-ingredient-name="@item.Name"
+                                               data-ingredient-unit="@item.Unit"
+                                               class="action-btn view"
+                                               title="Xem chi tiết"
+                                               onclick="showIngredientDetailFromRow(this); return false;">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button onclick="openEditModal('@item.IngredientId', '@item.Name', '@item.Unit')"
+                                                    class="action-btn edit"
+                                                    title="Chỉnh sửa">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                             </tr>
                             stt++;
+                        }
                         }
                     </tbody>
                 </table>
@@ -632,12 +847,20 @@
             <div class="pagination">
                 <div class="pagination-controls">
                     <span class="pagination-text">Trang</span>
-                    <a asp-action="DisplayIngredent" asp-route-page="@(Model.CurrentPage - 1)"
+                    <a asp-action="FilterIngredent"
+                       asp-route-page="@(Model.CurrentPage - 1)"
+                       asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
+                       asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")"
+                       asp-route-searchIngredent="@Model.SearchIngredent"
                        class="pagination-btn @(Model.CurrentPage <= 1 ? "disabled" : "")">
                         &lt;
                     </a>
                     <span class="pagination-btn active">@Model.CurrentPage</span>
-                    <a asp-action="DisplayIngredent" asp-route-page="@(Model.CurrentPage + 1)"
+                    <a asp-action="FilterIngredent"
+                       asp-route-page="@(Model.CurrentPage + 1)"
+                       asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
+                       asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")"
+                       asp-route-searchIngredent="@Model.SearchIngredent"
                        class="pagination-btn @(Model.CurrentPage * Model.ItemsPerPage >= Model.TotalItems ? "disabled" : "")">
                         &gt;
                     </a>
@@ -688,7 +911,70 @@
             </div>
 
             <div class="modal-footer">
+                <button class="btn btn-primary" onclick="openEditModalFromDetail()">
+                    <i class="fas fa-edit"></i> Chỉnh sửa
+                </button>
                 <button id="closeModalFooter" class="btn btn-danger">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chỉnh sửa nguyên liệu -->
+    <div id="editIngredientModal" class="edit-modal-overlay">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h2>
+                    <i class="fas fa-edit"></i>
+                    Chỉnh sửa nguyên liệu
+                </h2>
+                <button id="closeEditModal" class="close-btn">&times;</button>
+            </div>
+
+            <div class="edit-modal-body">
+                <form id="editIngredientForm">
+                    <input type="hidden" id="editIngredientId">
+
+                    <div class="edit-form-group">
+                        <label class="edit-form-label">
+                            <i class="fas fa-hashtag"></i> Mã nguyên liệu
+                        </label>
+                        <input type="text"
+                               id="editIngredientCode"
+                               class="edit-form-input"
+                               disabled>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label class="edit-form-label">
+                            <i class="fas fa-box"></i> Tên nguyên liệu
+                        </label>
+                        <input type="text"
+                               id="editIngredientName"
+                               class="edit-form-input"
+                               placeholder="Nhập tên nguyên liệu"
+                               required>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label class="edit-form-label">
+                            <i class="fas fa-ruler"></i> Đơn vị tính
+                        </label>
+                        <input type="text"
+                               id="editIngredientUnit"
+                               class="edit-form-input"
+                               placeholder="Nhập đơn vị tính (kg, lít, hộp...)"
+                               required>
+                    </div>
+                </form>
+            </div>
+
+            <div class="edit-modal-footer">
+                <button class="btn btn-danger" onclick="closeEditIngredientModal()">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button class="btn btn-success" id="saveEditBtn">
+                    <i class="fas fa-save"></i> Lưu thay đổi
+                </button>
             </div>
         </div>
     </div>
@@ -714,7 +1000,10 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         loadWarehouses();
-
+        const alert = document.getElementById('alertMessage');
+    if (alert) {
+        setTimeout(() => closeAlert(), 5000);
+    }
         const searchInput = document.querySelector('input[name="searchIngredent"]');
         const tableBody = document.querySelector('.table tbody');
         const modal = document.getElementById("ingredientModal");
@@ -730,18 +1019,29 @@
             if (e.target === modal) modal.style.display = "none";
         });
 
-        attachDetailViewListeners();
     });
 
-    function attachDetailViewListeners() {
-        document.querySelectorAll(".action-btn.view").forEach(button => {
-            button.addEventListener("click", async function (e) {
-                e.preventDefault();
-                const href = this.getAttribute("href");
-                const ingredientId = href.split('/').pop();
-                await showIngredientDetail(ingredientId);
-            });
-        });
+
+    function openEditModalFromDetail() {
+        const modal = document.getElementById("ingredientModal");
+
+        // Lấy thông tin đã lưu trong modal
+        const ingredientId = modal.getAttribute('data-ingredient-id');
+        const ingredientCode = modal.getAttribute('data-ingredient-code');
+        const ingredientName = modal.getAttribute('data-ingredient-name');
+        const ingredientUnit = modal.getAttribute('data-ingredient-unit');
+
+        // Điền dữ liệu vào form edit
+        document.getElementById('editIngredientId').value = ingredientId;
+        document.getElementById('editIngredientCode').value = ingredientCode;
+        document.getElementById('editIngredientName').value = ingredientName;
+        document.getElementById('editIngredientUnit').value = ingredientUnit;
+
+        // Đóng modal detail
+        modal.style.display = "none";
+
+        // Mở modal edit
+        document.getElementById('editIngredientModal').classList.add('active');
     }
 
     async function showIngredientDetail(ingredientId) {
@@ -794,7 +1094,7 @@
                     .join('');
 
                 row.innerHTML = `
-                    <td style="font-weight: 600; color: #3b82f6;">${batch.batchId}</td>
+                        <td style="font-weight: 600; color: #3b82f6;">${batch.purchaseOrderId}</td>
                     <td>${batch.supplierName || 'N/A'}</td>
                     <td>${createdDate}</td>
                     <td>${expiryDate}</td>
@@ -844,19 +1144,20 @@
 
         // Lắng nghe sự kiện click nút Lưu
         document.querySelectorAll('.btn-save-warehouse').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const batchId = this.dataset.batchId;
                 const row = this.closest('tr');
+                const purchaseOrderId = row.querySelector('td:first-child').textContent; // ← LẤY TEXT TỪ CỘT ĐẦU TIÊN
                 const select = row.querySelector('.warehouse-select');
                 const newWarehouseId = parseInt(select.value);
                 const newWarehouseName = select.options[select.selectedIndex].text;
 
-                showConfirmDialog(batchId, newWarehouseId, newWarehouseName, row);
+                showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, row);
             });
         });
     }
 
-    function showConfirmDialog(batchId, newWarehouseId, newWarehouseName, row) {
+    function showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, row) {
         const confirmHtml = `
             <div class="confirm-popup" id="confirmPopup">
                 <div class="confirm-content">
@@ -865,7 +1166,7 @@
                         Xác nhận thay đổi kho
                     </h3>
                     <p>
-                        Bạn có chắc chắn muốn chuyển lô <strong>#${batchId}</strong> 
+                        Bạn có chắc chắn muốn chuyển lô <strong>#${purchaseOrderId}</strong>
                         sang kho <strong>${newWarehouseName}</strong>?
                     </p>
                     <div class="confirm-buttons">
@@ -1024,5 +1325,217 @@
                 </td>
             </tr>
         `;
+    }
+
+    // Function to close alert
+function closeAlert() {
+    const alert = document.getElementById('alertMessage');
+    if (alert) {
+        alert.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => alert.remove(), 300);
+    }
+}
+
+
+    // ===== EDIT INGREDIENT FUNCTIONS =====
+
+    function openEditModal(ingredientId, ingredientName, ingredientUnit) {
+        // Lấy mã nguyên liệu từ bảng
+        const row = event.target.closest('tr');
+        const ingredientCode = row.cells[1].textContent; // Cột thứ 2 là mã nguyên liệu
+
+        // Điền dữ liệu vào form
+        document.getElementById('editIngredientId').value = ingredientId;
+        document.getElementById('editIngredientCode').value = ingredientCode;
+        document.getElementById('editIngredientName').value = ingredientName;
+        document.getElementById('editIngredientUnit').value = ingredientUnit;
+
+        // Hiển thị modal
+        document.getElementById('editIngredientModal').classList.add('active');
+    }
+
+    function closeEditIngredientModal() {
+        document.getElementById('editIngredientModal').classList.remove('active');
+        document.getElementById('editIngredientForm').reset();
+    }
+
+    // Đóng modal khi click vào nút X
+    document.getElementById('closeEditModal')?.addEventListener('click', closeEditIngredientModal);
+
+    // Đóng modal khi click ra ngoài
+    document.getElementById('editIngredientModal')?.addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeEditIngredientModal();
+        }
+    });
+
+    // Xử lý lưu thay đổi
+    document.getElementById('saveEditBtn')?.addEventListener('click', async function () {
+        const ingredientId = document.getElementById('editIngredientId').value;
+        const ingredientName = document.getElementById('editIngredientName').value.trim();
+        const ingredientUnit = document.getElementById('editIngredientUnit').value.trim();
+
+        // Validation
+        if (!ingredientName) {
+            alert('Vui lòng nhập tên nguyên liệu!');
+            document.getElementById('editIngredientName').focus();
+            return;
+        }
+
+        if (!ingredientUnit) {
+            alert('Vui lòng nhập đơn vị tính!');
+            document.getElementById('editIngredientUnit').focus();
+            return;
+        }
+
+        // Hiển thị loading
+        const saveBtn = document.getElementById('saveEditBtn');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+
+        try {
+            const response = await fetch('/ManagerIngredent/UpdateIngredient', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ingredientId: parseInt(ingredientId),
+                    name: ingredientName,
+                    unit: ingredientUnit
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể kết nối đến server');
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                showSuccessMessage(result.message || 'Cập nhật nguyên liệu thành công!');
+                closeEditIngredientModal();
+
+                // Reload trang sau 1 giây để hiển thị dữ liệu mới
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                throw new Error(result.message || 'Có lỗi xảy ra');
+            }
+
+        } catch (error) {
+            console.error('Error updating ingredient:', error);
+            alert('Có lỗi xảy ra: ' + error.message);
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
+    });
+
+    // Xử lý phím ESC để đóng modal
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeEditIngredientModal();
+        }
+    });
+
+
+    // ===== LẤY THÔNG TIN TỪ HÀNG TRONG BẢNG =====
+    function showIngredientDetailFromRow(button) {
+        // Lấy thông tin từ data attributes
+        const ingredientId = button.getAttribute('data-ingredient-id');
+        const ingredientCode = button.getAttribute('data-ingredient-code');
+        const ingredientName = button.getAttribute('data-ingredient-name');
+        const ingredientUnit = button.getAttribute('data-ingredient-unit');
+
+        // Hiển thị thông tin nguyên liệu ngay lập tức
+        document.getElementById("mName").textContent = ingredientName || "---";
+        document.getElementById("mUnit").textContent = ingredientUnit || "---";
+
+        // Lưu thông tin vào modal để dùng cho Edit
+        const modal = document.getElementById("ingredientModal");
+        modal.setAttribute('data-ingredient-id', ingredientId);
+        modal.setAttribute('data-ingredient-code', ingredientCode);
+        modal.setAttribute('data-ingredient-name', ingredientName);
+        modal.setAttribute('data-ingredient-unit', ingredientUnit);
+
+        // Gọi function load batch
+        loadBatchList(ingredientId);
+    }
+
+    // ===== LOAD DANH SÁCH BATCH =====
+    async function loadBatchList(ingredientId) {
+        const modal = document.getElementById("ingredientModal");
+        const tbody = document.getElementById("batchTableBody");
+        const url = `/api/InventoryIngredient/BatchIngredient/${ingredientId}`;
+
+        try {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:2rem;">
+                        <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...
+                    </td>
+                </tr>
+            `;
+            modal.style.display = "flex";
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+            const data = await response.json();
+            console.log("Batch data received:", data);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                displayNoData(tbody);
+                return;
+            }
+
+            // Clear and populate table
+            tbody.innerHTML = "";
+
+            data.forEach((batch) => {
+                const row = document.createElement("tr");
+                row.dataset.batchId = batch.batchId;
+                row.dataset.originalWarehouseId = batch.warehouseId;
+
+                const createdDate = formatDate(batch.createdAt);
+                const expiryDate = formatDate(batch.expiryDate);
+                const quantity = formatNumber(batch.quantityRemaining);
+
+                // Tạo options cho select từ warehouse list
+                const warehouseOptions = warehouseList
+                    .filter(w => w.isActive)
+                    .map(w => `<option value="${w.warehouseId}" ${w.warehouseId === batch.warehouseId ? 'selected' : ''}>${w.name}</option>`)
+                    .join('');
+
+                row.innerHTML = `
+                    <td style="font-weight: 600; color: #3b82f6;">${batch.purchaseOrderId}</td>
+                    <td>${batch.supplierName || 'N/A'}</td>
+                    <td>${createdDate}</td>
+                    <td>${expiryDate}</td>
+                    <td style="text-align: right; font-weight: 500;">${quantity}</td>
+                    <td>
+                        <select class="warehouse-select" data-batch-id="${batch.batchId}">
+                            ${warehouseOptions}
+                        </select>
+                    </td>
+                    <td style="text-align: center;">
+                        <button class="btn-save-warehouse" data-batch-id="${batch.batchId}">
+                            <i class="fas fa-save"></i> Lưu
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+
+            attachWarehouseEventListeners();
+            console.log(`Successfully displayed ${data.length} batches`);
+
+        } catch (error) {
+            console.error("Error:", error);
+            displayError(tbody, error.message);
+        }
     }
 </script>

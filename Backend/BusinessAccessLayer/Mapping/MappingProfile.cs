@@ -35,6 +35,7 @@ namespace BusinessAccessLayer.Mapping
                opt => opt.MapFrom(src => src.InventoryBatches));
 
             CreateMap<InventoryBatch, InventoryBatchDTO>();
+            CreateMap<InventoryBatchDTO, InventoryBatch>();
 
             CreateMap<StockTransaction, StockTransactionDTO>();
 
@@ -67,6 +68,8 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(dest => dest.SupplierPhone, opt => opt.MapFrom(src => src.PurchaseOrderDetail.PurchaseOrder.Supplier.Phone));
             CreateMap<WarehouseDTO, Warehouse>();
             CreateMap<Warehouse, WarehouseDTO>();
+            CreateMap<StockTransaction, StockTransactionDTO>();
+            CreateMap<StockTransactionDTO, StockTransaction>();
         }
     }
 }

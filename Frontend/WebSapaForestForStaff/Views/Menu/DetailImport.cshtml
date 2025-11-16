@@ -1,0 +1,1932 @@
+﻿@model WebSapaForestForStaff.DTOs.PurchaseOrderDTO
+
+@{
+    ViewData["Title"] = "Nhập Hàng Vào Kho";
+    Layout = "_LayoutInventory";
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"]</title>
+    <style>
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f3f4f6;
+    line-height: 1.6;
+}
+
+.container {
+    width: 100%;
+    transition: width 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Header Section */
+.header-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.header-title h1 {
+    font-size: 30px;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.header-title p {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+.status-badge svg {
+    color: #d97706;
+}
+
+.status-badge span {
+    font-weight: 600;
+    color: #b45309;
+}
+
+/* Main Content */
+.main-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 24px;
+}
+
+/* Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.info-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.info-box {
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid;
+}
+
+.info-box.order-info {
+    background-color: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.info-box.creator-info {
+    background-color: #faf5ff;
+    border-color: #e9d5ff;
+}
+
+.info-box.supplier-info {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.info-box-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.info-box.order-info .info-box-header {
+    color: #1e3a8a;
+}
+
+.info-box.creator-info .info-box-header {
+    color: #6b21a8;
+}
+
+.info-box.supplier-info .info-box-header {
+    color: #14532d;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.info-label {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.info-value {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.info-value.primary {
+    color: #1d4ed8;
+    font-weight: bold;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    background-color: #fef3c7;
+    color: #b45309;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.creator-detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.creator-detail svg {
+    color: #a855f7;
+    flex-shrink: 0;
+}
+
+.creator-detail span {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+.creator-detail.time span {
+    font-size: 13px;
+    color: #4b5563;
+}
+
+.supplier-detail {
+    margin-bottom: 12px;
+}
+
+.supplier-detail-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.supplier-detail-value {
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.supplier-name {
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.supplier-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding-top: 8px;
+}
+
+/* Table */
+.table-section {
+    margin-bottom: 24px;
+}
+
+.table-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 16px;
+    font-size: 16px;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background-color: #1f2937;
+    color: white;
+}
+
+th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+th.text-center {
+    text-align: center;
+}
+
+th.text-right {
+    text-align: right;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f9fafb;
+}
+
+tbody tr:nth-child(odd) {
+    background-color: white;
+}
+
+td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #374151;
+}
+
+td.text-center {
+    text-align: center;
+}
+
+td.text-right {
+    text-align: right;
+}
+
+td.font-medium {
+    font-weight: 500;
+}
+
+td.font-semibold {
+    font-weight: 600;
+}
+
+td.text-green {
+    color: #16a34a;
+}
+
+/* Total Section */
+.total-box {
+    background-color: #1f2937;
+    color: white;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.total-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.total-label {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.total-amount {
+    font-size: 28px;
+    font-weight: bold;
+    color: #86efac;
+}
+
+/* Inspector Confirmation */
+.inspector-section {
+    background: linear-gradient(to right, #eef2ff, #eff6ff);
+    border: 2px solid #c7d2fe;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.inspector-checkbox-wrapper {
+    display: flex;
+    align-items: start;
+    gap: 16px;
+}
+
+.inspector-checkbox {
+    width: 24px;
+    height: 24px;
+    margin-top: 4px;
+    cursor: pointer;
+    accent-color: #4f46e5;
+    flex-shrink: 0;
+}
+
+.inspector-content {
+    flex: 1;
+}
+
+.inspector-label {
+    cursor: pointer;
+}
+
+.inspector-title {
+    font-weight: bold;
+    color: #312e81;
+    font-size: 18px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inspector-description {
+    color: #4b5563;
+    font-size: 14px;
+}
+
+.inspector-info-box {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid #a5b4fc;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.3s ease-in;
+}
+
+@@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.inspector-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inspector-info-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.inspector-info-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.inspector-info-row svg {
+    color: #6366f1;
+    flex-shrink: 0;
+}
+
+.inspector-info-row .label {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.inspector-info-row .value {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.button-group {
+    display: flex;
+    gap: 12px;
+}
+
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-back {
+    background-color: #4b5563;
+    color: white;
+}
+
+.btn-back:hover {
+    background-color: #374151;
+}
+
+.btn-reject {
+    background-color: #dc2626;
+    color: white;
+}
+
+.btn-reject:hover {
+    background-color: #b91c1c;
+}
+
+.btn-accept {
+    padding: 12px 32px;
+    font-size: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-accept.enabled {
+    background-color: #16a34a;
+    color: white;
+}
+
+.btn-accept.enabled:hover {
+    background-color: #15803d;
+}
+
+.btn-accept.disabled {
+    background-color: #d1d5db;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-in;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 90%;
+    animation: slideIn 0.3s ease-out;
+}
+
+@@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #dc2626;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+.modal-label {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.modal-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 12px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.modal-textarea:focus {
+    outline: none;
+    border-color: #dc2626;
+}
+
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-btn-cancel {
+    background-color: #6b7280;
+    color: white;
+    padding: 10px 20px;
+}
+
+.modal-btn-cancel:hover {
+    background-color: #4b5563;
+}
+
+.modal-btn-confirm {
+    background-color: #dc2626;
+    color: white;
+    padding: 10px 20px;
+}
+
+.modal-btn-confirm:hover {
+    background-color: #b91c1c;
+}
+
+.modal-btn-confirm:disabled {
+    background-color: #d1d5db;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Icons */
+svg {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+svg.small {
+    width: 14px;
+    height: 14px;
+}
+
+svg.large {
+    width: 22px;
+    height: 22px;
+}
+
+/* Toast Notification Styles */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 420px;
+}
+
+.toast {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 320px;
+    animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    border-left: 4px solid;
+    position: relative;
+    overflow: hidden;
+}
+
+.toast::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    width: 100%;
+    animation: shrink 4s linear forwards;
+}
+
+@@keyframes slideInRight {
+    from {
+        transform: translateX(450px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@@keyframes slideOutRight {
+    to {
+        transform: translateX(450px);
+        opacity: 0;
+    }
+}
+
+@@keyframes shrink {
+    to {
+        width: 0;
+    }
+}
+
+.toast.success {
+    border-left-color: #16a34a;
+}
+
+.toast.success::before {
+    background: #16a34a;
+}
+
+.toast.error {
+    border-left-color: #dc2626;
+}
+
+.toast.error::before {
+    background: #dc2626;
+}
+
+.toast.warning {
+    border-left-color: #f59e0b;
+}
+
+.toast.warning::before {
+    background: #f59e0b;
+}
+
+.toast.info {
+    border-left-color: #3b82f6;
+}
+
+.toast.info::before {
+    background: #3b82f6;
+}
+
+.toast-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+}
+
+.toast.success .toast-icon {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.toast.error .toast-icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.toast.warning .toast-icon {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.toast.info .toast-icon {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.toast-message {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    font-size: 20px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.toast.removing {
+    animation: slideOutRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Confirmation Modal Styles */
+.confirm-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-in;
+}
+
+.confirm-modal-overlay.active {
+    display: flex;
+}
+
+.confirm-modal {
+    background: white;
+    border-radius: 16px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: scaleIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@@keyframes scaleIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.confirm-modal-header {
+    padding: 24px 24px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.confirm-icon-wrapper {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.confirm-icon-wrapper.success {
+    background: #dcfce7;
+}
+
+.confirm-icon-wrapper.error {
+    background: #fee2e2;
+}
+
+.confirm-icon-wrapper svg {
+    width: 28px;
+    height: 28px;
+}
+
+.confirm-icon-wrapper.success svg {
+    color: #16a34a;
+}
+
+.confirm-icon-wrapper.error svg {
+    color: #dc2626;
+}
+
+.confirm-modal-body {
+    padding: 0 24px 24px;
+}
+
+.confirm-modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.confirm-modal-message {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.confirm-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.confirm-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.confirm-btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.confirm-btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Button View Images */
+.btn-view-images {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #3b82f6;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.btn-view-images:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-view-images svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Image Slider Sidebar - KHÔNG CÓ OVERLAY MỜ */
+.image-slider-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: transparent;
+    z-index: 9999;
+    display: none;
+    pointer-events: none;
+}
+
+.image-slider-overlay.active {
+    display: block;
+}
+
+.image-slider-sidebar {
+    position: fixed;
+    top: 0;
+    right: -33.33%;
+    width: 30.00%;
+    height: 100%;
+    background-color: white;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+    transition: right 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+}
+
+.image-slider-overlay.active .image-slider-sidebar {
+    right: 0;
+}
+
+/* Thu nhỏ nội dung khi sidebar mở - KHÔNG MỜ */
+body.sidebar-open {
+    overflow: hidden;
+}
+
+body.sidebar-open .container {
+    width: 66.67%;
+    transition: width 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.image-slider-header {
+    padding: 20px 24px;
+    background-color: #1f2937;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #374151;
+}
+
+.image-slider-title {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.image-slider-close {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.image-slider-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.image-slider-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    background-color: #f9fafb;
+}
+
+.image-container {
+    background-color: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.image-wrapper {
+    height: 800px;
+    position: relative;
+    width: 100%;
+    padding-bottom: 75%;
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: zoom-in;
+}
+
+.image-wrapper img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.image-wrapper:hover img {
+    transform: scale(1.05);
+}
+
+.image-caption {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #6b7280;
+    text-align: center;
+}
+
+/* Image Modal for Zoom */
+.image-zoom-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 11000;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+.image-zoom-modal.active {
+    display: flex;
+}
+
+.image-zoom-container {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.image-zoom-container img {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.zoom-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 12px 16px;
+    border-radius: 30px;
+}
+
+.zoom-btn {
+    background-color: white;
+    color: #1f2937;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.zoom-btn:hover {
+    background-color: #3b82f6;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Empty State */
+.empty-images {
+    text-align: center;
+    padding: 60px 20px;
+    color: #9ca3af;
+}
+
+.empty-images svg {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-images p {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* Responsive */
+@@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .button-group {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    button {
+        width: 100%;
+    }
+
+    .supplier-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .toast-container {
+        right: 16px;
+        left: 16px;
+        top: 16px;
+        max-width: none;
+    }
+
+    .toast {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+/* Responsive for Image Slider */
+@@media (max-width: 1024px) {
+    .image-slider-sidebar {
+        width: 40%;
+        right: -40%;
+    }
+
+    body.sidebar-open .container {
+        width: 60%;
+    }
+}
+
+@@media (max-width: 768px) {
+    .image-slider-sidebar {
+        width: 50%;
+        right: -50%;
+    }
+
+    body.sidebar-open .container {
+        width: 50%;
+    }
+
+    .btn-view-images {
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+}
+
+@@media (max-width: 480px) {
+    .image-slider-sidebar {
+        width: 100%;
+        right: -100%;
+    }
+
+    body.sidebar-open .container {
+        width: 100%;
+    }
+}
+    </style>
+</head>
+<body>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="confirm-modal-overlay">
+        <div class="confirm-modal">
+            <div class="confirm-modal-header">
+                <div id="confirmIcon" class="confirm-icon-wrapper success">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 id="confirmTitle" class="confirm-modal-title">Thành công!</h3>
+                </div>
+            </div>
+            <div class="confirm-modal-body">
+                <p id="confirmMessage" class="confirm-modal-message"></p>
+            </div>
+            <div class="confirm-modal-footer">
+                <button class="confirm-btn confirm-btn-primary" onclick="closeConfirmModal()">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>Nhập Hàng</h1>
+                    <p>Tạo đơn nhập hàng mới từ nhà cung cấp</p>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 class="section-title" style="margin-bottom: 0;">Thông tin đơn nhập hàng</h2>
+                <button type="button" class="btn-view-images" onclick="openImageSlider()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Hình ảnh chứng thực
+                </button>
+            </div>
+
+            <!-- Info Grid -->
+            <div class="info-grid">
+                <!-- Left Column -->
+                <div class="info-column">
+                    <!-- Order Info -->
+                    <!-- Thông tin đơn hàng -->
+                    <div class="info-box order-info">
+                        <div class="info-box-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Thông tin đơn hàng
+                        </div>
+                        <div>
+                            <div class="info-row">
+                                <span class="info-label">Mã đơn nhập:</span>
+                                <span class="info-value primary">@Model.PurchaseOrderId</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Ngày nhập:</span>
+                                <span class="info-value">@Model.OrderDate?.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Trạng thái:</span>
+                                <span class="status-pill">@Model.Status</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Creator Info -->
+                    <div class="info-box creator-info">
+                        <div class="info-box-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Người tạo đơn
+                        </div>
+                        <div>
+                            <div class="creator-detail">
+                                <svg class="small" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span>Nguyễn Văn C</span>
+                            </div>
+                            <div class="creator-detail">
+                                <svg class="small" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                </svg>
+                                <span>0923 456 789</span>
+                            </div>
+                            <div class="creator-detail time">
+                                <svg class="small" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>03/10/2025 09:30</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Supplier Info -->
+                <div class="info-column">
+                    <div class="info-box supplier-info">
+                        <div class="info-box-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            Thông tin nhà cung cấp
+                        </div>
+
+                        <div>
+                            <div class="supplier-detail">
+                                <p class="supplier-detail-label">Tên nhà cung cấp</p>
+                                <p class="supplier-detail-value supplier-name">@Model.Supplier?.Name</p>
+                            </div>
+                            <div class="supplier-grid">
+                                <div class="supplier-detail">
+                                    <p class="supplier-detail-label">Mã NCC</p>
+                                    <p class="supplier-detail-value">@Model.Supplier?.CodeSupplier</p>
+                                </div>
+                                <div class="supplier-detail">
+                                    <p class="supplier-detail-label">Liên hệ</p>
+                                    <p class="supplier-detail-value">@Model.Supplier?.ContactInfo</p>
+                                </div>
+                            </div>
+                            <div class="supplier-detail">
+                                <p class="supplier-detail-label">Số điện thoại</p>
+                                <p class="supplier-detail-value">@Model.Supplier?.Phone</p>
+                            </div>
+                            <div class="supplier-detail">
+                                <p class="supplier-detail-label">Email</p>
+                                <p class="supplier-detail-value">@Model.Supplier?.Email</p>
+                            </div>
+                            <div class="supplier-detail">
+                                <p class="supplier-detail-label">Địa chỉ</p>
+                                <p class="supplier-detail-value">@Model.Supplier?.Address</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    Chi tiết nguyên liệu nhập
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Mã nguyên liệu</th>
+                                <th>Tên nguyên liệu</th>
+                                <th>Kho lưu trữ</th>
+                                <th class="text-center">Số lượng</th>
+                                <th class="text-center">Đơn vị</th>
+                                <th class="text-right">Đơn giá</th>
+                                <th class="text-right">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PurchaseOrderDetails != null && Model.PurchaseOrderDetails.Any())
+                            {
+                                int stt = 1;
+                                foreach (var item in Model.PurchaseOrderDetails)
+                                {
+                                    <tr>
+                                        <td>@stt</td>
+                                        <td class="font-medium">@item.IngredientCode</td>
+                                        <td>@item.IngredientName</td>
+                                        <td>@item.Warehouse.Name</td>
+                                        <td class="text-center font-semibold">@item.Quantity</td>
+                                        <td class="text-center">@item.Unit</td>
+                                        <td class="text-right">@string.Format("{0:N0}₫", item.UnitPrice)</td>
+                                        <td class="text-right font-semibold text-green">@string.Format("{0:N0}₫", item.Subtotal)</td>
+                                    </tr>
+                                    stt++;
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="8" class="text-center text-gray-500">Không có nguyên liệu nào</td></tr>
+                            }
+                        </tbody>
+
+                    </table>
+                </div>
+            </div>
+
+            @{
+                decimal totalAmount = 0;
+                if (Model.PurchaseOrderDetails != null && Model.PurchaseOrderDetails.Any())
+                {
+                    totalAmount = Model.PurchaseOrderDetails.Sum(x =>
+                    (x.Subtotal != 0 ? x.Subtotal : x.Quantity * x.UnitPrice)
+                    );
+                }
+            }
+
+            <!-- Total -->
+            <div class="total-box">
+                <div class="total-content">
+                    <span class="total-label">Tổng giá trị đơn hàng:</span>
+                    <span class="total-amount">@string.Format("{0:N0}₫", totalAmount)</span>
+
+                </div>
+            </div>
+
+            <!-- Inspector Confirmation -->
+            <form asp-controller="DetailImport" asp-action="Confirm" method="post">
+                   <input type="hidden" name="PurchaseOrderId" value="@Model.PurchaseOrderId" />
+                   <input type="hidden" id="CheckIdInput" name="CheckId" value="" />
+                <input type="hidden" id="StatusInput" name="Status" value="" />
+                <input type="hidden" id="RejectReasonInput" name="RejectReason" value="" />
+            <div class="inspector-section">
+                <div class="inspector-checkbox-wrapper">
+                    <input type="checkbox" 
+                           id="inspectorConfirm" 
+                           class="inspector-checkbox"
+                           onchange="handleInspectorConfirm(this)">
+                    <div class="inspector-content">
+                        <label for="inspectorConfirm" class="inspector-label">
+                            <h3 class="inspector-title">
+                                <svg class="large" id="checkIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: #9ca3af;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Xác nhận của người kiểm hàng
+                            </h3>
+                            <p class="inspector-description">
+                                Tôi xác nhận đã kiểm tra và đối chiếu đầy đủ hàng hóa theo đơn nhập hàng này
+                            </p>
+                        </label>
+
+                        <div id="inspectorInfo" class="inspector-info-box" style="display: none;">
+                            <h4 class="inspector-info-title">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Thông tin người xác nhận
+                            </h4>
+                            <div class="inspector-wrapper">
+                                <div class="inspector-info-row">
+                                    <svg class="small" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    <span class="label">Họ tên:</span>
+                                    <span class="value">Trần Thị B</span>
+                                </div>
+                                <div class="inspector-info-row">
+                                    <svg class="small" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    <span class="label">Số điện thoại:</span>
+                                    <span class="value">0912 345 678</span>
+                                </div>
+                                <div class="inspector-info-row">
+                                    <svg class="small" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="label">Thời gian xác nhận:</span>
+                                    <span class="value" id="confirmTime"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button type="button" class="btn-back" onclick="goBack()">Quay lại</button>
+                    <div class="button-group">
+                        <button type="button" class="btn-reject" onclick="showRejectModal()">
+                            Từ chối đơn nhập
+                        </button>
+                        <button type="button" id="acceptBtn" class="btn-accept disabled" disabled onclick="acceptOrder()">
+                            Chấp nhận đơn nhập
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div id="rejectModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Từ chối đơn nhập hàng
+                </h3>
+            </div>
+            <div class="modal-body">
+                <label for="rejectReason" class="modal-label">
+                    Lý do từ chối <span style="color: #dc2626;">*</span>
+                </label>
+                <textarea 
+                    id="rejectReason" 
+                    class="modal-textarea" 
+                    placeholder="Vui lòng nhập lý do từ chối đơn nhập hàng..."
+                    oninput="validateRejectReason()"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn-cancel" onclick="hideRejectModal()">Hủy</button>
+                <button id="confirmRejectBtn" class="modal-btn-confirm" disabled onclick="confirmRejectOrder()">
+                    Từ chối đơn nhập
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Slider Sidebar -->
+    <div id="imageSliderOverlay" class="image-slider-overlay">
+        <div class="image-slider-sidebar">
+            <div class="image-slider-header">
+                <h3 class="image-slider-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Hình ảnh chứng thực
+                </h3>
+                <button class="image-slider-close" onclick="closeImageSlider()">&times;</button>
+            </div>
+            <div class="image-slider-body" id="imageSliderBody">
+                @if (!string.IsNullOrEmpty(Model.UrlImg))
+                {
+                    @* Giả sử UrlImg chứa nhiều URL cách nhau bởi dấu phẩy *@
+                    var imageUrls = Model.UrlImg.Split(',');
+                    int imageIndex = 1;
+
+                    foreach (var imageUrl in imageUrls)
+                    {
+                        <div class="image-container">
+                            <div class="image-wrapper" onclick="zoomImage(this)">
+                                <img src="@imageUrl.Trim()" alt="Hình ảnh @imageIndex" onerror="this.src='https://via.placeholder.com/800x600/e5e7eb/6b7280?text=Loi+tai+anh'">
+                            </div>
+                            <p class="image-caption">Hình ảnh chứng thực @imageIndex</p>
+                        </div>
+                        imageIndex++;
+                    }
+                }
+                else
+                {
+                    <div class="empty-images">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p>Chưa có hình ảnh chứng thực</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Zoom Modal -->
+    <div id="imageZoomModal" class="image-zoom-modal" onclick="closeZoom()">
+        <div class="image-zoom-container">
+            <img id="zoomedImage" src="" alt="Zoomed">
+            <div class="zoom-controls" onclick="event.stopPropagation()">
+                <button class="zoom-btn" onclick="zoomInOut(-0.2)">−</button>
+                <button class="zoom-btn" onclick="resetZoom()">⟲</button>
+                <button class="zoom-btn" onclick="zoomInOut(0.2)">+</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inspectorConfirmed = false;
+
+        function handleInspectorConfirm(checkbox) {
+            inspectorConfirmed = checkbox.checked;
+            const inspectorInfo = document.getElementById('inspectorInfo');
+            const checkIcon = document.getElementById('checkIcon');
+            const acceptBtn = document.getElementById('acceptBtn');
+
+            if (inspectorConfirmed) {
+                // Hiển thị thông tin người xác nhận
+                inspectorInfo.style.display = 'block';
+                
+                // Cập nhật thời gian xác nhận
+                const now = new Date();
+                const timeString = now.toLocaleString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                document.getElementById('confirmTime').textContent = timeString;
+                
+                // Thay đổi màu icon
+                checkIcon.style.color = '#16a34a';
+                
+                // Enable nút chấp nhận
+                acceptBtn.classList.remove('disabled');
+                acceptBtn.classList.add('enabled');
+                acceptBtn.disabled = false;
+            } else {
+                // Ẩn thông tin người xác nhận
+                inspectorInfo.style.display = 'none';
+                
+                // Thay đổi màu icon về mặc định
+                checkIcon.style.color = '#9ca3af';
+                
+                // Disable nút chấp nhận
+                acceptBtn.classList.remove('enabled');
+                acceptBtn.classList.add('disabled');
+                acceptBtn.disabled = true;
+            }
+        }
+
+        function goBack() {
+            if (confirm('Bạn có chắc chắn muốn quay lại?')) {
+                window.history.back();
+            }
+        }
+
+        function showRejectModal() {
+            document.getElementById('rejectModal').classList.add('active');
+            document.getElementById('rejectReason').value = '';
+            document.getElementById('confirmRejectBtn').disabled = true;
+        }
+
+        function hideRejectModal() {
+            document.getElementById('rejectModal').classList.remove('active');
+        }
+
+        function validateRejectReason() {
+            const reason = document.getElementById('rejectReason').value.trim();
+            const confirmBtn = document.getElementById('confirmRejectBtn');
+            
+            if (reason.length > 0) {
+                confirmBtn.disabled = false;
+            } else {
+                confirmBtn.disabled = true;
+            }
+        }
+
+        function confirmRejectOrder() {
+            const reason = document.getElementById('rejectReason').value.trim();
+
+            if (!reason) {
+                showToast('warning', 'Thiếu thông tin', 'Vui lòng nhập lý do từ chối!');
+                return;
+            }
+
+            if (confirm('Bạn có chắc chắn muốn từ chối đơn nhập hàng này?')) {
+                // ✅ Hiển thị loading toast
+                showToast('info', 'Đang xử lý...', 'Đang gửi yêu cầu từ chối đơn hàng', 10000);
+
+                document.getElementById('StatusInput').value = 'Cancelled';
+                document.getElementById('RejectReasonInput').value = reason;
+                document.getElementById('CheckIdInput').value = 3;
+
+                document.querySelector('form').submit();
+            }
+        }
+
+        function acceptOrder() {
+            if (!inspectorConfirmed) {
+                showToast('warning', 'Chưa xác nhận', 'Vui lòng xác nhận kiểm hàng trước khi chấp nhận đơn!');
+                return;
+            }
+
+            if (confirm('Bạn có chắc chắn muốn chấp nhận đơn nhập hàng này?')) {
+                // ✅ Hiển thị loading toast
+                showToast('info', 'Đang xử lý...', 'Đang xác nhận đơn hàng và nhập kho', 10000);
+
+                document.getElementById('StatusInput').value = 'Completed';
+                document.getElementById('RejectReasonInput').value = '';
+                document.getElementById('CheckIdInput').value = 3;
+
+                document.querySelector('form').submit();
+            }
+        }
+
+        // Đóng modal khi click bên ngoài
+        document.getElementById('rejectModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideRejectModal();
+            }
+        });
+
+        // Xử lý phím ESC để đóng modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideRejectModal();
+            }
+        });
+
+        function beforeSubmit() {
+            if (!document.getElementById('inspectorConfirm').checked) {
+                alert('Vui lòng xác nhận kiểm hàng trước khi gửi!');
+                return false; // Ngăn submit
+            }
+
+            // Gán id người xác thực (giả định ID=2)
+            document.getElementById('CheckIdInput').value = 2;
+            return true; // Cho phép submit
+        }
+
+        // ===== TOAST NOTIFICATION SYSTEM =====
+        function showToast(type, title, message, duration = 4000) {
+            const container = document.getElementById('toastContainer');
+
+            const icons = {
+                success: '✓',
+                error: '✕',
+                warning: '⚠',
+                info: 'ℹ'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type]}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="removeToast(this)">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto remove after duration
+            setTimeout(() => {
+                removeToast(toast.querySelector('.toast-close'));
+            }, duration);
+        }
+
+        function removeToast(button) {
+            const toast = button.parentElement;
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 400);
+        }
+
+        // ===== CONFIRMATION MODAL =====
+        function showConfirmModal(type, title, message) {
+            const modal = document.getElementById('confirmModal');
+            const iconWrapper = document.getElementById('confirmIcon');
+            const titleEl = document.getElementById('confirmTitle');
+            const messageEl = document.getElementById('confirmMessage');
+
+            // Update icon and colors
+            iconWrapper.className = `confirm-icon-wrapper ${type}`;
+
+            if (type === 'success') {
+                iconWrapper.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                `;
+            } else if (type === 'error') {
+                iconWrapper.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                `;
+            }
+
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            modal.classList.add('active');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('active');
+
+            // Redirect sau khi đóng modal
+            setTimeout(() => {
+                window.location.href = '@Url.Action("Index", "MainImportInventory")';
+            }, 300);
+        }
+
+        // Close modal khi click outside
+        document.getElementById('confirmModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeConfirmModal();
+            }
+        });
+
+        // ===== CHECK FOR TEMPDATA MESSAGES ON PAGE LOAD =====
+        window.addEventListener('DOMContentLoaded', function () {
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>
+                    // Hiển thị modal confirmation cho thành công
+                        showConfirmModal('success', 'Thành công!', '@TempData["SuccessMessage"]');
+            </text>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+                    // Hiển thị toast cho lỗi
+                        showToast('error', 'Lỗi!', '@TempData["ErrorMessage"]', 6000);
+            </text>
+        }
+        });
+
+        // ===== IMAGE SLIDER FUNCTIONS =====
+        function openImageSlider() {
+            document.getElementById('imageSliderOverlay').classList.add('active');
+            document.body.classList.add('sidebar-open');
+        }
+
+        function closeImageSlider() {
+            document.getElementById('imageSliderOverlay').classList.remove('active');
+            document.body.classList.remove('sidebar-open');
+        }
+
+        // Close khi click vào overlay
+        document.getElementById('imageSliderOverlay')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeImageSlider();
+            }
+        });
+        // ===== IMAGE ZOOM FUNCTIONS =====
+        let currentZoom = 1;
+
+        function zoomImage(wrapper) {
+            const img = wrapper.querySelector('img');
+            const modal = document.getElementById('imageZoomModal');
+            const zoomedImg = document.getElementById('zoomedImage');
+
+            zoomedImg.src = img.src;
+            currentZoom = 1;
+            zoomedImg.style.transform = `scale(${currentZoom})`;
+            modal.classList.add('active');
+        }
+
+        function closeZoom() {
+            document.getElementById('imageZoomModal').classList.remove('active');
+        }
+
+        function zoomInOut(delta) {
+            currentZoom = Math.max(0.5, Math.min(3, currentZoom + delta));
+            document.getElementById('zoomedImage').style.transform = `scale(${currentZoom})`;
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            document.getElementById('zoomedImage').style.transform = `scale(${currentZoom})`;
+        }
+
+        // ESC key để đóng
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeImageSlider();
+                closeZoom();
+            }
+        });
+    </script>
+</body>
+</html>

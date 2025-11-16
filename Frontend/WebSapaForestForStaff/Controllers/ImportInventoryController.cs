@@ -24,6 +24,9 @@ namespace WebSapaForestForStaff.Controllers
             // Gọi API nguyên liệu
             var response = await _httpClient.GetAsync("api/InventoryIngredient");
 
+            // Gọi API mã lô
+            var responseIdPurchase = await _httpClient.GetAsync("api/PurchaseOrder");
+
             // Gọi API nhà cung cấp
             var responseSupplier = await _httpClient.GetAsync("api/Supplier");
 
@@ -50,12 +53,14 @@ namespace WebSapaForestForStaff.Controllers
             // Đọc dữ liệu đúng cho từng response
             var json = await response.Content.ReadAsStringAsync();
             var jsonSupplier = await responseSupplier.Content.ReadAsStringAsync();
+            var jsonIdPurchase = await responseIdPurchase.Content.ReadAsStringAsync();
 
             // ✅ THÊM: Đọc dữ liệu warehouse
             var jsonWarehouse = await responseWarehouse.Content.ReadAsStringAsync();
 
             // Giải mã dữ liệu JSON
             var supplierList = JsonConvert.DeserializeObject<List<SupplierDTO>>(jsonSupplier);
+            var purchaseList = JsonConvert.DeserializeObject<List<PurchaseOrderDTO>>(jsonIdPurchase);
             var ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json);
 
             // ✅ THÊM: Giải mã warehouse và lọc chỉ lấy kho active
@@ -67,7 +72,8 @@ namespace WebSapaForestForStaff.Controllers
             {
                 SupplierDTOs = supplierList,
                 InventoryIngredientDTOs = ingredientList,
-                WarehouseDTOs = warehouseList  // THÊM DÒNG NÀY
+                WarehouseDTOs = warehouseList,
+                PurchaseOrderDTOs = purchaseList
             };
 
             return View("~/Views/Menu/ImportInventory.cshtml", importIngredient);
@@ -108,7 +114,7 @@ namespace WebSapaForestForStaff.Controllers
                 }
 
                 // Validate dữ liệu cơ bản
-                if (string.IsNullOrEmpty(model.SupplierName))
+                if (model.SupplierId == null)
                     return BadRequest("Thiếu thông tin nhà cung cấp.");
 
                 if (model.ProofFile == null || model.ProofFile.Length == 0)
@@ -121,15 +127,13 @@ namespace WebSapaForestForStaff.Controllers
                 formData.Add(new StringContent(model.ImportCode), "ImportCode");
                 formData.Add(new StringContent(model.ImportDate.ToString("o")), "ImportDate"); // ISO 8601 format
                 formData.Add(new StringContent(model.SupplierId.ToString()), "SupplierId");
-                formData.Add(new StringContent(model.SupplierName), "SupplierName");
-                formData.Add(new StringContent(model.CreatorName), "CreatorName");
-                formData.Add(new StringContent(model.CreatorPhone), "CreatorPhone");
-                formData.Add(new StringContent(model.CheckerName), "CheckerName");
-                formData.Add(new StringContent(model.CheckerPhone), "CheckerPhone");
+                formData.Add(new StringContent(model.CreatorId.ToString()), "CreatorId");
+                //formData.Add(new StringContent(model.CheckId?.ToString() ?? ""), "CheckId");
 
                 // ✅ Thêm danh sách items dưới dạng JSON string
                 var itemsJson = JsonConvert.SerializeObject(importItems.Select(item => new
                 {
+                    IngredientId = item.IngredientId,
                     IngredientCode = item.Code,
                     IngredientName = item.Name,
                     Unit = item.Unit,
@@ -153,7 +157,7 @@ namespace WebSapaForestForStaff.Controllers
                 Console.WriteLine("Sending data to API Backend...");
 
                 // ✅ 3. GỬI SANG API BACKEND
-                var response = await _httpClient.PostAsync("api/ImportInventory/Create", formData);
+                var response = await _httpClient.PostAsync("api/ImportIngredient/Create", formData);
 
                 Console.WriteLine($"API Response Status: {response.StatusCode}");
 

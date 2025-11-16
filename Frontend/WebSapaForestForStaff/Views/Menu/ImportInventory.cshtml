@@ -153,9 +153,7 @@
     }
 
     .inventory-page .ip-main-container {
-        display: grid;
-        grid-template-columns: 1fr 400px;
-        gap: 20px;
+        display: block;
     }
 
     .inventory-page .ip-main-form {
@@ -267,42 +265,78 @@
         font-weight: 600;
     }
 
-    .ip-supplier-detail {
-        background: #2c3e50;
-        color: white;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 25px;
-        display: none;
-    }
-
-    .ip-supplier-detail h3 {
-        font-size: 15px;
+    /* ===== SUPPLIER DETAIL SECTION - TITLE OUTSIDE BOX ===== */
+    .ip-supplier-title {
+        font-size: 16px;
         font-weight: 600;
-        margin-bottom: 15px;
+        color: #10b981; /* xanh lá nhạt */
+        margin-bottom: 8px;
     }
 
+    /* Khung chứa thông tin NCC */
+    .ip-supplier-detail {
+        background: #1e293b; /* xanh navy đậm */
+        color: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        display: block !important;
+    }
+
+    /* Lưới 3 cột - 2 hàng */
     .ip-supplier-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        font-size: 13px;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-areas:
+            "name code address"
+            "contact phone email";
+        column-gap: 40px;
+        row-gap: 16px;
+        font-size: 14px;
+    }
+
+    /* Gán vị trí cụ thể cho từng phần */
+    .ip-supplier-item.name {
+        grid-area: name;
+    }
+
+    .ip-supplier-item.code {
+        grid-area: code;
+    }
+
+    .ip-supplier-item.address {
+        grid-area: address;
+    }
+
+    .ip-supplier-item.contact {
+        grid-area: contact;
+    }
+
+    .ip-supplier-item.phone {
+        grid-area: phone;
+    }
+
+    .ip-supplier-item.email {
+        grid-area: email;
     }
 
     .ip-supplier-item {
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 4px;
     }
 
     .ip-supplier-label {
-        color: #94a3b8;
         font-size: 12px;
+        color: #9ca3af;
+        font-weight: 500;
     }
 
     .ip-supplier-value {
-        font-weight: 500;
+        font-weight: 600;
+        color: white;
     }
+
 
     .ip-btn-add {
         background: #10b981;
@@ -409,7 +443,7 @@
 
     .ip-action-buttons {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 15px;
     }
 
@@ -1510,11 +1544,69 @@
             background: #1e293b;
             color: white;
         }
+
+        /* LOADING OVERLAY */
+.ip-loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.ip-loading-overlay.active {
+    display: flex;
+}
+
+.ip-loading-content {
+    background: white;
+    border-radius: 16px;
+    padding: 40px 60px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.ip-loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #10b981;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.ip-loading-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.ip-loading-subtext {
+    font-size: 14px;
+    color: #6b7280;
+}
 </style>
 
 <body>
     <div class="inventory-page">
         <div class="ip-toast-container" id="ipToastContainer"></div>
+
+        <!-- Loading Overlay -->
+        <div class="ip-loading-overlay" id="ipLoadingOverlay">
+            <div class="ip-loading-content">
+                <div class="ip-loading-spinner"></div>
+                <div class="ip-loading-text">Đang xử lý đơn nhập hàng</div>
+                <div class="ip-loading-subtext">Vui lòng đợi trong giây lát...</div>
+            </div>
+        </div>
 
         <div class="ip-wrapper">
             <div class="ip-header">
@@ -1528,8 +1620,8 @@
                     
                     <div class="ip-form-row">
                         <div class="ip-form-group">
-                            <label class="ip-required">Mã đơn nhập</label>
-                            <input type="text" value="PO-2025-001" readonly>
+                            <label class="ip-required">Mã lô nhập</label>
+                            <input type="text" id="importCodeInput" readonly>
                         </div>
 
                         <div class="ip-form-group">
@@ -1556,43 +1648,48 @@
                         </div>
                     </div>
 
+                    <h3 class="ip-supplier-title">Chi tiết nhà cung cấp</h3>
+
                     <div class="ip-supplier-detail" id="ipSupplierDetail">
-                        <h3>Chi tiết nhà cung cấp</h3>
                         <div class="ip-supplier-grid">
-                            <div class="ip-supplier-item">
+                            <div class="ip-supplier-item name">
                                 <span class="ip-supplier-label">Tên nhà cung cấp</span>
                                 <span class="ip-supplier-value" id="ipDetailName">-</span>
                             </div>
-                            <div class="ip-supplier-item">
+                            <div class="ip-supplier-item code">
                                 <span class="ip-supplier-label">Mã nhà cung cấp</span>
                                 <span class="ip-supplier-value" id="ipDetailCode">-</span>
                             </div>
-
-                            <div class="ip-supplier-item">
-                                <span class="ip-supplier-label">Điện thoại</span>
-                                <span class="ip-supplier-value" id="ipDetailPhone">-</span>
+                            <div class="ip-supplier-item address">
+                                <span class="ip-supplier-label">Địa chỉ</span>
+                                <span class="ip-supplier-value" id="ipDetailAddress">-</span>
                             </div>
-                            <div class="ip-supplier-item">
+                            <div class="ip-supplier-item contact">
                                 <span class="ip-supplier-label">Người liên hệ</span>
                                 <span class="ip-supplier-value" id="ipDetailContact">-</span>
                             </div>
-                            <div class="ip-supplier-item">
+                            <div class="ip-supplier-item phone">
+                                <span class="ip-supplier-label">Điện thoại</span>
+                                <span class="ip-supplier-value" id="ipDetailPhone">-</span>
+                            </div>
+                            <div class="ip-supplier-item email">
                                 <span class="ip-supplier-label">Email</span>
                                 <span class="ip-supplier-value" id="ipDetailEmail">-</span>
-                            </div>
-                            <div class="ip-supplier-item" style="grid-column: 1 / -1;">
-                                <span class="ip-supplier-label">Địa chỉ</span>
-                                <span class="ip-supplier-value" id="ipDetailAddress">-</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="ip-section-title">Chi tiết nguyên liệu nhập</div>
+
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="ip-section-title">Danh sách chi tiết nguyên liệu</div>
+
+                        <button class="ip-btn-add" id="ipBtnOpenModal">
+                            <span>+</span>
+                            <span>Thêm nguyên liệu</span>
+                        </button>
+                    </div>
                     
-                    <button class="ip-btn-add" id="ipBtnOpenModal">
-                        <span>+</span>
-                        <span>Thêm nguyên liệu</span>
-                    </button>
 
                     <table class="ip-materials-table" id="ipMaterialsTable">
                         <thead>
@@ -1634,15 +1731,6 @@
                             </div>
                         </div>
 
-                        <div>
-                            <input type="checkbox" id="chkChecker" style="transform: scale(1.3); margin-right: 8px;" />
-                            <label for="chkChecker" style="font-weight: 600;">Xác nhận của người kiểm hàng</label>
-                            <div id="checkerInfo" style="display:none; margin-top: 8px; font-size: 13px; background:#e5e7eb; padding:8px 12px; border-radius:6px;">
-                                <strong>Trần Thị E</strong><br>
-                                0123456788
-                            </div>
-                        </div>
-
                         <div style="margin-left:auto;">
                             <label style="font-weight:600;">Hình ảnh đơn nhập:</label>
                             <input type="file" id="uploadProof" accept="image/*" style="display:block; margin-top:6px;">
@@ -1652,39 +1740,8 @@
 
 
                     <div class="ip-action-buttons">
-                        <button class="ip-btn-action ip-btn-back" id="btnBack">Lưu nháp và quay lại</button>
-                        <button class="ip-btn-action ip-btn-confirm" id="btnConfirm">Xác nhận nhập hàng</button>
-                        <button class="ip-btn-action ip-btn-delete" id="btnDelete">Xóa đơn</button>
-                    </div>
-                </div>
-
-                <div class="ip-sidebar">
-                    <div class="ip-sidebar-card">
-                        <h3 class="ip-sidebar-title">Nhà cung cấp hàng đầu</h3>
-                        
-                        <div class="ip-supplier-list">
-                            @foreach (var supplier in Model.SupplierDTOs)
-                            {
-                                <div class="ip-supplier-card"
-                                     data-supplier-id="@supplier.SupplierId"
-                                     data-supplier-name="@supplier.Name"
-                                     data-supplier-phone="@supplier.Phone"
-                                     data-supplier-contact="@supplier.ContactInfo"
-                                     data-supplier-email="@supplier.Email"
-                                     data-supplier-address="@supplier.Address">
-
-                                    <div class="ip-supplier-avatar">
-                                        @supplier.Name.Substring(0, 1)
-                                    </div>
-                                    <div class="ip-supplier-info">
-                                        <div class="ip-supplier-name">@supplier.Name</div>
-                                        <div class="ip-supplier-email">@supplier.Email</div>
-                                        <div class="ip-supplier-phone">@supplier.Phone</div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-
+                        <button class="ip-btn-action ip-btn-back" id="btnBack">Quay lại</button>
+                        <button class="ip-btn-action ip-btn-confirm" id="btnConfirm">Yêu cầu quản lý xác nhận</button>
                     </div>
                 </div>
             </div>
@@ -1829,6 +1886,30 @@
                 </div>
             </div>
         </div>
+
+        <!-- Warning Dialog Quay Lại -->
+        <div class="sp-warning-overlay" id="backWarningOverlay">
+            <div class="sp-warning-dialog">
+                <div class="sp-warning-header">
+                    <div class="sp-warning-icon">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="sp-warning-content">
+                        <h3>Xác nhận quay lại</h3>
+                        <p>Dữ liệu đã nhập sẽ <strong style="color: #dc2626;">bị mất</strong> nếu bạn quay lại.</p>
+                        <p style="margin-top: 8px;">Bạn có chắc chắn muốn quay lại không?</p>
+                    </div>
+                </div>
+                <div class="sp-warning-actions">
+                    <button class="sp-warning-btn sp-warning-btn-cancel" id="backWarningCancel">Ở lại</button>
+                    <button class="sp-warning-btn sp-warning-btn-confirm" id="backWarningConfirm">Quay lại</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1836,6 +1917,14 @@
         const supplierList = @Html.Raw(JsonConvert.SerializeObject(Model.SupplierDTOs));
         const ingredientList = @Html.Raw(JsonConvert.SerializeObject(Model.InventoryIngredientDTOs));
         const warehouseList = @Html.Raw(JsonConvert.SerializeObject(Model.WarehouseDTOs));
+        const purchaseList = @Html.Raw(JsonConvert.SerializeObject(Model.PurchaseOrderDTOs));
+
+        console.log('✅ Data loaded:', {
+            suppliers: supplierList?.length || 0,
+            ingredients: ingredientList?.length || 0,
+            warehouses: warehouseList?.length || 0,
+            purchases: purchaseList?.length || 0
+        });
 
         // ===== BIẾN GLOBAL =====
         let ipImportList = [];
@@ -1859,6 +1948,14 @@
             setTimeout(() => toast.remove(), 4000);
         }
 
+        function showLoading() {
+            document.getElementById('ipLoadingOverlay').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('ipLoadingOverlay').classList.remove('active');
+        }
+
         // ===== FORMAT CURRENCY =====
         function ipFormatCurrency(value) {
             return parseFloat(value || 0).toLocaleString('vi-VN') + 'đ';
@@ -1867,7 +1964,7 @@
         // ===== TẠO MÃ NGUYÊN LIỆU MỚI KHÔNG TRÙNG =====
         function ipGenerateNewCode() {
             let prefix = "NL";
-            let existingCodes = ingredientList.map(i => i.IngredientCode);
+            let existingCodes = [ ingredientList.map(i => i.IngredientCode), ipImportList.map(i => i.code) ];
             let index = 1;
             let newCode;
 
@@ -1876,6 +1973,45 @@
                 index++;
             } while (existingCodes.includes(newCode));
 
+            return newCode;
+        }
+
+        // ===== TẠO MÃ ĐƠN NHẬP MỚI KHÔNG TRÙNG VỚI DATABASE =====
+        function generateNewImportCode() {
+            const now = new Date();
+            const prefix = "PO";
+
+            // Lấy năm (2 số cuối), tháng, ngày
+            const year = String(now.getFullYear()).slice(-2); // VD: 25
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // VD: 11
+            const day = String(now.getDate()).padStart(2, '0'); // VD: 13
+
+            const datePrefix = `${prefix}${year}${month}${day}`; // VD: PO251113
+
+            // Lấy tất cả mã đơn hiện có từ database
+            const existingCodes = purchaseList.map(p => p.PurchaseOrderCode || p.Code || '');
+
+            console.log('Existing purchase codes:', existingCodes); // Debug
+
+            let newCode;
+            let attempts = 0;
+            const maxAttempts = 1000; // Giới hạn số lần thử để tránh infinite loop
+
+            do {
+                // Tạo số ngẫu nhiên 3 chữ số (001-999)
+                const randomNum = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+                newCode = `${datePrefix}${randomNum}`; // VD: PO251113001
+
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    console.error('Không thể tạo mã đơn hàng duy nhất sau', maxAttempts, 'lần thử');
+                    // Fallback: thêm timestamp
+                    newCode = `${datePrefix}${Date.now().toString().slice(-3)}`;
+                    break;
+                }
+            } while (existingCodes.includes(newCode));
+
+            console.log('Generated new code:', newCode); // Debug
             return newCode;
         }
 
@@ -2192,8 +2328,24 @@
                 }
             }
 
-            // Tạo object nguyên liệu
-            const material = { code, name, unit, quantity, unitPrice, warehouseId: warehouseList.length > 0 ? warehouseList[0].WarehouseId : 0 };
+            // ✅ THÊM ĐOẠN NÀY: Lấy ingredientId
+            let ingredientId = null;
+            if (!ipIsNewMaterial && ipSelectedMaterial) {
+                // Nguyên liệu có sẵn → lấy ID từ database
+                ingredientId = ipSelectedMaterial.IngredientId;
+            }
+            // Nếu ipIsNewMaterial = true → ingredientId = null (nguyên liệu mới)
+
+            // ✅ SỬA DÒNG NÀY: Thêm ingredientId vào object
+            const material = {
+                ingredientId,  // ← THÊM dòng này (sẽ là ID thực hoặc null)
+                code,
+                name,
+                unit,
+                quantity,
+                unitPrice,
+                warehouseId: warehouseList.length > 0 ? warehouseList[0].WarehouseId : 0
+            };
 
             // Kiểm tra nếu đã có trong danh sách nhập (theo mã)
             const existingIndex = ipImportList.findIndex(item => item.code === code);
@@ -2252,28 +2404,14 @@
             </select>
         </td>
 
-                    <td><input type="number" class="ip-quantity-input" value="${item.quantity}" min="0" step="0.01" data-index="${i}" data-field="quantity"></td>
-                    <td>${item.unit}</td>
-                    <td><input type="number" class="ip-quantity-input" value="${item.unitPrice}" min="0" step="1000" data-index="${i}" data-field="unitPrice"></td>
+                            <td><span>${item.quantity}</span></td>
+                           <td>${item.unit}</td>
+                              <td><span>${item.unitPrice.toLocaleString('vi-VN')}đ</span></td>
+
                     <td style="font-weight:600;color:#10b981;">${ipFormatCurrency(item.quantity * item.unitPrice)}</td>
                     <td><button class="ip-btn-remove" data-index="${i}">×</button></td>
                 </tr>
             `).join('');
-
-            // Event cho input số lượng và đơn giá
-            tbody.querySelectorAll('input').forEach(input => {
-                input.addEventListener('input', e => {
-                    const idx = e.target.dataset.index;
-                    const field = e.target.dataset.field;
-                    const value = parseFloat(e.target.value) || 0;
-                    if (value < 0) {
-                        e.target.value = 0;
-                        return;
-                    }
-                    ipImportList[idx][field] = value;
-                    ipRenderImportTable();
-                });
-            });
 
             // Event cho select kho
             tbody.querySelectorAll('.ip-warehouse-select').forEach(select => {
@@ -2344,22 +2482,23 @@
             document.getElementById('ipFormQuantity').addEventListener('input', ipUpdateModalTotal);
             document.getElementById('ipFormUnitPrice').addEventListener('input', ipUpdateModalTotal);
 
-            // Nút hành động chính
-            document.getElementById('btnDelete').addEventListener('click', () => {
-                if (ipImportList.length === 0) {
-                    showToast('warning', 'Không có gì để xóa', 'Danh sách trống');
-                    return;
-                }
-                if (confirm('Bạn có chắc muốn xóa toàn bộ đơn hàng?')) {
-                    ipImportList = [];
-                    ipRenderImportTable();
-                    showToast('success', 'Đã xóa', 'Đơn hàng đã được xóa');
+            document.getElementById('btnBack').addEventListener('click', () => {
+                if (ipImportList.length > 0 || ipSelectedSupplier !== null) {
+                    // Có dữ liệu đã nhập => hiện popup cảnh báo
+                    document.getElementById('backWarningOverlay').classList.add('sp-active');
+                } else {
+                    // Không có dữ liệu => quay lại luôn
+                    window.history.back();
                 }
             });
 
-            document.getElementById('btnBack').addEventListener('click', () => {
-                showToast('warning', 'Đã lưu nháp', 'Quay lại trang trước');
-                // TODO: Thêm logic lưu nháp và chuyển trang
+
+            document.getElementById('backWarningCancel').addEventListener('click', () => {
+                document.getElementById('backWarningOverlay').classList.remove('sp-active');
+            });
+
+            document.getElementById('backWarningConfirm').addEventListener('click', () => {
+                window.history.back();
             });
 
             document.getElementById('btnConfirm').addEventListener('click', async () => {
@@ -2367,7 +2506,6 @@
                 const hasSupplier = supplierName !== "-- Chọn nhà cung cấp --";
 
                 const hasCreator = document.getElementById('chkCreator').checked;
-                const hasChecker = document.getElementById('chkChecker').checked;
                 const fileInput = document.getElementById('uploadProof');
                 const hasImage = fileInput.files.length > 0;
 
@@ -2384,25 +2522,23 @@
                     showToast('error', 'Chưa xác nhận', 'Vui lòng tích xác nhận của người tạo đơn.');
                     return;
                 }
-                if (!hasChecker) {
-                    showToast('error', 'Chưa xác nhận', 'Vui lòng tích xác nhận của người kiểm hàng.');
-                    return;
-                }
                 if (!hasImage) {
                     showToast('error', 'Thiếu minh chứng', 'Vui lòng tải lên hình ảnh đơn nhập.');
                     return;
                 }
 
                 // ✅ 2. CHUẨN BỊ DỮ LIỆU
-                const importCode = 'PO-2025-001';
+                const importCode = document.getElementById('importCodeInput').value; 
                 const importDate = document.querySelector('input[type="datetime-local"]').value;
                 const supplierId = ipSelectedSupplier ? ipSelectedSupplier.SupplierId : 0;
 
                 const creator = {
+                    id : 1,
                     name: 'Nguyễn Văn C',
                     phone: '0123456789'
                 };
                 const checker = {
+                    id : 2,
                     name: 'Trần Thị E',
                     phone: '0123456788'
                 };
@@ -2414,15 +2550,13 @@
                 formData.append('ImportCode', importCode);
                 formData.append('ImportDate', importDate);
                 formData.append('SupplierId', supplierId.toString());
-                formData.append('SupplierName', supplierName);
-                formData.append('CreatorName', creator.name);
-                formData.append('CreatorPhone', creator.phone);
-                formData.append('CheckerName', checker.name);
-                formData.append('CheckerPhone', checker.phone);
+                formData.append('CreatorId', creator.id);
+                formData.append('CheckerId', checker.id);
                 formData.append('ProofFile', proofFile);
 
                 // ✅ 4. CONVERT DANH SÁCH NGUYÊN LIỆU (PascalCase)
                 const importListFormatted = ipImportList.map(item => ({
+                    IngredientId: item.ingredientId ?? null,
                     Code: item.code,
                     Name: item.name,
                     Unit: item.unit,
@@ -2430,6 +2564,13 @@
                     UnitPrice: item.unitPrice,
                     WarehouseId: item.warehouseId
                 }));
+
+                const generatedCode = generateNewImportCode();
+                document.getElementById('importCodeInput').value = generatedCode;
+                console.log('Auto-generated import code:', generatedCode);
+
+                renderSupplierList(supplierList);
+                ipRenderImportTable();
 
                 const importListJson = JSON.stringify(importListFormatted);
                 formData.append('ImportList', importListJson);
@@ -2451,7 +2592,7 @@
 
                 try {
                     // ✅ 6. HIỂN THỊ LOADING
-                    showToast('warning', 'Đang xử lý...', 'Vui lòng đợi trong giây lát');
+                    showLoading();
 
                     // ✅ 7. GỬI REQUEST
                     const response = await fetch('/ImportInventory/SubmitImport', {
@@ -2466,8 +2607,8 @@
                     if (response.ok) {
                         const result = await response.json();
                         console.log('✅ Success result:', result);
-                        showToast('success', 'Thành công!', result.message || 'Đơn nhập hàng đã được tạo thành công!');
-
+                        showToast('success', 'Thành công!', result.message || 'Yêu cầu xác nhận đơn nhập hàng đã được tạo thành công!');
+                        hideLoading();
                         // ✅ 9. RESET FORM SAU KHI THÀNH CÔNG
                         ipImportList = [];
                         ipSelectedSupplier = null;
@@ -2476,12 +2617,11 @@
                         document.getElementById('ipSupplierBtnText').textContent = '-- Chọn nhà cung cấp --';
                         document.getElementById('ipSupplierDetail').style.display = 'none';
                         document.getElementById('chkCreator').checked = false;
-                        document.getElementById('chkChecker').checked = false;
                         document.getElementById('creatorInfo').style.display = 'none';
-                        document.getElementById('checkerInfo').style.display = 'none';
                         fileInput.value = '';
                         document.getElementById('proofPreview').innerHTML = '';
 
+                        document.getElementById('importCodeInput').value = generateNewImportCode();
                     } else {
                         // ✅ 10. XỬ LÝ LỖI TỪ SERVER
                         let errorMessage = 'Không thể gửi đơn nhập hàng.';
@@ -2498,6 +2638,7 @@
                         }
 
                         showToast('error', 'Lỗi!', errorMessage);
+                        hideLoading();
                     }
 
                 } catch (err) {
@@ -2505,6 +2646,7 @@
                     console.error('Error details:', err.message);
                     console.error('Stack trace:', err.stack);
                     showToast('error', 'Lỗi kết nối!', 'Không thể kết nối đến server: ' + err.message);
+                    hideLoading();
                 }
             });
 
@@ -2514,10 +2656,8 @@
                 info.style.display = e.target.checked ? 'block' : 'none';
             });
 
-            document.getElementById('chkChecker').addEventListener('change', (e) => {
-                const info = document.getElementById('checkerInfo');
-                info.style.display = e.target.checked ? 'block' : 'none';
-            });
+            // THÊM: Tạo mã đơn nhập tự động khi load trang
+            document.getElementById('importCodeInput').value = generateNewImportCode();
 
 
             // Khởi tạo

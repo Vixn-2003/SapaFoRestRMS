@@ -2,6 +2,7 @@
 using DataAccessLayer.Repositories;
 using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Threading.Tasks;
@@ -24,7 +25,16 @@ namespace DataAccessLayer.UnitOfWork
 
         private IWarehouseRepository _warehouseRepository;
 
+        private IPurchaseOrderRepository _purchaseOrderRepository;
 
+        private IPurchaseOrderDetailRepository _purchaseOrderDetailRepository;
+
+        private IStockTransactionRepository _stockTransactionRepository;
+
+        public IStockTransactionRepository StockTransaction => _stockTransactionRepository ??= new StockTransactionRepository(_context);
+        public IPurchaseOrderDetailRepository PurchaseOrderDetail => _purchaseOrderDetailRepository ??= new PurchaseOrderDetailRepository(_context);
+
+        public IPurchaseOrderRepository PurchaseOrder => _purchaseOrderRepository ??= new PurchaseOrderRepository(_context);
         public IWarehouseRepository Warehouse => _warehouseRepository ??= new WarehouseRepository(_context);
         public IManagerSupplierRepository Supplier => _supplierRepository ??= new ManagerSupplierRepository(_context);
 

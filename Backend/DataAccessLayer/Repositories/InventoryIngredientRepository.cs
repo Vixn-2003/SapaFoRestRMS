@@ -124,5 +124,107 @@ namespace DataAccessLayer.Repositories
             return true;
         }
 
+        public async Task<IEnumerable<Ingredient>> GetAllIngredientSearch(string search)
+        {
+            return await _context.Ingredients.Where(x => x.IngredientCode.Contains(search) || x.Name.Contains(search))
+                .Include(i => i.InventoryBatches)
+                    .ThenInclude(b => b.StockTransactions)
+                .ToListAsync();
+        }
+
+        public async Task<int> AddNewIngredient(Ingredient ingredient)
+        {
+            try
+            {
+                // Thêm entity vào DbSet
+                await _context.Ingredients.AddAsync(ingredient);
+
+                // Lưu vào DB
+                await _context.SaveChangesAsync();
+
+                // Sau khi SaveChanges, EF sẽ tự gán IngredientId
+                return ingredient.IngredientId;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi khi thêm nguyên liệu mới: {ex.Message}");
+                return 0; // Trả về 0 nghĩa là thêm thất bại
+            }
+        }
+
+        public async Task<int> AddNewBatch(InventoryBatch inventoryBatch)
+        {
+            try
+            {
+                await _context.InventoryBatches.AddAsync(inventoryBatch);
+                await _context.SaveChangesAsync();
+
+                // EF Core sẽ tự gán BatchId sau khi SaveChanges
+                return inventoryBatch.BatchId;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi khi thêm lô mới: {ex.Message}");
+                return 0; // 0 = thất bại
+            }
+        }
+
+        public async Task<Ingredient> GetIngredientById(int id)
+        {
+
+           var ingredient = await _context.Ingredients.FirstOrDefaultAsync(p => p.IngredientId == id);
+
+            if (ingredient != null)
+            {
+                return ingredient;
+            }
+            return null;
+
+           
+        }
+
+        public async Task<(bool success, string message)> UpdateInforIngredient(int idIngredient, string nameIngredient, string unit)
+        {
+            try
+            {
+                var ingredient = await _context.Ingredients
+                    .FirstOrDefaultAsync(p => p.IngredientId == idIngredient);
+
+                if (ingredient == null)
+                {
+                    return (false, "Không tìm thấy nguyên liệu");
+                }
+
+                // Kiểm tra có thay đổi không
+                if (ingredient.Name == nameIngredient && ingredient.Unit == unit)
+                {
+                    return (false, "Không có thay đổi nào");
+                }
+
+                // Kiểm tra tên trùng với nguyên liệu khác
+                var duplicateName = await _context.Ingredients
+                    .AnyAsync(p => p.Name == nameIngredient && p.IngredientId != idIngredient);
+
+                if (duplicateName)
+                {
+                    return (false, "Tên nguyên liệu đã tồn tại");
+                }
+
+                // Cập nhật thông tin
+                ingredient.Name = nameIngredient;
+                ingredient.Unit = unit;
+                // ingredient.UpdatedAt = DateTime.Now; // Nếu có field này
+
+                _context.Ingredients.Update(ingredient);
+                await _context.SaveChangesAsync();
+
+                return (true, "Cập nhật thành công");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in UpdateInforIngredient: {ex.Message}");
+                return (false, $"Có lỗi xảy ra: {ex.Message}");
+            }
+        }
     }
 }

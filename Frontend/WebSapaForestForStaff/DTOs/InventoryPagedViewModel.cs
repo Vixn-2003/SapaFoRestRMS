@@ -12,6 +12,5 @@ namespace WebSapaForestForStaff.DTOs
         public string SearchIngredent { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
-        public string SelectedUnit { get; set; }
     }
 }

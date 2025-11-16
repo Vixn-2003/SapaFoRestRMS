@@ -9,11 +9,18 @@ namespace BusinessAccessLayer.DTOs.Inventory
     public class InventoryBatchDTO
     {
         public int BatchId { get; set; }
+
+        public int IngredientId { get; set; }
+
+        public int? PurchaseOrderDetailId { get; set; }
+
+        public int WarehouseId { get; set; }  // 🔥 Thêm cột này để liên kết kho chứa
+
         public decimal QuantityRemaining { get; set; }
+
         public DateOnly? ExpiryDate { get; set; }
+
         public DateTime? CreatedAt { get; set; }
-
-
         public List<StockTransactionDTO> StockTransactions { get; set; } = new();
     }
 }

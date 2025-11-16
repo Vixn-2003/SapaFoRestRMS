@@ -9,6 +9,7 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public List<InventoryIngredientDTO> InventoryIngredientDTOs { get; set; }
 
         public List<WarehouseDTO> WarehouseDTOs { get; set; } = new List<WarehouseDTO>();
+        public List<PurchaseOrderDTO> PurchaseOrderDTOs { get; set; } = new List<PurchaseOrderDTO>();
     }
 
 

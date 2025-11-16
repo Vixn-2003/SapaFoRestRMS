@@ -8,15 +8,12 @@
 
         // Thông tin nhà cung cấp
         public int SupplierId { get; set; }
-        public string SupplierName { get; set; } = null!;
 
         // Thông tin người tạo đơn
-        public string CreatorName { get; set; } = null!;
-        public string CreatorPhone { get; set; } = null!;
+        public int CreatorId { get; set; } = 1;
 
         // Thông tin người kiểm hàng
-        public string CheckerName { get; set; } = null!;
-        public string CheckerPhone { get; set; } = null!;
+        //public int? CheckId { get; set; } = 2;
 
         // Hình ảnh minh chứng
         public IFormFile? ProofFile { get; set; }

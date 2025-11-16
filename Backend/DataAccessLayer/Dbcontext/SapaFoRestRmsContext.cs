@@ -441,9 +441,20 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.PurchaseOrderId).HasName("PK__Purchase__036BACA49E3BAAAB");
 
+            // Cấu hình PurchaseOrderId là string và không tự động tạo
+            entity.Property(e => e.PurchaseOrderId)
+                .HasMaxLength(50) // Hoặc độ dài phù hợp
+                .ValueGeneratedNever(); // Không tự động tạo giá trị
+
             entity.Property(e => e.OrderDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+
+            entity.Property(e => e.TimeConfirm)
+            .HasColumnType("datetime")
+            .HasDefaultValue(null);
+
+
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Pending");
@@ -464,25 +475,60 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasConstraintName("FK_PurchaseOrders_Users_Confirmer");
             entity.Property(e => e.UrlImg)
                 .HasMaxLength(500);
-
         });
 
         modelBuilder.Entity<PurchaseOrderDetail>(entity =>
         {
-            entity.HasKey(e => e.PurchaseOrderDetailId).HasName("PK__Purchase__5026B698B2854271");
+            // 🔑 Khóa chính
+            entity.HasKey(e => e.PurchaseOrderDetailId);
 
-            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PurchaseOrderDetailId)
+                  .ValueGeneratedOnAdd();
 
-            entity.HasOne(d => d.Ingredient).WithMany(p => p.PurchaseOrderDetails)
-                .HasForeignKey(d => d.IngredientId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PurchaseO__Ingre__339FAB6E");
+            // 🔗 FK đến PurchaseOrder
+            entity.Property(e => e.PurchaseOrderId)
+                  .HasMaxLength(50)
+                  .IsRequired();
 
-            entity.HasOne(d => d.PurchaseOrder).WithMany(p => p.PurchaseOrderDetails)
-                .HasForeignKey(d => d.PurchaseOrderId)
-                .HasConstraintName("FK__PurchaseO__Purch__3493CFA7");
+            // 🧾 Thông tin snapshot nguyên liệu
+            entity.Property(e => e.IngredientCode)
+                  .HasMaxLength(50);
+            entity.Property(e => e.IngredientName)
+                  .HasMaxLength(255);
+            entity.Property(e => e.Unit)
+                  .HasMaxLength(50);
+
+            // 💰 Giá trị số
+            entity.Property(e => e.Quantity)
+                  .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UnitPrice)
+                  .HasColumnType("decimal(15, 2)");
+            entity.Property(e => e.Subtotal)
+                  .HasColumnType("decimal(15, 2)");
+
+            // 🔗 Quan hệ với PurchaseOrder
+            entity.HasOne(d => d.PurchaseOrder)
+                  .WithMany(p => p.PurchaseOrderDetails)
+                  .HasForeignKey(d => d.PurchaseOrderId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_PurchaseOrderDetails_PurchaseOrders");
+
+            // 🔗 Quan hệ với Ingredient (nullable)
+            entity.HasOne(d => d.Ingredient)
+                  .WithMany(p => p.PurchaseOrderDetails)
+                  .HasForeignKey(d => d.IngredientId)
+                  .OnDelete(DeleteBehavior.SetNull)
+                  .HasConstraintName("FK_PurchaseOrderDetails_Ingredients");
+
+            // 🔗 Quan hệ với Warehouse (mới thêm)
+            entity.HasOne(d => d.Warehouse)
+                  .WithMany(p => p.PurchaseOrderDetails)
+                  .HasForeignKey(d => d.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict)
+                  .HasConstraintName("FK_PurchaseOrderDetails_Warehouses");
         });
+
+
 
         modelBuilder.Entity<Recipe>(entity =>
         {

@@ -135,6 +135,10 @@ builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
 builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
 builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+
+
 
 
 

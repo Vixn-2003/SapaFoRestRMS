@@ -14,5 +14,11 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<IEnumerable<InventoryBatch>> getBatchById(int id);
 
         Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse);
+        Task<int> AddNewIngredient(Ingredient ingredient);
+
+        Task<IEnumerable<Ingredient>> GetAllIngredientSearch(string search);
+        Task<int> AddNewBatch(InventoryBatch inventoryBatch);
+        Task<Ingredient> GetIngredientById(int id);
+        Task<(bool success, string message)> UpdateInforIngredient(int idIngredient, string nameIngredient, string unit);
     }
 }

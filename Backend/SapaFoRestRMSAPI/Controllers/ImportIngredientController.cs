@@ -1,4 +1,5 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
+using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -10,12 +11,14 @@ namespace SapaFoRestRMSAPI.Controllers
     public class ImportIngredientController : ControllerBase
     {
         private readonly IInventoryIngredientService _inventoryIngredientService;
+        private readonly IPurchaseOrderService _purchaseOrderService;
         private readonly ICloudinaryService _cloudinaryService;
 
-        public ImportIngredientController(IInventoryIngredientService inventoryIngredientService, ICloudinaryService cloudinaryService)
+        public ImportIngredientController(IInventoryIngredientService inventoryIngredientService, ICloudinaryService cloudinaryService, IPurchaseOrderService purchaseOrderService)
         {
             _inventoryIngredientService = inventoryIngredientService;
             _cloudinaryService = cloudinaryService;
+            _purchaseOrderService = purchaseOrderService;
         }
 
         [HttpPost("ImportInventory")]
@@ -49,76 +52,67 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             try
             {
-                // ✅ VALIDATE
+                //  1. VALIDATE INPUT CƠ BẢN
                 if (string.IsNullOrWhiteSpace(request.ImportCode))
                     return BadRequest(new { success = false, message = "Thiếu mã đơn nhập" });
+
+                if (request.SupplierId <= 0)
+                    return BadRequest(new { success = false, message = "Thiếu thông tin nhà cung cấp" });
+
+                if (request.CreatorId <= 0)
+                    return BadRequest(new { success = false, message = "Thiếu thông tin người tạo đơn" });
 
                 if (string.IsNullOrWhiteSpace(request.Items))
                     return BadRequest(new { success = false, message = "Thiếu danh sách nguyên liệu" });
 
-                // ✅ 1. PARSE DANH SÁCH ITEMS
-                List<ImportItemDTO>? itemsList = null;
+                // 🧩 2. CHUYỂN DỮ LIỆU ITEMS TỪ JSON → DANH SÁCH
+                List<ImportItemDTO>? itemsList;
                 try
                 {
                     itemsList = JsonConvert.DeserializeObject<List<ImportItemDTO>>(request.Items);
-                    Console.WriteLine($"✅ Parsed {itemsList?.Count ?? 0} items");
+                    if (itemsList == null || !itemsList.Any())
+                        return BadRequest(new { success = false, message = "Danh sách nguyên liệu trống" });
                 }
                 catch (JsonException ex)
                 {
-                    Console.WriteLine($"❌ JSON Parse Error: {ex.Message}");
+                    Console.WriteLine($" JSON Parse Error: {ex.Message}");
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Lỗi định dạng danh sách nguyên liệu",
+                        message = "Lỗi định dạng danh sách nguyên liệu. Vui lòng kiểm tra lại JSON gửi lên.",
                         error = ex.Message
                     });
                 }
 
-                if (itemsList == null || !itemsList.Any())
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Danh sách nguyên liệu trống"
-                    });
-                }
-
-                // ✅ 2. XỬ LÝ FILE ẢNH - Upload lên Cloudinary
+                // 🧩 3. XỬ LÝ FILE ẢNH (UPLOAD CLOUDINARY)
                 string? imagePath = null;
-                if (request.ProofFile != null && request.ProofFile.Length > 0)
+                if (request.ProofFile is { Length: > 0 })
                 {
-                    Console.WriteLine($"📤 Uploading image: {request.ProofFile.FileName}, Size: {request.ProofFile.Length} bytes");
-
-                    imagePath = await _cloudinaryService.UploadImageAsync(
-                        request.ProofFile,
-                        "import_proofs"
-                    );
-
-                    Console.WriteLine($"✅ Image uploaded: {imagePath}");
+                    Console.WriteLine($"Uploading image: {request.ProofFile.FileName} ({request.ProofFile.Length} bytes)");
+                    imagePath = await _cloudinaryService.UploadImageAsync(request.ProofFile, "import_proofs");
+                    Console.WriteLine($"Image uploaded successfully: {imagePath}");
                 }
 
-                // ✅ 3. TẠO ĐỐI TƯỢNG ĐƠN NHẬP HÀNG
+                // 🧩 4. TẠO ĐỐI TƯỢNG ĐƠN NHẬP HÀNG (PurchaseOrder)
                 var importOrder = new ImportOrder
                 {
-                    ImportCode = request.ImportCode,
+                    ImportCode = request.ImportCode.Trim(),
                     ImportDate = request.ImportDate,
                     SupplierId = request.SupplierId,
-                    SupplierName = request.SupplierName,
-                    CreatorName = request.CreatorName,
-                    CreatorPhone = request.CreatorPhone,
-                    CheckerName = request.CheckerName,
-                    CheckerPhone = request.CheckerPhone,
+                    CreatorId = request.CreatorId,
+                    //CheckId = request.CheckId,
                     ProofImagePath = imagePath,
-                    Status = "Pending",
+                    Status = "Processing", 
                     CreatedAt = DateTime.Now,
                     TotalAmount = itemsList.Sum(i => i.Quantity * i.UnitPrice)
                 };
 
-                // ✅ 4. TẠO CHI TIẾT ĐƠN NHẬP
+                // 🧩 5. TẠO DANH SÁCH CHI TIẾT NHẬP HÀNG
                 var importDetails = itemsList.Select(item => new ImportDetail
                 {
-                    IngredientCode = item.IngredientCode,
-                    IngredientName = item.IngredientName,
+                    IngredientId = item.IngredientId,
+                    IngredientCode = item.IngredientCode.Trim(),
+                    IngredientName = item.IngredientName.Trim(),
                     Unit = item.Unit,
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
@@ -126,11 +120,20 @@ namespace SapaFoRestRMSAPI.Controllers
                     TotalPrice = item.TotalPrice
                 }).ToList();
 
-                // ✅ 5. LƯU VÀO DATABASE
-                // TODO: Implement save logic
-                // await _inventoryIngredientService.CreateImportOrder(importOrder, importDetails);
+                // 🧩 6. GỌI SERVICE XỬ LÝ LƯU DATABASE
+                var result = await _purchaseOrderService.CreateImportOrderAsync(importOrder, importDetails);
 
-                Console.WriteLine("✅ Đơn nhập hàng đã được tạo thành công!");
+                if (!result)
+                {
+                    return StatusCode(500, new
+                    {
+                        success = false,
+                        message = "Không thể lưu đơn nhập hàng. Vui lòng thử lại."
+                    });
+                }
+
+                // 🧩 7. PHẢN HỒI KẾT QUẢ THÀNH CÔNG
+                Console.WriteLine("Đơn nhập hàng đã được tạo thành công!");
 
                 return Ok(new
                 {
@@ -149,76 +152,22 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
+                // 🧩 8. XỬ LÝ NGOẠI LỆ
                 Console.WriteLine($"❌ Exception: {ex.Message}");
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");
 
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = $"Lỗi server: {ex.Message}",
+                    message = "Đã xảy ra lỗi trong quá trình xử lý đơn nhập hàng.",
+                    error = ex.Message,
                     stackTrace = ex.StackTrace
                 });
             }
         }
+
     }
 
-    // ✅ REQUEST MODEL - Khớp với Frontend
-    public class ImportInventoryRequest
-    {
-        public string ImportCode { get; set; } = null!;
-        public DateTime ImportDate { get; set; }
-        public int SupplierId { get; set; }
-        public string SupplierName { get; set; } = null!;
-        public string CreatorName { get; set; } = null!;
-        public string CreatorPhone { get; set; } = null!;
-        public string CheckerName { get; set; } = null!;
-        public string CheckerPhone { get; set; } = null!;
-        public string Items { get; set; } = null!; // JSON string từ frontend
-        public IFormFile? ProofFile { get; set; }
-    }
-
-    // ✅ DTO - Khớp với cấu trúc JSON từ frontend
-    public class ImportItemDTO
-    {
-        public string IngredientCode { get; set; } = null!;
-        public string IngredientName { get; set; } = null!;
-        public string Unit { get; set; } = null!;
-        public decimal Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public int WarehouseId { get; set; }
-        public decimal TotalPrice { get; set; }
-    }
-
-    // ✅ ENTITY CLASSES
-    public class ImportOrder
-    {
-        public int Id { get; set; }
-        public string ImportCode { get; set; } = null!;
-        public DateTime ImportDate { get; set; }
-        public int SupplierId { get; set; }
-        public string SupplierName { get; set; } = null!;
-        public string CreatorName { get; set; } = null!;
-        public string CreatorPhone { get; set; } = null!;
-        public string CheckerName { get; set; } = null!;
-        public string CheckerPhone { get; set; } = null!;
-        public string? ProofImagePath { get; set; }
-        public string Status { get; set; } = null!;
-        public DateTime CreatedAt { get; set; }
-        public decimal TotalAmount { get; set; }
-    }
-
-    public class ImportDetail
-    {
-        public int Id { get; set; }
-        public int ImportOrderId { get; set; }
-        public string IngredientCode { get; set; } = null!;
-        public string IngredientName { get; set; } = null!;
-        public string Unit { get; set; } = null!;
-        public decimal Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-        public int WarehouseId { get; set; }
-        public decimal TotalPrice { get; set; }
-    }
 
 }
 

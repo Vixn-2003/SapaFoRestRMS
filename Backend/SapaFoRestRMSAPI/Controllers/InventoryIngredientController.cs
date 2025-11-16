@@ -68,9 +68,16 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 var fromDate = request?.FromDate ?? DateTime.Now.AddDays(-7);
                 var toDate = request?.ToDate ?? DateTime.Now;
-
-                var ingredients = await _inventoryIngredientService.GetAllIngredient();
-
+                var search = request?.SearchIngredent;
+                IEnumerable<InventoryIngredientDTO> ingredients;
+                if (string.IsNullOrEmpty(search))
+                {                   
+                    ingredients = await _inventoryIngredientService.GetAllIngredient();
+                }
+                else
+                {
+                    ingredients = await _inventoryIngredientService.GetAllIngredientSearch(search);
+                }
 
 
                 foreach (var ingredient in ingredients)
@@ -216,6 +223,82 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             public int BatchId { get; set; }
             public int WarehouseId { get; set; }
+        }
+
+        [HttpPut("UpdateIngredient")]
+        public async Task<IActionResult> UpdateIngredient([FromBody] UpdateIngredientRequest request)
+        {
+            try
+            {
+                // Validate request
+                if (request.IngredientId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "IngredientId không hợp lệ"
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Name))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Tên nguyên liệu không được để trống"
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Unit))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Đơn vị tính không được để trống"
+                    });
+                }
+
+                // Gọi service để cập nhật
+                var (success, message) = await _inventoryIngredientService.UpdateIngredient(
+                    request.IngredientId,
+                    request.Name.Trim(),
+                    request.Unit.Trim()
+                );
+
+                if (success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = message,
+                        data = new
+                        {
+                            ingredientId = request.IngredientId,
+                            name = request.Name.Trim(),
+                            unit = request.Unit.Trim()
+                        }
+                    });
+                }
+                else
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = message
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in UpdateIngredient API: {ex.Message}");
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra khi cập nhật nguyên liệu",
+                    error = ex.Message
+                });
+            }
         }
     }
 

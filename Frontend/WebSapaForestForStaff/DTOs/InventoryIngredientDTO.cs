@@ -14,6 +14,11 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string? Unit { get; set; }
         public decimal? ReorderLevel { get; set; }
 
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public string? SelectedUnit { get; set; }
+        public string? SearchIngredent { get; set; }
+
         public List<InventoryBatchDTO> Batches { get; set; } = new();
 
         public decimal TotalQuantity => Batches.Sum(b => b.QuantityRemaining);

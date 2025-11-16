@@ -2,6 +2,7 @@
 {
     public class ImportItemModel
     {
+        public int? IngredientId { get; set; }
         public string Code { get; set; } = null!;
         public string Name { get; set; } = null!;
         public string Unit { get; set; } = null!;
