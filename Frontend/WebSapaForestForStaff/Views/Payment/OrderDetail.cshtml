@@ -1,84 +1,134 @@
 @{
     ViewData["Title"] = "Chi tiết đơn hàng";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
     int orderId = ViewBag.OrderId ?? 0;
     string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/payment.css" asp-append-version="true" />
-}
+<h2 class="mb-3">Chi tiết đơn hàng</h2>
 
-<div class="payment-container">
-    <div class="breadcrumb-nav">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item">
-                    <a href="/Payment/OrderSelection">Đơn hàng</a>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">Chi tiết đơn hàng</li>
-            </ol>
-        </nav>
+<div class="mb-3">
+    <a href="/Payment/OrderSelection" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Quay lại
+    </a>
+</div>
+
+<!-- Payment Status Banner -->
+<div id="payment-status-banner" class="alert alert-info d-none mb-3" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-info-circle me-2 fs-5"></i>
+        <div class="flex-grow-1">
+            <strong id="payment-status-title">Trạng thái thanh toán</strong>
+            <div id="payment-status-message" class="small"></div>
+        </div>
+        <button type="button" class="btn-close" onclick="document.getElementById('payment-status-banner').classList.add('d-none')" aria-label="Close"></button>
     </div>
+</div>
 
-    <div class="order-detail-container">
+<div class="row">
+    <div class="col-md-8">
         <!-- Danh sách món ăn -->
-        <div class="order-items-card">
-            <h4 class="mb-4">
-                <i class="bi bi-list-ul me-2"></i>Danh sách món ăn
-            </h4>
-            <div id="order-items-list">
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Đang tải...</span>
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Danh sách món ăn</h5>
+            </div>
+            <div class="card-body">
+                <div id="order-items-list">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
+    <div class="col-md-4">
         <!-- Tóm tắt hóa đơn -->
-        <div class="order-summary-card">
-            <h4 class="mb-4">
-                <i class="bi bi-receipt me-2"></i>Tóm tắt hóa đơn
-            </h4>
-            
-            <div class="summary-row">
-                <span class="summary-label">Tạm tính:</span>
-                <span class="summary-value" id="subtotal">0 ₫</span>
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Tóm tắt hóa đơn</h5>
             </div>
-            
-            <div class="summary-row">
-                <span class="summary-label">VAT (10%):</span>
-                <span class="summary-value" id="vat">0 ₫</span>
-            </div>
-            
-            <div class="summary-row">
-                <span class="summary-label">Phí dịch vụ (5%):</span>
-                <span class="summary-value" id="serviceFee">0 ₫</span>
-            </div>
-            
-            <div class="summary-row">
-                <span class="summary-label">Ưu đãi:</span>
-                <span class="summary-value text-danger" id="discount">-0 ₫</span>
-            </div>
-            
-            <div class="summary-row summary-total">
-                <span>Tổng cộng:</span>
-                <span id="total">0 ₫</span>
-            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tạm tính:</span>
+                    <span id="subtotal">0 ₫</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>VAT (10%):</span>
+                    <span id="vat">0 ₫</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Phí dịch vụ (5%):</span>
+                    <span id="serviceFee">0 ₫</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Ưu đãi:</span>
+                    <span class="text-danger" id="discount">-0 ₫</span>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between fw-bold fs-5">
+                    <span>Tổng cộng:</span>
+                    <span id="total">0 ₫</span>
+                </div>
 
-            <div class="action-buttons mt-4">
-                <button type="button" 
-                        class="btn btn-outline-primary btn-action-primary" 
-                        data-bs-toggle="modal" 
-                        data-bs-target="#promotionModal">
-                    <i class="bi bi-tag me-2"></i>Áp dụng ưu đãi
-                </button>
-                <button type="button" 
-                        class="btn btn-primary btn-action-primary" 
-                        onclick="proceedToPayment()">
-                    <i class="bi bi-cash-coin me-2"></i>Thanh toán
-                </button>
+                <!-- Discount Code Input -->
+                <div class="mt-3 mb-3 p-3 bg-light rounded">
+                    <label for="discountCodeInput" class="form-label fw-bold">
+                        Mã giảm giá
+                    </label>
+                    <div class="input-group">
+                        <input type="text" 
+                               class="form-control" 
+                               id="discountCodeInput" 
+                               placeholder="Nhập mã giảm giá..."
+                               onkeypress="if(event.key === 'Enter') applyDiscountCode()">
+                        <button type="button" 
+                                class="btn btn-outline-primary" 
+                                onclick="applyDiscountCode()">
+                            Áp dụng
+                        </button>
+                    </div>
+                    <small class="text-muted d-block mt-1" id="discountMessage"></small>
+                </div>
+
+                <!-- Payment Options -->
+                <div class="mt-3">
+                    <h6 class="mb-3">Chọn phương thức thanh toán</h6>
+                    <div class="d-grid gap-2">
+                        <button type="button" 
+                                class="btn btn-warning" 
+                                onclick="openCashPaymentModal()">
+                            <i class="bi bi-cash-coin me-2"></i>Thanh toán tiền mặt
+                        </button>
+                        <button type="button" 
+                                class="btn btn-success" 
+                                onclick="openQrPayment(@ViewBag.OrderId)">
+                            <i class="bi bi-qr-code me-2"></i>Quét QR VietQR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Additional Options -->
+                <div class="mt-3 d-grid gap-2">
+                    <button type="button" 
+                            class="btn btn-outline-primary" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#promotionModal">
+                        <i class="bi bi-tag me-2"></i>Chọn ưu đãi
+                    </button>
+                    <button type="button" 
+                            class="btn btn-info" 
+                            onclick="openSplitBillModal()">
+                        <i class="bi bi-scissors me-2"></i>Chia hóa đơn
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -89,6 +139,18 @@
     ViewBag.ApiBaseUrl = apiBaseUrl;
 }
 @await Html.PartialAsync("PromotionModal")
+
+<!-- Cash Payment Modal -->
+@await Html.PartialAsync("_CashPaymentModal")
+
+<!-- Combined Payment Modal - REMOVED: Simplified to Cash and QR only -->
+<!-- @await Html.PartialAsync("_CombinedPaymentModal") -->
+
+<!-- Split Bill Modal -->
+@await Html.PartialAsync("_SplitBillModal")
+
+<!-- QR Payment Modal -->
+@await Html.PartialAsync("_QRPaymentModal")
 
 <!-- Toast Notification -->
 <div class="toast-container">
@@ -102,28 +164,127 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/payment-flow.js" asp-append-version="true"></script>
+    <script src="~/js/split-bill.js" asp-append-version="true"></script>
     <script>
-        const apiBaseUrl = '@apiBaseUrl';
-        const orderId = @orderId;
+        // Set global API base URL
+        window.API_BASE_URL = '@apiBaseUrl';
+        
+        // Wrap in IIFE to avoid variable conflicts
+        (function() {
+            'use strict';
+            
+            // Get API base URL - use global if available, otherwise use server value
+            const apiBaseUrl = window.API_BASE_URL || '@apiBaseUrl';
+            
+            // Get orderId from server or URL
+            let orderId = @orderId;
+        // Fallback to URL parameter if server orderId is 0
+        if (!orderId || orderId === 0) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlOrderId = urlParams.get('id');
+            if (urlOrderId) {
+                orderId = parseInt(urlOrderId);
+            }
+        }
+        console.log('Final orderId:', orderId);
         let orderData = null;
         let appliedDiscount = 0;
 
+        // Get authentication token
+        function getToken() {
+            // Try to get from localStorage
+            const token = localStorage.getItem('jwtToken');
+            if (token) return token;
+            
+            // Try to get from session storage
+            const sessionToken = sessionStorage.getItem('Token');
+            if (sessionToken) return sessionToken;
+            
+            // Try to get from cookie
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'Token' || name === 'jwtToken') {
+                    return value;
+                }
+            }
+            
+            return null;
+        }
+
         // Load chi tiết đơn hàng
         async function loadOrderDetail() {
+            console.log('Loading order detail for orderId:', orderId);
+            console.log('API Base URL:', apiBaseUrl);
+            
+            if (!orderId || orderId === 0) {
+                console.error('Invalid orderId:', orderId);
+                const container = document.getElementById('order-items-list');
+                container.innerHTML = '<p class="text-danger text-center">Lỗi: Không tìm thấy ID đơn hàng</p>';
+                return;
+            }
+            
             try {
-                const response = await fetch(`${apiBaseUrl}/orders/${orderId}/details`);
+                const token = getToken();
+                console.log('Token found:', !!token);
                 
-                if (!response.ok) {
-                    // Dùng mock data
-                    orderData = getMockOrderDetail();
-                } else {
-                    orderData = await response.json();
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
                 }
                 
+                const apiUrl = `${apiBaseUrl}/payment/orders/${orderId}/details`;
+                console.log('Fetching from:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                console.log('Response status:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.warn('API call failed:', response.status, errorText);
+                    console.log('Using mock data as fallback');
+                    orderData = getMockOrderDetail();
+                } else {
+                    const apiData = await response.json();
+                    console.log('API response:', apiData);
+                    
+                    // Map API response to frontend format
+                    orderData = {
+                        id: apiData.orderId,
+                        orderCode: apiData.orderCode || `ORD-${apiData.orderId}`,
+                        tableNumber: apiData.tableNumber || 'N/A',
+                        staffName: apiData.staffName || 'N/A',
+                        items: (apiData.orderItems || []).map(item => ({
+                            id: item.orderDetailId,
+                            name: item.menuItemName,
+                            quantity: item.quantity,
+                            price: item.unitPrice,
+                            total: item.totalPrice
+                        })),
+                        subtotal: apiData.subtotal || 0,
+                        vat: apiData.vatAmount || 0,
+                        serviceFee: apiData.serviceFee || 0,
+                        discount: apiData.discountAmount || 0,
+                        total: apiData.totalAmount || 0
+                    };
+                    
+                    console.log('Mapped orderData:', orderData);
+                }
+                
+                console.log('Rendering items:', orderData.items?.length || 0);
                 renderOrderItems(orderData.items || []);
                 calculateBill();
             } catch (error) {
                 console.error('Error loading order detail:', error);
+                console.error('Error stack:', error.stack);
                 orderData = getMockOrderDetail();
                 renderOrderItems(orderData.items || []);
                 calculateBill();
@@ -148,32 +309,74 @@
 
         // Render danh sách món ăn
         function renderOrderItems(items) {
+            console.log('renderOrderItems called with:', items);
             const container = document.getElementById('order-items-list');
             
-            if (items.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center">Không có món nào</p>';
+            if (!container) {
+                console.error('Container #order-items-list not found!');
+                return;
+            }
+            
+            if (!items || items.length === 0) {
+                console.log('No items to render');
+                container.innerHTML = '<p class="text-muted text-center py-4">Không có món nào</p>';
                 return;
             }
 
-            container.innerHTML = items.map(item => `
-                <div class="order-item">
-                    <div class="order-item-info">
-                        <div class="order-item-name">${item.name}</div>
-                        <div class="order-item-quantity">Số lượng: ${item.quantity}</div>
-                    </div>
-                    <div class="order-item-price">${formatCurrency(item.total)}</div>
-                </div>
-            `).join('');
+            console.log('Rendering', items.length, 'items');
+            try {
+                // Create table with header
+                const tableHTML = `
+                    <table class="table table-bordered table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Món ăn/Đồ uống</th>
+                                <th class="text-center">Số lượng</th>
+                                <th class="text-end">Giá</th>
+                                <th class="text-end">Thành Tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map(item => {
+                                const unitPrice = item.price || 0;
+                                const quantity = item.quantity || 0;
+                                const totalPrice = item.total || (unitPrice * quantity);
+                                return `
+                                <tr>
+                                    <td>${escapeHtml(item.name || 'N/A')}</td>
+                                    <td class="text-center">${quantity}</td>
+                                    <td class="text-end">${formatCurrency(unitPrice)}</td>
+                                    <td class="text-end">${formatCurrency(totalPrice)}</td>
+                                </tr>
+                            `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+                container.innerHTML = tableHTML;
+                console.log('Items rendered successfully');
+            } catch (error) {
+                console.error('Error rendering items:', error);
+                container.innerHTML = '<p class="text-danger text-center">Lỗi khi hiển thị danh sách món ăn</p>';
+            }
+        }
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Tính toán hóa đơn
         function calculateBill() {
             if (!orderData || !orderData.items) return;
 
-            const subtotal = orderData.items.reduce((sum, item) => sum + item.total, 0);
-            const vat = subtotal * 0.1;
-            const serviceFee = subtotal * 0.05;
-            const total = subtotal + vat + serviceFee - appliedDiscount;
+            // Nếu đã có sẵn từ API thì dùng, không thì tính lại
+            const subtotal = orderData.subtotal || orderData.items.reduce((sum, item) => sum + item.total, 0);
+            const vat = orderData.vat || subtotal * 0.1;
+            const serviceFee = orderData.serviceFee || subtotal * 0.05;
+            const total = (orderData.total || (subtotal + vat + serviceFee)) - appliedDiscount;
 
             document.getElementById('subtotal').textContent = formatCurrency(subtotal);
             document.getElementById('vat').textContent = formatCurrency(vat);
@@ -187,6 +390,66 @@
             orderData.serviceFee = serviceFee;
             orderData.total = total;
         }
+
+        // Step 3: Apply discount code validation
+        window.applyDiscountCode = async function() {
+            const discountCode = document.getElementById('discountCodeInput')?.value?.trim();
+            const discountMessage = document.getElementById('discountMessage');
+            
+            if (!discountCode) {
+                discountMessage.textContent = 'Vui lòng nhập mã giảm giá';
+                discountMessage.className = 'text-danger';
+                return;
+            }
+
+            if (!orderId || orderId === 0) {
+                showToast('Không tìm thấy đơn hàng!', 'error');
+                return;
+            }
+
+            try {
+                const token = getToken();
+                const response = await fetch(`${apiBaseUrl}/payment/discounts/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        voucherCode: discountCode
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    discountMessage.textContent = errorData.message || 'Mã không hợp lệ hoặc hết hạn';
+                    discountMessage.className = 'text-danger';
+                    showToast('❌ ' + (errorData.message || 'Mã không hợp lệ hoặc hết hạn'), 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success && data.order) {
+                    // Update order data with new discount
+                    orderData.discount = data.order.discountAmount || 0;
+                    appliedDiscount = orderData.discount;
+                    calculateBill();
+                    
+                    discountMessage.textContent = '✅ Áp dụng mã giảm giá thành công!';
+                    discountMessage.className = 'text-success';
+                    showToast('✅ Áp dụng ưu đãi thành công!', 'success');
+                    
+                    // Clear input
+                    document.getElementById('discountCodeInput').value = '';
+                }
+            } catch (error) {
+                console.error('Error applying discount:', error);
+                discountMessage.textContent = 'Lỗi khi áp dụng mã giảm giá';
+                discountMessage.className = 'text-danger';
+                showToast('Lỗi khi áp dụng mã giảm giá. Vui lòng thử lại.', 'error');
+            }
+        };
 
         // Áp dụng ưu đãi (sẽ được gọi từ PromotionModal)
         window.applyDiscount = function(discountAmount) {
@@ -203,6 +466,266 @@
             }
             window.location.href = `/Payment/PaymentMethod?orderId=${orderId}`;
         }
+
+        // Open Cash Payment Modal - Export to window for onclick
+        window.openCashPaymentModal = function() {
+            if (!orderData || orderData.total <= 0) {
+                showToast('Vui lòng kiểm tra lại đơn hàng!', 'error');
+                return;
+            }
+            if (typeof window.PaymentFlow !== 'undefined' && window.PaymentFlow.openCashPayment) {
+                window.PaymentFlow.openCashPayment(orderId, orderData);
+            } else {
+                console.error('PaymentFlow not loaded:', typeof window.PaymentFlow);
+                showToast('Payment flow chưa được tải. Vui lòng làm mới trang.', 'error');
+            }
+        };
+
+        // REMOVED: Combined Payment Modal - Simplified to Cash and QR only
+        // Combined payment functionality removed as part of payment system simplification
+        /*
+        window.openCombinedPaymentModal = function() {
+            if (!orderData || orderData.total <= 0) {
+                showToast('Vui lòng kiểm tra lại đơn hàng!', 'error');
+                return;
+            }
+            
+            // Populate modal
+            document.getElementById('combinedOrderCode').textContent = orderData.orderCode || `ORD-${orderId}`;
+            document.getElementById('combinedTableNumber').textContent = orderData.tableNumber || '-';
+            document.getElementById('combinedTotalAmount').textContent = formatCurrency(orderData.total || 0);
+            
+            // Reset form
+            document.getElementById('cashAmount').value = '';
+            document.getElementById('cashReceived').value = '';
+            document.getElementById('qrAmount').value = '';
+            document.getElementById('combinedNotes').value = '';
+            document.getElementById('cashChangeDisplay').classList.add('d-none');
+            document.getElementById('qrCodeDisplay').classList.add('d-none');
+            document.getElementById('combinedTotalValidation').classList.add('d-none');
+            document.getElementById('confirmCombinedPaymentBtn').disabled = true;
+            clearCombinedErrors();
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('combinedPaymentModal'));
+            modal.show();
+        };
+
+        // Show error message in combined payment modal
+        function showCombinedError(message, type = 'danger') {
+            const errorContainer = document.getElementById('combinedErrorMessages');
+            const alertClass = type === 'warning' ? 'alert-warning' : 'alert-danger';
+            errorContainer.innerHTML = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>${message}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+        }
+
+        // Clear error messages
+        function clearCombinedErrors() {
+            document.getElementById('combinedErrorMessages').innerHTML = '';
+        }
+
+        // Update combined payment calculation
+        window.updateCombinedPayment = function() {
+            clearCombinedErrors();
+            const totalAmount = orderData?.total || 0;
+            const cashAmount = parseFloat(document.getElementById('cashAmount').value) || 0;
+            const cashReceived = parseFloat(document.getElementById('cashReceived').value) || 0;
+            const qrAmount = totalAmount - cashAmount;
+            
+            // Update QR amount
+            document.getElementById('qrAmount').value = qrAmount.toFixed(0);
+            
+            // Calculate change
+            if (cashReceived > 0) {
+                const change = cashReceived - cashAmount;
+                if (change > 0) {
+                    document.getElementById('cashChangeAmount').textContent = formatCurrency(change);
+                    document.getElementById('cashChangeDisplay').classList.remove('d-none');
+                } else if (change < 0) {
+                    document.getElementById('cashChangeDisplay').classList.add('d-none');
+                    showCombinedError('Số tiền nhận được phải lớn hơn hoặc bằng số tiền cần thanh toán!', 'warning');
+                } else {
+                    document.getElementById('cashChangeDisplay').classList.add('d-none');
+                }
+            } else {
+                document.getElementById('cashChangeDisplay').classList.add('d-none');
+            }
+            
+            // Validate total
+            const partsTotal = cashAmount + qrAmount;
+            const validation = document.getElementById('combinedTotalValidation');
+            const confirmBtn = document.getElementById('confirmCombinedPaymentBtn');
+            
+            // Clear previous validation
+            validation.classList.add('d-none');
+            
+            // Check various validation errors
+            if (cashAmount <= 0) {
+                showCombinedError('Vui lòng nhập số tiền thanh toán bằng tiền mặt!', 'warning');
+                confirmBtn.disabled = true;
+                return;
+            }
+            
+            if (qrAmount <= 0) {
+                showCombinedError('Số tiền tiền mặt không được lớn hơn tổng hóa đơn!', 'warning');
+                confirmBtn.disabled = true;
+                return;
+            }
+            
+            if (Math.abs(partsTotal - totalAmount) > 0.01) {
+                validation.classList.remove('d-none');
+                document.getElementById('combinedPartsTotal').textContent = formatCurrency(partsTotal);
+                document.getElementById('combinedBillTotal').textContent = formatCurrency(totalAmount);
+                confirmBtn.disabled = true;
+                return;
+            }
+            
+            // All validations passed
+            confirmBtn.disabled = false;
+        };
+
+        // Generate QR for combined payment
+        window.generateCombinedQR = async function() {
+            const qrAmount = parseFloat(document.getElementById('qrAmount').value) || 0;
+            if (qrAmount <= 0) {
+                showToast('Vui lòng nhập số tiền tiền mặt trước!', 'warning');
+                return;
+            }
+            
+            const token = getToken();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            try {
+                // Call API with custom amount
+                const response = await fetch(`${apiBaseUrl}/payment/vietqr/${orderId}?amount=${qrAmount}`, {
+                    method: 'GET',
+                    headers: headers
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Không thể tạo mã QR.');
+                }
+                
+                const data = await response.json();
+                document.getElementById('combinedQrImage').src = data.qrUrl;
+                document.getElementById('combinedQrOrderCode').textContent = data.orderCode;
+                document.getElementById('qrCodeDisplay').classList.remove('d-none');
+                document.getElementById('generateQrBtn').innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Làm mới QR';
+            } catch (error) {
+                console.error('Error generating QR:', error);
+                showToast(error.message || 'Lỗi khi tạo mã QR. Vui lòng thử lại.', 'error');
+            }
+        };
+
+        // Confirm combined payment
+        window.confirmCombinedPayment = async function() {
+            const cashAmount = parseFloat(document.getElementById('cashAmount').value) || 0;
+            const cashReceived = parseFloat(document.getElementById('cashReceived').value) || 0;
+            const qrAmount = parseFloat(document.getElementById('qrAmount').value) || 0;
+            const notes = document.getElementById('combinedNotes').value;
+            const totalAmount = orderData?.total || 0;
+            
+            // Validate
+            if (Math.abs((cashAmount + qrAmount) - totalAmount) > 0.01) {
+                showToast('Tổng hai phần không khớp với tổng hóa đơn!', 'error');
+                return;
+            }
+            
+            if (cashReceived > 0 && cashReceived < cashAmount) {
+                showToast('Số tiền nhận được phải lớn hơn hoặc bằng số tiền cần thanh toán!', 'error');
+                return;
+            }
+            
+            const confirmBtn = document.getElementById('confirmCombinedPaymentBtn');
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
+            
+            try {
+                const token = getToken();
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                // Create split bill request with 2 parts
+                const response = await fetch(`${apiBaseUrl}/payment/split-bill`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        parts: [
+                            {
+                                paymentMethod: 'Cash',
+                                amount: cashAmount,
+                                amountReceived: cashReceived > 0 ? cashReceived : null,
+                                notes: 'Thanh toán bằng tiền mặt'
+                            },
+                            {
+                                paymentMethod: 'QRBankTransfer',
+                                amount: qrAmount,
+                                amountReceived: null,
+                                notes: 'Thanh toán bằng chuyển khoản QR'
+                            }
+                        ],
+                        notes: notes || 'Thanh toán kết hợp: Tiền mặt + QR'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Thanh toán kết hợp thất bại');
+                }
+                
+                const transactions = await response.json();
+                showToast('✅ Đã xác nhận thanh toán kết hợp thành công!', 'success');
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('combinedPaymentModal'));
+                modal.hide();
+                
+                // Reload page after delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } catch (error) {
+                console.error('Error processing combined payment:', error);
+                showToast(error.message || 'Lỗi khi xác nhận thanh toán. Vui lòng thử lại.', 'error');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalText;
+            }
+        };
+        */ // End of combined payment functions (removed)
+
+        // Open Split Bill Modal - Export to window for onclick
+        window.openSplitBillModal = function() {
+            if (!orderData || orderData.total <= 0) {
+                showToast('Vui lòng kiểm tra lại đơn hàng!', 'error');
+                return;
+            }
+            if (typeof window.SplitBill !== 'undefined' && window.SplitBill.openSplitBill) {
+                window.SplitBill.openSplitBill(orderId, orderData);
+            } else {
+                console.error('SplitBill not loaded:', typeof window.SplitBill);
+                showToast('Split bill chưa được tải. Vui lòng làm mới trang.', 'error');
+            }
+        };
 
         // Format currency
         function formatCurrency(amount) {
@@ -222,10 +745,279 @@
             toastInstance.show();
         }
 
+        /**
+         * Step 8: Play success sound when payment is confirmed
+         * Plays audio feedback for successful payment
+         */
+        function playSuccessSound() {
+            try {
+                // Create audio context for beep sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                // Configure beep sound (success tone)
+                oscillator.frequency.value = 800; // Higher pitch for success
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+
+                // Alternative: Use HTML5 Audio if file exists
+                // const audio = new Audio('/sounds/payment-success.mp3');
+                // audio.play().catch(e => console.log('Audio play failed:', e));
+            } catch (error) {
+                console.log('Sound playback not available:', error);
+                // Silently fail - sound is optional
+            }
+        }
+
+        // Check and display payment status
+        async function checkPaymentStatus() {
+            try {
+                const token = getToken();
+                const response = await fetch(`${apiBaseUrl}/payment/check-status/${orderId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    return; // Don't show error if status check fails
+                }
+
+                const statusData = await response.json();
+                updatePaymentStatusBanner(statusData);
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+                // Don't show error to user, just log it
+            }
+        }
+
+        // Update payment status banner
+        function updatePaymentStatusBanner(statusData) {
+            const banner = document.getElementById('payment-status-banner');
+            const title = document.getElementById('payment-status-title');
+            const message = document.getElementById('payment-status-message');
+
+            if (!banner || !statusData) return;
+
+            // Remove all status classes
+            banner.classList.remove('alert-success', 'alert-warning', 'alert-danger', 'alert-info', 'd-none');
+
+            const status = statusData.status || statusData.orderStatus || '';
+            const paymentStatus = statusData.paymentStatus || '';
+
+            if (status === 'Paid' || paymentStatus === 'Paid') {
+                banner.classList.add('alert-success');
+                title.innerHTML = '<i class="bi bi-check-circle me-2"></i>Đã thanh toán';
+                message.textContent = `Đơn hàng đã được thanh toán thành công. Transaction: ${statusData.transactionCode || 'N/A'}`;
+                banner.classList.remove('d-none');
+            } else if (status === 'WaitingForPayment' || paymentStatus === 'WaitingForPayment') {
+                // Simplified: Only WaitingForPayment status (for QR manual confirmation)
+                banner.classList.add('alert-info');
+                title.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Chờ thanh toán';
+                message.textContent = 'Đang chờ xác nhận thanh toán. Vui lòng xác nhận khi khách đã thanh toán.';
+                banner.classList.remove('d-none');
+            }
+            // Removed: PaymentProcessing, Failed statuses - Simplified for Cash/QR only
+        }
+
+        // ========== QR VIETQR MANUAL CONFIRMATION ==========
+        // Integration: Frontend ↔ Backend Payment Flow
+        
+        // Store QR payment data for confirmation
+        let qrPaymentData = null;
+
+        /**
+         * Step 1: Open QR Payment Modal and Fetch QR Code from Backend
+         * - Triggers when cashier clicks "Thanh toán QR" button
+         * - Calls GET /api/payment/qr/{orderId}
+         * - Displays QR image, amount, and description in modal
+         */
+        window.openQrPayment = async function(orderIdParam) {
+            const targetOrderId = orderIdParam || orderId;
+            
+            // Validate order ID
+            if (!targetOrderId || targetOrderId === 0) {
+                showToast('Không tìm thấy đơn hàng!', 'error');
+                return;
+            }
+
+            // Step 1.1: Show modal and loading state
+            const modal = new bootstrap.Modal(document.getElementById('qrPaymentModal'));
+            modal.show();
+
+            // Show loading spinner, hide content and error states
+            document.getElementById('qrLoading').classList.remove('d-none');
+            document.getElementById('qrContent').classList.add('d-none');
+            document.getElementById('qrError').classList.add('d-none');
+            document.getElementById('confirmQRPaymentBtn').classList.add('d-none');
+
+            try {
+                // Step 1.2: Fetch QR data from backend API
+                const token = getToken();
+                const response = await fetch(`${apiBaseUrl}/payment/qr/${targetOrderId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Step 1.3: Handle API response
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Không thể tạo mã QR');
+                }
+
+                // Step 1.4: Parse response data
+                // Expected response: { qrUrl, amount, description, orderId, orderCode, transactionId, transactionCode }
+                const data = await response.json();
+                qrPaymentData = data; // Store for confirmation step
+
+                // Step 1.5: Update UI with QR data
+                document.getElementById('qrImage').src = data.qrUrl;
+                document.getElementById('qrAmount').textContent = formatCurrency(data.amount);
+                document.getElementById('qrDescription').textContent = data.description;
+                document.getElementById('qrTransactionCode').textContent = data.transactionCode || '-';
+
+                // Step 1.6: Hide loading, show QR content and confirm button
+                document.getElementById('qrLoading').classList.add('d-none');
+                document.getElementById('qrContent').classList.remove('d-none');
+                document.getElementById('confirmQRPaymentBtn').classList.remove('d-none');
+            } catch (error) {
+                // Step 1.7: Handle errors - show error state with retry option
+                console.error('Error loading QR:', error);
+                document.getElementById('qrLoading').classList.add('d-none');
+                document.getElementById('qrError').classList.remove('d-none');
+                document.getElementById('qrErrorMessage').textContent = error.message || 'Đã xảy ra lỗi khi tạo mã QR';
+            }
+        };
+
+        /**
+         * Retry loading QR code if initial fetch failed
+         */
+        window.retryLoadQR = function() {
+            if (orderId) {
+                openQrPayment(orderId);
+            }
+        };
+
+        /**
+         * Step 2: Confirm Payment Manually
+         * - Triggers when cashier clicks "Đã nhận tiền" button
+         * - Calls POST /api/payment/confirm
+         * - Updates order status to PAID in backend
+         * - Refreshes UI to show updated status
+         */
+        window.confirmQRPayment = async function() {
+            // Step 2.1: Validate payment data
+            if (!qrPaymentData || !qrPaymentData.transactionId) {
+                showToast('Thông tin thanh toán không hợp lệ!', 'error');
+                return;
+            }
+
+            // Step 2.2: Disable button and show loading state
+            const confirmBtn = document.getElementById('confirmQRPaymentBtn');
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xác nhận...';
+
+            try {
+                // Step 2.3: Send confirmation request to backend
+                const token = getToken();
+                const response = await fetch(`${apiBaseUrl}/payment/confirm`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderId: qrPaymentData.orderId,
+                        transactionId: qrPaymentData.transactionId,
+                        gatewayReference: null,
+                        notes: 'Thanh toán qua QR VietQR - Xác nhận thủ công'
+                    })
+                });
+
+                // Step 2.4: Handle API response
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Xác nhận thanh toán thất bại');
+                }
+
+                // Step 2.5: Parse success response
+                // Expected response: { success: true, message: "Xác nhận thanh toán thành công", transaction: {...} }
+                const result = await response.json();
+                
+                // Step 2.6: Play success sound
+                playSuccessSound();
+
+                // Step 2.7: Show success message
+                showToast('✅ Đã xác nhận thanh toán thành công! Đang tạo hóa đơn...', 'success');
+
+                // Step 2.8: Generate and open receipt PDF
+                const orderId = qrPaymentData.orderId;
+                setTimeout(() => {
+                    // Open receipt in new tab
+                    const receiptUrl = `${apiBaseUrl}/payment/receipt/${orderId}`;
+                    window.open(receiptUrl, '_blank');
+                }, 500);
+
+                // Step 2.9: Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('qrPaymentModal'));
+                if (modal) {
+                    modal.hide();
+                }
+
+                // Step 2.10: Refresh page to show updated order status
+                // Delay allows user to see success message and receipt before reload
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } catch (error) {
+                // Step 2.9: Handle errors - show error message
+                console.error('Error confirming QR payment:', error);
+                showToast(error.message || 'Lỗi khi xác nhận thanh toán. Vui lòng thử lại.', 'error');
+            } finally {
+                // Step 2.10: Re-enable button (in case of error)
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalText;
+            }
+        };
+
         // Load khi trang được tải
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded - Starting to load order detail');
+            console.log('orderId from server:', orderId);
+            console.log('apiBaseUrl from server:', apiBaseUrl);
+            
+            // Check payment status on load
+            checkPaymentStatus();
+            
+            // Check payment status every 5 seconds if order is processing
+            setInterval(() => {
+                checkPaymentStatus();
+            }, 5000);
+            
+            // Double check orderId from URL if needed
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlOrderId = urlParams.get('id');
+            if (urlOrderId && parseInt(urlOrderId) !== orderId) {
+                console.warn('OrderId mismatch! URL:', urlOrderId, 'Server:', orderId);
+            }
+            
             loadOrderDetail();
         });
+        })(); // End IIFE
     </script>
 }
 

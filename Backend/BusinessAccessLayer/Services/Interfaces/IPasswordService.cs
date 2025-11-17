@@ -8,6 +8,7 @@ namespace BusinessAccessLayer.Services.Interfaces
     {
         Task RequestResetAsync(RequestPasswordResetDto request, CancellationToken ct = default);
         Task<string> VerifyResetAsync(VerifyPasswordResetDto request, CancellationToken ct = default);
+        Task ResetPasswordAsync(ResetPasswordDto request, CancellationToken ct = default);
 
         Task RequestChangeAsync(RequestChangePasswordDto request, CancellationToken ct = default);
         Task ChangeAsync(VerifyChangePasswordDto request, CancellationToken ct = default);

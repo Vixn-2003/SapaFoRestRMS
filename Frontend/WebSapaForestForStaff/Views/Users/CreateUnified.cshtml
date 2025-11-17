@@ -3,7 +3,6 @@
     ViewData["Title"] = "Tạo người dùng";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
     var roles = ViewBag.Roles as List<WebSapaForestForStaff.DTOs.Role> ?? new();
-    var positions = ViewBag.Positions as List<WebSapaForestForStaff.DTOs.Position> ?? new();
 }
 
 @section Styles {
@@ -51,34 +50,6 @@
                     </div>
                 </div>
 
-                <hr />
-
-                <div id="staffSection" style="display:none;">
-                    <h5 class="heading-h2 mb-3">Thông tin nhân viên</h5>
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label-custom">Ngày vào làm</label>
-                            <input asp-for="HireDate" type="date" class="form-control form-control-custom" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label-custom">Lương cơ bản (VNĐ)</label>
-                            <input asp-for="SalaryBase" type="number" step="10000" class="form-control form-control-custom" />
-                        </div>
-                        <div class="col-md-12">
-                            <label class="form-label-custom">Vị trí</label>
-                            <div class="position-checkbox-group d-flex flex-wrap gap-3">
-                                @foreach (var p in positions)
-                                {
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="PositionIds" value="@p.PositionId" id="pos_@p.PositionId" />
-                                        <label class="form-check-label" for="pos_@p.PositionId">@p.PositionName</label>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="mt-4 d-flex gap-2">
                     <button type="submit" class="btn-primary-custom" data-bs-toggle="tooltip" title="Lưu"> 
                         <i class="bi bi-check2-circle"></i>
@@ -95,21 +66,10 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Enable tooltips
             if (typeof bootstrap !== 'undefined') {
                 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
             }
-
-            const roleSelect = document.getElementById('roleSelect');
-            const staffSection = document.getElementById('staffSection');
-            const STAFF_ROLE_ID = 4; // Staff
-            function toggleStaffSection() {
-                const roleId = parseInt(roleSelect.value);
-                staffSection.style.display = (roleId === STAFF_ROLE_ID) ? '' : 'none';
-            }
-            roleSelect.addEventListener('change', toggleStaffSection);
-            toggleStaffSection();
         });
     </script>
 }

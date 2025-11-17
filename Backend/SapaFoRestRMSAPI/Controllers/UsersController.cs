@@ -7,8 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
+    /// <summary>
+    /// Controller quản lý Users
+    /// Chỉ Admin có quyền quản lý users (tạo, sửa, xóa)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -18,16 +23,20 @@ namespace SapaFoRestRMSAPI.Controllers
             _userService = userService;
         }
 
+        /// <summary>
+        /// Admin: Lấy danh sách tất cả users
+        /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {
             var users = await _userService.GetAllAsync(ct);
             return Ok(users);
         }
 
+        /// <summary>
+        /// Admin: Tìm kiếm users
+        /// </summary>
         [HttpGet("search")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Search(
             [FromQuery] string? searchTerm = null,
             [FromQuery] int? roleId = null,
@@ -53,8 +62,10 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Admin: Lấy chi tiết user
+        /// </summary>
         [HttpGet("{id:int}")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Get(int id, CancellationToken ct)
         {
             var user = await _userService.GetByIdAsync(id, ct);
@@ -62,8 +73,10 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(user);
         }
 
+        /// <summary>
+        /// Admin: Tạo user mới
+        /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Create([FromBody] UserCreateRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -82,8 +95,10 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Admin: Cập nhật user
+        /// </summary>
         [HttpPut("{id:int}")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Update(int id, [FromBody] UserUpdateRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -102,8 +117,10 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Admin: Xóa user
+        /// </summary>
         [HttpDelete("{id:int}")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             try
@@ -117,8 +134,10 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Admin: Thay đổi trạng thái user
+        /// </summary>
         [HttpPatch("{id:int}/status/{status:int}")]
-        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ChangeStatus(int id, int status, CancellationToken ct)
         {
             try

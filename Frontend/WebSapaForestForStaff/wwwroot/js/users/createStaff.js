@@ -1,110 +1,124 @@
 /**
  * Create Staff Page - JavaScript
- * Handles form initialization, salary formatting, and validation
+ * Handles email verification flow and minimal validation
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Set default hire date to today if not set
-    const hireDateInput = document.getElementById('HireDate');
-    if (hireDateInput && !hireDateInput.value) {
-        const today = new Date().toISOString().split('T')[0];
-        hireDateInput.value = today;
-    }
-
-    // Set default RoleId to Staff (4) if not set
-    const roleIdSelect = document.getElementById('RoleId');
-    if (roleIdSelect && !roleIdSelect.value) {
-        roleIdSelect.value = '4'; // Staff role
-    }
-
-    // Format salary display in VND
-    const salaryInput = document.getElementById('salaryBaseInput');
-    const salaryDisplay = document.getElementById('salaryDisplay');
-    
-    /**
-     * Format number to VND currency
-     */
-    function formatVND(value) {
-        if (!value || value === '0' || value === '') {
-            return '';
-        }
-        // Convert to number and format with thousand separators
-        const numValue = parseFloat(value);
-        if (isNaN(numValue) || numValue <= 0) {
-            return '';
-        }
-        return numValue.toLocaleString('vi-VN') + ' VNĐ';
-    }
-
-    if (salaryInput && salaryDisplay) {
-        // Format on input
-        salaryInput.addEventListener('input', function(e) {
-            const value = e.target.value;
-            const formatted = formatVND(value);
-            salaryDisplay.textContent = formatted;
-        });
-
-        // Format on load if value exists
-        if (salaryInput.value) {
-            salaryDisplay.textContent = formatVND(salaryInput.value);
-        }
-    }
-
-    // Form validation
+document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('createStaffForm');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const fullName = document.getElementById('FullName').value.trim();
-            const email = document.getElementById('Email').value.trim();
-            const hireDate = document.getElementById('HireDate').value;
-            const salaryBase = document.getElementById('salaryBaseInput').value;
+    if (!form) return;
 
-            if (!fullName) {
-                e.preventDefault();
-                showErrorToast('Vui lòng nhập họ và tên');
-                document.getElementById('FullName').focus();
-                return;
-            }
+    const sendBtn = document.getElementById('sendVerificationBtn');
+    const fullNameInput = document.getElementById('FullName');
+    const emailInput = document.getElementById('Email');
+    const codeInput = document.getElementById('VerificationCode');
+    const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
+    const sendCodeUrl = form.dataset.sendCodeUrl;
 
-            if (!email) {
-                e.preventDefault();
-                showErrorToast('Vui lòng nhập email');
-                document.getElementById('Email').focus();
-                return;
-            }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let countdownInterval = null;
+    const cooldownSeconds = 60;
 
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                e.preventDefault();
-                showErrorToast('Email không hợp lệ');
-                document.getElementById('Email').focus();
-                return;
-            }
-
-            if (!hireDate) {
-                e.preventDefault();
-                showErrorToast('Vui lòng chọn ngày tuyển dụng');
-                document.getElementById('HireDate').focus();
-                return;
-            }
-
-            if (!salaryBase || parseFloat(salaryBase) <= 0) {
-                e.preventDefault();
-                showErrorToast('Vui lòng nhập lương cơ bản hợp lệ (lớn hơn 0)');
-                document.getElementById('salaryBaseInput').focus();
-                return;
-            }
-
-            // Ensure minimum salary (e.g., 1,000,000 VND)
-            const salaryValue = parseFloat(salaryBase);
-            if (salaryValue < 1000000) {
-                e.preventDefault();
-                showWarningToast('Lương cơ bản thấp hơn 1.000.000 VNĐ. Vui lòng kiểm tra lại.', 4000);
-                document.getElementById('salaryBaseInput').focus();
-                return;
-            }
-        });
+    function setButtonState(disabled, label) {
+        if (!sendBtn) return;
+        sendBtn.disabled = disabled;
+        if (label) {
+            sendBtn.innerHTML = label;
+        }
     }
+
+    function startCooldown() {
+        let remaining = cooldownSeconds;
+        setButtonState(true, `Gửi lại (${remaining}s)`);
+        countdownInterval = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(countdownInterval);
+                setButtonState(false, '<i class="mdi mdi-email-send-outline"></i> Gửi mã xác minh');
+                return;
+            }
+            setButtonState(true, `Gửi lại (${remaining}s)`);
+        }, 1000);
+    }
+
+    async function sendVerificationCode() {
+        if (!sendCodeUrl || !sendBtn) return;
+
+        const fullName = fullNameInput?.value.trim();
+        const email = emailInput?.value.trim();
+
+        if (!fullName) {
+            showErrorToast('Vui lòng nhập họ và tên trước khi gửi mã.');
+            fullNameInput?.focus();
+            return;
+        }
+
+        if (!email || !emailRegex.test(email)) {
+            showErrorToast('Vui lòng nhập email hợp lệ trước khi gửi mã.');
+            emailInput?.focus();
+            return;
+        }
+
+        const token = tokenInput?.value;
+        if (!token) {
+            showErrorToast('Thiếu mã xác thực. Vui lòng tải lại trang.');
+            return;
+        }
+
+        setButtonState(true, '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi...');
+
+        try {
+            const response = await fetch(sendCodeUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({ fullName, email })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                showSuccessToast(data.message || 'Đã gửi mã xác minh.');
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+                startCooldown();
+            } else {
+                setButtonState(false, '<i class="mdi mdi-email-send-outline"></i> Gửi mã xác minh');
+                showErrorToast(data.message || 'Không thể gửi mã xác minh. Vui lòng thử lại.');
+            }
+        } catch (error) {
+            setButtonState(false, '<i class="mdi mdi-email-send-outline"></i> Gửi mã xác minh');
+            showErrorToast('Không thể kết nối tới máy chủ. Vui lòng thử lại sau.');
+        }
+    }
+
+    sendBtn?.addEventListener('click', sendVerificationCode);
+
+    form.addEventListener('submit', function (e) {
+        const fullName = fullNameInput?.value.trim();
+        const email = emailInput?.value.trim();
+        const code = codeInput?.value.trim();
+
+        if (!fullName) {
+            e.preventDefault();
+            showErrorToast('Vui lòng nhập họ và tên');
+            fullNameInput?.focus();
+            return;
+        }
+
+        if (!email || !emailRegex.test(email)) {
+            e.preventDefault();
+            showErrorToast('Vui lòng nhập email hợp lệ');
+            emailInput?.focus();
+            return;
+        }
+
+        if (!code || code.length !== 6) {
+            e.preventDefault();
+            showErrorToast('Vui lòng nhập mã xác minh gồm 6 ký tự');
+            codeInput?.focus();
+        }
+    });
 });
 

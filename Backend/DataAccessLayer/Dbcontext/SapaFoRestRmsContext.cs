@@ -86,6 +86,12 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Transaction> Transactions { get; set; }
 
+    public virtual DbSet<SalaryChangeRequest> SalaryChangeRequests { get; set; }
+
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
+
+    public virtual DbSet<OrderLock> OrderLocks { get; set; }
+
     public virtual DbSet<Supplier> Suppliers { get; set; }
 
     public virtual DbSet<SystemLogo> SystemLogos { get; set; }
@@ -444,9 +450,159 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasIndex(e => e.OrderId)
                 .HasDatabaseName("IX_Transactions_OrderId");
 
+            // New columns for Payment Flow
+            entity.Property(e => e.AmountReceived)
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.RefundAmount)
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.GatewayReference)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.GatewayErrorCode)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.GatewayErrorMessage)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.RetryCount)
+                .HasDefaultValue(0)
+                .IsRequired();
+
+            entity.Property(e => e.LastRetryAt)
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.ParentTransactionId);
+
+            entity.Property(e => e.IsManualConfirmed)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.Property(e => e.ConfirmedByUserId);
+
+            // Self-referencing relationship for Split Bill
+            entity.HasOne(d => d.ParentTransaction)
+                .WithMany(p => p.ChildTransactions)
+                .HasForeignKey(d => d.ParentTransactionId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__Transactions__ParentTransactionId");
+
+            // Relationship: Transaction -> User (ConfirmedBy)
+            entity.HasOne(d => d.ConfirmedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.ConfirmedByUserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__Transactions__ConfirmedByUserId");
+
             // Index cho Status
             entity.HasIndex(e => e.Status)
                 .HasDatabaseName("IX_Transactions_Status");
+        });
+
+        // Configure AuditLog entity
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.AuditLogId).HasName("PK__AuditLogs__AuditLogId");
+
+            entity.ToTable("AuditLogs");
+
+            entity.Property(e => e.EventType)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(e => e.EntityType)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(e => e.EntityId)
+                .IsRequired();
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(1000);
+
+            entity.Property(e => e.Metadata)
+                .HasColumnType("nvarchar(max)");
+
+            entity.Property(e => e.IpAddress)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            // Relationship: AuditLog -> User
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__AuditLogs__UserId");
+
+            // Indexes
+            entity.HasIndex(e => e.EventType)
+                .HasDatabaseName("IX_AuditLogs_EventType");
+
+            entity.HasIndex(e => new { e.EntityType, e.EntityId })
+                .HasDatabaseName("IX_AuditLogs_EntityType_EntityId");
+
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_AuditLogs_CreatedAt");
+
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("IX_AuditLogs_UserId");
+        });
+
+        // Configure OrderLock entity
+        modelBuilder.Entity<OrderLock>(entity =>
+        {
+            entity.HasKey(e => e.OrderLockId).HasName("PK__OrderLocks__OrderLockId");
+
+            entity.ToTable("OrderLocks");
+
+            entity.Property(e => e.OrderId)
+                .IsRequired();
+
+            entity.Property(e => e.LockedByUserId)
+                .IsRequired();
+
+            entity.Property(e => e.SessionId)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Reason)
+                .HasMaxLength(500)
+                .HasDefaultValue("Payment in progress")
+                .IsRequired();
+
+            entity.Property(e => e.LockedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            entity.Property(e => e.ExpiresAt)
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            // Relationship: OrderLock -> Order
+            entity.HasOne(d => d.Order)
+                .WithMany(p => p.OrderLocks)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__OrderLocks__OrderId");
+
+            // Relationship: OrderLock -> User
+            entity.HasOne(d => d.LockedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.LockedByUserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__OrderLocks__LockedByUserId");
+
+            // Indexes
+            entity.HasIndex(e => e.OrderId)
+                .HasDatabaseName("IX_OrderLocks_OrderId");
+
+            entity.HasIndex(e => e.ExpiresAt)
+                .HasDatabaseName("IX_OrderLocks_ExpiresAt");
         });
 
         modelBuilder.Entity<Payroll>(entity =>
@@ -652,6 +808,74 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasKey(e => e.PositionId).HasName("PK__Position__60BB9D7D");
             entity.Property(e => e.PositionName).HasMaxLength(100);
             entity.Property(e => e.Status).HasDefaultValue(0);
+            entity.Property(e => e.BaseSalary)
+                .HasDefaultValue(0m)
+                .HasColumnType("decimal(18, 2)");
+        });
+
+        modelBuilder.Entity<SalaryChangeRequest>(entity =>
+        {
+            entity.HasKey(e => e.RequestId).HasName("PK__SalaryChangeRequest__RequestId");
+
+            entity.ToTable("SalaryChangeRequests");
+
+            entity.Property(e => e.CurrentBaseSalary)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.ProposedBaseSalary)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.Reason)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending")
+                .IsRequired();
+
+            entity.Property(e => e.OwnerNotes)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            entity.Property(e => e.ReviewedAt)
+                .HasColumnType("datetime");
+
+            // Relationship: SalaryChangeRequest -> Position (Many-to-One)
+            entity.HasOne(d => d.Position)
+                .WithMany(p => p.SalaryChangeRequests)
+                .HasForeignKey(d => d.PositionId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__Position");
+
+            // Relationship: SalaryChangeRequest -> User (RequestedBy) (Many-to-One)
+            entity.HasOne(d => d.RequestedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.RequestedBy)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__RequestedBy");
+
+            // Relationship: SalaryChangeRequest -> User (ApprovedBy) (Many-to-One, nullable)
+            entity.HasOne(d => d.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__ApprovedBy");
+
+            // Indexes
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_SalaryChangeRequests_Status");
+
+            entity.HasIndex(e => e.PositionId)
+                .HasDatabaseName("IX_SalaryChangeRequests_PositionId");
+
+            entity.HasIndex(e => e.RequestedBy)
+                .HasDatabaseName("IX_SalaryChangeRequests_RequestedBy");
         });
 
         modelBuilder.Entity<Staff>()
@@ -749,6 +973,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.PasswordHash).HasMaxLength(200);
             entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.AvatarUrl).HasMaxLength(500);
             entity.Property(e => e.Status).HasDefaultValue(0);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
 

@@ -45,6 +45,8 @@ namespace BusinessAccessLayer.Services
 
             // Staff must have at least one assigned position to be allowed to login
             var roleName = user.Role?.RoleName ?? string.Empty;
+            List<string>? positions = null;
+            
             if (string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase))
             {
                 var staff = await _dbContext.Staffs
@@ -55,6 +57,9 @@ namespace BusinessAccessLayer.Services
                 {
                     throw new UnauthorizedAccessException("Staff account has no assigned position. Please contact administrator.");
                 }
+                
+                // Get position names
+                positions = staff.Positions.Select(p => p.PositionName).ToList();
             }
 
             return new LoginResponse
@@ -65,7 +70,8 @@ namespace BusinessAccessLayer.Services
                 RoleId = user.RoleId,
                 RoleName = user.Role?.RoleName ?? string.Empty,
                 Token = GenerateJwtToken(user),
-                RefreshToken = GenerateRefreshToken(user)
+                RefreshToken = GenerateRefreshToken(user),
+                Positions = positions
             };
         }
 

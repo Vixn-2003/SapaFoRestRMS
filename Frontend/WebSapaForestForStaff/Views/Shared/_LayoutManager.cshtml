@@ -70,7 +70,7 @@
             <div class="navbar-menu-wrapper d-flex align-items-top">
                 <ul class="navbar-nav">
                     <li class="nav-item fw-semibold d-none d-lg-block ms-0">
-                        <h1 class="welcome-text">Chào mừng, <span class="text-black fw-bold">"Tên người dùng"</span></h1>
+                        <h1 class="welcome-text">Chào mừng, <span class="text-black fw-bold">@(User.Identity?.Name ?? "User")</span></h1>
                         <h3 class="welcome-sub-text">Chúc làm việc tốt!!! </h3>
                     </li>
                 </ul>
@@ -177,14 +177,18 @@
                         <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
                             <div class="dropdown-header text-center">
                                 <img class="img-md rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
-                                <p class="mb-1 mt-3 fw-semibold">Allen Moreno</p>
-                                <p class="fw-light text-muted mb-0">allenmoreno@gmail.com</p>
+                                <p class="mb-1 mt-3 fw-semibold">@(User.Identity?.Name ?? "User")</p>
+                                <p class="fw-light text-muted mb-0">@(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "")</p>
                             </div>
-                            <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-account-outline text-primary me-2"></i> My Profile <span class="badge badge-pill badge-danger">1</span></a>
-                            <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-message-text-outline text-primary me-2"></i> Messages</a>
-                            <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-calendar-check-outline text-primary me-2"></i> Activity</a>
-                            <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-help-circle-outline text-primary me-2"></i> FAQ</a>
-                            <a class="dropdown-item"><i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Sign Out</a>
+                            <a class="dropdown-item" asp-controller="UserProfile" asp-action="Index">
+                                <i class="dropdown-item-icon mdi mdi-account-circle text-primary me-2"></i>Hồ sơ của tôi
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
+                                <button type="submit" class="btn btn-link dropdown-item p-0 m-0 w-100 text-start">
+                                    <i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Đăng xuất
+                                </button>
+                            </form>
                         </div>
                     </li>
                 </ul>
@@ -388,6 +392,45 @@
 <!-- custom scripts -->
 <script src="~/js/vouchers.js"></script>
 <script src="~/js/print-qr.js"></script>
+<script src="~/js/vietqr-payment.js"></script>
+
+<!-- VietQR Payment Modal -->
+<div class="modal fade" id="qrPaymentModal" tabindex="-1" aria-labelledby="qrPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="qrPaymentModalLabel">
+                    <i class="mdi mdi-qrcode me-2"></i>Thanh toán qua VietQR
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <p class="text-muted mb-2">Mã đơn hàng: <strong id="qrOrderCode">-</strong></p>
+                    <p class="text-muted mb-3">Quét mã QR để thanh toán</p>
+                </div>
+                <div class="qr-image-container mb-3">
+                    <img id="qrImage" src="" class="img-fluid border rounded p-3 bg-white" style="max-width:300px; height:auto;" alt="VietQR Code">
+                </div>
+                <div class="payment-info">
+                    <h5 class="text-primary mb-2">
+                        <i class="mdi mdi-currency-usd me-2"></i>
+                        Tổng tiền: <span id="qrAmount">0</span> VND
+                    </h5>
+                    <p class="text-muted small mb-0" id="qrDescription">-</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="mdi mdi-close me-1"></i>Đóng
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmPaymentBtn" onclick="confirmVietQRPayment()">
+                    <i class="mdi mdi-check-circle me-1"></i>Đã nhận tiền
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- framework scripts -->
 <script src="~/assets/js/off-canvas.js"></script>

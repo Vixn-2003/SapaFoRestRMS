@@ -1,0 +1,113 @@
+<!-- Cash Payment Modal -->
+<div class="modal fade" id="cashPaymentModal" tabindex="-1" aria-labelledby="cashPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="cashPaymentModalLabel">
+                    <i class="bi bi-cash-coin me-2"></i>Thanh toán tiền mặt
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Order Summary -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="bi bi-receipt me-2"></i>Thông tin đơn hàng
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Mã đơn:</strong> <span id="cashOrderCode">-</span></p>
+                                <p class="mb-1"><strong>Bàn:</strong> <span id="cashTableNumber">-</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Tạm tính:</strong> <span id="cashSubtotal">0 ₫</span></p>
+                                <p class="mb-1"><strong>VAT (10%):</strong> <span id="cashVat">0 ₫</span></p>
+                                <p class="mb-1"><strong>Phí dịch vụ (5%):</strong> <span id="cashServiceFee">0 ₫</span></p>
+                                <p class="mb-0"><strong>Ưu đãi:</strong> <span id="cashDiscount" class="text-danger">-0 ₫</span></p>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Tổng cộng:</h5>
+                            <h4 class="mb-0 text-primary" id="cashTotalAmount">0 ₫</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Input -->
+                <div class="mb-3">
+                    <label for="amountReceived" class="form-label fw-bold">
+                        <i class="bi bi-currency-dollar me-2"></i>Số tiền khách đưa <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group input-group-lg">
+                        <input type="number" 
+                               class="form-control" 
+                               id="amountReceived" 
+                               placeholder="Nhập số tiền..."
+                               min="0"
+                               step="1000"
+                               oninput="calculateCashChange()">
+                        <span class="input-group-text">₫</span>
+                    </div>
+                    <small class="text-muted">Nhập số tiền khách hàng đưa</small>
+                </div>
+
+                <!-- Change Display -->
+                <div id="changeDisplay" class="alert alert-info d-none">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-left-right me-2 fs-4"></i>
+                        <div>
+                            <strong>Tiền thối lại:</strong>
+                            <span class="fs-4 ms-2 text-primary" id="refundAmount">0 ₫</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Underpaid Warning -->
+                <div id="underpaidWarning" class="alert alert-warning d-none">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>
+                            <strong>⚠️ Số tiền chưa đủ!</strong>
+                            <p class="mb-0 mt-1">Tổng tiền: <span id="requiredAmount">0 ₫</span>, Nhận được: <span id="receivedAmount">0 ₫</span></p>
+                            <p class="mb-0">Còn thiếu: <span class="text-danger fw-bold" id="missingAmount">0 ₫</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="mb-3">
+                    <label for="paymentNotes" class="form-label">
+                        <i class="bi bi-sticky me-2"></i>Ghi chú (tùy chọn)
+                    </label>
+                    <textarea class="form-control" 
+                              id="paymentNotes" 
+                              rows="2" 
+                              placeholder="Nhập ghi chú nếu có..."></textarea>
+                </div>
+
+                <!-- Refund Confirmation (for overpaid) -->
+                <div id="refundConfirmation" class="form-check mb-3 d-none">
+                    <input class="form-check-input" type="checkbox" id="refundConfirmed" onchange="toggleConfirmButton()">
+                    <label class="form-check-label" for="refundConfirmed">
+                        <i class="bi bi-check-circle me-2"></i>Tôi đã trả lại tiền thối cho khách hàng
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Hủy
+                </button>
+                <button type="button" 
+                        class="btn btn-primary" 
+                        id="confirmCashPaymentBtn"
+                        onclick="confirmCashPayment()"
+                        disabled>
+                    <i class="bi bi-check-circle me-1"></i>Xác nhận thanh toán
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
