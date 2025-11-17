@@ -25,7 +25,8 @@ public class SalaryChangeRequestController : ControllerBase
     }
 
     /// <summary>
-    /// Manager: Tạo yêu cầu thay đổi lương
+    /// Manager: Tạo yêu cầu thay đổi BaseSalary cho Position
+    /// Flow: Manager tạo yêu cầu → Owner xem và phê duyệt/từ chối → BaseSalary được cập nhật khi approve
     /// POST /api/salarychangerequest
     /// </summary>
     [HttpPost]
@@ -52,6 +53,14 @@ public class SalaryChangeRequestController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {

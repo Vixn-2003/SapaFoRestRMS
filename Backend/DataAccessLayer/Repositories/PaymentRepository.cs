@@ -76,6 +76,8 @@ public class PaymentRepository : IPaymentRepository
                 .ThenInclude(r => r.ReservationTables)
                     .ThenInclude(rt => rt.Table)
             .Include(o => o.Payments)
+            .Include(o => o.Transactions)
+                .ThenInclude(t => t.ConfirmedByUser)
             .FirstOrDefaultAsync(o => o.OrderId == orderId);
     }
 
@@ -146,6 +148,39 @@ public class PaymentRepository : IPaymentRepository
             _context.Orders.Update(order);
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task<Transaction?> GetTransactionByIdAsync(int transactionId)
+    {
+        return await _context.Set<Transaction>()
+            .Include(t => t.Order)
+            .Include(t => t.ConfirmedByUser)
+            .Include(t => t.ParentTransaction)
+            .Include(t => t.ChildTransactions)
+            .FirstOrDefaultAsync(t => t.TransactionId == transactionId);
+    }
+
+    public async Task<IEnumerable<Transaction>> GetTransactionsByOrderIdAsync(int orderId)
+    {
+        return await _context.Set<Transaction>()
+            .Include(t => t.ConfirmedByUser)
+            .Where(t => t.OrderId == orderId)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task UpdateTransactionAsync(Transaction transaction)
+    {
+        _context.Set<Transaction>().Update(transaction);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<Transaction?> GetTransactionByCodeAsync(string transactionCode)
+    {
+        return await _context.Set<Transaction>()
+            .Include(t => t.Order)
+            .Include(t => t.ConfirmedByUser)
+            .FirstOrDefaultAsync(t => t.TransactionCode == transactionCode);
     }
 }
 

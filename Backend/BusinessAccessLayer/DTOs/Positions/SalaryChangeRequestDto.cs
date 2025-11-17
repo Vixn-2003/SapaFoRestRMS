@@ -39,6 +39,7 @@ public class SalaryChangeRequestDto
 
 /// <summary>
 /// DTO cho request tạo yêu cầu thay đổi lương (Manager)
+/// Manager không thể trực tiếp update BaseSalary, phải tạo yêu cầu và chờ Owner phê duyệt
 /// </summary>
 public class CreateSalaryChangeRequestDto
 {

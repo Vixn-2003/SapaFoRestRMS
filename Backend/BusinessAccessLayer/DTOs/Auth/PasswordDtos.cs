@@ -19,6 +19,24 @@ namespace BusinessAccessLayer.DTOs.Auth
         public string Code { get; set; } = null!;
     }
 
+    public class ResetPasswordDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = null!;
+
+        [Required]
+        public string Code { get; set; } = null!;
+
+        [Required]
+        [MinLength(8, ErrorMessage = "Mật khẩu phải có ít nhất 8 ký tự")]
+        public string NewPassword { get; set; } = null!;
+
+        [Required]
+        [Compare("NewPassword", ErrorMessage = "Mật khẩu xác nhận không khớp")]
+        public string ConfirmPassword { get; set; } = null!;
+    }
+
     public class RequestChangePasswordDto
     {
         [Required]

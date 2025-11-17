@@ -230,6 +230,129 @@ namespace SapaFoRestRMSAPI.Services
 
             await context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// Seed test staff accounts with all positions for testing
+        /// Creates one staff account for each position: Waiter/Waitress, Cashier, Kitchen Staff, Inventory Staff
+        /// </summary>
+        public static async Task SeedStaffWithAllPositionsAsync(SapaFoRestRmsContext context)
+        {
+            // Ensure roles and positions exist
+            var staffRoleId = await context.Roles.Where(r => r.RoleName == "Staff")
+                .Select(r => r.RoleId).FirstOrDefaultAsync();
+            if (staffRoleId == 0)
+            {
+                var role = new Role { RoleName = "Staff" };
+                await context.Roles.AddAsync(role);
+                await context.SaveChangesAsync();
+                staffRoleId = role.RoleId;
+            }
+
+            // Ensure positions exist
+            await SeedPositionsAsync(context);
+            var positions = await context.Positions.ToListAsync();
+
+            string HashPassword(string password)
+            {
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(hashedBytes);
+            }
+
+            // Create staff for each position
+            var staffAccounts = new[]
+            {
+                new { Email = "cashier@test.com", FullName = "Test Cashier", Phone = "0900002001", PositionName = "Cashier" },
+                new { Email = "waiter@test.com", FullName = "Test Waiter", Phone = "0900002002", PositionName = "Waiter/Waitress" },
+                new { Email = "kitchen@test.com", FullName = "Test Kitchen Staff", Phone = "0900002003", PositionName = "Kitchen Staff" },
+                new { Email = "inventory@test.com", FullName = "Test Inventory Staff", Phone = "0900002004", PositionName = "Inventory Staff" }
+            };
+
+            foreach (var account in staffAccounts)
+            {
+                var position = positions.FirstOrDefault(p => p.PositionName == account.PositionName);
+                if (position == null) continue;
+
+                // Check if user exists
+                var existingUser = await context.Users.FirstOrDefaultAsync(u => u.Email == account.Email && u.IsDeleted == false);
+                User user;
+                Staff staff;
+
+                if (existingUser == null)
+                {
+                    // Create new user
+                    user = new User
+                    {
+                        FullName = account.FullName,
+                        Email = account.Email,
+                        Phone = account.Phone,
+                        PasswordHash = HashPassword("Staff@123"),
+                        RoleId = staffRoleId,
+                        Status = 0,
+                        CreatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+                    await context.Users.AddAsync(user);
+                    await context.SaveChangesAsync();
+
+                    // Create staff profile
+                    staff = new Staff
+                    {
+                        UserId = user.UserId,
+                        HireDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+                        SalaryBase = 7000000m,
+                        Status = 0
+                    };
+                    await context.Staffs.AddAsync(staff);
+                    await context.SaveChangesAsync();
+                }
+                else
+                {
+                    user = existingUser;
+                    user.RoleId = staffRoleId;
+                    user.PasswordHash = HashPassword("Staff@123"); // Reset password for testing
+                    context.Users.Update(user);
+
+                    // Get or create staff profile
+                    staff = await context.Staffs.FirstOrDefaultAsync(s => s.UserId == user.UserId);
+                    if (staff == null)
+                    {
+                        staff = new Staff
+                        {
+                            UserId = user.UserId,
+                            HireDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+                            SalaryBase = 7000000m,
+                            Status = 0
+                        };
+                        await context.Staffs.AddAsync(staff);
+                    }
+                    await context.SaveChangesAsync();
+                }
+
+                // Assign position to staff (many-to-many relationship)
+                // Check if position is already assigned
+                var hasPosition = await context.Staffs
+                    .Where(s => s.StaffId == staff.StaffId)
+                    .SelectMany(s => s.Positions)
+                    .AnyAsync(p => p.PositionId == position.PositionId);
+
+                if (!hasPosition)
+                {
+                    // Load staff with positions to add new position
+                    var staffWithPositions = await context.Staffs
+                        .Include(s => s.Positions)
+                        .FirstOrDefaultAsync(s => s.StaffId == staff.StaffId);
+
+                    if (staffWithPositions != null)
+                    {
+                        staffWithPositions.Positions.Add(position);
+                        context.Staffs.Update(staffWithPositions);
+                    }
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
     }
 }
 

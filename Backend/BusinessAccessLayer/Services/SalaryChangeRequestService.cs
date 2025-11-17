@@ -40,11 +40,26 @@ public class SalaryChangeRequestService : ISalaryChangeRequestService
             throw new KeyNotFoundException($"Không tìm thấy Position với ID: {request.PositionId}");
         }
 
+        // Business validation: ProposedBaseSalary phải lớn hơn 0
+        if (request.ProposedBaseSalary <= 0)
+        {
+            throw new ArgumentException("Lương đề xuất phải lớn hơn 0");
+        }
+
+        // Business validation: Kiểm tra xem có yêu cầu Pending nào cho Position này không
+        var existingPendingRequest = (await _salaryChangeRequestRepository.GetByPositionIdAsync(request.PositionId))
+            .FirstOrDefault(r => r.Status == "Pending");
+        
+        if (existingPendingRequest != null)
+        {
+            throw new InvalidOperationException($"Đã có yêu cầu thay đổi lương đang chờ phê duyệt cho Position này. Vui lòng đợi Owner xử lý yêu cầu ID: {existingPendingRequest.RequestId}");
+        }
+
         // Tạo yêu cầu
         var salaryChangeRequest = new SalaryChangeRequest
         {
             PositionId = request.PositionId,
-            CurrentBaseSalary = position.BaseSalary,
+            CurrentBaseSalary = position.BaseSalary, // Lưu lương hiện tại để so sánh
             ProposedBaseSalary = request.ProposedBaseSalary,
             Reason = request.Reason,
             Status = "Pending",
@@ -101,10 +116,18 @@ public class SalaryChangeRequestService : ISalaryChangeRequestService
         {
             salaryRequest.Status = "Approved";
             
-            // Cập nhật BaseSalary của Position
+            // Cập nhật BaseSalary của Position (chỉ khi Owner approve)
             var position = await _unitOfWork.Positions.GetByIdAsync(salaryRequest.PositionId);
             if (position != null)
             {
+                // Kiểm tra xem BaseSalary hiện tại có thay đổi không (có thể có yêu cầu khác đã được approve)
+                if (position.BaseSalary != salaryRequest.CurrentBaseSalary)
+                {
+                    // BaseSalary đã thay đổi, cần cảnh báo Owner
+                    // Nhưng vẫn cập nhật theo yêu cầu đã được approve
+                    // Có thể log hoặc thông báo cho Owner biết
+                }
+                
                 position.BaseSalary = salaryRequest.ProposedBaseSalary;
                 await _unitOfWork.Positions.UpdateAsync(position);
             }
@@ -112,6 +135,7 @@ public class SalaryChangeRequestService : ISalaryChangeRequestService
         else if (request.Action.Equals("Reject", StringComparison.OrdinalIgnoreCase))
         {
             salaryRequest.Status = "Rejected";
+            // BaseSalary không thay đổi khi reject
         }
         else
         {

@@ -9,6 +9,7 @@ namespace BusinessAccessLayer.DTOs.Users
         public int RoleId { get; set; }
         public string RoleName { get; set; } = null!;
         public int Status { get; set; }
+        public string? AvatarUrl { get; set; }
         public DateTime? CreatedAt { get; set; }
         public int? CreatedBy { get; set; }
         public DateTime? ModifiedAt { get; set; }

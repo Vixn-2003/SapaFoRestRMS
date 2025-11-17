@@ -1,0 +1,169 @@
+<!-- Combined Payment Modal (Tiền mặt + QR) -->
+<div class="modal fade" id="combinedPaymentModal" tabindex="-1" aria-labelledby="combinedPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="combinedPaymentModalLabel">
+                    <i class="bi bi-wallet2 me-2"></i>Thanh toán kết hợp
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Order Summary -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="bi bi-receipt me-2"></i>Tổng hóa đơn
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Mã đơn:</strong> <span id="combinedOrderCode">-</span></p>
+                                <p class="mb-1"><strong>Bàn:</strong> <span id="combinedTableNumber">-</span></p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <h4 class="mb-0 text-primary" id="combinedTotalAmount">0 ₫</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Parts -->
+                <div class="row g-3">
+                    <!-- Part 1: Cash -->
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-cash-coin me-2"></i>Phần 1: Tiền mặt
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="cashAmount" class="form-label">
+                                        <strong>Số tiền thanh toán bằng tiền mặt</strong>
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               class="form-control" 
+                                               id="cashAmount" 
+                                               min="0" 
+                                               step="1000"
+                                               placeholder="Nhập số tiền..."
+                                               oninput="updateCombinedPayment()">
+                                        <span class="input-group-text">₫</span>
+                                    </div>
+                                    <small class="text-muted">Số tiền khách sẽ trả bằng tiền mặt</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="cashReceived" class="form-label">
+                                        Số tiền khách đưa
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               class="form-control" 
+                                               id="cashReceived" 
+                                               min="0" 
+                                               step="1000"
+                                               placeholder="Nhập số tiền nhận được..."
+                                               oninput="updateCombinedPayment()">
+                                        <span class="input-group-text">₫</span>
+                                    </div>
+                                </div>
+                                
+                                <div id="cashChangeDisplay" class="alert alert-info d-none">
+                                    <i class="bi bi-calculator me-2"></i>
+                                    <strong>Tiền thối lại:</strong> <span id="cashChangeAmount">0 ₫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Part 2: QR -->
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-qr-code me-2"></i>Phần 2: Chuyển khoản QR
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="qrAmount" class="form-label">
+                                        <strong>Số tiền thanh toán bằng QR</strong>
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               class="form-control" 
+                                               id="qrAmount" 
+                                               min="0" 
+                                               step="1000"
+                                               placeholder="Tự động tính..."
+                                               readonly>
+                                        <span class="input-group-text">₫</span>
+                                    </div>
+                                    <small class="text-muted">Số tiền còn lại sẽ thanh toán bằng QR</small>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <button type="button" 
+                                            class="btn btn-success w-100" 
+                                            id="generateQrBtn"
+                                            onclick="generateCombinedQR()">
+                                        <i class="bi bi-qr-code me-2"></i>Hiển thị mã QR
+                                    </button>
+                                </div>
+                                
+                                <div id="qrCodeDisplay" class="mt-3 text-center d-none">
+                                    <img id="combinedQrImage" src="" class="img-fluid border rounded p-3 bg-white" style="max-width:250px;" alt="VietQR Code">
+                                    <p class="mt-2 mb-0">
+                                        <small class="text-muted">Mã đơn: <span id="combinedQrOrderCode">-</span></small>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="mt-3">
+                    <label for="combinedNotes" class="form-label">
+                        <i class="bi bi-sticky me-2"></i>Ghi chú (tùy chọn)
+                    </label>
+                    <textarea class="form-control" 
+                              id="combinedNotes" 
+                              rows="2" 
+                              placeholder="Nhập ghi chú nếu có..."></textarea>
+                </div>
+
+                <!-- Error Messages - Display above Notes -->
+                <div id="combinedTotalValidation" class="alert alert-danger mt-3 d-none">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Tổng hai phần không khớp với tổng hóa đơn!</strong>
+                    <p class="mb-0 mt-1">
+                        Tổng hai phần: <span id="combinedPartsTotal">0 ₫</span> | 
+                        Tổng hóa đơn: <span id="combinedBillTotal">0 ₫</span>
+                    </p>
+                </div>
+                
+                <!-- Additional error messages container -->
+                <div id="combinedErrorMessages" class="mt-3">
+                    <!-- Dynamic error messages will be inserted here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Hủy
+                </button>
+                <button type="button" 
+                        class="btn btn-primary" 
+                        id="confirmCombinedPaymentBtn"
+                        onclick="confirmCombinedPayment()"
+                        disabled>
+                    <i class="bi bi-check-circle me-1"></i>Xác nhận thanh toán
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

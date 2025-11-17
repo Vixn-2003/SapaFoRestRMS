@@ -1,3 +1,5 @@
+using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using BusinessAccessLayer.DTOs.Auth;
@@ -38,16 +40,54 @@ namespace SapaFoRestRMSAPI.Controllers
         [Authorize]
         public async Task<IActionResult> RequestChange([FromBody] RequestChangePasswordDto dto, CancellationToken ct)
         {
-            await _passwordService.RequestChangeAsync(dto, ct);
-            return Ok();
+            var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            dto.UserId = userId;
+
+            try
+            {
+                await _passwordService.RequestChangeAsync(dto, ct);
+                return Ok(new { message = "Verification code sent" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("change/confirm")]
         [Authorize]
         public async Task<IActionResult> Change([FromBody] VerifyChangePasswordDto dto, CancellationToken ct)
         {
-            await _passwordService.ChangeAsync(dto, ct);
-            return Ok();
+            var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            dto.UserId = userId;
+
+            try
+            {
+                await _passwordService.ChangeAsync(dto, ct);
+                return Ok(new { message = "Password changed" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

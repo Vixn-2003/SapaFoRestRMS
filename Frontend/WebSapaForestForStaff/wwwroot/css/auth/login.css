@@ -118,6 +118,20 @@ label {
         color: #333;
     }
 
+/* =============== ERROR MESSAGES =============== */
+.text-danger {
+    display: block;
+    font-size: 12px;
+    color: #dc3545;
+    margin-top: 6px;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.form-group .text-danger {
+    margin-top: 4px;
+}
+
 /* =============== FORGOT PASSWORD + BUTTON =============== */
 .forgot-password {
     text-align: right;

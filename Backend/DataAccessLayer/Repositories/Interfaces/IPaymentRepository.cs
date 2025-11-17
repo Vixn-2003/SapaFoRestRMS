@@ -38,5 +38,25 @@ public interface IPaymentRepository : IRepository<Order>
     /// Cập nhật trạng thái đơn hàng
     /// </summary>
     Task UpdateOrderStatusAsync(int orderId, string status);
+
+    /// <summary>
+    /// Lấy transaction theo ID
+    /// </summary>
+    Task<Transaction?> GetTransactionByIdAsync(int transactionId);
+
+    /// <summary>
+    /// Lấy danh sách transactions theo OrderId
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetTransactionsByOrderIdAsync(int orderId);
+
+    /// <summary>
+    /// Cập nhật transaction
+    /// </summary>
+    Task UpdateTransactionAsync(Transaction transaction);
+
+    /// <summary>
+    /// Lấy transaction theo TransactionCode
+    /// </summary>
+    Task<Transaction?> GetTransactionByCodeAsync(string transactionCode);
 }
 
