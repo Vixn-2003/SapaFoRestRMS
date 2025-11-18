@@ -13,6 +13,7 @@ namespace BusinessAccessLayer.DTOs.Users
         public string? Phone { get; set; }
 
         [StringLength(500)]
+        [Url(ErrorMessage = "AvatarUrl phải là một đường dẫn hợp lệ")]
         public string? AvatarUrl { get; set; }
     }
 }

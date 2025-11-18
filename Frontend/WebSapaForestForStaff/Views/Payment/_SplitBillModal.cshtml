@@ -1,0 +1,113 @@
+<!-- Split Bill Modal -->
+<div class="modal fade" id="splitBillModal" tabindex="-1" aria-labelledby="splitBillModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="splitBillModalLabel">
+                    <i class="bi bi-scissors me-2"></i>Chia hóa đơn
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Order Summary -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="bi bi-receipt me-2"></i>Tổng hóa đơn
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Mã đơn:</strong> <span id="splitOrderCode">-</span></p>
+                                <p class="mb-1"><strong>Bàn:</strong> <span id="splitTableNumber">-</span></p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <h4 class="mb-0 text-primary" id="splitTotalAmount">0 ₫</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Split Options -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-sliders me-2"></i>Chọn cách chia
+                    </label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="splitType" id="splitEqual" value="equal" checked onchange="changeSplitType()">
+                        <label class="btn btn-outline-primary" for="splitEqual">
+                            <i class="bi bi-equal me-1"></i>Chia đều
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="splitType" id="splitCustom" value="custom" onchange="changeSplitType()">
+                        <label class="btn btn-outline-primary" for="splitCustom">
+                            <i class="bi bi-pencil me-1"></i>Tùy chỉnh
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Number of Parts -->
+                <div class="mb-3" id="equalSplitSection">
+                    <label for="numberOfParts" class="form-label">
+                        <i class="bi bi-123 me-2"></i>Số phần chia
+                    </label>
+                    <div class="input-group">
+                        <input type="number" 
+                               class="form-control" 
+                               id="numberOfParts" 
+                               min="2" 
+                               max="10" 
+                               value="2"
+                               onchange="calculateEqualSplit()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="decreaseParts()">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" onclick="increaseParts()">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Split Parts List -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-list-ul me-2"></i>Chi tiết các phần
+                    </label>
+                    <div id="splitPartsList" class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Parts will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Total Validation -->
+                <div id="splitTotalValidation" class="alert alert-danger d-none">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Tổng các phần không khớp với tổng hóa đơn!</strong>
+                    <p class="mb-0 mt-1">Tổng các phần: <span id="splitPartsTotal">0 ₫</span> | Tổng hóa đơn: <span id="splitBillTotal">0 ₫</span></p>
+                </div>
+
+                <!-- Notes -->
+                <div class="mb-3">
+                    <label for="splitNotes" class="form-label">
+                        <i class="bi bi-sticky me-2"></i>Ghi chú (tùy chọn)
+                    </label>
+                    <textarea class="form-control" 
+                              id="splitNotes" 
+                              rows="2" 
+                              placeholder="Nhập ghi chú nếu có..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Hủy
+                </button>
+                <button type="button" 
+                        class="btn btn-info" 
+                        id="confirmSplitBillBtn"
+                        onclick="confirmSplitBill()"
+                        disabled>
+                    <i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

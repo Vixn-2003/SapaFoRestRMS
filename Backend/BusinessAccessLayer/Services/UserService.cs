@@ -19,6 +19,7 @@ namespace BusinessAccessLayer.Services
         private readonly IMapper _mapper;
         private readonly IRoleRepository _roleRepository;
         private readonly IEmailService _emailService;
+        private static readonly HashSet<int> RestrictedCreationRoleIds = new() { 2, 5 };
 
         public UserService(IUnitOfWork unitOfWork, IMapper mapper, IRoleRepository roleRepository, IEmailService emailService)
         {
@@ -158,6 +159,11 @@ namespace BusinessAccessLayer.Services
                 throw new InvalidOperationException("Email already exists");
             }
 
+            if (RestrictedCreationRoleIds.Contains(request.RoleId))
+            {
+                throw new InvalidOperationException("Không được phép tạo tài khoản Admin hoặc Customer bằng chức năng này");
+            }
+
             // Hash password
             var passwordHash = HashPassword(request.Password);
 
@@ -251,6 +257,9 @@ namespace BusinessAccessLayer.Services
             {
                 user.Phone = request.Phone;
             }
+            user.AvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl)
+                ? null
+                : request.AvatarUrl.Trim();
             user.ModifiedAt = DateTime.UtcNow;
 
             await _unitOfWork.Users.UpdateAsync(user);

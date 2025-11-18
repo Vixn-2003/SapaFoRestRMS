@@ -1,70 +1,54 @@
 @{
     ViewData["Title"] = "Chọn phương thức thanh toán";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
     int orderId = ViewBag.OrderId ?? 0;
     string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/payment.css" asp-append-version="true" />
-}
+<h2 class="mb-3">Chọn phương thức thanh toán</h2>
 
-<div class="payment-container">
-    <div class="breadcrumb-nav">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item">
-                    <a href="/Payment/OrderSelection">Đơn hàng</a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="/Payment/OrderDetail?id=@orderId">Chi tiết</a>
-                </li>
-                <li class="breadcrumb-item active" aria-current="page">Thanh toán</li>
-            </ol>
-        </nav>
-    </div>
+<div class="mb-3">
+    <a href="/Payment/OrderDetail?id=@orderId" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Quay lại
+    </a>
+</div>
 
-    <div class="text-center mb-4">
-        <h3 class="mb-2">
-            <i class="bi bi-credit-card me-2"></i>Chọn phương thức thanh toán
-        </h3>
-        <p class="text-muted">Vui lòng chọn hình thức thanh toán phù hợp</p>
-    </div>
-
-    <div class="payment-method-grid">
-        <!-- Tiền mặt -->
-        <div class="payment-method-card" onclick="selectPaymentMethod('cash')">
-            <div class="payment-method-icon">💵</div>
-            <div class="payment-method-name">Tiền mặt</div>
-            <div class="payment-method-desc">Thanh toán bằng tiền mặt</div>
-        </div>
-
-        <!-- Thẻ -->
-        <div class="payment-method-card" onclick="selectPaymentMethod('card')">
-            <div class="payment-method-icon">💳</div>
-            <div class="payment-method-name">Thẻ</div>
-            <div class="payment-method-desc">Thẻ tín dụng / Ghi nợ</div>
-        </div>
-
-        <!-- Ví điện tử -->
-        <div class="payment-method-card" onclick="selectPaymentMethod('ewallet')">
-            <div class="payment-method-icon">📱</div>
-            <div class="payment-method-name">Ví điện tử</div>
-            <div class="payment-method-desc">MoMo, ZaloPay, VNPay...</div>
-        </div>
-
-        <!-- Chia bill -->
-        <div class="payment-method-card" onclick="selectPaymentMethod('split')">
-            <div class="payment-method-icon">💸</div>
-            <div class="payment-method-name">Chia bill</div>
-            <div class="payment-method-desc">Chia hóa đơn nhiều người</div>
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('cash')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">💵</div>
+                <h5 class="card-title">Tiền mặt</h5>
+                <p class="card-text text-muted">Thanh toán bằng tiền mặt</p>
+            </div>
         </div>
     </div>
-
-    <div class="text-center mt-4">
-        <a href="/Payment/OrderDetail?id=@orderId" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-2"></i>Quay lại
-        </a>
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('card')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">💳</div>
+                <h5 class="card-title">Thẻ</h5>
+                <p class="card-text text-muted">Thẻ tín dụng / Ghi nợ</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('ewallet')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">📱</div>
+                <h5 class="card-title">Ví điện tử</h5>
+                <p class="card-text text-muted">MoMo, ZaloPay, VNPay...</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('split')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">💸</div>
+                <h5 class="card-title">Chia bill</h5>
+                <p class="card-text text-muted">Chia hóa đơn nhiều người</p>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -87,19 +71,9 @@
 
         // Chọn phương thức thanh toán
         function selectPaymentMethod(method) {
-            // Remove active class từ tất cả cards
-            document.querySelectorAll('.payment-method-card').forEach(card => {
-                card.classList.remove('active');
-            });
-
-            // Add active class cho card được chọn
-            event.currentTarget.classList.add('active');
             selectedMethod = method;
-
             // Chuyển đến màn hình xác nhận
-            setTimeout(() => {
-                window.location.href = `/Payment/PaymentConfirmation?orderId=${orderId}&method=${method}`;
-            }, 300);
+            window.location.href = `/Payment/PaymentConfirmation?orderId=${orderId}&method=${method}`;
         }
 
         // Show toast

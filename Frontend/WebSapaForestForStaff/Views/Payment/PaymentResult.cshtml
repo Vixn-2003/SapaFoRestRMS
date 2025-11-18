@@ -1,64 +1,66 @@
 @{
     ViewData["Title"] = "Kết quả thanh toán";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
     int orderId = ViewBag.OrderId ?? 0;
     string sessionId = ViewBag.SessionId as string ?? "";
     string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
 }
 
-@section Styles {
-    <link rel="stylesheet" href="~/css/payment.css" asp-append-version="true" />
-}
+<h2 class="mb-3">Kết quả thanh toán</h2>
 
-<div class="payment-container">
-    <div class="result-card" id="resultCard">
+<div class="card">
+    <div class="card-body">
         <div class="text-center">
-            <div class="result-icon" id="resultIcon">
-                <i class="bi bi-hourglass-split"></i>
+            <div id="resultIcon" class="mb-3">
+                <i class="bi bi-hourglass-split fs-1"></i>
             </div>
-            <h3 class="result-title" id="resultTitle">Đang xử lý...</h3>
+            <h3 id="resultTitle">Đang xử lý...</h3>
             <p class="text-muted" id="resultMessage">Vui lòng đợi trong giây lát</p>
         </div>
 
-        <div class="result-info" id="resultInfo" style="display: none;">
-            <div class="result-info-row">
-                <span class="result-info-label">Mã đơn hàng:</span>
-                <span class="result-info-value" id="orderCode">-</span>
-            </div>
-            <div class="result-info-row">
-                <span class="result-info-label">Tổng tiền:</span>
-                <span class="result-info-value" id="totalAmount">-</span>
-            </div>
-            <div class="result-info-row">
-                <span class="result-info-label">Phương thức:</span>
-                <span class="result-info-value" id="paymentMethod">-</span>
-            </div>
-            <div class="result-info-row">
-                <span class="result-info-label">Mã giao dịch:</span>
-                <span class="result-info-value" id="transactionId">-</span>
-            </div>
-            <div class="result-info-row">
-                <span class="result-info-label">Nhân viên:</span>
-                <span class="result-info-value" id="staffName">-</span>
-            </div>
-            <div class="result-info-row">
-                <span class="result-info-label">Thời gian:</span>
-                <span class="result-info-value" id="paymentTime">-</span>
-            </div>
+        <div id="resultInfo" style="display: none;" class="mt-4">
+            <table class="table table-bordered">
+                <tbody>
+                    <tr>
+                        <th>Mã đơn hàng:</th>
+                        <td id="orderCode">-</td>
+                    </tr>
+                    <tr>
+                        <th>Tổng tiền:</th>
+                        <td id="totalAmount">-</td>
+                    </tr>
+                    <tr>
+                        <th>Phương thức:</th>
+                        <td id="paymentMethod">-</td>
+                    </tr>
+                    <tr>
+                        <th>Mã giao dịch:</th>
+                        <td id="transactionId">-</td>
+                    </tr>
+                    <tr>
+                        <th>Nhân viên:</th>
+                        <td id="staffName">-</td>
+                    </tr>
+                    <tr>
+                        <th>Thời gian:</th>
+                        <td id="paymentTime">-</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-        <div class="action-buttons mt-4" id="actionButtons" style="display: none;">
+        <div class="mt-4" id="actionButtons" style="display: none;">
             <button type="button" 
-                    class="btn btn-primary btn-action-primary" 
+                    class="btn btn-primary" 
                     onclick="viewReceipt()">
                 <i class="bi bi-receipt me-2"></i>Xem hóa đơn
             </button>
             <button type="button" 
-                    class="btn btn-outline-primary btn-action-primary" 
+                    class="btn btn-outline-primary" 
                     onclick="sendReceipt()">
                 <i class="bi bi-send me-2"></i>Gửi biên nhận
             </button>
-            <a href="/Payment/OrderSelection" class="btn btn-outline-secondary btn-action-primary">
+            <a href="/Payment/OrderSelection" class="btn btn-outline-secondary">
                 <i class="bi bi-list-ul me-2"></i>Danh sách đơn hàng
             </a>
         </div>
@@ -134,9 +136,9 @@
 
             if (result.success) {
                 // Success
-                resultIcon.innerHTML = '<i class="bi bi-check-circle-fill result-success"></i>';
+                resultIcon.innerHTML = '<i class="bi bi-check-circle-fill fs-1 text-success"></i>';
                 resultTitle.textContent = 'Thanh toán thành công!';
-                resultTitle.className = 'result-title text-success';
+                resultTitle.className = 'text-success';
                 resultMessage.textContent = result.message || 'Giao dịch đã được xử lý thành công.';
                 resultMessage.className = 'text-success';
 
@@ -149,24 +151,24 @@
                 document.getElementById('paymentTime').textContent = result.paymentTime || new Date().toLocaleString('vi-VN');
 
                 resultInfo.style.display = 'block';
-                actionButtons.style.display = 'flex';
+                actionButtons.style.display = 'block';
             } else {
                 // Failed
-                resultIcon.innerHTML = '<i class="bi bi-x-circle-fill result-error"></i>';
+                resultIcon.innerHTML = '<i class="bi bi-x-circle-fill fs-1 text-danger"></i>';
                 resultTitle.textContent = 'Thanh toán thất bại!';
-                resultTitle.className = 'result-title text-danger';
+                resultTitle.className = 'text-danger';
                 resultMessage.textContent = result.message || 'Có lỗi xảy ra trong quá trình thanh toán.';
                 resultMessage.className = 'text-danger';
 
                 actionButtons.innerHTML = `
-                    <a href="/Payment/PaymentMethod?orderId=${orderId}" class="btn btn-primary btn-action-primary">
+                    <a href="/Payment/PaymentMethod?orderId=${orderId}" class="btn btn-primary">
                         <i class="bi bi-arrow-left me-2"></i>Thử lại
                     </a>
-                    <a href="/Payment/OrderSelection" class="btn btn-outline-secondary btn-action-primary">
+                    <a href="/Payment/OrderSelection" class="btn btn-outline-secondary">
                         <i class="bi bi-list-ul me-2"></i>Danh sách đơn hàng
                     </a>
                 `;
-                actionButtons.style.display = 'flex';
+                actionButtons.style.display = 'block';
             }
         }
 

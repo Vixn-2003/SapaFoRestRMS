@@ -73,7 +73,7 @@
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown d-none d-lg-block user-dropdown">
-                        <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false" role="button">
                             <img class="img-xs rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
                         </a>
                         <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
@@ -81,11 +81,12 @@
                                 <i class="dropdown-item-icon mdi mdi-account-circle text-primary me-2"></i>Hồ sơ của tôi
                             </a>
                             <div class="dropdown-divider"></div>
-                            <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
-                                <button type="submit" class="btn btn-link dropdown-item p-0 m-0">
-                                    <i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Đăng xuất
-                                </button>
+                            <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="display: none;">
+                                @Html.AntiForgeryToken()
                             </form>
+                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit(); return false;" style="cursor: pointer;">
+                                <i class="dropdown-item-icon mdi mdi-power text-primary me-2"></i>Đăng xuất
+                            </a>
                         </div>
                     </li>
                 </ul>
@@ -176,12 +177,44 @@
     <script src="~/js/toast-notification.js"></script>
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container-custom"></div>
+    <style>
+        /* Ensure dropdown menu is visible and clickable */
+        .user-dropdown .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            z-index: 1050;
+            min-width: 200px;
+        }
+        .user-dropdown .dropdown-menu.show {
+            display: block !important;
+        }
+        .user-dropdown .dropdown-item {
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+        }
+        .user-dropdown .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
     <script>
         // Global tooltip enable (fallback if pages don't initialize per-view)
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof bootstrap !== 'undefined') {
                 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+                
+                // Initialize dropdowns - ensure user dropdown works
+                var userDropdown = document.getElementById('UserDropdown');
+                if (userDropdown) {
+                    var dropdown = new bootstrap.Dropdown(userDropdown);
+                    // Ensure dropdown is clickable
+                    userDropdown.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        dropdown.toggle();
+                    });
+                }
             }
         });
     </script>

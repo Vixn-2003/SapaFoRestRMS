@@ -219,6 +219,21 @@ builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
+// AuditLog Service
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+// Receipt Service - Pass WebRootPath from IWebHostEnvironment
+builder.Services.AddScoped<IReceiptService>(sp =>
+{
+    var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    return new ReceiptService(unitOfWork, env.WebRootPath);
+});
+
+// SalaryChangeRequest Service/Repository
+builder.Services.AddScoped<ISalaryChangeRequestRepository, SalaryChangeRequestRepository>();
+builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestService>();
+
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
@@ -318,6 +333,7 @@ using (var scope = app.Services.CreateScope())
 
     await DataSeeder.SeedPositionsAsync(ctx);
     await DataSeeder.SeedTestCustomerAsync(ctx);
+    await DataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);

@@ -87,6 +87,12 @@ namespace BusinessAccessLayer.Mapping
             CreateMap<PositionCreateRequest, Position>();
             CreateMap<PositionUpdateRequest, Position>();
 
+            // SalaryChangeRequest mappings
+            CreateMap<SalaryChangeRequest, SalaryChangeRequestDto>()
+                .ForMember(d => d.PositionName, m => m.MapFrom(s => s.Position != null ? s.Position.PositionName : ""))
+                .ForMember(d => d.RequestedByName, m => m.MapFrom(s => s.RequestedByUser != null ? s.RequestedByUser.FullName : ""))
+                .ForMember(d => d.ApprovedByName, m => m.MapFrom(s => s.ApprovedByUser != null ? s.ApprovedByUser.FullName : null));
+
             // Role mappings
             CreateMap<Role, RoleDto>()
                 .ForMember(d => d.Description, m => m.MapFrom(s => string.Empty)); // Role model doesn't have Description
