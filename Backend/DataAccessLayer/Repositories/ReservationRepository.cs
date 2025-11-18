@@ -44,7 +44,7 @@ namespace DataAccessLayer.Repositories
     if (!string.IsNullOrEmpty(status))
         query = query.Where(r => r.Status == status);
     else
-        query = query.Where(r => r.Status == "Pending" || r.Status == "Confirmed");
+        query = query.Where(r => r.Status == "Pending" || r.Status == "Confirmed" || r.Status == "Cancelled");
 
     // Lọc theo ngày
     if (date.HasValue)
@@ -126,6 +126,24 @@ namespace DataAccessLayer.Repositories
                 .Select(rt => rt.TableId)
                 .ToListAsync();
         }
+        public async Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime reservationDate, string timeSlot)
+        {
+            return await _context.ReservationTables
+                .Where(rt => rt.Reservation.ReservationDate.Date == reservationDate.Date
+                          && rt.Reservation.TimeSlot == timeSlot
+                          && rt.Reservation.Status != "Cancelled")
+                .Select(rt => new BookedTableDetailDto
+                {
+                    TableId = rt.TableId,
+                    ReservationTime = rt.Reservation.ReservationTime
+                })
+                .ToListAsync();
+        }
+        public class BookedTableDetailDto
+        {
+            public int TableId { get; set; }
+            public DateTime ReservationTime { get; set; }
+        }
 
         public async Task<Reservation?> GetReservationByIdAsync(int reservationId)
         {
@@ -141,6 +159,16 @@ namespace DataAccessLayer.Repositories
                          && r.TimeSlot == slot)
                 .ToListAsync();
         }
+        public async Task<List<Reservation>> GetReservationsByCustomerAsync(int customerId)
+        {
+            return await _context.Reservations
+                .Include(r => r.Customer)
+                    .ThenInclude(c => c.User)
+                .Where(r => r.CustomerId == customerId)
+                .OrderByDescending(r => r.ReservationDate)
+                .ToListAsync();
+        }
+
 
         public async Task SaveChangesAsync()
         {

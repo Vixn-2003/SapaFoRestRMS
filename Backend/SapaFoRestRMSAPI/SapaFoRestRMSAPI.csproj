@@ -29,6 +29,7 @@
 	  <ProjectReference Include="..\DomainAccessLayer\DomainAccessLayer.csproj" />
 	</ItemGroup>
 	<ItemGroup>
+	  <Folder Include="Helpers\" />
 	  <Folder Include="keys\" />
 	</ItemGroup>
 </Project>

@@ -14,9 +14,15 @@
     <link rel="stylesheet" href="~/css/design-system.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/auth/login-modal.css" asp-append-version="true" />
 
-
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+
+    <!--  Toastr CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+    <!-- Toastr & SweetAlert2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         html, body {
@@ -29,6 +35,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            padding-top: 100px;
         }
 
         main {
@@ -280,7 +287,22 @@
     <script src="~/js/toast-notification.js" asp-append-version="true"></script>
     <script src="~/js/auth/login-modal.js" asp-append-version="true"></script>
 
+    <!--  Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
     <script>
+        //  Cấu hình toastr mặc định
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3500",
+            "showDuration": "300",
+            "hideDuration": "500",
+            "showEasing": "swing",
+            "hideEasing": "linear"
+        };
+
         // Load logo động
         document.addEventListener('DOMContentLoaded', async () => {
             try {
@@ -296,7 +318,7 @@
         });
 
         // AJAX submit form đặt bàn trong modal
-              $(document).ready(function () {
+        $(document).ready(function () {
 
             // Khi mở modal, load form mới từ server
             $('#reservationModal').on('show.bs.modal', function () {
@@ -306,10 +328,10 @@
                 });
             });
 
-            // Bỏ binding cũ trước khi bind lại
+            // Bỏ binding cũ
             $(document).off('submit', '#reservationForm');
 
-            // Bind sự kiện submit
+            // Bind lại submit
             $(document).on('submit', '#reservationForm', function (e) {
                 e.preventDefault();
                 var $form = $(this);
@@ -321,34 +343,44 @@
                     type: 'POST',
                     data: $form.serialize(),
                     headers: { 'RequestVerificationToken': token },
-                    success: function (result) {
-                        // Nếu server trả JSON
-                        if (result && result.success !== undefined) {
-                            $('#reservationModal').modal('hide');
-                            alert(result.message || 'Đặt bàn thành công!');
-                        } else {
-                            // Nếu server trả PartialView (validation lỗi)
-                            $('#reservationModal .modal-body').html(result);
-                        }
-                    },
+                            success: function (result) {
+           
+            if (result.message && !result.success) {
+                toastr.info(result.message);
+                return;
+            }
+
+           
+            if (result && result.success !== undefined) {
+                if (result.success) {
+                    toastr.success(result.message || 'Đặt bàn thành công!');
+                    $('#reservationModal').modal('hide');
+                } else {
+                    toastr.error(result.message || 'Đặt bàn thất bại!');
+                }
+            } else {
+                // Trường hợp form có lỗi validation → render lại form
+                $('#reservationModal .modal-body').html(result);
+            }
+        },
+
                     error: function (xhr) {
                         console.error(xhr.responseText);
-                        alert('Có lỗi xảy ra. Vui lòng thử lại!');
+                        toastr.error('Có lỗi xảy ra. Vui lòng thử lại!');
                     }
                 });
             });
 
         });
 
-                // Gắn event cho nút gửi OTP trong modal, kể cả khi form load bằng AJAX
+        // Gửi OTP bằng fetch
         $(document).on('click', '#sendOtpBtn', async function (e) {
             e.preventDefault();
-
-            var $form = $(this).closest('form'); // tìm form chứa nút
-            var phone = $form.find('input[name="Phone"]').val(); // lấy số điện thoại
+            var $form = $(this).closest('form');
+            var phone = $form.find('input[name="Phone"]').val();
 
             if (!phone) {
-                alert("Vui lòng nhập số điện thoại.");
+                toastr.warning("Vui lòng nhập số điện thoại.");
                 return;
             }
 
@@ -360,10 +392,13 @@
                 });
 
                 var result = await response.json();
-                alert(result.message);
+                if (result.success)
+                    toastr.success(result.message);
+                else
+                    toastr.error(result.message);
             } catch (err) {
                 console.error(err);
-                alert("Có lỗi xảy ra khi gửi OTP.");
+                toastr.error("Có lỗi xảy ra khi gửi OTP.");
             }
         });
 

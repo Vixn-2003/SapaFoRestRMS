@@ -1,4 +1,5 @@
-﻿@{
+﻿@using WebSapaForestForStaff.DTOs
+@{
     var reservation = ViewBag.Reservation as ReservationStaffViewModel;
     var areas = ViewBag.Areas as List<AreaViewModel>;
     var bookedTableIds = ViewBag.BookedTableIds as List<int> ?? new List<int>();
@@ -8,7 +9,7 @@
 
 <link rel="stylesheet" href="~/css/assign-tables.css" />
 
-<h2>🌿 Xử lý đặt bàn</h2>
+<h2>🌿 Xử lý xếp bàn</h2>
 
 @if (TempData["Error"] != null)
 {
@@ -36,6 +37,10 @@
                 : "Không có bàn nào được đặt ở lần xử lý trước đó"
                 )
     </div>
+    <a href="@Url.Action("EditReservation", "ReservationStaff", new { id = reservation.ReservationId })"
+       class="btn btn-sm btn-warning">
+        ✏️ Sửa
+    </a>
 
     <!-- Bên phải: Thống kê bàn trống & sức chứa -->
     <div style="flex:1; min-width:250px;">
@@ -52,11 +57,9 @@
                 Số bàn trống: <strong>@freeTables.Count</strong> -
                 Sức chứa còn lại: <strong>@remainingCapacity</strong> chỗ
             </div>
-
         }
     </div>
 </div>
-
 
 @if (suggestedTableIdsByArea.Any())
 {
@@ -72,7 +75,6 @@
                 if (tables.Any())
                 {
                     <span>@area.AreaName: @string.Join(", ", tables)</span>
-    
                     <br />
                 }
             }
@@ -101,24 +103,32 @@
             <div class="d-flex flex-wrap mt-2">
                 @foreach (var table in area.Tables)
                 {
-                    var isBooked = bookedTableIds.Contains(table.TableId);
+                    var bookedTable = (ViewBag.BookedTablesWithTime as List<BookedTableDetailDto>)
+                    ?.FirstOrDefault(b => b.TableId == table.TableId);
+
+                    var isBooked = bookedTable != null;
                     var isSuggested = suggestedTableIdsByArea.ContainsKey(area.AreaId)
                     && suggestedTableIdsByArea[area.AreaId].Contains(table.TableId);
 
-                    string labelClass = isBooked ? "btn btn-danger disabled"
-                    : isSuggested ? "btn btn-primary"
-                    : "btn btn-outline-success";
+                    string labelClass = isBooked ? "btn btn-danger disabled" :
+                    isSuggested ? "btn btn-primary" :
+                    "btn btn-outline-success";
 
-                    string filterType = isBooked ? "booked"
-                    : isSuggested ? "suggested"
-                    : "available";
+                    string filterType = isBooked ? "booked" :
+                    isSuggested ? "suggested" : "available";
 
                     <label class="@labelClass table-item" data-type="@filterType">
-                        <input type="checkbox" name="TableIds" value="@table.TableId"
-                               @(isBooked ? "disabled" : "") />
+                        <input type="checkbox" name="TableIds" value="@table.TableId" @(isBooked ? "disabled" : "") />
                         @table.TableName (@table.Capacity chỗ)
+                        @if (isBooked)
+                        {
+                            <div style="font-size:12px; color:#fff;">
+                                ⏰ @bookedTable.ReservationTime.ToString("HH:mm")
+                            </div>
+                        }
                     </label>
                 }
+
             </div>
         </div>
     }
@@ -145,78 +155,256 @@
     </div>
 </form>
 
+<button id="viewDepositInvoicesBtn" class="btn btn-primary mt-3">
+    📄 Xem hóa đơn đặt cọc
+</button>
+<button id="addDepositBtn" class="btn btn-success">➕ Thêm hóa đơn</button>
+<div id="depositInvoicesContainer" style="margin-top:15px;">
+    <!-- Danh sách hóa đơn sẽ hiển thị ở đây -->
+</div>
+<!-- Modal popup thêm hóa đơn -->
+<div class="modal fade" id="depositModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content p-3">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm hóa đơn đặt cọc</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="depositForm">
+                    <input type="hidden" name="ReservationId" value="@reservation.ReservationId" />
+                    <div class="mb-2">
+                        <label class="form-label">Mã hóa đơn</label>
+                        <input type="text" name="DepositCode" class="form-control" required />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Số tiền (VND)</label>
+                        <input type="number" name="Amount" class="form-control" required step="0.01" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Phương thức thanh toán</label>
+                        <input type="text" name="PaymentMethod" class="form-control" required />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Ghi chú</label>
+                        <textarea name="Notes" class="form-control"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Ảnh biên lai</label>
+                        <input type="file" name="ReceiptImage" class="form-control" />
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="saveDepositBtn" class="btn btn-success">💾 Lưu</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Thêm Bootstrap JS nếu chưa có -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    const depositCheck = document.getElementById("depositCheck");
-    const sendBtn = document.getElementById("sendDepositBtn");
+    document.addEventListener("DOMContentLoaded", function() {
+        // --- Biến toàn cục ---
+        const depositContainer = document.getElementById("depositInvoicesContainer");
+        const viewInvoicesBtn = document.getElementById("viewDepositInvoicesBtn");
+        const addDepositBtn = document.getElementById("addDepositBtn");
+        const depositModalEl = document.getElementById("depositModal");
+        const depositModal = new bootstrap.Modal(depositModalEl);
+        const form = document.getElementById("depositForm");
+        const saveBtn = document.getElementById("saveDepositBtn");
+        let invoices = []; // lưu danh sách hóa đơn hiện tại
+        let editingDepositId = null; // lưu id khi sửa
 
-    depositCheck.addEventListener("change", function () {
-        sendBtn.style.display = this.checked ? "inline-block" : "none";
-    });
+        const API_BASE = "https://localhost:7096/api/ReservationDeposit";
 
-    sendBtn.addEventListener("click", async () => {
-        const depositAmount = document.getElementById("depositAmount").value;
-        if (!depositAmount || depositAmount <= 0) {
-            alert("Vui lòng nhập số tiền đặt cọc hợp lệ!");
-            return;
-        }
+        // --- Hiển thị nút gửi yêu cầu đặt cọc ---
+        const depositCheck = document.getElementById("depositCheck");
+        const sendBtn = document.getElementById("sendDepositBtn");
 
-        const reservationId = "@reservation.ReservationId";
-        const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
-
-        const response = await fetch(`/ReservationStaff/SendDepositRequest`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "RequestVerificationToken": token
-            },
-            body: JSON.stringify({
-                reservationId: reservationId,
-                depositAmount: depositAmount
-            })
+        depositCheck.addEventListener("change", function () {
+            sendBtn.style.display = this.checked ? "inline-block" : "none";
         });
 
-        const result = await response.json();
-        alert(result.message);
-    });
+        sendBtn.addEventListener("click", async () => {
+            const depositAmount = document.getElementById("depositAmount").value;
+            if (!depositAmount || depositAmount <= 0) {
+                alert("Vui lòng nhập số tiền đặt cọc hợp lệ!");
+                return;
+            }
 
-        // --- Lọc theo khu vực khi click vào thống kê ---
-    document.querySelectorAll(".area-summary").forEach(summary => {
-        summary.addEventListener("click", () => {
-            const areaId = summary.getAttribute("data-area-id");
-            document.querySelectorAll(".area-block").forEach(block => {
-                if (block.getAttribute("data-area-id") === areaId) {
-                    block.style.display = "block";
-                } else {
-                    block.style.display = "none";
+            const reservationId = "@reservation.ReservationId";
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            try {
+                const response = await fetch(`/ReservationStaff/SendDepositRequest`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": token
+                    },
+                    body: JSON.stringify({ reservationId, depositAmount })
+                });
+                const result = await response.json();
+                alert(result.message);
+            } catch (err) {
+                console.error(err);
+                alert("Có lỗi khi gửi yêu cầu đặt cọc.");
+            }
+        });
+
+        // --- Lọc khu vực khi click vào thống kê ---
+        document.querySelectorAll(".area-summary").forEach(summary => {
+            summary.addEventListener("click", () => {
+                const areaId = summary.getAttribute("data-area-id");
+                document.querySelectorAll(".area-block").forEach(block => {
+                    block.style.display = (block.getAttribute("data-area-id") === areaId) ? "block" : "none";
+                });
+            });
+        });
+
+        // --- Lọc bàn ---
+        const filterSelect = document.getElementById("filterSelect");
+        filterSelect.addEventListener("change", () => {
+            const value = filterSelect.value;
+            document.querySelectorAll(".table-item").forEach(item => {
+                const type = item.getAttribute("data-type");
+                if (value === "all") {
+                    item.style.display = "inline-block";
+                    document.querySelectorAll(".area-block").forEach(block => block.style.display = "block");
+                } else if (value === "available") {
+                    item.style.display = (type === "available" || type === "suggested") ? "inline-block" : "none";
+                } else if (value === "booked") {
+                    item.style.display = (type === "booked") ? "inline-block" : "none";
+                } else if (value === "suggested") {
+                    item.style.display = (type === "suggested") ? "inline-block" : "none";
                 }
             });
         });
-    });
-    // --- Lọc bàn ---
-    const filterSelect = document.getElementById("filterSelect");
-    filterSelect.addEventListener("change", () => {
-        const value = filterSelect.value;
-        document.querySelectorAll(".table-item").forEach(item => {
-            const type = item.getAttribute("data-type");
 
-            // ✅ Logic lọc mới
-            if (value === "all") {
-                item.style.display = "inline-block";
-                // Hiện toàn bộ khu vực
-            document.querySelectorAll(".area-block").forEach(block => block.style.display = "block");
+        // --- Xem danh sách hóa đơn đặt cọc ---
+        async function loadInvoices() {
+            depositContainer.innerHTML = "<p>Đang tải danh sách hóa đơn...</p>";
+            try {
+                const reservationId = "@reservation.ReservationId";
+                const response = await fetch(`${API_BASE}/by-reservation/${reservationId}`);
+                if (!response.ok) throw new Error("Không thể tải dữ liệu hóa đơn");
+                invoices = await response.json();
+
+                if (!invoices || invoices.length === 0) {
+                    depositContainer.innerHTML = "<p>Chưa có hóa đơn đặt cọc nào.</p>";
+                    return;
+                }
+
+                let html = `<table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Mã hóa đơn</th>
+                                        <th>Số tiền (VND)</th>
+                                        <th>Ngày tạo</th>
+                                        <th>Phương thức thanh toán</th>
+                                        <th>Ghi chú</th>
+                                        <th>Ảnh biên lai</th>
+                                        <th>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+
+                invoices.forEach(inv => {
+                    const amount = inv.amount ? Number(inv.amount).toLocaleString('vi-VN') : "0";
+                    const depositDate = inv.depositDate ? new Date(inv.depositDate).toLocaleString('vi-VN') : "-";
+
+                    html += `<tr>
+                                <td>${inv.depositCode ?? ""}</td>
+                                <td>${amount}</td>
+                                <td>${depositDate}</td>
+                                <td>${inv.paymentMethod ?? ""}</td>
+                                <td>${inv.notes ?? ""}</td>
+                                <td>${inv.receiptImageUrl ? `<a href="${inv.receiptImageUrl}" target="_blank">Xem ảnh</a>` : ""}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning update-deposit-btn" data-id="${inv.depositId}">✏️ Sửa</button>
+                                    <button class="btn btn-sm btn-danger delete-deposit-btn" data-id="${inv.depositId}">🗑️ Xóa</button>
+                                </td>
+                             </tr>`;
+                });
+
+                html += "</tbody></table>";
+                depositContainer.innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                depositContainer.innerHTML = "<p>Không thể tải danh sách hóa đơn. Vui lòng thử lại.</p>";
             }
-            else if (value === "available") {
-                // Bàn trống = bàn available + suggested
-                item.style.display = (type === "available" || type === "suggested")
-                    ? "inline-block" : "none";
+        }
+
+        viewInvoicesBtn.addEventListener("click", loadInvoices);
+
+        // --- Mở modal thêm hóa đơn ---
+        addDepositBtn.addEventListener("click", () => {
+            editingDepositId = null;
+            form.reset();
+            depositModal.show();
+        });
+
+        // --- Lưu hoặc cập nhật hóa đơn ---
+        saveBtn.addEventListener("click", async () => {
+            const formData = new FormData(form);
+
+            try {
+                let url = `${API_BASE}/add`;
+                let method = "POST";
+
+                if (editingDepositId) {
+                    url = `${API_BASE}/update/${editingDepositId}`;
+                    method = "PUT";
+                }
+
+                const response = await fetch(url, { method, body: formData });
+                if (!response.ok) throw new Error("Có lỗi khi lưu hóa đơn");
+                const result = await response.json();
+                alert(result.message ?? "Thao tác thành công!");
+                depositModal.hide();
+                loadInvoices();
+            } catch (err) {
+                console.error(err);
+                alert("Có lỗi xảy ra. Vui lòng thử lại.");
             }
-            else if (value === "booked") {
-                item.style.display = (type === "booked") ? "inline-block" : "none";
+        });
+
+        // --- Event delegation cho xóa/sửa ---
+        depositContainer.addEventListener("click", (e) => {
+            const btn = e.target;
+
+            if (btn.classList.contains("delete-deposit-btn")) {
+                if (!confirm("Bạn có chắc muốn xóa hóa đơn này không?")) return;
+
+                const depositId = btn.getAttribute("data-id");
+                fetch(`${API_BASE}/${depositId}`, { method: "DELETE" })
+                    .then(res => {
+                        if (!res.ok) throw new Error("Xóa thất bại");
+                        alert("Xóa hóa đơn thành công!");
+                        loadInvoices();
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("Có lỗi xảy ra khi xóa hóa đơn.");
+                    });
             }
-            else if (value === "suggested") {
-                item.style.display = (type === "suggested") ? "inline-block" : "none";
+
+            if (btn.classList.contains("update-deposit-btn")) {
+                const depositId = btn.getAttribute("data-id");
+                const deposit = invoices.find(d => d.depositId == depositId);
+                if (!deposit) return;
+
+                editingDepositId = depositId;
+                form.querySelector("input[name='DepositCode']").value = deposit.depositCode ?? "";
+                form.querySelector("input[name='Amount']").value = deposit.amount ?? 0;
+                form.querySelector("input[name='PaymentMethod']").value = deposit.paymentMethod ?? "";
+                form.querySelector("textarea[name='Notes']").value = deposit.notes ?? "";
+                depositModal.show();
             }
         });
     });
 </script>
-

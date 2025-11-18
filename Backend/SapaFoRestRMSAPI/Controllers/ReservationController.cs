@@ -129,6 +129,44 @@ namespace SapaFoRestRMSAPI.Controllers
                 timeSlot = reservation.TimeSlot
             });
         }
+        // GET api/CustomerReservation/{customerId}
+        [HttpGet("{customerId}")]
+        public async Task<IActionResult> GetReservationsByCustomer(int customerId)
+        {
+            var result = await _reservationService.GetReservationsByCustomerAsync(customerId);
+            return Ok(result);
+        }
+
+        [HttpPut("Update/{id}")]
+        public async Task<IActionResult> UpdateReservation(int id, [FromBody] ReservationUpdateDto dto)
+        {
+            try
+            {
+                var result = await _reservationService.UpdateReservationAsync(id, dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+
+        // DELETE api/CustomerReservation/Cancel/{id}
+        [HttpDelete("Cancel/{id}")]
+        public async Task<IActionResult> CancelReservation(int id)
+        {
+            try
+            {
+                var result = await _reservationService.CancelReservationByCustomerAsync(id);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
     }
 
     public class OtpInfo
