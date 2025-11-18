@@ -15,7 +15,6 @@ namespace DataAccessLayer.Migrations
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
-#pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.16")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
@@ -2672,45 +2671,46 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Navigation("Ingredients");
 
-            modelBuilder.Entity("DomainAccessLayer.Models.Transaction", b =>
-                {
-                    b.Navigation("ChildTransactions");
+                    modelBuilder.Entity("DomainAccessLayer.Models.Transaction", b =>
+                        {
+                            b.Navigation("ChildTransactions");
+
+                        });
+
+                    modelBuilder.Entity("DomainAccessLayer.Models.User", b =>
+                        {
+                            b.Navigation("Announcements");
+
+                            b.Navigation("BrandBanners");
+
+                            b.Navigation("Customers");
+
+                            b.Navigation("Events");
+
+                            b.Navigation("MarketingCampaigns");
+
+                            b.Navigation("Regulations");
+
+                            b.Navigation("RestaurantIntros");
+
+                            b.Navigation("Staff");
+
+                            b.Navigation("SystemLogos");
+                        });
+
+                    modelBuilder.Entity("DomainAccessLayer.Models.Voucher", b =>
+                        {
+                            b.Navigation("MarketingCampaigns");
+
+                            b.Navigation("Payments");
+                        });
+
+                    modelBuilder.Entity("DomainAccessLayer.Models.Warehouse", b =>
+                        {
+                            b.Navigation("InventoryBatches");
+                        });
 
                 });
-
-            modelBuilder.Entity("DomainAccessLayer.Models.User", b =>
-                {
-                    b.Navigation("Announcements");
-
-                    b.Navigation("BrandBanners");
-
-                    b.Navigation("Customers");
-
-                    b.Navigation("Events");
-
-                    b.Navigation("MarketingCampaigns");
-
-                    b.Navigation("Regulations");
-
-                    b.Navigation("RestaurantIntros");
-
-                    b.Navigation("Staff");
-
-                    b.Navigation("SystemLogos");
-                });
-
-            modelBuilder.Entity("DomainAccessLayer.Models.Voucher", b =>
-                {
-                    b.Navigation("MarketingCampaigns");
-
-                    b.Navigation("Payments");
-                });
-
-            modelBuilder.Entity("DomainAccessLayer.Models.Warehouse", b =>
-                {
-                    b.Navigation("InventoryBatches");
-                });
-#pragma warning restore 612, 618
         }
     }
 }
