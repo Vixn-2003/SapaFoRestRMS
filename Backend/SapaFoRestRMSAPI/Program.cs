@@ -29,7 +29,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
         policy.WithOrigins(
             "http://localhost:5158",  // frontend chạy http
-            "https://localhost:5158"  // phòng khi chạy https
+            "https://localhost:5158", // phòng khi chạy https
+             "http://localhost:5054",  // module Staff
+            "https://localhost:5054"  // phòng khi chạy https
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
@@ -159,7 +161,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
-
+builder.Services.AddScoped<IReservationDepositRepository, ReservationDepositRepository>();
+builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // Unit of Work and User Repository mapping

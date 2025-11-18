@@ -27,6 +27,10 @@ public partial class Reservation
     public decimal? DepositAmount { get; set; }
 
     public bool DepositPaid { get; set; } = false;
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? TotalDepositPaid { get; set; } = 0;
+
     public string? Status { get; set; }
 
     public string? Notes { get; set; }
@@ -36,4 +40,6 @@ public partial class Reservation
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
     public virtual ICollection<ReservationTable> ReservationTables { get; set; } = new List<ReservationTable>();
+    public virtual ICollection<ReservationDeposit> ReservationDeposits { get; set; } = new List<ReservationDeposit>();
+
 }

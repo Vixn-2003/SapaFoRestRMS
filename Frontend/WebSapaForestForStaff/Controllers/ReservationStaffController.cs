@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using System.Text;
 using WebSapaForestForStaff.Models;
-
+using WebSapaForestForStaff.DTOs;
 namespace WebSapaForestForStaff.Controllers
 {
     public class ReservationStaffController : Controller
@@ -116,6 +116,15 @@ namespace WebSapaForestForStaff.Controllers
                     suggestedTableIdsByArea[area.AreaId] = singleIds.Union(comboIds).ToList();
                 }
             }
+            var bookedInforResponse = await _client.GetAsync(
+    $"ReservationStaff/tables/booked-with-time?reservationDate={reservation.ReservationDate:yyyy-MM-dd}&timeSlot={reservation.TimeSlot}");
+
+            var bookedInforJson = await bookedInforResponse.Content.ReadAsStringAsync();
+            var bookedInforData = JsonConvert.DeserializeObject<BookedTableResultWithTime>(bookedInforJson);
+
+            // ✅ Danh sách bàn & thời gian
+            var bookedTablesWithTime = bookedInforData?.BookedTables ?? new List<BookedTableDetailDto>();
+            ViewBag.BookedTablesWithTime = bookedTablesWithTime;
 
             ViewBag.BookedTableIds = bookedTableIds;
             ViewBag.Reservation = reservation;
@@ -209,7 +218,7 @@ namespace WebSapaForestForStaff.Controllers
         [HttpGet]
         public IActionResult CreateReservation()
         {
-            return View(new ReservationViewModel());
+            return View();
         }
 
         [HttpPost]
@@ -219,6 +228,7 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            // Gửi đúng API "ReservationStaff/add"
             var dto = new
             {
                 CustomerName = model.CustomerName,
@@ -232,19 +242,98 @@ namespace WebSapaForestForStaff.Controllers
             var jsonContent = JsonConvert.SerializeObject(dto);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            var response = await _client.PostAsync("Reservation", content);
+            var response = await _client.PostAsync("ReservationStaff/add", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
             {
-                TempData["Success"] = "Đặt bàn thành công!";
-                return RedirectToAction("Index"); // trở về danh sách reservations
+                TempData["Success"] = "✅ Tạo đơn đặt bàn thành công!";
+                return RedirectToAction("Index");
             }
             else
             {
-                ModelState.AddModelError("", "Không thể đặt bàn. Vui lòng thử lại.");
+                // Lấy message lỗi từ API (ví dụ "Khách hàng đã có đơn trong khung giờ này")
+                try
+                {
+                    dynamic errorData = JsonConvert.DeserializeObject(responseBody);
+                    string message = errorData?.message ?? "Không thể tạo đơn đặt bàn. Vui lòng thử lại.";
+                    ModelState.AddModelError("", message);
+                }
+                catch
+                {
+                    ModelState.AddModelError("", "Không thể tạo đơn đặt bàn. Vui lòng thử lại.");
+                }
+
                 return View(model);
             }
         }
+        [HttpGet]
+        public async Task<IActionResult> EditReservation(int id)
+        {
+            var response = await _client.GetAsync($"ReservationStaff/reservations/{id}");
+            if (!response.IsSuccessStatusCode)
+                return NotFound();
+
+            var json = await response.Content.ReadAsStringAsync();
+            var reservation = JsonConvert.DeserializeObject<ReservationStaffViewModel>(json);
+            if (reservation == null)
+                return NotFound();
+
+            // Chuyển dữ liệu sang DTO cho form
+            var model = new ReservationUpdateViewModel
+            {
+                ReservationId = reservation.ReservationId,
+                ReservationDate = reservation.ReservationDate,
+                ReservationTime = reservation.ReservationTime,
+                NumberOfGuests = reservation.NumberOfGuests,
+                Notes = reservation.Notes
+            };
+
+            return View("EditReservation", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateReservationPost(ReservationUpdateViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View("EditReservation", model);
+
+            var dto = new
+            {
+                model.ReservationDate,
+                model.ReservationTime,
+                model.NumberOfGuests,
+                model.Notes
+            };
+
+            var content = new StringContent(JsonConvert.SerializeObject(dto), Encoding.UTF8, "application/json");
+            var response = await _client.PutAsync($"ReservationStaff/update/{model.ReservationId}", content);
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                TempData["Success"] = "✅ Cập nhật đơn đặt bàn thành công!";
+                return RedirectToAction("AssignTables", new { id = model.ReservationId });
+
+            }
+            else
+            {
+                try
+                {
+                    dynamic error = JsonConvert.DeserializeObject(responseBody);
+                    TempData["Error"] = $"❌ Cập nhật thất bại: {error?.message ?? "Lỗi không xác định"}";
+                }
+                catch
+                {
+                    TempData["Error"] = "❌ Cập nhật thất bại. Vui lòng thử lại.";
+                }
+
+                return View("EditReservation", model);
+            }
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SendDepositRequest([FromBody] DepositRequestDto dto)
@@ -342,6 +431,8 @@ namespace WebSapaForestForStaff.Controllers
             public int ReservationId { get; set; }
             public decimal DepositAmount { get; set; }
         }
+       
+
 
 
     }

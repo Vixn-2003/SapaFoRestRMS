@@ -1,188 +1,318 @@
-﻿<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Giới thiệu Nhà hàng</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            scroll-behavior: smooth;
-        }
+﻿@{
+    ViewData["Title"] = "Danh sách đặt bàn của khách hàng";
+}
 
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            background-color: #f8f9fa;
-            overflow-x: hidden;
-        }
+<div class="container mt-4">
+    <h3 class="mb-3">Danh sách đặt bàn của bạn</h3>
 
-        /* Mỗi intro là 1 section chiếm toàn màn hình */
-        .intro-section {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 60px;
-            transition: background-color 0.4s ease;
-        }
+    <!-- 🔍 Bộ lọc -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <input type="text" id="searchName" class="form-control" placeholder="Tên khách hàng">
+        </div>
+        <div class="col-md-3">
+            <input type="date" id="searchDate" class="form-control">
+        </div>
+        <div class="col-md-3">
+            <select id="searchStatus" class="form-select">
+                <option value="">-- Tất cả trạng thái --</option>
+                <option value="Pending">Pending</option>
+                <option value="Confirmed">Confirmed</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100" id="btnSearch">Tìm kiếm</button>
+        </div>
+    </div>
 
-            /* Xen kẽ màu nền */
-            .intro-section:nth-child(odd) {
-                background-color: #fff;
-            }
+    <!-- 📋 Danh sách -->
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Mã</th>
+                <th>Tên KH</th>
+                <th>Ngày</th>
+                <th>Giờ</th>
+                <th>Số khách</th>
+                <th>Ca</th>
+                <th>Trạng thái</th>
+                <th>Ghi chú</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody id="reservationTableBody"></tbody>
+    </table>
 
-            .intro-section:nth-child(even) {
-                background-color: #f3f3f3;
-            }
+    <!-- 📄 Phân trang -->
+    <nav>
+        <ul class="pagination justify-content-center" id="pagination"></ul>
+    </nav>
+</div>
 
-        /* Bố cục bên trong */
-        .intro-container {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            gap: 40px;
-            max-width: 1200px;
-        }
+<!-- ✏️ Modal cập nhật -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cập nhật đặt bàn</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editId">
 
-        .intro-image img, .intro-video iframe {
-            width: 500px;
-            height: 350px;
-            object-fit: cover;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        }
-
-        .intro-content {
-            max-width: 550px;
-        }
-
-        .intro-title {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: #198754;
-        }
-
-        .intro-description {
-            font-size: 1.1rem;
-            color: #555;
-            margin-top: 15px;
-            line-height: 1.8;
-        }
-
-        footer {
-            background-color: #222;
-            color: #ccc;
-            text-align: center;
-            padding: 25px 0;
-        }
-
-        @@media (max-width: 992px) {
-            .intro-section
-
-        {
-            flex-direction: column;
-            padding: 30px;
-        }
-
-        .intro-container {
-            flex-direction: column;
-        }
-
-        .intro-image img, .intro-video iframe {
-            width: 100%;
-            height: 300px;
-        }
-
-        .intro-content {
-            text-align: center;
-        }
-
-        }
-
-        /* Hiệu ứng fade khi cuộn */
-        .fade-in {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.8s ease-out;
-        }
-
-            .fade-in.active {
-                opacity: 1;
-                transform: translateY(0);
-            }
-    </style>
-</head>
-<body>
-
-    <div id="intro-wrapper"></div>
-
-    <footer>
-        <p>&copy; 2025 Sapa Forest Restaurant | Thiết kế bởi Lương</p>
-    </footer>
-
-    <script>
-        async function loadRestaurantIntro() {
-          try {
-            const response = await fetch("https://localhost:7096/api/RestaurantIntro/active");
-            if (!response.ok) throw new Error("Lỗi khi gọi API");
-
-            const intros = await response.json();
-            const wrapper = document.getElementById("intro-wrapper");
-            wrapper.innerHTML = "";
-
-            intros.forEach((intro, index) => {
-              // Xử lý link YouTube
-              let embedUrl = "";
-              if (intro.videoUrl?.includes("youtube.com/watch?v=")) {
-                const videoId = new URL(intro.videoUrl).searchParams.get("v");
-                embedUrl = `https://www.youtube.com/embed/${videoId}`;
-              } else if (intro.videoUrl?.includes("youtu.be/")) {
-                const videoId = intro.videoUrl.split("youtu.be/")[1];
-                embedUrl = `https://www.youtube.com/embed/${videoId}`;
-              }
-
-              const section = document.createElement("section");
-              section.className = "intro-section fade-in";
-
-              // Xen kẽ trái - phải
-              const isEven = index % 2 === 0;
-              section.innerHTML = `
-                <div class="intro-container ${isEven ? '' : 'flex-row-reverse'}">
-                  <div class="intro-image">
-                    ${intro.imageUrl ? `<img src="${intro.imageUrl}" alt="${intro.title}">` : ""}
-                    ${embedUrl ? `<div class="intro-video mt-3"><iframe src="${embedUrl}" allowfullscreen></iframe></div>` : ""}
-                  </div>
-                  <div class="intro-content">
-                    <h2 class="intro-title">${intro.title}</h2>
-                    <p class="intro-description">${intro.description || "Không có mô tả."}</p>
-                  </div>
+                <div class="mb-3">
+                    <label>Ngày đặt</label>
+                    <input type="date" id="editDate" class="form-control">
                 </div>
-              `;
-              wrapper.appendChild(section);
+
+                <div class="mb-3">
+                    <label>Giờ đặt (8:00 - 22:00)</label>
+                    <select id="editTime" class="form-select"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label>Số khách</label>
+                    <input type="number" id="editGuests" class="form-control" min="1">
+                </div>
+
+                <div class="mb-3">
+                    <label>Ghi chú</label>
+                    <textarea id="editNotes" class="form-control"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button class="btn btn-primary" id="btnSaveEdit">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBase = "https://localhost:7096/api/Reservation";
+        const customerId = 6; // 👉 Thay bằng session thực tế
+        let allData = [];
+        let currentPage = 1;
+        const pageSize = 5;
+
+        // ⚙️ Toastr config
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "3000"
+        };
+
+        // 🕒 Định dạng HH:mm
+        function formatTime(dateString) {
+            const d = new Date(dateString);
+            const hours = d.getHours().toString().padStart(2, '0');
+            const minutes = d.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        // 🕑 Tạo danh sách giờ 8:00 - 22:00 cách nhau 30 phút
+        function populateTimeOptions() {
+            const select = document.getElementById("editTime");
+            select.innerHTML = "";
+
+            let start = 8 * 60; // 8:00
+            let end = 22 * 60; // 22:00
+
+            for (let t = start; t <= end; t += 30) {
+                const h = Math.floor(t / 60).toString().padStart(2, '0');
+                const m = (t % 60).toString().padStart(2, '0');
+                const val = `${h}:${m}`;
+                const opt = document.createElement("option");
+                opt.value = val;
+                opt.textContent = val;
+                select.appendChild(opt);
+            }
+        }
+
+        // 📦 Load danh sách đặt bàn
+        async function loadReservations() {
+            try {
+                const response = await fetch(`${apiBase}/${customerId}`);
+                allData = await response.json();
+                renderTable();
+            } catch {
+                toastr.error("Không thể tải danh sách đặt bàn.");
+            }
+        }
+
+        // 🧾 Render bảng
+        function renderTable() {
+            const tbody = $('#reservationTableBody');
+            tbody.empty();
+
+            const name = $('#searchName').val().toLowerCase();
+            const date = $('#searchDate').val();
+            const status = $('#searchStatus').val();
+
+            let filtered = allData.filter(r =>
+                (!name || r.customerNameReservation.toLowerCase().includes(name)) &&
+                (!date || r.reservationDate.startsWith(date)) &&
+                (!status || r.status === status)
+            );
+
+            const totalPages = Math.ceil(filtered.length / pageSize);
+            if (currentPage > totalPages) currentPage = 1;
+
+            const start = (currentPage - 1) * pageSize;
+            const pageData = filtered.slice(start, start + pageSize);
+
+            if (pageData.length === 0) {
+                tbody.append(`<tr><td colspan="9" class="text-center">Không có dữ liệu</td></tr>`);
+                $('#pagination').empty();
+                return;
+            }
+
+            pageData.forEach(r => {
+                tbody.append(`
+                    <tr>
+                        <td>${r.reservationId}</td>
+                        <td>${r.customerNameReservation}</td>
+                        <td>${new Date(r.reservationDate).toLocaleDateString()}</td>
+                        <td>${formatTime(r.reservationTime)}</td>
+                        <td>${r.numberOfGuests}</td>
+                        <td>${r.timeSlot}</td>
+                        <td><span class="badge bg-${getStatusColor(r.status)}">${r.status}</span></td>
+                        <td>${r.notes || ''}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning me-2" onclick="openEdit(${r.reservationId})"
+                                ${r.status === 'Cancelled' ? 'disabled' : ''}>Sửa</button>
+                            <button class="btn btn-sm btn-danger" onclick="cancelReservation(${r.reservationId})"
+                                ${r.status === 'Cancelled' ? 'disabled' : ''}>Hủy</button>
+                        </td>
+                    </tr>
+                `);
             });
 
-            // Hiệu ứng fade-in khi cuộn
-            const fadeEls = document.querySelectorAll(".fade-in");
-            function checkFadeIn() {
-              fadeEls.forEach(el => {
-                const rect = el.getBoundingClientRect();
-                if (rect.top < window.innerHeight - 100) el.classList.add("active");
-              });
-            }
-            window.addEventListener("scroll", checkFadeIn);
-            checkFadeIn();
-
-          } catch (error) {
-            console.error("❌ Lỗi:", error);
-            document.getElementById("intro-wrapper").innerHTML =
-              `<p class="text-danger text-center mt-5">Không thể tải dữ liệu giới thiệu.</p>`;
-          }
+            renderPagination(totalPages);
         }
 
-        window.onload = loadRestaurantIntro;
+        // 📄 Phân trang
+        function renderPagination(totalPages) {
+            const pagination = $('#pagination');
+            pagination.empty();
+            for (let i = 1; i <= totalPages; i++) {
+                pagination.append(`
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>
+                    </li>
+                `);
+            }
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderTable();
+        }
+
+        // 🎨 Màu trạng thái
+        function getStatusColor(status) {
+            switch (status) {
+                case "Pending": return "secondary";
+                case "Confirmed": return "success";
+                case "Cancelled": return "danger";
+                default: return "dark";
+            }
+        }
+
+        // ✏️ Mở modal edit
+        function openEdit(id) {
+            const item = allData.find(x => x.reservationId === id);
+            if (!item) return;
+
+            $('#editId').val(item.reservationId);
+            $('#editDate').val(item.reservationDate.split('T')[0]);
+            $('#editTime').val(formatTime(item.reservationTime));
+            $('#editGuests').val(item.numberOfGuests);
+            $('#editNotes').val(item.notes);
+
+            const editable = item.status !== "Cancelled";
+            $('#editDate, #editTime, #editGuests, #editNotes, #btnSaveEdit').prop('disabled', !editable);
+
+            $('#editModal').modal('show');
+        }
+
+        // 💾 Lưu thay đổi
+        $('#btnSaveEdit').click(async function () {
+            const id = $('#editId').val();
+            const date = $('#editDate').val();
+            const time = $('#editTime').val();
+            const guests = parseInt($('#editGuests').val());
+
+            if (!date || !time || !guests || guests <= 0) {
+                toastr.warning("⚠️ Vui lòng nhập đầy đủ và hợp lệ thông tin.");
+                return;
+            }
+
+            const dto = {
+                reservationDate: `${date}T${time}`,
+                reservationTime: `${date}T${time}`,
+                numberOfGuests: guests,
+                notes: $('#editNotes').val()
+            };
+
+            try {
+                const response = await fetch(`${apiBase}/Update/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dto)
+                });
+
+                if (response.ok) {
+                    toastr.success("✅ Cập nhật thành công!");
+                    $('#editModal').modal('hide');
+                    loadReservations();
+                } else {
+                    const err = await response.json();
+                    toastr.error('❌ ' + (err.message || 'Cập nhật thất bại!'));
+                }
+            } catch {
+                toastr.error("❌ Lỗi kết nối server!");
+            }
+        });
+
+        // ❌ Hủy đặt bàn
+        async function cancelReservation(id) {
+            const confirmResult = await Swal.fire({
+                title: "Bạn có chắc chắn muốn hủy?",
+                text: "Sau khi hủy, bạn sẽ không thể khôi phục lại đơn này.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Có, hủy ngay",
+                cancelButtonText: "Không",
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#6c757d"
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            try {
+                const response = await fetch(`${apiBase}/Cancel/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    toastr.success("✅ Đã hủy đặt bàn.");
+                    loadReservations();
+                } else {
+                    const err = await response.json();
+                    toastr.error('❌ ' + (err.message || 'Hủy thất bại!'));
+                }
+            } catch {
+                toastr.error("❌ Không thể kết nối server!");
+            }
+        }
+
+        // 🚀 Khởi động
+        $('#btnSearch').click(() => { currentPage = 1; renderTable(); });
+        $(document).ready(() => {
+            populateTimeOptions();
+            loadReservations();
+        });
     </script>
-</body>
-</html>
+}

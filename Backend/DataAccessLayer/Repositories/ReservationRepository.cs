@@ -126,6 +126,24 @@ namespace DataAccessLayer.Repositories
                 .Select(rt => rt.TableId)
                 .ToListAsync();
         }
+        public async Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime reservationDate, string timeSlot)
+        {
+            return await _context.ReservationTables
+                .Where(rt => rt.Reservation.ReservationDate.Date == reservationDate.Date
+                          && rt.Reservation.TimeSlot == timeSlot
+                          && rt.Reservation.Status != "Cancelled")
+                .Select(rt => new BookedTableDetailDto
+                {
+                    TableId = rt.TableId,
+                    ReservationTime = rt.Reservation.ReservationTime
+                })
+                .ToListAsync();
+        }
+        public class BookedTableDetailDto
+        {
+            public int TableId { get; set; }
+            public DateTime ReservationTime { get; set; }
+        }
 
         public async Task<Reservation?> GetReservationByIdAsync(int reservationId)
         {

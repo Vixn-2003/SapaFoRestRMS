@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static DataAccessLayer.Repositories.ReservationRepository;
 
 namespace BusinessAccessLayer.Services.Interfaces
 {
@@ -23,6 +24,7 @@ namespace BusinessAccessLayer.Services.Interfaces
 
         Task<object> GetAllTablesGroupedByAreaAsync();
         Task<List<int>> GetBookedTableIdsAsync(DateTime date, string slot);
+        Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime date, string slot);
         Task<object> SuggestTablesByAreasAsync(DateTime date, string slot, int guests, int? currentReservationId = null);
         Task<object> AssignTablesAsync(AssignTableDto dto);
         Task<object> ResetTablesAsync(int reservationId);

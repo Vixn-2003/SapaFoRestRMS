@@ -4,6 +4,7 @@ using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using System;
 using System.Threading.Tasks;
+using static DataAccessLayer.Repositories.ReservationRepository;
 
 namespace BusinessAccessLayer.Services
 {
@@ -108,7 +109,8 @@ namespace BusinessAccessLayer.Services
                     r.TimeSlot,
                     r.NumberOfGuests,
                     r.Status,
-                    r.DepositAmount,  
+                    r.DepositAmount,
+                    r.TotalDepositPaid,
                     r.DepositPaid,
                     TableIds = r.ReservationTables.Select(rt => rt.TableId).ToList()
                 }).ToList()
@@ -141,6 +143,10 @@ namespace BusinessAccessLayer.Services
         public async Task<List<int>> GetBookedTableIdsAsync(DateTime date, string slot)
         {
             return await _reservationRepository.GetBookedTableIdsAsync(date, slot);
+        }
+        public async Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime date, string slot)
+        {
+            return await _reservationRepository.GetBookedTableDetailsAsync(date, slot);
         }
 
         public async Task<object> SuggestTablesByAreasAsync(DateTime date, string slot, int guests, int? currentReservationId = null)

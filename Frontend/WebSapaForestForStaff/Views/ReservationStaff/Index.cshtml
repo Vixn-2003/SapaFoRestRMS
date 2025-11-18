@@ -78,9 +78,11 @@
                 <th>Tên khách hàng</th>
                 <th>SĐT</th>
                 <th>Ngày đặt</th>
+                <th>Giờ đến </th>
                 <th>Ca</th>
                 <th>Số người</th>
-                 <th>Đặt cọc (VND)</th>
+                 <th>Cần Đặt cọc (VND)</th>
+                 <th>Đã Đặt cọc (VND)</th>
                 <th>Trạng thái</th>
                 <th class="text-center">Thao tác</th>
             </tr>
@@ -95,12 +97,23 @@
                         <td>@r.CustomerName</td>
                         <td>@r.CustomerPhone</td>
                         <td class="text-center">@r.ReservationDate.ToString("dd/MM/yyyy")</td>
+                        <td class="text-center">@r.ReservationTime.ToString("HH:mm")</td>
                         <td class="text-center">@r.TimeSlot</td>
                         <td class="text-center">@r.NumberOfGuests</td>
                          <td>
                     @if (r.DepositAmount.HasValue && r.DepositAmount.Value > 0)
                     {
                         @String.Format("{0:N0}", r.DepositAmount) 
+                    }
+                    else
+                    {
+                        <span class="text-muted">Chưa cọc/Không cần cọc </span>
+                    }
+                </td>
+                  <td>
+                    @if (r.TotalDepositPaid.HasValue && r.TotalDepositPaid.Value > 0)
+                    {
+                        @String.Format("{0:N0}", r.TotalDepositPaid) 
                     }
                     else
                     {
