@@ -8,5 +8,7 @@ namespace WebSapaForestForStaff.DTOs.Auth
         public int RoleId { get; set; }
         public string RoleName { get; set; } = null!;
         public string Token { get; set; } = null!;
+        public string? RefreshToken { get; set; }
+        public List<string>? Positions { get; set; } // List of position names for Staff role
     }
 }

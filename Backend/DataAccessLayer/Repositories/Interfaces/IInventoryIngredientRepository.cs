@@ -7,9 +7,18 @@ using System.Threading.Tasks;
 
 namespace DataAccessLayer.Repositories.Interfaces
 {
-    public interface IInventoryIngredientRepository : IRepository<InventoryBatch>
+    public interface IInventoryIngredientRepository : IRepository<Ingredient>
     {
+        Task<(decimal totalImport, decimal totalExport, decimal totalFirst)> GetTotalImportExportBatches(int ingredientId, DateTime? startDate, DateTime? endDate);
 
+        Task<IEnumerable<InventoryBatch>> getBatchById(int id);
 
+        Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse);
+        Task<int> AddNewIngredient(Ingredient ingredient);
+
+        Task<IEnumerable<Ingredient>> GetAllIngredientSearch(string search);
+        Task<int> AddNewBatch(InventoryBatch inventoryBatch);
+        Task<Ingredient> GetIngredientById(int id);
+        Task<(bool success, string message)> UpdateInforIngredient(int idIngredient, string nameIngredient, int unit);
     }
 }

@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using DomainAccessLayer.Enums;
 using BusinessLogicLayer.Services.Interfaces;
 using BusinessLogicLayer.Services;
+using Microsoft.AspNetCore.Http.Features;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -130,6 +131,17 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Add Repositories
 builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IPositionRepository, PositionRepository>();
+builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
+// Role Management
+builder.Services.AddScoped<IRoleService, RoleService>();
+
+// Position Management
+builder.Services.AddScoped<IPositionService, PositionService>();
+
+// Các dịch vụ khác
+builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 // Add Services
 builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
@@ -148,8 +160,22 @@ builder.Services.AddScoped<IEventService, EventService>();
 
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+
 builder.Services.AddScoped<IRestaurantIntroRepository, RestaurantIntroRepository>();
 builder.Services.AddScoped<IRestaurantIntroService, RestaurantIntroService>();
+
+builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
+builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
+builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+
+
+
+
+
 
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
@@ -166,24 +192,87 @@ builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // Unit of Work and User Repository mapping
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
+builder.Services.AddScoped<IUserService, UserService>();
 
-            // Auth and User Management services
-            builder.Services.AddScoped<IAuthService, AuthService>();
-            builder.Services.AddScoped<IUserManagementService, UserManagementService>();
-            builder.Services.AddScoped<IEmailService, EmailService>();
-            builder.Services.AddScoped<IVerificationService, VerificationService>();
-            builder.Services.AddScoped<IPasswordService, PasswordService>();
-            builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
-            //Table Service/Repository
-            builder.Services.AddScoped<ITableRepository, TableRepository>();
-            builder.Services.AddScoped<ITableService, TableService>();
-            // Area Repository
-            builder.Services.AddScoped<IAreaRepository, AreaRepository>();
-            builder.Services.AddScoped<IAreaService, AreaService>();
+// Auth and User Management services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVerificationService, VerificationService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+builder.Services.AddScoped<BusinessAccessLayer.Services.OtpService>();
+builder.Services.AddScoped<BusinessAccessLayer.Services.Interfaces.IPhoneAuthService, BusinessAccessLayer.Services.PhoneAuthService>();
+//Table Service/Repository
+builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<ITableService, TableService>();
+// Area Repository
+builder.Services.AddScoped<IAreaRepository, AreaRepository>();
+builder.Services.AddScoped<IAreaService, AreaService>();
+// Auth and User Management services
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVerificationService, VerificationService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IExternalAuthService, ExternalAuthService>();
+//Table Service/Repository
+builder.Services.AddScoped<ITableRepository, TableRepository>();
+builder.Services.AddScoped<ITableService, TableService>();
+// Area Repository
+builder.Services.AddScoped<IAreaRepository, AreaRepository>();
+builder.Services.AddScoped<IAreaService, AreaService>();
+
+
+//voucher
+builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
+builder.Services.AddScoped<IVoucherService, VoucherService>();
+
+//Payrool
+builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
+builder.Services.AddScoped<IPayrollService, PayrollService>();
+
+// Area Repository
+builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
+builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
+
+
+// Payment Service/Repository
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+// AuditLog Service
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+// Receipt Service - Pass WebRootPath from IWebHostEnvironment
+builder.Services.AddScoped<IReceiptService>(sp =>
+{
+    var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    return new ReceiptService(unitOfWork, env.WebRootPath);
+});
+
+// SalaryChangeRequest Service/Repository
+builder.Services.AddScoped<ISalaryChangeRequestRepository, SalaryChangeRequestRepository>();
+builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestService>();
+
+builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
+// Đăng ký dịch vụ chạy ngầm của chúng ta
+builder.Services.AddHostedService<OrderStatusUpdaterService>();
+
+// ✅ Đảm bảo hỗ trợ multipart form data
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
+
+// ✅ Cấu hình kích thước file upload (nếu cần)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 52428800; // 50MB
+});
+
 
 
 builder.Services.AddAuthorization(options =>
@@ -221,8 +310,25 @@ builder.Services
         };
     });
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+// === 1. THÊM DỊCH VỤ CORS ===
+// === THAY THẾ TOÀN BỘ KHỐI NÀY ===
 
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
+    {
+        policy.WithOrigins(
+            "http://localhost:5054",    // 👈 Frontend bạn đang chạy
+            "http://localhost:5123",    // Razor nội bộ
+            "http://192.168.1.47:5123", // IP Razor
+            "http://192.168.1.47:5180"  // Swagger
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials(); // 👈 Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
+    });
+});
 
 var app = builder.Build();
 
@@ -232,9 +338,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+
+app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 // Bật CORS
-app.UseCors("AllowFrontend");
+//app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -246,8 +354,16 @@ using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    // Seed core lookup data
+    await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
+
+    await DataSeeder.SeedPositionsAsync(ctx);
+    await DataSeeder.SeedTestCustomerAsync(ctx);
+    await DataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
+    Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);
+    Console.WriteLine("Environment: " + builder.Environment.EnvironmentName);
     if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
     {
         var adminRoleId = await ctx.Roles.Where(r => r.RoleName == "Admin").Select(r => r.RoleId).FirstOrDefaultAsync();
@@ -290,5 +406,6 @@ using (var scope = app.Services.CreateScope())
         await ctx.SaveChangesAsync();
     }
 }
+
 
 app.Run();

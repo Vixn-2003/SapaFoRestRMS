@@ -1,0 +1,800 @@
+﻿@{
+    ViewData["Title"] = "Nhập Hàng Vào Kho";
+    Layout = "_LayoutInventory";
+}
+
+
+<style>
+    /* CSS riêng cho trang Export Management - tránh conflict với layout */
+    .export-page-wrapper {
+        min-height: 100vh;
+        padding: 1.5rem;
+    }
+
+    .export-max-container {
+        max-width: 90rem;
+        margin: 0 auto;
+    }
+
+    .export-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+    }
+
+    .export-header-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 1rem;
+    }
+
+    .export-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .export-stat-item {
+        display: flex;
+        align-items: center;
+    }
+
+    .export-stat-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .export-stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        display: block;
+    }
+
+    .export-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        display: block;
+    }
+
+    .export-filter-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .export-form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .export-form-control {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+        .export-form-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+    .export-layout-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .export-table-wrapper {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .export-table-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .export-table-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .export-table-scroll {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .export-data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .export-data-table thead {
+            background-color: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .export-data-table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .export-data-table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .export-data-table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+    .export-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+
+    .export-quantity {
+        font-weight: 600;
+        color: #ea580c;
+    }
+
+    .export-expand-btn {
+        background: none;
+        border: none;
+        color: #3b82f6;
+        cursor: pointer;
+        padding: 0;
+    }
+
+        .export-expand-btn:hover {
+            color: #1e40af;
+        }
+
+    .export-detail-row {
+        background-color: #eff6ff;
+    }
+
+    .export-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .export-detail-label {
+        color: #6b7280;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .export-detail-value {
+        color: #111827;
+        margin-bottom: 0.25rem;
+    }
+
+    .export-status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .export-stats-sidebar {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .export-stats-scroll {
+        max-height: 600px;
+        overflow-y: auto;
+        padding: 1rem;
+    }
+
+    .export-stat-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: box-shadow 0.2s;
+    }
+
+        .export-stat-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+    .export-stat-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+
+    .export-stat-card-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #111827;
+    }
+
+    .export-stat-card-icon {
+        width: 1rem;
+        height: 1rem;
+        color: #9ca3af;
+    }
+
+    .export-stat-card-amount {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #ea580c;
+    }
+
+    .export-stat-card-unit {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-left: 0.5rem;
+    }
+
+    .export-empty-state {
+        text-align: center;
+        padding: 3rem 0;
+    }
+
+    .export-empty-icon {
+        width: 4rem;
+        height: 4rem;
+        color: #d1d5db;
+        margin: 0 auto 1rem;
+    }
+
+    .export-empty-text {
+        color: #6b7280;
+    }
+
+    .export-icon-inline {
+        width: 1rem;
+        height: 1rem;
+        display: inline-block;
+        vertical-align: middle;
+        margin-right: 0.5rem;
+    }
+
+    /* Responsive */
+    @@media (max-width: 1024px) {
+        .export-layout-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .export-stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .export-filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .export-stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="export-page-wrapper">
+    <div class="export-max-container">
+        <!-- Header với thống kê -->
+        <div class="export-card">
+            <h1 class="export-header-title">Quản lý đơn xuất nguyên liệu</h1>
+            <div class="export-stats-grid">
+                <div class="export-stat-item">
+                    <svg class="export-stat-icon" style="color: #3b82f6;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div>
+                        <span class="export-stat-label">Tổng số đơn xuất</span>
+                        <span class="export-stat-value" style="color: #3b82f6;" id="total-orders">0</span>
+                    </div>
+                </div>
+
+                <div class="export-stat-item">
+                    <svg class="export-stat-icon" style="color: #ea580c;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    <div>
+                        <span class="export-stat-label">Tổng số lượng xuất</span>
+                        <span class="export-stat-value" style="color: #ea580c;" id="total-quantity">0</span>
+                    </div>
+                </div>
+
+                <div class="export-stat-item">
+                    <svg class="export-stat-icon" style="color: #22c55e;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    <div>
+                        <span class="export-stat-label">Số loại nguyên liệu</span>
+                        <span class="export-stat-value" style="color: #22c55e;" id="total-ingredients">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bộ lọc -->
+        <div class="export-card">
+            <div class="export-filter-grid">
+                <div class="export-form-group">
+                    <label>
+                        <svg class="export-icon-inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Tìm kiếm
+                    </label>
+                    <input type="text"
+                           id="search-input"
+                           class="export-form-control"
+                           placeholder="Tìm theo ghi chú, nguyên liệu, lô hàng..." />
+                </div>
+
+                <div class="export-form-group">
+                    <label>
+                        <svg class="export-icon-inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Thời gian
+                    </label>
+                    <select id="date-range" class="export-form-control">
+                        <option value="all">Tất cả thời gian</option>
+                        <option value="7days">7 ngày qua</option>
+                        <option value="30days">30 ngày qua</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layout 2 bảng -->
+        <div class="export-layout-grid">
+            <!-- Bảng đơn xuất -->
+            <div class="export-table-wrapper">
+                <div class="export-table-header">
+                    <h2 class="export-table-title">Danh sách đơn xuất</h2>
+                </div>
+                <div class="export-table-scroll">
+                    <table class="export-data-table">
+                        <thead>
+                            <tr>
+                                <th>Mã</th>
+                                <th>Nguyên liệu</th>
+                                <th>Lô</th>
+                                <th>Số lượng</th>
+                                <th>Thời gian</th>
+                                <th>Ghi chú</th>
+                                <th style="text-align: center;">Chi tiết</th>
+                            </tr>
+                        </thead>
+                        <tbody id="export-table-body">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                    <div id="no-data" class="export-empty-state" style="display: none;">
+                        <svg class="export-empty-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        <p class="export-empty-text">Không tìm thấy đơn xuất nào</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thống kê -->
+            <div class="export-stats-sidebar">
+                <div class="export-table-header">
+                    <h2 class="export-table-title">Thống kê xuất theo nguyên liệu</h2>
+                </div>
+                <div class="export-stats-scroll" id="stats-container">
+                    <!-- Stats will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================
+    // DỮ LIỆU MẪU - BẠN THAY BẰNG DỮ LIỆU THẬT
+    // ============================================
+    const transactions = [
+        {
+            id: 1,
+            ingredientId: 1,
+            ingredientName: "Bột mì",
+            type: "Export",
+            quantity: 10.00,
+            date: "2025-01-15T14:45:00",
+            note: "Dùng bột mì làm bánh pizza",
+            batchId: 1,
+            batchName: "Lô 01/2025"
+        },
+        {
+            id: 2,
+            ingredientId: 2,
+            ingredientName: "Đường trắng",
+            type: "Export",
+            quantity: 5.00,
+            date: "2025-01-16T15:10:00",
+            note: "Dùng đường cho món tráng miệng",
+            batchId: 2,
+            batchName: "Lô NCC A"
+        },
+        {
+            id: 3,
+            ingredientId: 4,
+            ingredientName: "Trứng gà",
+            type: "Export",
+            quantity: 50.00,
+            date: "2025-01-18T09:00:00",
+            note: "Dùng trứng gà làm bánh ngọt",
+            batchId: 3,
+            batchName: "Lô Trai B"
+        },
+        {
+            id: 4,
+            ingredientId: 7,
+            ingredientName: "Dầu ăn",
+            type: "Export",
+            quantity: 8.00,
+            date: "2025-02-05T11:30:00",
+            note: "Dùng dầu ăn cho chiên rán",
+            batchId: 6,
+            batchName: "Lô 02/2025"
+        },
+        {
+            id: 5,
+            ingredientId: 13,
+            ingredientName: "Thịt gà",
+            type: "Export",
+            quantity: 5.00,
+            date: "2025-03-21T14:00:00",
+            note: "Xuất thịt gà cho món chính",
+            batchId: 11,
+            batchName: "Lô 03/2025"
+        },
+        {
+            id: 6,
+            ingredientId: 11,
+            ingredientName: "Cá chua",
+            type: "Export",
+            quantity: 3.00,
+            date: "2025-03-22T10:00:00",
+            note: "Xuất cá chua cho salad",
+            batchId: 10,
+            batchName: "Lô 03/2025"
+        },
+        {
+            id: 7,
+            ingredientId: 28,
+            ingredientName: "Rau xà lách",
+            type: "Export",
+            quantity: 5.00,
+            date: "2025-03-22T12:00:00",
+            note: "Xuất rau xà lách cho salad",
+            batchId: 19,
+            batchName: "Lô 03/2025"
+        },
+        {
+            id: 8,
+            ingredientId: 1,
+            ingredientName: "Bột mì",
+            type: "Export",
+            quantity: 15.50,
+            date: "2025-11-10T08:30:00",
+            note: "Dùng bột mì làm bánh mì",
+            batchId: 25,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 9,
+            ingredientId: 2,
+            ingredientName: "Đường trắng",
+            type: "Export",
+            quantity: 3.20,
+            date: "2025-11-12T09:15:00",
+            note: "Dùng đường pha chế đồ uống",
+            batchId: 26,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 10,
+            ingredientId: 5,
+            ingredientName: "Muối",
+            type: "Export",
+            quantity: 2.00,
+            date: "2025-11-13T10:20:00",
+            note: "Xuất muối cho bếp chính",
+            batchId: 27,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 11,
+            ingredientId: 7,
+            ingredientName: "Dầu ăn",
+            type: "Export",
+            quantity: 12.00,
+            date: "2025-11-14T11:00:00",
+            note: "Dùng dầu ăn cho món chiên",
+            batchId: 28,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 12,
+            ingredientId: 13,
+            ingredientName: "Thịt gà",
+            type: "Export",
+            quantity: 8.50,
+            date: "2025-11-15T13:30:00",
+            note: "Xuất thịt gà làm món gà rán",
+            batchId: 29,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 13,
+            ingredientId: 14,
+            ingredientName: "Thịt heo",
+            type: "Export",
+            quantity: 10.00,
+            date: "2025-11-15T14:00:00",
+            note: "Xuất thịt heo cho món nướng",
+            batchId: 30,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 14,
+            ingredientId: 20,
+            ingredientName: "Cà chua",
+            type: "Export",
+            quantity: 4.50,
+            date: "2025-11-16T08:00:00",
+            note: "Xuất cà chua làm salad",
+            batchId: 31,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 15,
+            ingredientId: 21,
+            ingredientName: "Hành tây",
+            type: "Export",
+            quantity: 3.00,
+            date: "2025-11-16T09:30:00",
+            note: "Xuất hành tây cho món xào",
+            batchId: 32,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 16,
+            ingredientId: 28,
+            ingredientName: "Rau xà lách",
+            type: "Export",
+            quantity: 2.50,
+            date: "2025-11-17T07:45:00",
+            note: "Xuất rau xà lách làm salad",
+            batchId: 33,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 17,
+            ingredientId: 30,
+            ingredientName: "Khoai tây",
+            type: "Export",
+            quantity: 20.00,
+            date: "2025-11-17T10:00:00",
+            note: "Xuất khoai tây làm khoai tây chiên",
+            batchId: 34,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 18,
+            ingredientId: 1,
+            ingredientName: "Bột mì",
+            type: "Export",
+            quantity: 8.00,
+            date: "2025-11-18T08:00:00",
+            note: "Dùng bột mì làm bánh croissant",
+            batchId: 35,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 19,
+            ingredientId: 4,
+            ingredientName: "Trứng gà",
+            type: "Export",
+            quantity: 30.00,
+            date: "2025-11-18T09:00:00",
+            note: "Xuất trứng gà làm món tráng miệng",
+            batchId: 36,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 20,
+            ingredientId: 6,
+            ingredientName: "Nước mắm",
+            type: "Export",
+            quantity: 1.50,
+            date: "2025-11-18T10:30:00",
+            note: "Xuất nước mắm pha nước chấm",
+            batchId: 37,
+            batchName: "Lô 11/2025"
+        }
+    ];
+    // ============================================
+
+    let searchTerm = '';
+    let dateRange = 'all';
+    let expandedRow = null;
+
+    function filterAndSort() {
+        let filtered = transactions.filter(item => {
+            const matchSearch = item.note.toLowerCase().includes(searchTerm) ||
+                item.ingredientName.toLowerCase().includes(searchTerm) ||
+                item.batchName.toLowerCase().includes(searchTerm);
+
+            let matchDate = true;
+            if (dateRange !== 'all') {
+                const itemDate = new Date(item.date);
+                const today = new Date();
+                const daysDiff = (today - itemDate) / (1000 * 60 * 60 * 24);
+                if (dateRange === '7days') {
+                    matchDate = daysDiff <= 7;
+                } else if (dateRange === '30days') {
+                    matchDate = daysDiff <= 30;
+                }
+            }
+
+            return matchSearch && matchDate;
+        });
+
+        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    function calculateStats(data) {
+        const stats = {};
+        data.forEach(item => {
+            if (!stats[item.ingredientName]) {
+                stats[item.ingredientName] = 0;
+            }
+            stats[item.ingredientName] += item.quantity;
+        });
+        return Object.entries(stats).sort((a, b) => b[1] - a[1]);
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function toggleRow(id) {
+        expandedRow = expandedRow === id ? null : id;
+        render();
+    }
+
+    function render() {
+        const filtered = filterAndSort();
+        const stats = calculateStats(filtered);
+        const totalQuantity = filtered.reduce((sum, item) => sum + item.quantity, 0);
+
+        document.getElementById('total-orders').textContent = filtered.length;
+        document.getElementById('total-quantity').textContent = totalQuantity.toFixed(2);
+        document.getElementById('total-ingredients').textContent = stats.length;
+
+        const tbody = document.getElementById('export-table-body');
+        const noData = document.getElementById('no-data');
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            noData.style.display = 'block';
+        } else {
+            noData.style.display = 'none';
+            tbody.innerHTML = filtered.map(item => `
+                <tr>
+                    <td><strong>#${item.id}</strong></td>
+                    <td><strong>${item.ingredientName}</strong></td>
+                    <td><span class="export-badge">${item.batchName}</span></td>
+                    <td><span class="export-quantity">-${item.quantity.toFixed(2)}</span></td>
+                    <td>${formatDate(item.date)}</td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.note}</td>
+                    <td style="text-align: center;">
+                        <button onclick="toggleRow(${item.id})" class="export-expand-btn">
+                            <svg style="width: 1.25rem; height: 1.25rem;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                ${expandedRow === item.id ?
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />' :
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />'
+                }
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+                ${expandedRow === item.id ? `
+                    <tr class="export-detail-row">
+                        <td colspan="7">
+                            <div class="export-detail-grid">
+                                <div>
+                                    <p class="export-detail-label">Thông tin chi tiết:</p>
+                                    <p class="export-detail-value">• ID Nguyên liệu: <strong>${item.ingredientId}</strong></p>
+                                    <p class="export-detail-value">• ID Lô hàng: <strong>${item.batchId}</strong></p>
+                                    <p class="export-detail-value">• Trạng thái: <span class="export-status-badge">Đã xuất kho</span></p>
+                                </div>
+                                <div>
+                                    <p class="export-detail-label">Ghi chú đầy đủ:</p>
+                                    <p class="export-detail-value" style="font-style: italic;">${item.note}</p>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                ` : ''}
+            `).join('');
+        }
+
+        const statsContainer = document.getElementById('stats-container');
+        if (stats.length === 0) {
+            statsContainer.innerHTML = '<div class="export-empty-state"><p class="export-empty-text">Chưa có dữ liệu thống kê</p></div>';
+        } else {
+            statsContainer.innerHTML = stats.map(([name, qty]) => `
+                <div class="export-stat-card">
+                    <div class="export-stat-card-header">
+                        <span class="export-stat-card-name">${name}</span>
+                        <svg class="export-stat-card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="export-stat-card-amount">${qty.toFixed(2)}</span>
+                        <span class="export-stat-card-unit">kg</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+
+    document.getElementById('search-input').addEventListener('input', (e) => {
+        searchTerm = e.target.value.toLowerCase();
+        render();
+    });
+
+    document.getElementById('date-range').addEventListener('change', (e) => {
+        dateRange = e.target.value;
+        render();
+    });
+
+    render();
+</script>

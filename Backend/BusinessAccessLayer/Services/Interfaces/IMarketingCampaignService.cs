@@ -32,29 +32,17 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<CampaignKpiDto> GetKpisAsync(DateOnly? startDate, DateOnly? endDate);
 
         /// <summary>
-        /// Get performance data for line chart
+        /// Get daily performance data with KPI achievement percentages
         /// </summary>
-        Task<IEnumerable<CampaignPerformanceDto>> GetPerformanceChartDataAsync(
+        Task<IEnumerable<DailyPerformanceDto>> GetDailyPerformanceChartDataAsync(
             DateOnly startDate, DateOnly endDate);
 
         /// <summary>
-        /// Get comparison with previous year
+        /// Get daily performance for previous year (same period)
         /// </summary>
-        Task<CampaignComparisonDto> GetYearOverYearComparisonAsync(
+        Task<IEnumerable<DailyPerformanceDto>> GetDailyPerformancePreviousYearAsync(
             DateOnly startDate, DateOnly endDate);
 
-        /// <summary>
-        /// Get target KPI achievement
-        /// </summary>
-        Task<CampaignTargetKpiDto> GetTargetKpiAsync(
-            DateOnly startDate,
-            DateOnly endDate,
-            decimal targetRevenue,
-            int targetReach);
 
-        /// <summary>
-        /// Get campaign distribution by type (optional)
-        /// </summary>
-        Task<IEnumerable<CampaignDistributionDto>> GetCampaignDistributionAsync();
     }
 }

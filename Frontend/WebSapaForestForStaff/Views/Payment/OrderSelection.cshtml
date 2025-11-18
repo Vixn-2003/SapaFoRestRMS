@@ -1,0 +1,241 @@
+@{
+    ViewData["Title"] = "Danh sách đơn chờ thanh toán";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
+}
+
+<h2 class="mb-3">Danh sách đơn chờ thanh toán</h2>
+
+<!-- Form tìm kiếm/filter -->
+<form method="get" class="mb-4 d-flex flex-wrap gap-2">
+    <input type="text" 
+           id="searchInput" 
+           name="search" 
+           value="@ViewBag.Search" 
+           placeholder="Tìm theo mã đơn hoặc số bàn" 
+           class="form-control w-auto" 
+           onkeyup="filterOrders()" />
+    <button type="button" class="btn btn-primary" onclick="loadOrders()">
+        <i class="bi bi-arrow-clockwise me-2"></i>Làm mới
+    </button>
+</form>
+
+<!-- Bảng danh sách đơn hàng -->
+<table class="table table-bordered table-striped align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Mã đơn</th>
+            <th>Bàn</th>
+            <th>Nhân viên</th>
+            <th>Tổng tạm tính</th>
+            <th>Thời gian</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody id="order-list">
+        <tr>
+            <td colspan="7" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Đang tải...</span>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Toast Notification -->
+<div class="toast-container">
+    <div id="toastNotification" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Set global API base URL for vietqr-payment.js
+        window.API_BASE_URL = '@apiBaseUrl';
+    </script>
+    <script>
+        const apiBaseUrl = '@apiBaseUrl';
+
+        // Mock data cho demo
+        let orders = [];
+
+        // Load danh sách đơn hàng
+        async function loadOrders() {
+            try {
+                showLoading();
+                
+                // Gọi API thật hoặc dùng mock data
+                const response = await fetch(`${apiBaseUrl}/orders?status=pending-payment`);
+                
+                if (!response.ok) {
+                    // Nếu API không có, dùng mock data
+                    orders = getMockOrders();
+                } else {
+                    orders = await response.json();
+                }
+                
+                renderOrders(orders);
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                // Dùng mock data khi có lỗi
+                orders = getMockOrders();
+                renderOrders(orders);
+                hideLoading();
+            }
+        }
+
+        // Mock data
+        function getMockOrders() {
+            return [
+                {
+                    id: 1,
+                    orderCode: 'ORD-001',
+                    tableNumber: 'Bàn 5',
+                    staffName: 'Nguyễn Văn A',
+                    subtotal: 450000,
+                    createdAt: '2025-01-15T10:30:00',
+                    status: 'pending-payment'
+                },
+                {
+                    id: 2,
+                    orderCode: 'ORD-002',
+                    tableNumber: 'Bàn 12',
+                    staffName: 'Trần Thị B',
+                    subtotal: 680000,
+                    createdAt: '2025-01-15T11:15:00',
+                    status: 'pending-payment'
+                },
+                {
+                    id: 3,
+                    orderCode: 'ORD-003',
+                    tableNumber: 'Bàn 8',
+                    staffName: 'Lê Văn C',
+                    subtotal: 320000,
+                    createdAt: '2025-01-15T12:00:00',
+                    status: 'paid'
+                },
+                {
+                    id: 4,
+                    orderCode: 'ORD-004',
+                    tableNumber: 'Bàn 3',
+                    staffName: 'Phạm Thị D',
+                    subtotal: 890000,
+                    createdAt: '2025-01-15T12:30:00',
+                    status: 'pending-payment'
+                }
+            ];
+        }
+
+        // Render danh sách đơn hàng
+        function renderOrders(orderList) {
+            const tbody = document.getElementById('order-list');
+            
+            if (orderList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">Không có dữ liệu</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = orderList.map(order => {
+                const isPaid = order.status === 'paid';
+                const statusText = isPaid ? 'Đã thanh toán' : 'Chờ thanh toán';
+                const disabledAttr = isPaid ? 'disabled' : '';
+                
+                const date = new Date(order.createdAt);
+                const timeStr = date.toLocaleString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return `
+                    <tr>
+                        <td><strong>${order.orderCode}</strong></td>
+                        <td>${order.tableNumber}</td>
+                        <td>${order.staffName}</td>
+                        <td class="fw-bold text-primary">${formatCurrency(order.subtotal)}</td>
+                        <td>${timeStr}</td>
+                        <td>
+                            ${isPaid 
+                                ? '<span class="badge bg-success">Đã thanh toán</span>' 
+                                : '<span class="badge bg-warning text-dark">Chờ thanh toán</span>'}
+                        </td>
+                        <td>
+                            <a href="/Payment/OrderDetail?id=${order.id}" 
+                               class="btn btn-sm btn-primary ${disabledAttr}"
+                               ${disabledAttr}>
+                                Thanh toán
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Lọc đơn hàng
+        function filterOrders() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = orders.filter(order => 
+                order.orderCode.toLowerCase().includes(searchTerm) ||
+                order.tableNumber.toLowerCase().includes(searchTerm)
+            );
+            renderOrders(filtered);
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(amount);
+        }
+
+        // Show loading
+        function showLoading() {
+            const tbody = document.getElementById('order-list');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Hide loading
+        function hideLoading() {
+            // Loading sẽ được thay thế bởi renderOrders
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            
+            const toastInstance = new bootstrap.Toast(toast);
+            toastInstance.show();
+        }
+
+        // Load orders khi trang được tải
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOrders();
+        });
+    </script>
+}
+

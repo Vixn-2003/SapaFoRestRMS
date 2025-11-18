@@ -1,0 +1,206 @@
+﻿@model WebSapaForestForStaff.Models.VoucherDTO.VoucherDto
+
+@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    ViewData["Title"] = "Update Voucher";
+    var pageNumber = ViewData["PageNumber"] as int? ?? 1;
+}
+
+<h2 class="fw-bold mb-4 text-primary">Cập nhật Voucher</h2>
+
+<form asp-action="Edit" method="post" class="p-4 rounded shadow-sm border bg-white">
+    <input type="hidden" asp-for="VoucherId" />
+    <input type="hidden" name="pageNumber" value="@pageNumber" />
+
+    <!-- Hiển thị lỗi chung của ModelState (từ server) -->
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="row g-3">
+        <!-- Cột trái -->
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Mã Voucher</label>
+                <input class="form-control form-control-sm border-primary bg-light" asp-for="Code" readonly />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Mô tả</label>
+                <input class="form-control form-control-sm" asp-for="Description" />
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Loại Giảm Giá</label>
+                <select class="form-select form-select-sm border-success fw-semibold" asp-for="DiscountType">
+                    <option value="">-- Chọn loại giảm giá --</option>
+                    <option value="Giá trị cố định">Giá trị cố định</option>
+                    <option value="Phần trăm">Phần trăm</option>
+                </select>
+                <span asp-validation-for="DiscountType" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Giá trị giảm</label>
+                <input type="number" step="0.01" class="form-control form-control-sm border-info" asp-for="DiscountValue" />
+                <span asp-validation-for="DiscountValue" class="text-danger"></span>
+            </div>
+        </div>
+
+        <!-- Cột phải -->
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Ngày bắt đầu</label>
+                <input type="date" class="form-control form-control-sm border-secondary" asp-for="StartDate" id="StartDate" />
+                <span asp-validation-for="StartDate" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Ngày kết thúc</label>
+                <input type="date" class="form-control form-control-sm border-secondary" asp-for="EndDate" id="EndDate" />
+                <span asp-validation-for="EndDate" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Giá trị đơn tối thiểu</label>
+                <input type="number" step="0.01" class="form-control form-control-sm border-warning" asp-for="MinOrderValue" />
+                <span asp-validation-for="MinOrderValue" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Giảm tối đa</label>
+                <input type="number" step="0.01" class="form-control form-control-sm border-warning" asp-for="MaxDiscount" />
+                <span asp-validation-for="MaxDiscount" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Trạng thái</label>
+                <select class="form-select form-select-sm border-info fw-semibold" asp-for="Status" id="Status">
+                    <option value="">-- Chọn trạng thái --</option>
+                    <option value="Đang sử dụng">Đang sử dụng</option>
+                    <option value="Sắp ra mắt">Sắp ra mắt</option>
+                    <option value="Hết hạn">Hết hạn</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-primary fw-semibold shadow-sm">
+            Lưu thay đổi
+        </button>
+
+        <a asp-action="Index" asp-route-pageNumber="@pageNumber" class="btn btn-secondary fw-semibold ms-2 shadow-sm">
+            Hủy
+        </a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.querySelector("form[asp-action='Edit']");
+        const errorContainerId = "jsValidationErrorsEdit";
+
+        // Nếu chưa có div chứa lỗi thì tạo mới
+        let errorContainer = document.getElementById(errorContainerId);
+        if (!errorContainer) {
+            errorContainer = document.createElement("div");
+            errorContainer.id = errorContainerId;
+            errorContainer.classList.add("text-danger", "mt-3");
+            form.insertBefore(errorContainer, form.querySelector(".mt-4.text-end"));
+        }
+
+        const startDateInput = document.getElementById("StartDate");
+        const endDateInput = document.getElementById("EndDate");
+        const discountTypeInput = form.querySelector("[asp-for='DiscountType']");
+        const discountValueInput = form.querySelector("[asp-for='DiscountValue']");
+        const minOrderValueInput = form.querySelector("[asp-for='MinOrderValue']");
+        const maxDiscountInput = form.querySelector("[asp-for='MaxDiscount']");
+        const codeInput = form.querySelector("[asp-for='Code']");
+        const descriptionInput = form.querySelector("[asp-for='Description']");
+        const statusSelect = document.getElementById("Status");
+
+        function validateForm(e) {
+            let errorMessages = [];
+
+            const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+            const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const discountType = discountTypeInput.value;
+            const discountValue = parseFloat(discountValueInput.value);
+            const minOrderValue = parseFloat(minOrderValueInput.value);
+            const maxDiscount = parseFloat(maxDiscountInput.value);
+            const code = codeInput.value.trim();
+            const description = descriptionInput.value.trim();
+
+            if (!code) {
+                errorMessages.push("Mã voucher không được để trống.");
+            }
+
+            if (description === "") {
+                errorMessages.push("Mô tả không được để trống hoặc chỉ có khoảng trắng.");
+            }
+
+            if (startDate && endDate && startDate > endDate) {
+                errorMessages.push("Ngày bắt đầu phải nhỏ hơn ngày kết thúc.");
+            }
+
+            if (endDate && endDate < today) {
+                errorMessages.push("Ngày kết thúc không được trong quá khứ.");
+            }
+
+            if (!isNaN(discountValue) && discountValue < 0) {
+                errorMessages.push("Giá trị giảm không được âm.");
+            }
+
+            if (!isNaN(minOrderValue) && minOrderValue < 0) {
+                errorMessages.push("Giá trị đơn tối thiểu không được âm.");
+            }
+
+            if (!isNaN(maxDiscount) && maxDiscount < 0) {
+                errorMessages.push("Giảm tối đa không được âm.");
+            }
+
+            if (discountType === "Phần trăm") {
+                if (isNaN(discountValue) || discountValue < 1 || discountValue > 100) {
+                    errorMessages.push("Giá trị phần trăm phải từ 1 đến 100.");
+                }
+            }
+
+            const validTypes = ["Phần trăm", "Giá trị cố định"];
+            if (discountType && !validTypes.includes(discountType)) {
+                errorMessages.push("Kiểu giảm giá không hợp lệ.");
+            }
+
+            if (errorMessages.length > 0) {
+                e.preventDefault();
+                errorContainer.innerHTML = `<ul>${errorMessages.map(msg => `<li>${msg}</li>`).join("")}</ul>`;
+                errorContainer.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                errorContainer.innerHTML = "";
+            }
+        }
+
+        form.addEventListener("submit", validateForm);
+    });
+</script>
+
+<style>
+    select:focus, input:focus {
+        box-shadow: 0 0 5px rgba(13, 110, 253, 0.5);
+        border-color: #0d6efd;
+    }
+
+    .form-select, .form-control {
+        background-color: #f8f9fa;
+    }
+
+        .form-select:hover, .form-control:hover {
+            background-color: #ffffff;
+        }
+</style>

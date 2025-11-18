@@ -2,6 +2,7 @@
 using DataAccessLayer.Repositories;
 using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Threading.Tasks;
@@ -19,6 +20,26 @@ namespace DataAccessLayer.UnitOfWork
         private IManagerComboRepository _comboRepository;
 
         private IInventoryIngredientRepository _inventoryRepository;
+
+        private IManagerSupplierRepository _supplierRepository;
+
+        private IWarehouseRepository _warehouseRepository;
+
+        private IPurchaseOrderRepository _purchaseOrderRepository;
+
+        private IPurchaseOrderDetailRepository _purchaseOrderDetailRepository;
+
+        private IStockTransactionRepository _stockTransactionRepository;
+        private IUnitRepository _unitRepository;
+
+
+        public IUnitRepository UnitRepository => _unitRepository ??= new UnitRepository(_context);
+        public IStockTransactionRepository StockTransaction => _stockTransactionRepository ??= new StockTransactionRepository(_context);
+        public IPurchaseOrderDetailRepository PurchaseOrderDetail => _purchaseOrderDetailRepository ??= new PurchaseOrderDetailRepository(_context);
+
+        public IPurchaseOrderRepository PurchaseOrder => _purchaseOrderRepository ??= new PurchaseOrderRepository(_context);
+        public IWarehouseRepository Warehouse => _warehouseRepository ??= new WarehouseRepository(_context);
+        public IManagerSupplierRepository Supplier => _supplierRepository ??= new ManagerSupplierRepository(_context);
 
         public IManagerMenuRepository MenuItem => _menuRepository ??= new ManagerMenuRepository(_context);
         public IManagerCategoryRepository MenuCategory => _categoryRepository ??= new ManagerCategoryRepository(_context);
@@ -40,6 +61,18 @@ namespace DataAccessLayer.UnitOfWork
         private IPositionRepository _positions;
 
         public IPositionRepository Positions => _positions ??= new PositionRepository(_context);
+
+        private IPaymentRepository _payments;
+
+        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
+
+        private IAuditLogRepository _auditLogs;
+
+        public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(_context);
+
+        private IOrderLockRepository _orderLocks;
+
+        public IOrderLockRepository OrderLocks => _orderLocks ??= new OrderLockRepository(_context);
 
         public UnitOfWork(SapaFoRestRmsContext context)
         {

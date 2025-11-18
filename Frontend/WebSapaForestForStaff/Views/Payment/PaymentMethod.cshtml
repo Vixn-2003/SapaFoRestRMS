@@ -1,0 +1,90 @@
+@{
+    ViewData["Title"] = "Chọn phương thức thanh toán";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    int orderId = ViewBag.OrderId ?? 0;
+    string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
+}
+
+<h2 class="mb-3">Chọn phương thức thanh toán</h2>
+
+<div class="mb-3">
+    <a href="/Payment/OrderDetail?id=@orderId" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Quay lại
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('cash')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">💵</div>
+                <h5 class="card-title">Tiền mặt</h5>
+                <p class="card-text text-muted">Thanh toán bằng tiền mặt</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('card')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">💳</div>
+                <h5 class="card-title">Thẻ</h5>
+                <p class="card-text text-muted">Thẻ tín dụng / Ghi nợ</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('ewallet')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">📱</div>
+                <h5 class="card-title">Ví điện tử</h5>
+                <p class="card-text text-muted">MoMo, ZaloPay, VNPay...</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100" style="cursor: pointer;" onclick="selectPaymentMethod('split')">
+            <div class="card-body text-center">
+                <div class="fs-1 mb-3">💸</div>
+                <h5 class="card-title">Chia bill</h5>
+                <p class="card-text text-muted">Chia hóa đơn nhiều người</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container">
+    <div id="toastNotification" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBaseUrl = '@apiBaseUrl';
+        const orderId = @orderId;
+        let selectedMethod = null;
+
+        // Chọn phương thức thanh toán
+        function selectPaymentMethod(method) {
+            selectedMethod = method;
+            // Chuyển đến màn hình xác nhận
+            window.location.href = `/Payment/PaymentConfirmation?orderId=${orderId}&method=${method}`;
+        }
+
+        // Show toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            
+            const toastInstance = new bootstrap.Toast(toast);
+            toastInstance.show();
+        }
+    </script>
+}
+

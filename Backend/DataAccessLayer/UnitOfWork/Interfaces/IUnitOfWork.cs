@@ -15,10 +15,20 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IManagerCategoryRepository MenuCategory { get; }
         IInventoryIngredientRepository InventoryIngredient { get; }
 
+        IPurchaseOrderDetailRepository PurchaseOrderDetail { get; }
+        IPurchaseOrderRepository PurchaseOrder { get; }
+        IStockTransactionRepository StockTransaction { get; }
+        IManagerSupplierRepository Supplier { get; }
+
+        IUnitRepository UnitRepository { get; }
+        IWarehouseRepository Warehouse { get; }
         IManagerComboRepository Combo { get; }
         IUserRepository Users { get; }
         IStaffProfileRepository StaffProfiles { get; }
         IPositionRepository Positions { get; }
+        IPaymentRepository Payments { get; }
+        IAuditLogRepository AuditLogs { get; }
+        IOrderLockRepository OrderLocks { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

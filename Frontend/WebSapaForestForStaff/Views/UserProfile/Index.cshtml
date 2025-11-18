@@ -1,0 +1,305 @@
+@model WebSapaForestForStaff.DTOs.User
+
+@{
+    ViewData["Title"] = "Hồ sơ của tôi";
+    // Use layout from ViewBag if set, otherwise default to Admin layout
+    Layout = ViewBag.Layout as string ?? "~/Views/Shared/_LayoutAdmin.cshtml";
+
+    var avatarUrl = string.IsNullOrWhiteSpace(Model.AvatarUrl)
+        ? Url.Content("~/assets/images/faces/face8.jpg")
+        : Model.AvatarUrl;
+    
+    var positions = ViewBag.Positions as List<string> ?? new List<string>();
+}
+
+<div class="container-fluid">
+    <div class="page-header mb-4">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="mdi mdi-account-circle me-2"></i> Hồ sơ của tôi
+            </h1>
+            <p class="page-subtitle">Quản lý thông tin cá nhân của bạn</p>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alertContainer"></div>
+
+    <div class="row">
+        <!-- Left Panel: Avatar & Actions -->
+        <div class="col-lg-4 col-md-12 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="avatar-container mb-3">
+                        <img id="userAvatar" 
+                             src="@avatarUrl" 
+                             data-default-avatar="@Url.Content("~/assets/images/faces/face8.jpg")"
+                             alt="Avatar" 
+                             class="rounded-circle mb-3" 
+                             style="width: 150px; height: 150px; object-fit: cover; border: 4px solid #e0e0e0;">
+                    </div>
+                    <h4 class="mb-2" id="displayFullName">@Model.FullName</h4>
+                    <p class="text-muted mb-3" id="displayRole">@Model.RoleName</p>
+                    <button type="button" class="btn-primary-custom btn-medium" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="mdi mdi-pencil me-1"></i> Chỉnh sửa hồ sơ
+                    </button>
+                    <button type="button" class="btn-secondary-custom btn-medium mt-2" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                        <i class="mdi mdi-lock-reset me-1"></i> Đổi mật khẩu
+                    </button>
+                </div>
+            </div>
+
+            <!-- Additional Info Card -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="mdi mdi-information-outline me-2"></i> Thông tin bổ sung
+                    </h5>
+                    <hr>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Email</small>
+                        <strong id="displayEmail">@Model.Email</strong>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Trạng thái</small>
+                        <span class="badge @(Model.Status == 0 ? "bg-success" : "bg-warning")" id="displayStatus">
+                            @(Model.Status == 0 ? "Đang hoạt động" : "Tạm khóa")
+                        </span>
+                    </div>
+                    @if (Model.CreatedAt.HasValue)
+                    {
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Ngày tham gia</small>
+                            <strong>@Model.CreatedAt.Value.ToString("dd/MM/yyyy")</strong>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Role-specific Sections -->
+            @if (User.IsInRole("Owner") || User.IsInRole("Admin"))
+            {
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="mdi mdi-view-dashboard me-2"></i> Tổng quan hệ thống
+                        </h5>
+                        <hr>
+                        <p class="text-muted small">Tính năng dành cho quản trị viên</p>
+                        <a href="@Url.Action("Index", "Users")" class="btn btn-outline-primary btn-sm">
+                            <i class="mdi mdi-account-multiple me-1"></i> Quản lý người dùng
+                        </a>
+                    </div>
+                </div>
+            }
+            else if (User.IsInRole("Staff"))
+            {
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="mdi mdi-calendar-clock me-2"></i> Lịch làm việc
+                        </h5>
+                        <hr>
+                        <p class="text-muted small">Thông tin ca làm việc sẽ được hiển thị ở đây</p>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Right Panel: Profile Details -->
+        <div class="col-lg-8 col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="mdi mdi-account-details me-2"></i> Chi tiết hồ sơ
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Họ và tên</label>
+                            <div class="profile-field-value">
+                                <i class="mdi mdi-account me-2"></i>
+                                <span id="profileFullName">@Model.FullName</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Email</label>
+                            <div class="profile-field-value">
+                                <i class="mdi mdi-email me-2"></i>
+                                <span id="profileEmail">@Model.Email</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Số điện thoại</label>
+                            <div class="profile-field-value">
+                                <i class="mdi mdi-phone me-2"></i>
+                                <span id="profilePhone">@(Model.Phone ?? "Chưa cập nhật")</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">Vai trò</label>
+                            <div class="profile-field-value">
+                                <i class="mdi mdi-shield-account me-2"></i>
+                                <span id="profileRole">@Model.RoleName</span>
+                            </div>
+                        </div>
+                        @if (User.IsInRole("Staff") && positions.Any())
+                        {
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-muted">Vị trí công việc</label>
+                                <div class="profile-field-value">
+                                    <i class="mdi mdi-briefcase me-2"></i>
+                                    <div>
+                                        @foreach (var position in positions)
+                                        {
+                                            <span class="badge bg-primary me-1">@position</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">User ID</label>
+                            <div class="profile-field-value">
+                                <i class="mdi mdi-identifier me-2"></i>
+                                <span>@Model.UserId</span>
+                            </div>
+                        </div>
+                        @if (Model.ModifiedAt.HasValue)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-muted">Cập nhật lần cuối</label>
+                                <div class="profile-field-value">
+                                    <i class="mdi mdi-clock-outline me-2"></i>
+                                    <span>@Model.ModifiedAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editProfileModalLabel">
+                    <i class="mdi mdi-pencil me-2"></i> Chỉnh sửa hồ sơ
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="profileForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" id="currentAvatarUrl" value="@Model.AvatarUrl" />
+                    <div class="mb-3">
+                        <label for="editFullName" class="form-label required">Họ và tên</label>
+                        <input type="text" class="form-control" id="editFullName" name="FullName" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPhone" class="form-label">Số điện thoại</label>
+                        <input type="tel" class="form-control" id="editPhone" name="Phone" placeholder="Nhập số điện thoại">
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editAvatarUrl" class="form-label">URL ảnh đại diện</label>
+                        <input type="url" class="form-control" id="editAvatarUrl" name="AvatarUrl" placeholder="Nhập URL ảnh đại diện (tùy chọn)">
+                        <small class="form-text text-muted">Bạn có thể nhập URL của ảnh đại diện từ internet</small>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary-custom btn-medium" data-bs-dismiss="modal">
+                        <i class="mdi mdi-close me-1"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn-primary-custom btn-medium" id="saveProfileBtn">
+                        <i class="mdi mdi-content-save me-1"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changePasswordModalLabel">
+                    <i class="mdi mdi-lock-reset me-2"></i> Đổi mật khẩu
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="passwordStepRequest">
+                    <p class="text-muted">Nhập mật khẩu hiện tại để nhận mã xác nhận qua email.</p>
+                    <form id="requestPasswordChangeForm">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label required">Mật khẩu hiện tại</label>
+                            <div class="input-wrapper password-input">
+                                <i class="bi bi-key-fill text-muted"></i>
+                                <input type="password" class="form-control" id="currentPassword" name="CurrentPassword" required autocomplete="current-password">
+                            </div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <button type="submit" class="btn-primary-custom btn-medium w-100" id="requestChangePasswordBtn">
+                            <i class="mdi mdi-email-send-outline me-1"></i> Gửi mã xác nhận
+                        </button>
+                    </form>
+                </div>
+
+                <div id="passwordStepConfirm" class="d-none">
+                    <p class="text-muted">Nhập mã xác nhận đã nhận được và mật khẩu mới.</p>
+                    <form id="confirmPasswordChangeForm">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label for="verificationCode" class="form-label required">Mã xác nhận</label>
+                            <input type="text" class="form-control" id="verificationCode" name="Code" required>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label required">Mật khẩu mới</label>
+                            <div class="input-wrapper password-input">
+                                <i class="bi bi-shield-lock text-muted"></i>
+                                <input type="password" class="form-control" id="newPassword" name="NewPassword" minlength="8" required autocomplete="new-password">
+                            </div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmNewPassword" class="form-label required">Xác nhận mật khẩu mới</label>
+                            <div class="input-wrapper password-input">
+                                <i class="bi bi-check2-circle text-muted"></i>
+                                <input type="password" class="form-control" id="confirmNewPassword" name="ConfirmPassword" minlength="8" required autocomplete="new-password">
+                            </div>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <button type="submit" class="btn-primary-custom btn-medium w-100" id="confirmChangePasswordBtn">
+                            <i class="mdi mdi-content-save-check-outline me-1"></i> Xác nhận đổi mật khẩu
+                        </button>
+                        <button type="button" class="btn-text-custom mt-2 w-100" id="backToRequestStepBtn">
+                            <i class="mdi mdi-arrow-left"></i> Quay lại bước trước
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/users.css">
+    <link rel="stylesheet" href="~/css/userProfile.css">
+}
+
+@section Scripts {
+    <script src="~/js/toast-notification.js"></script>
+    <script src="~/js/userProfile.js"></script>
+}
+

@@ -1,0 +1,52 @@
+/**
+ * Create Staff Page - CSS
+ * Specific styles for CreateStaff view
+ */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--neutral-gray-300);
+}
+
+.header-content .page-title {
+    margin: 0;
+}
+
+.header-content .page-subtitle {
+    margin: 0.5rem 0 0 0;
+}
+
+.page-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.required::after {
+    content: " *";
+    color: var(--semantic-error);
+}
+
+.role-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.role-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.position-checkbox {
+    margin-top: 0.25rem;
+}
+
+.input-group-text {
+    border-color: var(--neutral-gray-300);
+}
+
