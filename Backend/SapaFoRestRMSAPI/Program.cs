@@ -22,6 +22,24 @@ using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// -----------------------------
+// ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
+// -----------------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins(
+            "http://localhost:5158",  // frontend chạy http
+            "https://localhost:5158", // phòng khi chạy https
+             "http://localhost:5054",  // module Staff
+            "https://localhost:5054"  // phòng khi chạy https
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+    );
+});
+
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
@@ -142,6 +160,10 @@ builder.Services.AddScoped<IEventService, EventService>();
 
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+
+builder.Services.AddScoped<IRestaurantIntroRepository, RestaurantIntroRepository>();
+builder.Services.AddScoped<IRestaurantIntroService, RestaurantIntroService>();
+
 builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
 builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
 builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
@@ -149,6 +171,7 @@ builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
 builder.Services.AddScoped<IUnitService, UnitService>();
+
 
 
 
@@ -164,7 +187,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
-
+builder.Services.AddScoped<IReservationDepositRepository, ReservationDepositRepository>();
+builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // Unit of Work and User Repository mapping
@@ -215,6 +239,7 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
+
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -247,6 +272,7 @@ builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 52428800; // 50MB
 });
+
 
 
 builder.Services.AddAuthorization(options =>

@@ -1093,6 +1093,9 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<decimal?>("TotalDepositPaid")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("ZaloMessageId")
                         .HasColumnType("nvarchar(max)");
 
@@ -1104,6 +1107,46 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("StaffId");
 
                     b.ToTable("Reservations");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ReservationDeposit", b =>
+                {
+                    b.Property<int>("DepositId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepositId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DepositCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("DepositDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReceiptImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ReservationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DepositId");
+
+                    b.HasIndex("ReservationId");
+
+                    b.ToTable("ReservationDeposits");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.ReservationTable", b =>
@@ -2360,6 +2403,17 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.ReservationDeposit", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
+                        .WithMany("ReservationDeposits")
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.ReservationTable", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
@@ -2644,6 +2698,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("DomainAccessLayer.Models.Reservation", b =>
                 {
                     b.Navigation("Orders");
+
+                    b.Navigation("ReservationDeposits");
 
                     b.Navigation("ReservationTables");
                 });

@@ -68,7 +68,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<Regulation> Regulations { get; set; }
 
     public virtual DbSet<Reservation> Reservations { get; set; }
-
+    public virtual DbSet<ReservationDeposit> ReservationDeposits { get; set; } = null!;
     public virtual DbSet<ReservationTable> ReservationTables { get; set; }
 
     public virtual DbSet<RestaurantIntro> RestaurantIntros { get; set; }
