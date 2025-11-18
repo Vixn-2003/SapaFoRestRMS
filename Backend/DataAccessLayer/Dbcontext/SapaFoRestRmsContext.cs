@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using DomainAccessLayer.Models;
+using Microsoft.Extensions.Configuration;
+using DomainAccessLayer.Enums;
 namespace DataAccessLayer.Dbcontext;
 
 public partial class SapaFoRestRmsContext : DbContext
@@ -13,6 +15,12 @@ public partial class SapaFoRestRmsContext : DbContext
     public SapaFoRestRmsContext(DbContextOptions<SapaFoRestRmsContext> options)
         : base(options)
     {
+    }
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        IConfigurationRoot configuration = builder.Build();
+        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyDatabase"));
     }
 
     public virtual DbSet<Announcement> Announcements { get; set; }
@@ -77,6 +85,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
 
+    public virtual DbSet<Transaction> Transactions { get; set; }
+
     public virtual DbSet<Supplier> Suppliers { get; set; }
 
     public virtual DbSet<SystemLogo> SystemLogos { get; set; }
@@ -86,6 +96,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<User> Users { get; set; }
     public DbSet<Warehouse> Warehouses { get; set; } = null!;
 
+    public DbSet<Unit> Units { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
@@ -93,10 +104,10 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
+    //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    //{
 
-    }
+    //}
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Announcement>(entity =>
@@ -206,7 +217,11 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.ReorderLevel)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Unit).HasMaxLength(20);
+            entity.HasOne(d => d.Unit)
+      .WithMany(p => p.Ingredients)
+      .HasForeignKey(d => d.UnitId)
+      .OnDelete(DeleteBehavior.Restrict);
+
         });
 
         modelBuilder.Entity<InventoryBatch>(entity =>
@@ -233,12 +248,13 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.PurchaseOrderDetailId)
                 .HasConstraintName("FK__Inventory__Purch__2739D489");
 
-            // ====== 🔥 Thêm quan hệ Warehouse - InventoryBatch ======
+            // ====== Quan hệ Warehouse - InventoryBatch ======
             entity.HasOne(d => d.Warehouse)
-                .WithMany(p => p.InventoryBatches)
-                .HasForeignKey(d => d.WarehouseId)
-                .OnDelete(DeleteBehavior.Restrict) // tránh xóa kho làm mất batch
-                .HasConstraintName("FK__Inventory__Wareh__WarehouseId");
+                  .WithMany(w => w.InventoryBatches)
+                  .HasForeignKey(d => d.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict)
+                  .HasConstraintName("FK_InventoryBatch_Warehouses");
+
         });
 
 
@@ -413,6 +429,63 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasConstraintName("FK__Payments__Vouche__31B762FC");
         });
 
+        modelBuilder.Entity<Transaction>(entity =>
+        {
+            entity.HasKey(e => e.TransactionId).HasName("PK__Transact__55433A6B");
+
+            entity.ToTable("Transactions");
+
+            entity.Property(e => e.TransactionCode)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(e => e.Amount)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.PaymentMethod)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending")
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            entity.Property(e => e.CompletedAt)
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.SessionId)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Notes)
+                .HasMaxLength(500);
+
+            // Relationship: Transaction -> Order (Many-to-One)
+            entity.HasOne(d => d.Order)
+                .WithMany(p => p.Transactions)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Restrict) // Không cho phép xóa Order nếu có Transaction
+                .HasConstraintName("FK__Transacti__Order__Transaction_OrderId");
+
+            // Index cho SessionId để tìm kiếm nhanh
+            entity.HasIndex(e => e.SessionId)
+                .HasDatabaseName("IX_Transactions_SessionId");
+
+            // Index cho OrderId
+            entity.HasIndex(e => e.OrderId)
+                .HasDatabaseName("IX_Transactions_OrderId");
+
+            // Index cho Status
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_Transactions_Status");
+        });
+
         modelBuilder.Entity<Payroll>(entity =>
         {
             entity.HasKey(e => e.PayrollId).HasName("PK__Payroll__99DFC672704E2373");
@@ -520,12 +593,6 @@ public partial class SapaFoRestRmsContext : DbContext
                   .OnDelete(DeleteBehavior.SetNull)
                   .HasConstraintName("FK_PurchaseOrderDetails_Ingredients");
 
-            // 🔗 Quan hệ với Warehouse (mới thêm)
-            entity.HasOne(d => d.Warehouse)
-                  .WithMany(p => p.PurchaseOrderDetails)
-                  .HasForeignKey(d => d.WarehouseId)
-                  .OnDelete(DeleteBehavior.Restrict)
-                  .HasConstraintName("FK_PurchaseOrderDetails_Warehouses");
         });
 
 
@@ -644,6 +711,19 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(18, 2)");
         });
+
+        modelBuilder.Entity<Unit>(entity =>
+        {
+            entity.HasKey(e => e.UnitId);
+
+            entity.Property(e => e.UnitName)
+                  .HasMaxLength(50)
+                  .IsRequired();
+
+            entity.Property(e => e.UnitType)
+                  .IsRequired();
+        });
+
 
         modelBuilder.Entity<Shift>(entity =>
         {
@@ -797,7 +877,10 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.VoucherId).HasName("PK__Vouchers__3AEE7921766B4882");
 
-            entity.HasIndex(e => e.Code, "UQ__Vouchers__A25C5AA74763DC38").IsUnique();
+            // Thay đổi Unique Index từ Code thành Code + StartDate + EndDate
+            entity.HasIndex(e => new { e.Code, e.StartDate, e.EndDate })
+                  .IsUnique()
+                  .HasDatabaseName("UQ_Vouchers_Code_StartDate_EndDate");
 
             entity.Property(e => e.Code).HasMaxLength(50);
             entity.Property(e => e.Description).HasMaxLength(200);
@@ -806,12 +889,37 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.MaxDiscount).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.MinOrderValue).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.Status)
-                .HasMaxLength(20)
-                .HasDefaultValue("Active");
+                  .HasMaxLength(20)
+                  .HasDefaultValue("Active");
+            entity.Property(e => e.IsDelete)
+                  .HasColumnName("IsDelete")
+                  .HasDefaultValue(false);
         });
+
+
+
+        modelBuilder.Entity<Unit>().HasData(
+    new Unit { UnitId = 1, UnitName = "quả", UnitType = UnitType.Integer },
+    new Unit { UnitId = 2, UnitName = "cái", UnitType = UnitType.Integer },
+    new Unit { UnitId = 3, UnitName = "hộp", UnitType = UnitType.Integer },
+    new Unit { UnitId = 4, UnitName = "chai", UnitType = UnitType.Integer },
+    new Unit { UnitId = 5, UnitName = "gói", UnitType = UnitType.Integer },
+    new Unit { UnitId = 6, UnitName = "bịch", UnitType = UnitType.Integer },
+    new Unit { UnitId = 7, UnitName = "bó", UnitType = UnitType.Integer },
+    new Unit { UnitId = 8, UnitName = "con", UnitType = UnitType.Integer },
+    new Unit { UnitId = 9, UnitName = "túi", UnitType = UnitType.Integer },
+
+    new Unit { UnitId = 10, UnitName = "kg", UnitType = UnitType.Decimal },
+    new Unit { UnitId = 11, UnitName = "gram", UnitType = UnitType.Decimal },
+    new Unit { UnitId = 12, UnitName = "lít", UnitType = UnitType.Decimal },
+    new Unit { UnitId = 13, UnitName = "ml", UnitType = UnitType.Decimal }
+);
+
 
         OnModelCreatingPartial(modelBuilder);
     }
+
+
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

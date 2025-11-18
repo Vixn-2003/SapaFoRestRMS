@@ -38,18 +38,37 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddTable([FromBody] TableManageDto dto)
+        public async Task<IActionResult> AddTable([FromBody] TableCreateDto dto)
         {
-            await _tableService.AddAsync(dto);
-            return Ok(new { message = "Table added successfully" });
+            try
+            {
+                await _tableService.AddAsync(dto);
+                return Ok(new { message = "Table added successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTable(int id, [FromBody] TableManageDto dto)
+        public async Task<IActionResult> UpdateTable(int id, [FromBody] TableUpdateDto dto)
         {
-            await _tableService.UpdateAsync(id, dto);
-            return Ok(new { message = "Table updated successfully" });
+            try
+            {
+                await _tableService.UpdateAsync(id, dto);
+                return Ok(new { message = "Table updated successfully" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)

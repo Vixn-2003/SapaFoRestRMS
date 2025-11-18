@@ -1,0 +1,239 @@
+@model WebSapaForestForStaff.DTOs.UserManagement.UserDetailsResponse
+
+@{
+    ViewData["Title"] = "Chi tiết người dùng";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Chi tiết người dùng</h1>
+            <p class="page-subtitle">Thông tin chi tiết về @Model.FullName</p>
+        </div>
+        <div class="page-actions">
+            <a asp-action="Index" class="btn-secondary-custom btn-medium">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.UserId" class="btn-primary-custom btn-medium">
+                <i class="bi bi-pencil"></i> Chỉnh sửa
+            </a>
+            @if (User.IsInRole("Admin") || User.IsInRole("Owner"))
+            {
+                <a asp-action="ResetPassword" asp-route-id="@Model.UserId" class="btn-text-custom">
+                    <i class="bi bi-key"></i> Đặt lại mật khẩu
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- User Information -->
+        <div class="col-lg-4">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="card-title mb-0 heading-h2">
+                        <i class="bi bi-person"></i> Thông tin cá nhân
+                    </h5>
+                </div>
+                <div class="card-body-custom text-center">
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                    {
+                        <img src="@Model.AvatarUrl" alt="Avatar" class="avatar-lg mb-3" />
+                    }
+                    else
+                    {
+                        <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
+                            @Model.FullName.Substring(0, 1).ToUpper()
+                        </div>
+                    }
+                    
+                    <h4 class="mb-1">@Model.FullName</h4>
+                    <p class="text-muted mb-3">@Model.Email</p>
+                    
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                                        <span class="badge-custom @(Model.RoleName?.ToLower() == "owner" || Model.RoleName?.ToLower() == "admin" ? "error" : Model.RoleName?.ToLower() == "manager" ? "warning" : "info")">
+                            @Model.RoleName
+                        </span>
+                        <span class="badge-custom @(Model.Status == 0 ? "success" : Model.Status == 1 ? "error" : "warning")">
+                            @(Model.Status == 0 ? "Hoạt động" : Model.Status == 1 ? "Không hoạt động" : "Khóa")
+                        </span>
+                    </div>
+
+                    <div class="user-info">
+                        <div class="info-item">
+                            <i class="bi bi-telephone"></i>
+                            <span>@(Model.Phone ?? "Chưa cập nhật")</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="bi bi-calendar"></i>
+                            <span>Tham gia: @(Model.CreatedAt?.ToString("dd/MM/yyyy") ?? "N/A")</span>
+                        </div>
+                        @if (Model.LastLoginAt.HasValue)
+                        {
+                            <div class="info-item">
+                                <i class="bi bi-clock"></i>
+                                <span>Đăng nhập cuối: @Model.LastLoginAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Details -->
+        <div class="col-lg-8">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            <h5 class="card-title mb-0 heading-h2">
+                                <i class="bi bi-info-circle"></i> Thông tin tài khoản
+                            </h5>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">ID Người dùng</label>
+                                        <span class="info-value">@Model.UserId</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Vai trò</label>
+                                        <span class="info-value">
+                                            <span class="badge-custom @(Model.RoleName?.ToLower() == "owner" || Model.RoleName?.ToLower() == "admin" ? "error" : Model.RoleName?.ToLower() == "manager" ? "warning" : "info")">
+                                                @Model.RoleName
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Trạng thái</label>
+                                        <span class="info-value">
+                                            <span class="badge-custom @(Model.Status == 0 ? "success" : Model.Status == 1 ? "error" : "warning")">
+                                                @(Model.Status == 0 ? "Hoạt động" : Model.Status == 1 ? "Không hoạt động" : "Khóa")
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Ngày tạo</label>
+                                        <span class="info-value">@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Cập nhật lần cuối</label>
+                                        <span class="info-value">@(Model.ModifiedAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa cập nhật")</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-group">
+                                        <label class="info-label">Đăng nhập cuối</label>
+                                        <span class="info-value">@(Model.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa đăng nhập")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login History -->
+            @if (Model.LoginHistory.Any())
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card-custom">
+                            <div class="card-header-custom">
+                                <h5 class="card-title mb-0 heading-h2">
+                                    <i class="bi bi-clock-history"></i> Lịch sử đăng nhập
+                                </h5>
+                            </div>
+                            <div class="card-body-custom">
+                                <div class="table-responsive">
+                                    <table class="table-custom table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Thời gian</th>
+                                                <th>IP Address</th>
+                                                <th>Trạng thái</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var login in Model.LoginHistory.Take(10))
+                                            {
+                                                <tr>
+                                                    <td>@login.LoginTime.ToString("dd/MM/yyyy HH:mm")</td>
+                                                    <td>@(login.IpAddress ?? "N/A")</td>
+                                                                                    <td>
+                                                        <span class="badge-custom @(login.IsSuccessful ? "success" : "error")">
+                                                            @(login.IsSuccessful ? "Thành công" : "Thất bại")
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Recent Activities -->
+            @if (Model.RecentActivities.Any())
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card-custom">
+                            <div class="card-header-custom">
+                                <h5 class="card-title mb-0 heading-h2">
+                                    <i class="bi bi-activity"></i> Hoạt động gần đây
+                                </h5>
+                            </div>
+                            <div class="card-body-custom">
+                                <div class="activity-timeline">
+                                    @foreach (var activity in Model.RecentActivities.Take(10))
+                                    {
+                                        <div class="activity-item">
+                                            <div class="activity-time">@activity.ActivityTime.ToString("dd/MM/yyyy HH:mm")</div>
+                                            <div class="activity-content">
+                                                <div class="activity-type">@activity.ActivityType</div>
+                                                <div class="activity-description">@activity.Description</div>
+                                                @if (!string.IsNullOrEmpty(activity.IpAddress))
+                                                {
+                                                    <div class="activity-ip">IP: @activity.IpAddress</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/users.css">
+    <link rel="stylesheet" href="~/css/users/details.css">
+}
+
+@section Scripts {
+    <script src="~/js/toast-notification.js"></script>
+}

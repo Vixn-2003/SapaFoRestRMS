@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DomainAccessLayer.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,8 +14,10 @@ namespace BusinessAccessLayer.DTOs.Inventory
 
         public string Name { get; set; } = null!;
 
-        public string? Unit { get; set; }
+        public int? UnitId { get; set; }
 
         public decimal? ReorderLevel { get; set; }
+
+        public UnitDTO Unit { get; set; }
     }
 }

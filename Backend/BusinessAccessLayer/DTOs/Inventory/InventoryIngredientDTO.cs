@@ -11,10 +11,11 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public int IngredientId { get; set; }
         public string IngredientCode { get; set; } = string.Empty!;
         public string Name { get; set; } = null!;
-        public string? Unit { get; set; }
+        public int? UnitId {get; set; }
         public decimal? ReorderLevel { get; set; }
 
         public List<InventoryBatchDTO> Batches { get; set; } = new();
+        public UnitDTO Unit { get; set; } = new();
 
         public decimal TotalQuantity => Batches.Sum(b => b.QuantityRemaining);
 

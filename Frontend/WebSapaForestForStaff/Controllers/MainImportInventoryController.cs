@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using WebSapaForestForStaff.DTOs;
+using WebSapaForestForStaff.DTOs.Inventory;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -24,6 +25,7 @@ namespace WebSapaForestForStaff.Controllers
                 // Gọi API với endpoint đúng
                 var response = await _httpClient.GetAsync("api/PurchaseOrder");
 
+
                 // Kiểm tra status code
                 if (!response.IsSuccessStatusCode)
                 {
@@ -36,6 +38,7 @@ namespace WebSapaForestForStaff.Controllers
 
                 // Debug - log ra để kiểm tra
                 Console.WriteLine("API Response: " + jsonData);
+
 
                 // Parse JSON
                 var purchaseList = JsonConvert.DeserializeObject<List<PurchaseOrderDTO>>(jsonData);

@@ -62,9 +62,13 @@ body, html {
 
     .login-box h3 {
         font-size: 28px;
-        color: #28a745;
+        color: var(--primary-500, #FF6B6B);
         font-weight: 800;
         margin-bottom: 35px;
+    }
+
+    .login-box h3 span {
+        color: var(--primary-500, #FF6B6B);
     }
 
 /* =============== FORM ELEMENTS =============== */
@@ -88,9 +92,14 @@ label {
     transition: all 0.2s;
 }
 
+    .input-wrapper {
+        border: 1px solid var(--neutral-gray-300, #E0E0E0);
+    }
+
     .input-wrapper:focus-within {
-        border: 1px solid #28a745;
+        border: 1px solid var(--primary-500, #FF6B6B);
         background-color: #fff;
+        box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
     }
 
     .input-wrapper i {
@@ -125,22 +134,7 @@ label {
             text-decoration: underline;
         }
 
-.btn-login {
-    width: 100%;
-    background-color: #28a745;
-    border: none;
-    color: white;
-    font-weight: 600;
-    font-size: 16px;
-    padding: 13px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-    .btn-login:hover {
-        background-color: #218838;
-    }
+/* Button styles now use Design System classes */
 
 /* =============== RESPONSIVE =============== */
 @media (max-width: 992px) {

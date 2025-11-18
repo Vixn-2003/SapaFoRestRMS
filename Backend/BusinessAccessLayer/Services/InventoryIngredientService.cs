@@ -74,7 +74,7 @@ namespace BusinessAccessLayer.Services
             return _mapper.Map<InventoryIngredientDTO>(ingredients);
         }
 
-        public async Task<(bool success, string message)> UpdateIngredient(int idIngredient, string nameIngredient, string unit)
+        public async Task<(bool success, string message)> UpdateIngredient(int idIngredient, string nameIngredient, int unit)
         {
             var ingredients = await _unitOfWork.InventoryIngredient.UpdateInforIngredient(idIngredient, nameIngredient, unit);
             return ingredients;

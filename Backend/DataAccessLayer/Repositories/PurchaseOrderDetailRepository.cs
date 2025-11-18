@@ -42,8 +42,7 @@ namespace DataAccessLayer.Repositories
         {
             return await _context.PurchaseOrderDetails
                 .Where(d => d.PurchaseOrderId == purchaseOrderId)
-                .Include(d => d.Ingredient)      
-                .Include(d => d.Warehouse)    
+                .Include(d => d.Ingredient)        
                 .ToListAsync();
         }
 

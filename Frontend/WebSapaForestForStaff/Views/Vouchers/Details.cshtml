@@ -1,0 +1,86 @@
+﻿@using WebSapaForestForStaff.Models
+@using WebSapaForestForStaff.Models.VoucherDTO
+@model WebSapaForestForStaff.Models.VoucherDTO.VoucherDto
+
+@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    ViewData["Title"] = "Voucher Details";
+}
+
+<div class="col-md-10 grid-margin stretch-card mx-auto">
+    <div class="card">
+        <div class="card-body">
+            <h4 class="card-title">Voucher Details</h4>
+            <p class="card-description">Thông tin chi tiết voucher</p>
+
+            <form class="forms-sample">
+                <div class="row">
+                    <!-- Cột trái -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Voucher ID</label>
+                            <input type="text" class="form-control" value="@Model.VoucherId" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Code</label>
+                            <input type="text" class="form-control" value="@Model.Code" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Description</label>
+                            <input type="text" class="form-control" value="@Model.Description" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Discount Type</label>
+                            <input type="text" class="form-control" value="@Model.DiscountType" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Discount Value</label>
+                            <input type="text" class="form-control" value="@Model.DiscountValue" readonly />
+                        </div>
+                    </div>
+
+                    <!-- Cột phải -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="text" class="form-control" value="@Model.StartDate?.ToString("yyyy-MM-dd")" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="text" class="form-control" value="@Model.EndDate?.ToString("yyyy-MM-dd")" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Min Order Value</label>
+                            <input type="text" class="form-control" value="@Model.MinOrderValue" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Max Discount</label>
+                            <input type="text" class="form-control" value="@Model.MaxDiscount" readonly />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Status</label>
+                            <input type="text" class="form-control" value="@Model.Status" readonly />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-end">
+                    <a href="@Url.Action("Index", "Vouchers", new { pageNumber = ViewData["PageNumber"] })" class="btn btn-secondary me-2">
+                        Back to List
+                    </a>
+                    <a href="@Url.Action("Edit", "Vouchers", new { id = Model.VoucherId })" class="btn btn-warning">
+                        Edit
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

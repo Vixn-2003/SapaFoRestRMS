@@ -65,7 +65,7 @@ namespace DataAccessLayer.Repositories
             return await _context.PurchaseOrders.Include(p => p.Creator)
                 .Include(p => p.Confirmer)
                 .Include(x => x.Supplier)
-                .Include(x => x.PurchaseOrderDetails).ThenInclude(z => z.Warehouse)
+                .Include(x => x.PurchaseOrderDetails)
                 .ToListAsync();
         }
 
@@ -79,8 +79,7 @@ namespace DataAccessLayer.Repositories
         {
             return await _context.PurchaseOrders.Include( p => p.Creator).Include(p => p.Confirmer)
                 .Include(p => p.Supplier)
-                .Include(p => p.PurchaseOrderDetails)
-                    .ThenInclude(d => d.Warehouse)
+                .Include(p => p.PurchaseOrderDetails)                   
                 .FirstOrDefaultAsync(p => p.PurchaseOrderId == id);
         }
 

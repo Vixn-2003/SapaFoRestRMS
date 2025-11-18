@@ -9,6 +9,6 @@ namespace DataAccessLayer.Repositories.Interfaces
 {
     public interface IWarehouseRepository : IRepository<Warehouse>
     {
-
+        Task<int> GetIdByStringAsync(string warehouse);
     }
 }

@@ -16,6 +16,12 @@
     <link rel="stylesheet" href="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.css">
     <!-- endinject -->
     <!-- Plugin css for this page -->
+    <!-- Trong <head> -->
+<link href="~/css/vouchers.css" rel="stylesheet" />  
+@RenderSection("Styles", required: false)
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
     <link rel="stylesheet" href="~/assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
     <link rel="stylesheet" type="text/css" href="~/assets/js/select.dataTables.min.css">
     <!-- End plugin css for this page -->
@@ -239,17 +245,23 @@
                         </div>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
-                            <i class="menu-icon mdi mdi-table"></i>
-                            <span class="menu-title">Quản lý bàn</span>
-                            <i class="menu-arrow"></i>
-                        </a>
-                        <div class="collapse" id="tables">
-                            <ul class="nav flex-column sub-menu">
-                                <li class="nav-item"> <a class="nav-link" href="pages/tables/basic-table.html">Basic table</a></li>
-                            </ul>
-                        </div>
-                    </li>
+    <a class="nav-link" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
+        <i class="menu-icon mdi mdi-table"></i>
+        <span class="menu-title">Quản lý bàn</span>
+        <i class="menu-arrow"></i>
+    </a>
+    <div class="collapse" id="tables">
+        <ul class="nav flex-column sub-menu">
+            <li class="nav-item">
+                <a class="nav-link" href="/TableManage">Quản lý bàn</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/Ordertable">Quản lý mã QR</a>
+            </li>
+        </ul>
+    </div>
+</li>
+
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
                             <i class="menu-icon mdi mdi-layers-outline"></i>
@@ -278,6 +290,43 @@
                             </ul>
                         </div>
                     </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#voucherSubMenu" aria-expanded="false" aria-controls="voucherSubMenu">
+                            <i class="menu-icon mdi mdi-layers-outline"></i>
+                            <span class="menu-title">Quản lý Voucher</span>
+                            <i class="menu-arrow"></i>
+                        </a>
+                        <div class="collapse" id="voucherSubMenu">
+                            <ul class="nav flex-column sub-menu">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Vouchers" asp-action="Index">Danh sách Voucher</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="Vouchers" asp-action="IsDelete">Thùng rác Voucher</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+
+                   <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="collapse" href="#payrollSubMenu" aria-expanded="false" aria-controls="payrollSubMenu">
+        <i class="menu-icon mdi mdi-cash-multiple"></i>
+        <span class="menu-title">Quản lý Lương</span>
+        <i class="menu-arrow"></i>
+    </a>
+    <div class="collapse" id="payrollSubMenu">
+        <ul class="nav flex-column sub-menu">
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="Payroll" asp-action="Index">Danh sách Lương Nhân viên</a>
+            </li>
+            <!-- Bạn có thể thêm các mục con khác ở đây -->
+        </ul>
+    </div>
+</li>
+
+
+
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="ManagerMenu" asp-action="DisplayMenu">
                             <i class="menu-icon mdi mdi-file-document"></i>
@@ -319,28 +368,36 @@
             </div>
             <!-- main-panel ends -->
         </div>
+
+            @RenderSection("Scripts", required: false)
+
         <!-- page-body-wrapper ends -->
-    </div>
-    <!-- container-scroller -->
-    <!-- plugins:js -->
-    <script src="~/assets/vendors/js/vendor.bundle.base.js"></script>
-    <script src="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
-    <!-- endinject -->
-    <!-- Plugin js for this page -->
-    <script src="~/assets/vendors/chart.js/chart.umd.js"></script>
-    <script src="~/assets/vendors/progressbar.js/progressbar.min.js"></script>
-    <!-- End plugin js for this page -->
-    <!-- inject:js -->
-    <script src="~/assets/js/off-canvas.js"></script>
-    <script src="~/assets/js/template.js"></script>
-    <script src="~/assets/js/settings.js"></script>
-    <script src="~/assets/js/hoverable-collapse.js"></script>
-    <script src="~/assets/js/todolist.js"></script>
-    <!-- endinject -->
-    <!-- Custom js for this page-->
-    <script src="~/assets/js/jquery.cookie.js" type="text/javascript"></script>
-    <script src="~/assets/js/dashboard.js"></script>
-    <!-- <script src="assets/js/Chart.roundedBarCharts.js"></script> -->
-    <!-- End custom js for this page-->
+    </div
+   <!-- vendor scripts -->
+<script src="~/assets/vendors/js/vendor.bundle.base.js"></script>
+<script src="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
+<script src="~/assets/vendors/chart.js/chart.umd.js"></script>
+<script src="~/assets/vendors/progressbar.js/progressbar.min.js"></script>
+
+<!-- jQuery (đặt lại ở đây để đảm bảo sẵn sàng trước JS custom) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- toastr (phụ thuộc jQuery) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<!-- custom scripts -->
+<script src="~/js/vouchers.js"></script>
+<script src="~/js/print-qr.js"></script>
+
+<!-- framework scripts -->
+<script src="~/assets/js/off-canvas.js"></script>
+<script src="~/assets/js/template.js"></script>
+<script src="~/assets/js/settings.js"></script>
+<script src="~/assets/js/hoverable-collapse.js"></script>
+<script src="~/assets/js/todolist.js"></script>
+<script src="~/assets/js/jquery.cookie.js"></script>
+<script src="~/assets/js/dashboard.js"></script>
+
+
 </body>
 </html>

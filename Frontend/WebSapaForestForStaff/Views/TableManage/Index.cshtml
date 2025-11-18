@@ -2,11 +2,16 @@
 
 @{
     ViewData["Title"] = "Quản lý bàn";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+
 }
 
 <h2 class="mb-3">Danh sách bàn</h2>
-<button class="btn btn-primary mb-3" id="btnAdd">Thêm bàn mới</button>
 
+<!-- Nút thêm bàn -->
+<a class="btn btn-primary mb-3" href="@Url.Action("Create")">Thêm bàn mới</a>
+
+<!-- Form tìm kiếm/filter -->
 <form method="get" class="mb-4 d-flex flex-wrap gap-2">
     <input type="text" name="search" value="@ViewBag.Search" placeholder="Tìm theo tên bàn" class="form-control w-auto" />
     <input type="number" name="capacity" value="@ViewBag.Capacity" placeholder="Sức chứa" class="form-control w-auto" />
@@ -27,6 +32,7 @@
     <button type="submit" class="btn btn-primary">Tìm kiếm</button>
 </form>
 
+<!-- Bảng danh sách bàn -->
 <table class="table table-bordered table-striped align-middle">
     <thead class="table-light">
         <tr>
@@ -47,7 +53,7 @@
         {
             foreach (var t in Model)
             {
-                <tr data-id="@t.TableId" data-number="@t.TableNumber" data-capacity="@t.Capacity" data-area="@t.AreaId" data-status="@t.Status">
+                <tr>
                     <td>@t.TableId</td>
                     <td>@t.TableNumber</td>
                     <td>@t.Capacity</td>
@@ -63,8 +69,14 @@
                         }
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-warning btnEdit">Sửa</button>
-                        <button class="btn btn-sm btn-danger btnDelete">Xóa</button>
+                        <!-- Nút Sửa -->
+                        <a class="btn btn-sm btn-warning" href="@Url.Action("Edit", new { id = t.TableId })">Sửa</a>
+
+                        <!-- Nút Xóa -->
+                        <form asp-action="Delete" asp-route-id="@t.TableId" method="post" style="display:inline-block;" 
+                              onsubmit="return confirm('Bạn có chắc muốn xóa bàn này?');">
+                            <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                        </form>
                     </td>
                 </tr>
             }
@@ -72,6 +84,7 @@
     </tbody>
 </table>
 
+<!-- Pagination -->
 @if (ViewBag.TotalCount > ViewBag.PageSize)
 {
     <nav>
@@ -87,98 +100,4 @@
             }
         </ul>
     </nav>
-}
-
-<!-- Modal Add/Edit -->
-<div class="modal fade" id="tableModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="tableForm">
-                <div class="modal-header">
-                    <h5 class="modal-title">Thêm / Sửa bàn</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="TableId" name="TableId" value="0" />
-                    <div class="mb-3">
-                        <label for="TableNumber" class="form-label">Tên bàn</label>
-                        <input type="text" class="form-control" id="TableNumber" name="TableNumber" required />
-                    </div>
-                    <div class="mb-3">
-                        <label for="Capacity" class="form-label">Sức chứa</label>
-                        <input type="number" class="form-control" id="Capacity" name="Capacity" required />
-                    </div>
-                    <div class="mb-3">
-                        <label for="AreaId" class="form-label">Khu vực</label>
-                        <select class="form-select" id="AreaId" name="AreaId" required>
-                            @foreach (var area in ViewBag.Areas as List<WebSapaForestForStaff.Models.AreaDto>)
-                            {
-                                <option value="@area.AreaId">@area.AreaName (Tầng @area.Floor)</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="Status" class="form-label">Trạng thái</label>
-                        <select class="form-select" id="Status" name="Status">
-                            <option value="Available">Available</option>
-                            <option value="Maintenance">Maintenance</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Lưu</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-@section Scripts {
-    <script>
-        $(document).ready(function() {
-            // Mở modal thêm
-            $("#btnAdd").click(function() {
-                $("#tableForm")[0].reset();
-                $("#TableId").val(0);
-                $("#tableModal .modal-title").text("Thêm bàn mới");
-                $("#tableModal").modal("show");
-            });
-
-            // Mở modal sửa
-            $(".btnEdit").click(function() {
-                var row = $(this).closest("tr");
-                $("#TableId").val(row.data("id"));
-                $("#TableNumber").val(row.data("number"));
-                $("#Capacity").val(row.data("capacity"));
-                $("#AreaId").val(row.data("area"));
-                $("#Status").val(row.data("status"));
-                $("#tableModal .modal-title").text("Sửa bàn");
-                $("#tableModal").modal("show");
-            });
-
-            // Submit Add/Edit
-            $("#tableForm").submit(function(e) {
-                e.preventDefault();
-                $.post("@Url.Action("SaveTable", "TableManage")", $(this).serialize(), function(res) {
-                    alert(res.message);
-                    if(res.success) location.reload();
-                });
-            });
-
-            // Xóa bàn
-            $(".btnDelete").click(function() {
-                if(!confirm("Bạn có chắc muốn xóa bàn này?")) return;
-                var id = $(this).closest("tr").data("id");
-                $.ajax({
-                    url: "@Url.Action("Delete", "TableManage")/" + id,
-                    type: "DELETE",
-                    success: function(res){
-                        alert(res.message);
-                        if(res.success) location.reload();
-                    }
-                });
-            });
-        });
-    </script>
 }

@@ -1,0 +1,120 @@
+/**
+ * User Details Page - CSS
+ * Specific styles for Details view
+ */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--neutral-gray-300);
+}
+
+.header-content .page-title {
+    margin: 0;
+}
+
+.header-content .page-subtitle {
+    margin: 0.5rem 0 0 0;
+}
+
+.page-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.avatar-lg {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.user-info {
+    text-align: left;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--neutral-gray-600);
+}
+
+.info-item i {
+    width: 16px;
+    color: var(--primary-500);
+}
+
+.info-group {
+    margin-bottom: 1rem;
+}
+
+.info-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--neutral-black);
+}
+
+.info-value {
+    color: var(--neutral-gray-600);
+}
+
+.activity-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.activity-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--neutral-gray-300);
+}
+
+.activity-item {
+    position: relative;
+    margin-bottom: 1rem;
+    padding-left: 1rem;
+}
+
+.activity-item::before {
+    content: '';
+    position: absolute;
+    left: -0.5rem;
+    top: 0.5rem;
+    width: 8px;
+    height: 8px;
+    background-color: var(--primary-500);
+    border-radius: 50%;
+}
+
+.activity-time {
+    font-size: 0.875rem;
+    color: var(--neutral-gray-600);
+    margin-bottom: 0.25rem;
+}
+
+.activity-type {
+    font-weight: 600;
+    color: var(--neutral-black);
+    margin-bottom: 0.25rem;
+}
+
+.activity-description {
+    color: var(--neutral-gray-600);
+    margin-bottom: 0.25rem;
+}
+
+.activity-ip {
+    font-size: 0.75rem;
+    color: var(--neutral-gray-600);
+}
+

@@ -24,9 +24,8 @@ namespace BusinessAccessLayer.DTOs.Inventory
 
         public decimal Subtotal { get; set; }
 
-        public int? WarehouseId { get; set; }
+        public string? WarehouseName { get; set; }
 
-        public WarehouseDTO Warehouse { get; set; }
         public IngredientDTO Ingredient { get; set; }
     }
 }

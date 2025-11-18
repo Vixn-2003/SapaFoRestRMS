@@ -267,7 +267,7 @@
                     <span>Nhập hàng</span>
                 </a>
 
-                <a href="@Url.Action("Index", "XuatHang")"
+                <a href="@Url.Action("Index", "ExportManagement")"
                    class="sidebar-menu-item"
                    data-controller="XuatHang">
                     <svg fill="currentColor" viewBox="0 0 24 24">
@@ -321,7 +321,9 @@
                 </div>
             </div>
 
-            <button class="sidebar-logout-btn" onclick="logout()">Đăng xuất</button>
+            <form id="logoutForm" action="/Auth/Logout" method="post">
+                <button type="submit" class="logout-btn">Đăng xuất</button>
+            </form>
         </aside>
 
         <!-- Main Content -->
@@ -331,11 +333,7 @@
     </div>
 
     <script>
-        function logout() {
-            if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
-                window.location.href = '/Logout';
-            }
-        }
+        // No JS needed; form posts to logout
 
         // Highlight active menu item based on current controller
         document.addEventListener('DOMContentLoaded', function () {

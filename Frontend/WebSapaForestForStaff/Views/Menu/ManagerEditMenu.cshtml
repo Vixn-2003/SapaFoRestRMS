@@ -406,20 +406,21 @@
                                         @foreach (var ingredient in Model.Ingredient)
                                         {
                                             var isSelected = Model.Recipe != null && Model.Recipe.Any(r => r.IngredientId == ingredient.IngredientId);
+                                            var unitName = ingredient.Unit?.UnitName ?? "";
                                             <tr data-ingredient-id="@ingredient.IngredientId"
                                                 data-ingredient-name="@ingredient.Name"
-                                                data-ingredient-unit="@ingredient.Unit">
+                                                data-ingredient-unit="@unitName">
                                                 <td style="text-align: center;">
                                                     <input type="checkbox"
                                                            class="ingredient-checkbox"
                                                            value="@ingredient.IngredientId"
                                                            data-name="@ingredient.Name"
-                                                           data-unit="@ingredient.Unit"
+                                                           data-unit="@unitName"
                                                     @(isSelected ? "checked" : "")
                                                            onchange="toggleIngredient(this)">
                                                 </td>
                                                 <td>@ingredient.Name</td>
-                                                <td>@(ingredient.Unit == "piece" ? "Cái" : ingredient.Unit)</td>
+                                                <td>@(ingredient.Unit?.UnitName ?? "N/A")</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -450,18 +451,22 @@
                                                 var ingredient = Model.Ingredient.FirstOrDefault(i => i.IngredientId == recipe.IngredientId);
                                                 if (ingredient != null)
                                                 {
-                                                    <tr data-ingredient-id="@ingredient.IngredientId">
+                                                    var unitName = ingredient.Unit?.UnitName ?? "";
+
+                                                    <tr data-ingredient-id="@ingredient.IngredientId"
+                                                        data-ingredient-name="@ingredient.Name"
+                                                        data-ingredient-unit="@unitName">
                                                         <td>@ingredient.Name</td>
                                                         <td>
                                                             <input type="number"
                                                                    value="@recipe.QuantityNeeded"
-                                                                   min="@(ingredient.Unit.ToLower() == "piece" ? "1" : "0")"
-                                                                   step="@(ingredient.Unit.ToLower() == "piece" ? "1" : "0.01")"
+                                                                   min="0"
+                                                                   step="0.01"
                                                                    style="width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;"
                                                                    onchange="updateQuantityFromTable(@ingredient.IngredientId, this.value)"
                                                                    required>
                                                         </td>
-                                                        <td>@(ingredient.Unit == "piece" ? "Cái" : ingredient.Unit)</td>
+                                                        <td>@unitName</td>
                                                         <td style="text-align: center;">
                                                             <button type="button"
                                                                     class="btn btn-danger"
@@ -510,7 +515,7 @@
                     @:{
                     @:id: @ingredient.IngredientId,
                     @:name: "@ingredient.Name",
-                    @:unit: "@ingredient.Unit",
+                    @:unit: "@(ingredient.Unit?.UnitName ?? "")",
                     @:quantity: @recipe.QuantityNeeded
                     @:},
                 }
@@ -678,7 +683,7 @@
                                     <input type="hidden" name="MenuRecipes[${index}].QuantityNeeded" value="${ing.quantity}" id="hidden_quantity_${index}">
                                     <input type="hidden" name="MenuRecipes[${index}].Unit" value="${ing.unit}">
                                 </td>
-                                <td>${ing.unit === 'piece' ? 'Cái' : ing.unit}</td>
+                                                <td>${ing.unit || 'N/A'}</td>
                                 <td style="text-align: center;">
                                     <button type="button"
                                             class="btn btn-danger"

@@ -14,12 +14,15 @@ namespace SapaFoRestRMSAPI.Controllers
         private readonly IPurchaseOrderService _purchaseOrderService;
         private readonly IInventoryIngredientService _inventoryIngredientService;
         private readonly IStockTransactionService _stockTransactionService;
-
-        public PurchaseOrderController(IPurchaseOrderService purchaseOrderService, IInventoryIngredientService inventoryIngredientService, IStockTransactionService stockTransactionService)
+        private readonly IUnitService _unitService;
+        private readonly IWarehouseService _warehouseService;
+        public PurchaseOrderController(IWarehouseService warehouseService,IPurchaseOrderService purchaseOrderService, IInventoryIngredientService inventoryIngredientService, IStockTransactionService stockTransactionService, IUnitService unitService)
         {
             _purchaseOrderService = purchaseOrderService;
             _inventoryIngredientService = inventoryIngredientService;
             _stockTransactionService = stockTransactionService;
+            _unitService = unitService;
+            _warehouseService = warehouseService;
         }
 
        [HttpGet]
@@ -100,14 +103,16 @@ namespace SapaFoRestRMSAPI.Controllers
                 // Xử lý từng nguyên liệu
                 foreach (var item in listIngredients.PurchaseOrderDetails)
                 {
+                    int idW = await _warehouseService.GetWarehouseByString(item.WarehouseName);
                     if (item.IngredientId == null)
                     {
+                        int idU = await _unitService.getIdUnitByString(item.Unit);                       
                         //  NGUYÊN LIỆU MỚI - Thêm vào bảng Ingredient trước
                         IngredientDTO ingredients = new IngredientDTO
                         {
                             Name = item.IngredientName,
                             IngredientCode = item.IngredientCode,
-                            Unit = item.Unit,
+                            UnitId = idU,
                             ReorderLevel = 10
                         };
 
@@ -130,7 +135,7 @@ namespace SapaFoRestRMSAPI.Controllers
                             IngredientId = id,
                             PurchaseOrderDetailId = item.PurchaseOrderDetailId,
                             ExpiryDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-5)),
-                            WarehouseId = (int)item.WarehouseId,
+                            WarehouseId = idW,
                             QuantityRemaining = item.Quantity
                         };
 
@@ -163,7 +168,7 @@ namespace SapaFoRestRMSAPI.Controllers
                             IngredientId = (int)item.IngredientId,
                             PurchaseOrderDetailId = item.PurchaseOrderDetailId,
                             ExpiryDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-5)),
-                            WarehouseId = (int)item.WarehouseId,
+                            WarehouseId = idW,
                             QuantityRemaining = item.Quantity
                         };
 

@@ -1247,6 +1247,48 @@ body.sidebar-open .container {
         width: 100%;
     }
 }
+        /* ===== BUTTON STYLES ===== */
+        .confirm-btn-cancel {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+            .confirm-btn-cancel:hover {
+                background: #e5e7eb;
+            }
+
+        .confirm-btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+            .confirm-btn-danger:hover {
+                background: #b91c1c;
+                transform: translateY(-1px);
+            }
+
+        .confirm-btn-success {
+            background: #16a34a;
+            color: white;
+        }
+
+            .confirm-btn-success:hover {
+                background: #15803d;
+                transform: translateY(-1px);
+            }
+
+        /* ===== CONFIRM MODAL ENHANCEMENTS ===== */
+        .confirm-modal-message strong {
+            font-weight: 700;
+        }
+
+        .confirm-icon-wrapper.warning {
+            background: #fef3c7;
+        }
+
+            .confirm-icon-wrapper.warning svg {
+                color: #f59e0b;
+            }
     </style>
 </head>
 <body>
@@ -1438,7 +1480,7 @@ body.sidebar-open .container {
                                         <td>@stt</td>
                                         <td class="font-medium">@item.IngredientCode</td>
                                         <td>@item.IngredientName</td>
-                                        <td>@item.Warehouse.Name</td>
+                                        <td>@item.WarehouseName</td>
                                         <td class="text-center font-semibold">@item.Quantity</td>
                                         <td class="text-center">@item.Unit</td>
                                         <td class="text-right">@string.Format("{0:N0}₫", item.UnitPrice)</td>
@@ -1477,7 +1519,8 @@ body.sidebar-open .container {
             </div>
 
             <!-- Inspector Confirmation -->
-            <form asp-controller="DetailImport" asp-action="Confirm" method="post">
+            <form asp-controller="DetailImport" asp-action="Confirm" method="post" id="confirmForm">
+
                    <input type="hidden" name="PurchaseOrderId" value="@Model.PurchaseOrderId" />
                    <input type="hidden" id="CheckIdInput" name="CheckId" value="" />
                 <input type="hidden" id="StatusInput" name="Status" value="" />
@@ -1543,7 +1586,7 @@ body.sidebar-open .container {
                         <button type="button" class="btn-reject" onclick="showRejectModal()">
                             Từ chối đơn nhập
                         </button>
-                        <button type="button" id="acceptBtn" class="btn-accept disabled" disabled onclick="acceptOrder()">
+                        <button type="button" id="acceptBtn" class="btn-accept disabled" disabled onclick="showAcceptModal()">
                             Chấp nhận đơn nhập
                         </button>
                     </div>
@@ -1552,31 +1595,66 @@ body.sidebar-open .container {
         </div>
     </div>
 
-    <!-- Reject Modal -->
-    <div id="rejectModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 class="modal-title">
+    <!-- ===== MODAL XÁC NHẬN TỪ CHỐI ===== -->
+    <div id="rejectConfirmModal" class="confirm-modal-overlay">
+        <div class="confirm-modal">
+            <div class="confirm-modal-header">
+                <div class="confirm-icon-wrapper error">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Từ chối đơn nhập hàng
-                </h3>
+                </div>
+                <div>
+                    <h3 class="confirm-modal-title">Xác nhận từ chối đơn hàng</h3>
+                </div>
             </div>
-            <div class="modal-body">
-                <label for="rejectReason" class="modal-label">
-                    Lý do từ chối <span style="color: #dc2626;">*</span>
-                </label>
-                <textarea 
-                    id="rejectReason" 
-                    class="modal-textarea" 
-                    placeholder="Vui lòng nhập lý do từ chối đơn nhập hàng..."
-                    oninput="validateRejectReason()"></textarea>
+            <div class="confirm-modal-body">
+                <p class="confirm-modal-message">
+                    Bạn có chắc chắn muốn <strong style="color: #dc2626;">từ chối</strong> đơn nhập hàng này không?
+                </p>
+                <p class="confirm-modal-message" style="margin-top: 8px; font-size: 13px;">
+                    Hành động này không thể hoàn tác. Đơn hàng sẽ bị hủy và không được nhập vào kho.
+                </p>
             </div>
-            <div class="modal-footer">
-                <button class="modal-btn-cancel" onclick="hideRejectModal()">Hủy</button>
-                <button id="confirmRejectBtn" class="modal-btn-confirm" disabled onclick="confirmRejectOrder()">
-                    Từ chối đơn nhập
+            <div class="confirm-modal-footer">
+                <button class="confirm-btn confirm-btn-cancel" onclick="closeRejectConfirmModal()">
+                    Hủy bỏ
+                </button>
+                <button class="confirm-btn confirm-btn-danger" onclick="executeReject()">
+                    Từ chối đơn hàng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL XÁC NHẬN CHẤP NHẬN ===== -->
+    <div id="acceptConfirmModal" class="confirm-modal-overlay">
+        <div class="confirm-modal">
+            <div class="confirm-modal-header">
+                <div class="confirm-icon-wrapper success">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="confirm-modal-title">Xác nhận chấp nhận đơn hàng</h3>
+                </div>
+            </div>
+            <div class="confirm-modal-body">
+                <p class="confirm-modal-message">
+                    Bạn có chắc chắn muốn <strong style="color: #16a34a;">chấp nhận</strong> đơn nhập hàng này không?
+                </p>
+                <p class="confirm-modal-message" style="margin-top: 8px; font-size: 13px;">
+                    Sau khi chấp nhận, tất cả nguyên liệu sẽ được nhập vào kho và không thể chỉnh sửa.
+                </p>
+            </div>
+            <div class="confirm-modal-footer">
+                <button class="confirm-btn confirm-btn-cancel" onclick="closeAcceptConfirmModal()">
+                    Hủy bỏ
+                </button>
+                <button class="confirm-btn confirm-btn-success" onclick="executeAccept()">
+                    Xác nhận nhập kho
                 </button>
             </div>
         </div>
@@ -1637,6 +1715,8 @@ body.sidebar-open .container {
         </div>
     </div>
 
+
+
     <script>
         let inspectorConfirmed = false;
 
@@ -1689,78 +1769,99 @@ body.sidebar-open .container {
             }
         }
 
+        function goBack() {
+            if (confirm('Bạn có chắc chắn muốn quay lại?')) {
+                window.history.back();
+            }
+        }
+
+        // ===== MODAL XÁC NHẬN TỪ CHỐI =====
         function showRejectModal() {
-            document.getElementById('rejectModal').classList.add('active');
-            document.getElementById('rejectReason').value = '';
-            document.getElementById('confirmRejectBtn').disabled = true;
+            document.getElementById('rejectConfirmModal').classList.add('active');
         }
 
-        function hideRejectModal() {
-            document.getElementById('rejectModal').classList.remove('active');
+        function closeRejectConfirmModal() {
+            document.getElementById('rejectConfirmModal').classList.remove('active');
         }
 
-        function validateRejectReason() {
-            const reason = document.getElementById('rejectReason').value.trim();
-            const confirmBtn = document.getElementById('confirmRejectBtn');
-            
-            if (reason.length > 0) {
-                confirmBtn.disabled = false;
-            } else {
-                confirmBtn.disabled = true;
-            }
+        function executeReject() {
+            console.log('========== JAVASCRIPT: BẮT ĐẦU TỪ CHỐI ==========');
+
+            // ✅ SET GIÁ TRỊ VÀO HIDDEN FIELDS
+            document.getElementById('StatusInput').value = 'Cancelled';
+            document.getElementById('RejectReasonInput').value = 'Đơn hàng bị từ chối bởi người kiểm tra';
+            document.getElementById('CheckIdInput').value = '3';
+
+            console.log('Status:', document.getElementById('StatusInput').value);
+            console.log('CheckId:', document.getElementById('CheckIdInput').value);
+
+            // ✅ ĐÓNG MODAL
+            closeRejectConfirmModal();
+
+            // ✅ HIỂN THỊ LOADING
+            showToast('info', 'Đang xử lý...', 'Đang gửi yêu cầu từ chối đơn hàng', 10000);
+
+            // ✅ SUBMIT FORM
+            console.log('🚀 Submitting form...');
+            document.getElementById('confirmForm').submit();
         }
 
-        function confirmRejectOrder() {
-            const reason = document.getElementById('rejectReason').value.trim();
-
-            if (!reason) {
-                showToast('warning', 'Thiếu thông tin', 'Vui lòng nhập lý do từ chối!');
-                return;
-            }
-
-            if (confirm('Bạn có chắc chắn muốn từ chối đơn nhập hàng này?')) {
-                // ✅ Hiển thị loading toast
-                showToast('info', 'Đang xử lý...', 'Đang gửi yêu cầu từ chối đơn hàng', 10000);
-
-                document.getElementById('StatusInput').value = 'Cancelled';
-                document.getElementById('RejectReasonInput').value = reason;
-                document.getElementById('CheckIdInput').value = 3;
-
-                document.querySelector('form').submit();
-            }
-        }
-
-        function acceptOrder() {
+        // ===== MODAL XÁC NHẬN CHẤP NHẬN =====
+        function showAcceptModal() {
             if (!inspectorConfirmed) {
                 showToast('warning', 'Chưa xác nhận', 'Vui lòng xác nhận kiểm hàng trước khi chấp nhận đơn!');
                 return;
             }
-
-            if (confirm('Bạn có chắc chắn muốn chấp nhận đơn nhập hàng này?')) {
-                // ✅ Hiển thị loading toast
-                showToast('info', 'Đang xử lý...', 'Đang xác nhận đơn hàng và nhập kho', 10000);
-
-                document.getElementById('StatusInput').value = 'Completed';
-                document.getElementById('RejectReasonInput').value = '';
-                document.getElementById('CheckIdInput').value = 3;
-
-                document.querySelector('form').submit();
-            }
+            document.getElementById('acceptConfirmModal').classList.add('active');
         }
 
-        // Đóng modal khi click bên ngoài
-        document.getElementById('rejectModal').addEventListener('click', function(e) {
+        function closeAcceptConfirmModal() {
+            document.getElementById('acceptConfirmModal').classList.remove('active');
+        }
+
+        function executeAccept() {
+            console.log('========== JAVASCRIPT: BẮT ĐẦU CHẤP NHẬN ==========');
+
+            // ✅ SET GIÁ TRỊ VÀO HIDDEN FIELDS
+            document.getElementById('StatusInput').value = 'Completed';
+            document.getElementById('RejectReasonInput').value = '';
+            document.getElementById('CheckIdInput').value = '3';
+
+            console.log('Status:', document.getElementById('StatusInput').value);
+            console.log('CheckId:', document.getElementById('CheckIdInput').value);
+
+            // ✅ ĐÓNG MODAL
+            closeAcceptConfirmModal();
+
+            // ✅ HIỂN THỊ LOADING
+            showToast('info', 'Đang xử lý...', 'Đang xác nhận đơn hàng và nhập kho', 10000);
+
+            // ✅ SUBMIT FORM
+            console.log('🚀 Submitting form...');
+            document.getElementById('confirmForm').submit();
+        }
+
+        // ===== XỬ LÝ ĐÓNG MODAL KHI CLICK BÊN NGOÀI =====
+        document.getElementById('rejectConfirmModal')?.addEventListener('click', function (e) {
             if (e.target === this) {
-                hideRejectModal();
+                closeRejectConfirmModal();
             }
         });
 
-        // Xử lý phím ESC để đóng modal
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                hideRejectModal();
+        document.getElementById('acceptConfirmModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeAcceptConfirmModal();
             }
         });
+
+        // ===== XỬ LÝ PHÍM ESC ĐỂ ĐÓNG MODAL =====
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeRejectConfirmModal();
+                closeAcceptConfirmModal();
+            }
+        });
+
 
         function beforeSubmit() {
             if (!document.getElementById('inspectorConfirm').checked) {
@@ -1816,6 +1917,9 @@ body.sidebar-open .container {
             const titleEl = document.getElementById('confirmTitle');
             const messageEl = document.getElementById('confirmMessage');
 
+            // ✅ LƯU LOẠI MODAL VÀO ATTRIBUTE
+            modal.setAttribute('data-type', type);
+
             // Update icon and colors
             iconWrapper.className = `confirm-icon-wrapper ${type}`;
 
@@ -1843,10 +1947,16 @@ body.sidebar-open .container {
             const modal = document.getElementById('confirmModal');
             modal.classList.remove('active');
 
-            // Redirect sau khi đóng modal
-            setTimeout(() => {
-                window.location.href = '@Url.Action("Index", "MainImportInventory")';
-            }, 300);
+            // ✅ THAY ĐỔI: Kiểm tra loại modal để quyết định redirect
+            const modalType = modal.getAttribute('data-type');
+
+            if (modalType === 'success') {
+                // Chuyển về trang Index nếu thành công
+                setTimeout(() => {
+                    window.location.href = '@Url.Action("Index", "MainImportInventory")';
+                }, 300);
+            }
+            // Nếu là error, không làm gì (ở lại trang hiện tại)
         }
 
         // Close modal khi click outside
@@ -1858,19 +1968,19 @@ body.sidebar-open .container {
 
         // ===== CHECK FOR TEMPDATA MESSAGES ON PAGE LOAD =====
         window.addEventListener('DOMContentLoaded', function () {
-        @if (TempData["SuccessMessage"] != null)
+        @if (TempData["ShowModal"] != null)
         {
             <text>
-                    // Hiển thị modal confirmation cho thành công
-                        showConfirmModal('success', 'Thành công!', '@TempData["SuccessMessage"]');
-            </text>
-        }
+                        var modalType = "@TempData["ShowModal"]";
 
-        @if (TempData["ErrorMessage"] != null)
-        {
-            <text>
-                    // Hiển thị toast cho lỗi
-                        showToast('error', 'Lỗi!', '@TempData["ErrorMessage"]', 6000);
+                        if (modalType === "success") {
+                            showConfirmModal("success", "Thành công!", @Html.Raw(Json.Serialize(TempData["SuccessMessage"])));
+
+                    }
+                        else if (modalType === "error") {
+                            showConfirmModal( "error","Lỗi!",@Html.Raw(Json.Serialize(TempData["ErrorMessage"]))
+                        );
+                    }
             </text>
         }
         });

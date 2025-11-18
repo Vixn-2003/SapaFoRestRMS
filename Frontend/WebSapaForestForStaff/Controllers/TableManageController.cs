@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WebSapaForestForStaff.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Net.Http.Json;
+using WebSapaForestForStaff.DTOs.TableManage;
+using WebSapaForestForStaff.Models;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -54,42 +56,129 @@ namespace WebSapaForestForStaff.Controllers
             return View(result?.Data ?? new List<TableManageDto>());
         }
 
+
+        [HttpGet]
+        public async Task<IActionResult> Create()
+        {
+            // Lấy danh sách Area để hiển thị dropdown
+            var areaResponse = await _client.GetAsync("Area?page=1&pageSize=100");
+            ViewBag.Areas = areaResponse.IsSuccessStatusCode
+                ? (await areaResponse.Content.ReadFromJsonAsync<AreaApiResponse>())?.Data ?? new List<AreaDto>()
+                : new List<AreaDto>();
+
+            return View();
+        }
+
         [HttpPost]
-        public async Task<IActionResult> SaveTable(TableManageDto dto)
+        public async Task<IActionResult> Create(TableCreateDto dto)
         {
             try
             {
-                if (dto.TableId == 0)
+                var response = await _client.PostAsJsonAsync("TableManager", dto);
+                var content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine(response.StatusCode);
+                Console.WriteLine(content);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    // Add
-                    var response = await _client.PostAsJsonAsync("TableManager", dto);
-                    if (response.IsSuccessStatusCode)
-                        return Json(new { success = true, message = "Thêm bàn thành công" });
+                    TempData["Success"] = "Thêm bàn thành công!";
+                    return RedirectToAction(nameof(Index));
                 }
-                else
-                {
-                    // Edit
-                    var response = await _client.PutAsJsonAsync($"TableManager/{dto.TableId}", dto);
-                    if (response.IsSuccessStatusCode)
-                        return Json(new { success = true, message = "Cập nhật bàn thành công" });
-                }
-                return Json(new { success = false, message = "Có lỗi xảy ra" });
+
+                TempData["Error"] = "Có lỗi xảy ra khi thêm bàn: " + content;
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                TempData["Error"] = "Lỗi kết nối API: " + ex.Message;
             }
+
+            // Nếu thất bại, vẫn cần lấy Area để hiển thị dropdown
+            var areaResponse = await _client.GetAsync("Area?page=1&pageSize=100");
+            ViewBag.Areas = areaResponse.IsSuccessStatusCode
+                ? (await areaResponse.Content.ReadFromJsonAsync<AreaApiResponse>())?.Data ?? new List<AreaDto>()
+                : new List<AreaDto>();
+
+            return View(dto);
         }
 
-        [HttpDelete]
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var response = await _client.GetAsync($"TableManager/{id}");
+            if (!response.IsSuccessStatusCode) return NotFound();
+
+            var table = await response.Content.ReadFromJsonAsync<TableManageDto>();
+
+            var model = new TableUpdateDto
+            {
+                TableNumber = table.TableNumber,
+                Capacity = table.Capacity,
+                Status = table.Status,
+                AreaId = table.AreaId
+            };
+
+            var areaResponse = await _client.GetAsync("Area?page=1&pageSize=100");
+            var areas = areaResponse.IsSuccessStatusCode
+                ? (await areaResponse.Content.ReadFromJsonAsync<AreaApiResponse>())?.Data ?? new List<AreaDto>()
+                : new List<AreaDto>();
+
+            // Tạo SelectList và gán vào ViewBag
+            ViewBag.Areas = new SelectList(areas, "AreaId", "AreaName", model.AreaId);
+            ViewBag.StatusList = new SelectList(new List<string> { "Available", "Maintenance" }, model.Status);
+
+            return View(model);
+        }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> Edit(int id, TableUpdateDto dto)
+        {
+            try
+            {
+                var response = await _client.PutAsJsonAsync($"TableManager/{id}", dto);
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    TempData["Success"] = "Cập nhật bàn thành công!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                TempData["Error"] = "Có lỗi xảy ra khi cập nhật bàn: " + content;
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Lỗi kết nối API: " + ex.Message;
+            }
+
+            // Lấy Area để hiển thị dropdown
+            var areaResponse = await _client.GetAsync("Area?page=1&pageSize=100");
+            ViewBag.Areas = areaResponse.IsSuccessStatusCode
+                ? (await areaResponse.Content.ReadFromJsonAsync<AreaApiResponse>())?.Data ?? new List<AreaDto>()
+                : new List<AreaDto>();
+
+            return View(dto);
+        }
+
+        [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
             var response = await _client.DeleteAsync($"TableManager/{id}");
             if (response.IsSuccessStatusCode)
-                return Json(new { success = true, message = "Xóa bàn thành công" });
+            {
+                TempData["Success"] = "Xóa bàn thành công!";
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                TempData["Error"] = $"Có lỗi khi xóa bàn: {error}";
+            }
 
-            return Json(new { success = false, message = "Xóa thất bại" });
+            return RedirectToAction(nameof(Index));
         }
+
+
 
         // Internal classes for API deserialization
         private class TableResponse

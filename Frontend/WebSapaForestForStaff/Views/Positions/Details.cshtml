@@ -1,0 +1,63 @@
+@model WebSapaForestForStaff.DTOs.Positions.PositionDto
+@{
+    ViewData["Title"] = "Chi tiết vị trí";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/design-system.css" />
+}
+
+<div class="container mt-4">
+    <div class="card card-custom">
+        <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+            <h3 class="heading-h2 m-0">Chi tiết vị trí</h3>
+            <div>
+                <a asp-action="Edit" asp-route-id="@Model.PositionId" class="btn-secondary-custom" data-bs-toggle="tooltip" data-bs-placement="top" title="Sửa">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <a asp-action="Index" class="btn-text-custom" data-bs-toggle="tooltip" data-bs-placement="top" title="Quay lại">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">ID</dt>
+                <dd class="col-sm-9">@Model.PositionId</dd>
+
+                <dt class="col-sm-3">Tên vị trí</dt>
+                <dd class="col-sm-9">@Model.PositionName</dd>
+
+                <dt class="col-sm-3">Mô tả</dt>
+                <dd class="col-sm-9">@Model.Description</dd>
+
+                <dt class="col-sm-3">Trạng thái</dt>
+                <dd class="col-sm-9">
+                    @switch (Model.Status)
+                    {
+                        case 0:
+                            @:<span class="badge-custom success">Hoạt động</span>
+                            break;
+                        case 1:
+                            @:<span class="badge-custom warning">Tạm dừng</span>
+                            break;
+                        default:
+                            @:<span class="badge-custom gray">Đã ẩn</span>
+                            break;
+                    }
+                </dd>
+            </dl>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+        });
+    </script>
+}

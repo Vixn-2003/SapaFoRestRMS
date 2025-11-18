@@ -14,7 +14,6 @@ namespace WebSapaForestForStaff.Controllers
     {
 
         private readonly HttpClient _httpClient;
-        List<InventoryIngredientDTO> listIngredient;
 
         public ManagerIngredentController(HttpClient httpClient)
         {
@@ -29,12 +28,25 @@ namespace WebSapaForestForStaff.Controllers
             try
             {
                 var response = await _httpClient.GetAsync("api/InventoryIngredient");
+                var responseUnit = await _httpClient.GetAsync("api/Unit");
 
                 List<InventoryIngredientDTO> ingredientList;
+                List<UnitDTO> unitList;
+
+                // ✅ XỬ LÝ UNIT TRƯỚC
+                if (!responseUnit.IsSuccessStatusCode)
+                {
+                    unitList = new List<UnitDTO>();
+                }
+                else
+                {
+                    var jsonU = await responseUnit.Content.ReadAsStringAsync();
+                    unitList = JsonConvert.DeserializeObject<List<UnitDTO>>(jsonU)
+                                     ?? new List<UnitDTO>();
+                }
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    // Trả về danh sách rỗng thay vì NotFound
                     ingredientList = new List<InventoryIngredientDTO>();
                 }
                 else
@@ -42,6 +54,16 @@ namespace WebSapaForestForStaff.Controllers
                     var json = await response.Content.ReadAsStringAsync();
                     ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json)
                                      ?? new List<InventoryIngredientDTO>();
+
+                    // ✅ MAP UNIT VÀO INGREDIENT
+                    foreach (var ingredient in ingredientList)
+                    {
+                        if (ingredient.UnitId.HasValue)
+                        {
+                            ingredient.Unit = unitList.FirstOrDefault(u => u.UnitId == ingredient.UnitId.Value)
+                                              ?? new UnitDTO();
+                        }
+                    }
                 }
 
                 var totalItems = ingredientList.Count;
@@ -55,20 +77,21 @@ namespace WebSapaForestForStaff.Controllers
                     Ingredients = pagedList,
                     CurrentPage = page,
                     ItemsPerPage = itemsPerPage,
-                    TotalItems = totalItems
+                    TotalItems = totalItems,
+                    Units = unitList // ✅ THÊM DANH SÁCH UNIT VÀO MODEL
                 };
 
                 return View("~/Views/Inventory/ManagerIngredent.cshtml", model);
             }
             catch (Exception ex)
             {
-                // Xử lý lỗi: trả về model rỗng với thông báo
                 var model = new InventoryPagedViewModel
                 {
                     Ingredients = new List<InventoryIngredientDTO>(),
                     CurrentPage = 1,
                     ItemsPerPage = itemsPerPage,
-                    TotalItems = 0
+                    TotalItems = 0,
+                    Units = new List<UnitDTO>() // ✅ THÊM
                 };
 
                 TempData["ErrorMessage"] = "Có lỗi xảy ra khi tải danh sách nguyên liệu: " + ex.Message;
@@ -76,18 +99,16 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-
         [HttpPost]
         [HttpGet]
         public async Task<IActionResult> FilterIngredent(
-            DateTime? fromDate,
-            DateTime? toDate,
-            string searchIngredent,
-            int page = 1)
+    DateTime? fromDate,
+    DateTime? toDate,
+    string searchIngredent,
+    int page = 1)
         {
             int itemsPerPage = 10;
 
-            // Nếu không có filter, gọi DisplayIngredent
             if (fromDate == null && toDate == null &&
                 string.IsNullOrEmpty(searchIngredent))
             {
@@ -96,7 +117,21 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
-                // Gói dữ liệu cần gửi sang API
+                // ✅ THÊM: Load Unit list
+                var responseUnit = await _httpClient.GetAsync("api/Unit");
+                List<UnitDTO> unitList;
+
+                if (!responseUnit.IsSuccessStatusCode)
+                {
+                    unitList = new List<UnitDTO>();
+                }
+                else
+                {
+                    var jsonU = await responseUnit.Content.ReadAsStringAsync();
+                    unitList = JsonConvert.DeserializeObject<List<UnitDTO>>(jsonU)
+                                     ?? new List<UnitDTO>();
+                }
+
                 var requestData = new
                 {
                     FromDate = fromDate,
@@ -116,7 +151,6 @@ namespace WebSapaForestForStaff.Controllers
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    // Trả về danh sách rỗng thay vì NotFound
                     ingredientList = new List<InventoryIngredientDTO>();
                     TempData["InfoMessage"] = "Không tìm thấy nguyên liệu nào phù hợp với điều kiện tìm kiếm.";
                 }
@@ -126,13 +160,22 @@ namespace WebSapaForestForStaff.Controllers
                     ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json)
                                      ?? new List<InventoryIngredientDTO>();
 
+                    // ✅ MAP UNIT VÀO INGREDIENT
+                    foreach (var ingredient in ingredientList)
+                    {
+                        if (ingredient.UnitId.HasValue)
+                        {
+                            ingredient.Unit = unitList.FirstOrDefault(u => u.UnitId == ingredient.UnitId.Value)
+                                              ?? new UnitDTO();
+                        }
+                    }
+
                     if (ingredientList.Count == 0)
                     {
                         TempData["InfoMessage"] = "Không tìm thấy nguyên liệu nào phù hợp với điều kiện tìm kiếm.";
                     }
                 }
 
-                // Phân trang
                 var totalItems = ingredientList.Count;
                 var pagedList = ingredientList
                     .Skip((page - 1) * itemsPerPage)
@@ -147,14 +190,14 @@ namespace WebSapaForestForStaff.Controllers
                     TotalItems = totalItems,
                     FromDate = fromDate,
                     ToDate = toDate,
-                    SearchIngredent = searchIngredent
+                    SearchIngredent = searchIngredent,
+                    Units = unitList // ✅ THÊM
                 };
 
                 return View("~/Views/Inventory/ManagerIngredent.cshtml", model);
             }
             catch (Exception ex)
             {
-                // Xử lý lỗi: trả về model rỗng với thông báo
                 var model = new InventoryPagedViewModel
                 {
                     Ingredients = new List<InventoryIngredientDTO>(),
@@ -163,7 +206,8 @@ namespace WebSapaForestForStaff.Controllers
                     TotalItems = 0,
                     FromDate = fromDate,
                     ToDate = toDate,
-                    SearchIngredent = searchIngredent
+                    SearchIngredent = searchIngredent,
+                    Units = new List<UnitDTO>() // ✅ THÊM
                 };
 
                 TempData["ErrorMessage"] = "Có lỗi xảy ra khi tìm kiếm: " + ex.Message;
@@ -278,7 +322,7 @@ namespace WebSapaForestForStaff.Controllers
                     });
                 }
 
-                if (string.IsNullOrWhiteSpace(request.Unit))
+                if (request.UnitId == null)
                 {
                     return Json(new
                     {

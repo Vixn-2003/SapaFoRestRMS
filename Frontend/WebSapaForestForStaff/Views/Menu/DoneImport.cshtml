@@ -1888,7 +1888,7 @@
                                         <td>@stt</td>
                                         <td class="font-medium">@item.IngredientCode</td>
                                         <td>@item.IngredientName</td>
-                                        <td>@item.Warehouse.Name</td>
+                                        <td>@item.WarehouseName</td>
                                         <td class="text-center font-semibold">@item.Quantity</td>
                                         <td class="text-center">@item.Unit</td>
                                         <td class="text-right">@string.Format("{0:N0}₫", item.UnitPrice)</td>
@@ -1960,7 +1960,11 @@
                             <div class="confirmation-details">
                                 <div class="confirmation-row">
                                     <span class="label">Người xác nhận:</span>
-                                    <span class="value">@Model.IdConfirm</span>
+                                    <span class="value">Nguyễn Văn Thanh</span>
+                                </div>
+                                <div class="confirmation-row">
+                                    <span class="label">Số điện thoại:</span>
+                                    <span class="value">0912 345 678</span>
                                 </div>
                                 <div class="confirmation-row">
                                     <span class="label">Thời gian xác nhận:</span>

@@ -30,7 +30,10 @@ namespace DataAccessLayer.UnitOfWork
         private IPurchaseOrderDetailRepository _purchaseOrderDetailRepository;
 
         private IStockTransactionRepository _stockTransactionRepository;
+        private IUnitRepository _unitRepository;
 
+
+        public IUnitRepository UnitRepository => _unitRepository ??= new UnitRepository(_context);
         public IStockTransactionRepository StockTransaction => _stockTransactionRepository ??= new StockTransactionRepository(_context);
         public IPurchaseOrderDetailRepository PurchaseOrderDetail => _purchaseOrderDetailRepository ??= new PurchaseOrderDetailRepository(_context);
 
@@ -58,6 +61,10 @@ namespace DataAccessLayer.UnitOfWork
         private IPositionRepository _positions;
 
         public IPositionRepository Positions => _positions ??= new PositionRepository(_context);
+
+        private IPaymentRepository _payments;
+
+        public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
 
         public UnitOfWork(SapaFoRestRmsContext context)
         {

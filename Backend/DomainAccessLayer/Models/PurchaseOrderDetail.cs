@@ -20,11 +20,10 @@ public partial class PurchaseOrderDetail
 
     public decimal Subtotal { get; set; }
 
-    public int? WarehouseId { get; set; }
+    public string? WarehouseName { get; set; }
 
     public virtual PurchaseOrder PurchaseOrder { get; set; } = null!;
     public virtual Ingredient? Ingredient { get; set; }
-    public virtual Warehouse? Warehouse { get; set; }
 
     public virtual ICollection<InventoryBatch> InventoryBatches { get; set; } = new List<InventoryBatch>();
 }

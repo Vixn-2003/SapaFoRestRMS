@@ -1,0 +1,198 @@
+﻿using DataAccessLayer.Dbcontext;
+using DataAccessLayer.Repositories.Interfaces;
+using DomainAccessLayer.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccessLayer.Repositories
+{
+    public class VoucherRepository : Repository<Voucher>, IVoucherRepository
+    {
+        public VoucherRepository(SapaFoRestRmsContext context) : base(context)
+        {
+        }
+
+        public async Task<IEnumerable<Voucher>> GetFilteredVouchersAsync(
+    string? searchKeyword,
+    string? discountType,
+    decimal? discountValue,
+    DateTime? startDate,
+    DateTime? endDate,
+    decimal? minOrderValue,
+    decimal? maxDiscount,
+    string? status, // <- Thêm tham số
+    int pageNumber,
+    int pageSize)
+        {
+            // 1. Validate ngày
+            if (startDate.HasValue && endDate.HasValue && startDate > endDate)
+            {
+                throw new ArgumentException("StartDate phải nhỏ hơn hoặc bằng EndDate.");
+            }
+
+            // 2. Validate các giá trị không âm
+            if ((discountValue.HasValue && discountValue < 0) ||
+                (minOrderValue.HasValue && minOrderValue < 0) ||
+                (maxDiscount.HasValue && maxDiscount < 0))
+            {
+                throw new ArgumentException("Các giá trị số không được phép âm.");
+            }
+
+            var query = _dbSet.AsQueryable();
+
+            // 3. Trim keyword và check để tránh case "code"
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+            {
+                var trimmedKeyword = searchKeyword.Trim();
+                if (!string.IsNullOrEmpty(trimmedKeyword))
+                {
+                    query = query.Where(v =>
+                        v.Code.Contains(trimmedKeyword) ||
+                        (v.Description ?? "").Contains(trimmedKeyword));
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(discountType))
+            {
+                query = query.Where(v => v.DiscountType == discountType);
+            }
+
+           
+
+            if (discountValue.HasValue)
+            {
+                query = query.Where(v => v.DiscountValue == discountValue);
+            }
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(v => v.StartDate >= startDate);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(v => v.EndDate <= endDate);
+            }
+
+            if (minOrderValue.HasValue)
+            {
+                query = query.Where(v => v.MinOrderValue >= minOrderValue);
+            }
+
+            if (maxDiscount.HasValue)
+            {
+                query = query.Where(v => v.MaxDiscount <= maxDiscount);
+            }
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
+            query = query.Where(v => v.IsDelete == false)
+                .OrderByDescending(v => v.VoucherId)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize);
+
+            return await query.ToListAsync();
+        }
+
+
+        public async Task<int> CountFilteredVouchersAsync(
+            string? searchKeyword,
+            string? discountType,
+            decimal? discountValue,
+            DateTime? startDate,
+            DateTime? endDate,
+            decimal? minOrderValue,
+            decimal? maxDiscount, string? status)
+        {
+            var query = _dbSet.AsQueryable();
+            query = query.Where(v => v.IsDelete == false);
+
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+                query = query.Where(v =>
+                    v.Code.Contains(searchKeyword) ||
+                    (v.Description ?? "").Contains(searchKeyword));
+
+            if (!string.IsNullOrWhiteSpace(discountType))
+                query = query.Where(v => v.DiscountType == discountType);
+         
+            if (discountValue.HasValue)
+                query = query.Where(v => v.DiscountValue == discountValue);
+
+            if (startDate.HasValue)
+                query = query.Where(v => v.StartDate >= startDate);
+
+            if (endDate.HasValue)
+                query = query.Where(v => v.EndDate <= endDate);
+
+            if (minOrderValue.HasValue)
+                query = query.Where(v => v.MinOrderValue >= minOrderValue);
+
+            if (maxDiscount.HasValue)
+                query = query.Where(v => v.MaxDiscount <= maxDiscount);
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
+
+            return await query.CountAsync();
+        }
+
+
+
+        public async Task<IEnumerable<Voucher>> GetDeletedVouchersAsync(
+     string? searchKeyword,
+     string? discountType, string? status,
+     int pageNumber,
+     int pageSize)
+        {
+            var query = _context.Vouchers
+                .IgnoreQueryFilters() // nếu có global filter IsDelete = false
+                .Where(v => v.IsDelete == true);
+
+            // Lọc theo mã code (search keyword)
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+            {
+                query = query.Where(v =>
+                    v.Code.Contains(searchKeyword));
+            }
+
+            // Lọc theo loại giảm giá
+            if (!string.IsNullOrWhiteSpace(discountType))
+            {
+                query = query.Where(v => v.DiscountType == discountType);
+            }
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
+            // Phân trang
+            var skip = (pageNumber - 1) * pageSize;
+
+            return await query
+                .OrderByDescending(v => v.VoucherId) // sắp xếp mới nhất trước
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync();
+
+        }
+
+        public async Task<int> CountDeletedVouchersAsync(string? searchKeyword, string? discountType, string? status)
+        {
+            var query = _context.Vouchers
+                .Where(v => v.IsDelete == true);
+
+            if (!string.IsNullOrWhiteSpace(searchKeyword))
+            {
+                query = query.Where(v => v.Code.Contains(searchKeyword)
+                || v.Description.Contains(searchKeyword));
+            }
+
+            if (!string.IsNullOrWhiteSpace(discountType))
+            {
+                query = query.Where(v => v.DiscountType == discountType);
+            }
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(v => v.Status == status); // <- Thêm filter theo status
+            return await query.CountAsync();
+        }
+    }
+}

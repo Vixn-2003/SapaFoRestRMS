@@ -1,4 +1,6 @@
-﻿namespace WebSapaForestForStaff.DTOs
+﻿using WebSapaForestForStaff.DTOs.Inventory;
+
+namespace WebSapaForestForStaff.DTOs
 {
     public class PurchaseOrderDetailDTO
     {
@@ -17,8 +19,7 @@
 
         public decimal Subtotal { get; set; }
 
-        public int? WarehouseId { get; set; }
+        public string? WarehouseName { get; set; }
 
-        public WarehouseDTO Warehouse { get; set; }
     }
 }

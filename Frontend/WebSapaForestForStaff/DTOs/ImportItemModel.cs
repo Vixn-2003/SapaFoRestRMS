@@ -8,6 +8,6 @@
         public string Unit { get; set; } = null!;
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public int WarehouseId { get; set; }
+        public string WarehouseName { get; set; }
     }
 }

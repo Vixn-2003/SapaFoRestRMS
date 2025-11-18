@@ -39,6 +39,16 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(x => x.IsActive && x.WarehouseId == id);
         }
 
+        public async Task<int> GetIdByStringAsync(string warehouse)
+        {
+            if (string.IsNullOrWhiteSpace(warehouse))
+                return 0;
+
+            var unit = await _context.Warehouses
+                .FirstOrDefaultAsync(u => u.Name == warehouse);
+
+            return unit?.WarehouseId ?? 0;
+        }
 
         public Task SaveChangesAsync()
         {

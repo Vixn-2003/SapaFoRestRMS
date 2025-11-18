@@ -19,7 +19,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse);
         Task<int> AddNewIngredient(IngredientDTO ingredient);
         Task<int> AddNewBatch(InventoryBatchDTO batchIngredientDTO);
-        Task<(bool success, string message)> UpdateIngredient(int idIngredient, string nameIngredient, string unit);
+        Task<(bool success, string message)> UpdateIngredient(int idIngredient, string nameIngredient, int unit);
 
     }
 }

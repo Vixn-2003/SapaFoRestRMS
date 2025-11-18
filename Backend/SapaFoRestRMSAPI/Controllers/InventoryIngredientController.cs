@@ -249,20 +249,11 @@ namespace SapaFoRestRMSAPI.Controllers
                     });
                 }
 
-                if (string.IsNullOrWhiteSpace(request.Unit))
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "Đơn vị tính không được để trống"
-                    });
-                }
-
                 // Gọi service để cập nhật
                 var (success, message) = await _inventoryIngredientService.UpdateIngredient(
                     request.IngredientId,
                     request.Name.Trim(),
-                    request.Unit.Trim()
+                    request.UnitId
                 );
 
                 if (success)
@@ -275,7 +266,7 @@ namespace SapaFoRestRMSAPI.Controllers
                         {
                             ingredientId = request.IngredientId,
                             name = request.Name.Trim(),
-                            unit = request.Unit.Trim()
+                            unit = request.UnitId
                         }
                     });
                 }

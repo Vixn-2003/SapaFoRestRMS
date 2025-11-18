@@ -34,5 +34,11 @@ namespace BusinessAccessLayer.Services
             var warehouse = await _unitOfWork.Warehouse.GetByIdAsync(id);
             return _mapper.Map<WarehouseDTO>(warehouse);
         }
+
+        public async Task<int> GetWarehouseByString(string warehouses)
+        {
+            var warehouse = await _unitOfWork.Warehouse.GetIdByStringAsync(warehouses);
+            return warehouse;
+        }
     }
 }

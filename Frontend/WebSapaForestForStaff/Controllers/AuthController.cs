@@ -1,28 +1,35 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using WebSapaForestForStaff.DTOs.Auth;
-using WebSapaForestForStaff.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
+using WebSapaForestForStaff.Services;
 
 namespace WebSapaForestForStaff.Controllers
 {
     public class AuthController : Controller
     {
+        private readonly ILogger<AuthController> _logger;
         private readonly ApiService _apiService;
 
-        public AuthController(ApiService apiService)
+        public AuthController(ILogger<AuthController> logger, ApiService apiService)
         {
+            _logger = logger;
             _apiService = apiService;
         }
         public string ReturnUrl { get; set; }
 
         [HttpGet]
-        public IActionResult Login()
+        public IActionResult Login(string returnUrl = null)
         {
             // If already authenticated via cookie, redirect by role
             if (User?.Identity?.IsAuthenticated == true)
             {
+                if (User.IsInRole("Owner"))
+                {
+                    return RedirectToAction("Index", "Admin"); // Owner has admin privileges
+                }
                 if (User.IsInRole("Admin"))
                 {
                     return RedirectToAction("Index", "Admin");
@@ -35,24 +42,21 @@ namespace WebSapaForestForStaff.Controllers
                 {
                     return RedirectToAction("Index", "Home");
                 }
+                if (User.IsInRole("Customer"))
+                {
+                    return RedirectToAction("Index", "Home"); // Customer redirected to home
+                }
                 return RedirectToAction("Index", "Home");
             }
 
-            // If token exists in session (fallback), go home
-            if (HttpContext.Session.GetString("Token") != null)
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
+            ViewData["ReturnUrl"] = returnUrl;
             return View(new LoginRequest());
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginRequest model)
+        public async Task<IActionResult> Login(LoginRequest model, string returnUrl = null)
         {
-            Console.WriteLine(model.email);
-
             if (!ModelState.IsValid)
             {
                 return View(model);
@@ -60,73 +64,85 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
-                var response = await _apiService.LoginAsync(model);
-                
-                if (response != null)
+                _logger.LogInformation(" Login attempt: Email = {Email}, Password(raw) = {Password}",
+                    model.Email, model.Password);
+                var authResponse = await _apiService.LoginAsync(model);
+                if (authResponse != null)
                 {
-                    // Store user info in session
-                    HttpContext.Session.SetString("UserId", response.UserId.ToString());
-                    HttpContext.Session.SetString("FullName", response.FullName);
-                    HttpContext.Session.SetString("Email", response.Email);
-                    HttpContext.Session.SetString("RoleName", response.RoleName);
-                    HttpContext.Session.SetString("RoleId", response.RoleId.ToString());
-
-                    // Build claims identity for cookie auth
+                    // Tạo claims để xác thực cookie
                     var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.NameIdentifier, response.UserId.ToString()),
-                        new Claim(ClaimTypes.Name, response.FullName ?? response.Email),
-                        new Claim(ClaimTypes.Email, response.Email),
-                        new Claim(ClaimTypes.Role, string.IsNullOrWhiteSpace(response.RoleName) ? "Staff" : response.RoleName)
-                    };
+            {
+                new Claim(ClaimTypes.NameIdentifier, authResponse.UserId.ToString()),
+                new Claim(ClaimTypes.Name, authResponse.FullName ?? ""),
+                new Claim(ClaimTypes.Email, authResponse.Email ?? ""),
+                new Claim(ClaimTypes.Role, GetRoleName(authResponse.RoleId)),
+                new Claim("Token", authResponse.Token ?? "")
+            };
 
-                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                    var principal = new ClaimsPrincipal(identity);
-                    await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, new AuthenticationProperties
+                    var claimsIdentity = new ClaimsIdentity(
+                        claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    var authProperties = new AuthenticationProperties
                     {
                         IsPersistent = true,
-                        AllowRefresh = true
-                    });
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
+                    };
 
-                    TempData["SuccessMessage"] = "Đăng nhập thành công!";
+                    await HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(claimsIdentity),
+                        authProperties);
 
-                    // Redirect based on role name
-                    var role = (response.RoleName ?? string.Empty).Trim();
-                    if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return RedirectToAction("Index", "Admin");
-                    }
-                    if (string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return RedirectToAction("Index", "Users");
-                    }
-                    if (string.Equals(role, "Staff", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return RedirectToAction("Index", "Home");
-                    }
+                    // Token is already saved to Session inside ApiService.LoginAsync; keep claim copy above
 
-                    return RedirectToAction("Index", "Home");
+                    _logger.LogInformation(" User {Email} logged in successfully with role {RoleId}",
+                        authResponse.Email, authResponse.RoleId);
+
+                    // 🔁 Redirect theo Role
+                    var redirectUrl = authResponse.RoleId switch
+                    {
+                        1 => returnUrl ?? Url.Action("Index", "Admin"),
+                        2 => returnUrl ?? Url.Action("Index", "Admin"),
+                        3 => returnUrl ?? Url.Action("Index", "Users"),
+                        4 => returnUrl ?? Url.Action("Index", "Home"),
+                        5 => returnUrl ?? Url.Action("Index", "Home"),
+                        _ => returnUrl ?? Url.Action("Index", "Home")
+                    };
+
+                    return LocalRedirect(redirectUrl);
                 }
-                else
-                {
-                    ModelState.AddModelError("", "Email hoặc mật khẩu không đúng");
-                    return View(model);
-                }
+
+                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                return View(model);
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "Lỗi kết nối. Vui lòng thử lại sau");
+                _logger.LogError(ex, "Unexpected error during login");
+                ModelState.AddModelError(string.Empty, "An unexpected error occurred. Please try again.");
                 return View(model);
             }
         }
 
+
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
-            _apiService.Logout();
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            HttpContext.Session.Clear();
+            _apiService.Logout();
             return RedirectToAction("Login");
+        }
+
+        private string GetRoleName(int roleId)
+        {
+            return roleId switch
+            {
+                1 => "Owner",
+                2 => "Admin",
+                3 => "Manager", 
+                4 => "Staff",
+                5 => "Customer",
+                _ => "Staff"
+            };
         }
 
         [HttpGet]
@@ -134,6 +150,11 @@ namespace WebSapaForestForStaff.Controllers
         public IActionResult AccessDenied()
         {
             return View();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
         }
     }
 }

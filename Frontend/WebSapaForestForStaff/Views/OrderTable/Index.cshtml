@@ -1,0 +1,168 @@
+﻿@model WebSapaFoRestForStaff.DTOs.OrderTable.PagedQrResultViewModel
+@{
+    ViewData["Title"] = "Quản lý Bàn & Mã QR";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    string apiBaseUrl = ViewBag.ApiBaseUrl as string;
+}
+
+@section Styles {
+    <style>
+        .qr-img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+        }
+
+        .page-header h4 {
+            font-weight: 600;
+        }
+
+        .btn-action {
+            width: 48%;
+        }
+    </style>
+}
+
+<div class="content-wrapper">
+    <div class="page-header">
+        <h4 class="card-title text-primary"><i class="mdi mdi-qrcode-scan me-2"></i>@ViewData["Title"]</h4>
+    </div>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger text-center">
+            <i class="mdi mdi-alert-circle-outline me-2"></i>@ViewBag.Error
+        </div>
+    }
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Tìm theo số bàn</label>
+                    <input type="text" name="searchString" class="form-control" value="@Model.SearchString" placeholder="Nhập số bàn..." />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Khu vực</label>
+                    <select name="areaName" class="form-select" asp-for="AreaName" asp-items="@Model.AreaNames">
+                        <option value="">-- Tất cả khu vực --</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Tầng</label>
+                    <select name="floor" class="form-select" asp-for="Floor" asp-items="@Model.Floors">
+                        <option value="">-- Tất cả tầng --</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        <i class="mdi mdi-filter-outline me-1"></i> Lọc
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="mdi mdi-close-circle-outline me-1"></i> Xóa
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body table-responsive">
+            <table class="table table-hover text-center align-middle">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Số Bàn</th>
+                        <th>Khu Vực</th>
+                        <th>Tầng</th>
+                        <th>Mã QR</th>
+                        <th>Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Tables != null && Model.Tables.Any())
+                    {
+                        foreach (var table in Model.Tables)
+                        {
+                            <tr>
+                                <td><strong>@table.TableNumber</strong></td>
+                                <td>@table.AreaName</td>
+                                <td>@table.Floor</td>
+                                <td>
+                                    <img src="@(apiBaseUrl)/api/OrderTable/@table.TableId/qrcode"
+                                         alt="QR @table.TableNumber"
+                                         class="qr-img border rounded" style="width:150px; height:150px;" />
+                                </td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <button class="btn btn-outline-primary btn-sm btn-export-qr btn-action"
+                                                data-table-number="@table.TableNumber"
+                                                data-area-name="@table.AreaName"
+                                                data-floor="@table.Floor"
+                                                data-qr-url="@(apiBaseUrl)/api/OrderTable/@table.TableId/qrcode">
+                                            <i class="mdi mdi-file-pdf me-1"></i> PDF
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm btn-print-qr btn-action"
+                                                data-table-number="@table.TableNumber"
+                                                data-area-name="@table.AreaName"
+                                                data-floor="@table.Floor"
+                                                data-qr-url="@(apiBaseUrl)/api/OrderTable/@table.TableId/qrcode">
+                                            <i class="mdi mdi-printer me-1"></i> In
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-muted">Không có dữ liệu</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex justify-content-center">
+        <nav>
+            <ul class="pagination">
+                @{
+                    var prevDisabled = Model.Page > 1 ? "" : "disabled";
+                    var nextDisabled = Model.Page < Model.TotalPages ? "" : "disabled";
+                }
+                <li class="page-item @prevDisabled">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-page="@(Model.Page - 1)"
+                       asp-route-searchString="@Model.SearchString"
+                       asp-route-areaName="@Model.AreaName"
+                       asp-route-floor="@Model.Floor">Trước</a>
+                </li>
+
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-page="@i"
+                           asp-route-searchString="@Model.SearchString"
+                           asp-route-areaName="@Model.AreaName"
+                           asp-route-floor="@Model.Floor">@i</a>
+                    </li>
+                }
+
+                <li class="page-item @nextDisabled">
+                    <a class="page-link" asp-action="Index"
+                       asp-route-page="@(Model.Page + 1)"
+                       asp-route-searchString="@Model.SearchString"
+                       asp-route-areaName="@Model.AreaName"
+                       asp-route-floor="@Model.Floor">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="~/assets/js/print-qr.js" asp-append-version="true"></script>
+}

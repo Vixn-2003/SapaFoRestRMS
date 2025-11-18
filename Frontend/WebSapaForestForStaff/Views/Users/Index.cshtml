@@ -1,0 +1,390 @@
+@model WebSapaForestForStaff.DTOs.UserManagement.UserListResponse
+
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Quản lý người dùng</h1>
+            <p class="page-subtitle">Quản lý tài khoản nhân viên và phân quyền hệ thống</p>
+        </div>
+        <div class="page-actions">
+            @if (User.IsInRole("Manager") || User.IsInRole("Admin") || User.IsInRole("Owner"))
+            {
+                <a asp-action="CreateUnified" class="btn-primary-custom btn-medium" data-bs-toggle="tooltip" data-bs-placement="top" title="Tạo người dùng / quản lý / nhân viên">
+                    <i class="bi bi-person-gear"></i>
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- TempData messages will be shown via Toast in JS -->
+
+    <!-- Search and Filter Section -->
+    <div class="card-custom mb-4">
+        <div class="card-header-custom">
+            <h5 class="card-title mb-0 heading-h2">
+                <i class="bi bi-search"></i> Tìm kiếm và lọc
+            </h5>
+        </div>
+        <div class="card-body-custom">
+            <form method="get" asp-action="Index" class="row g-3" id="searchForm">
+                <input type="hidden" name="sortBy" id="sortBy" value="@ViewBag.SortBy" />
+                <input type="hidden" name="sortOrder" id="sortOrder" value="@ViewBag.SortOrder" />
+                <div class="col-md-4">
+                    <label for="searchTerm" class="form-label-custom">Tìm kiếm</label>
+                    <input type="text" class="form-control-custom" id="searchTerm" name="searchTerm" 
+                           placeholder="Tên, email, số điện thoại..." value="@ViewBag.SearchTerm">
+                </div>
+                <div class="col-md-3">
+                    <label for="roleId" class="form-label-custom">Vai trò</label>
+                    <select class="form-control-custom" id="roleId" name="roleId">
+                        <option value="">Tất cả vai trò</option>
+                        @if (ViewBag.RoleId == 1) { <option value="1" selected>Owner</option> } else { <option value="1">Owner</option> }
+                        @if (ViewBag.RoleId == 2) { <option value="2" selected>Admin</option> } else { <option value="2">Admin</option> }
+                        @if (ViewBag.RoleId == 3) { <option value="3" selected>Manager</option> } else { <option value="3">Manager</option> }
+                        @if (ViewBag.RoleId == 4) { <option value="4" selected>Staff</option> } else { <option value="4">Staff</option> }
+                        @if (ViewBag.RoleId == 5) { <option value="5" selected>Customer</option> } else { <option value="5">Customer</option> }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label-custom">Trạng thái</label>
+                    <select class="form-control-custom" id="status" name="status">
+                        <option value="">Tất cả trạng thái</option>
+                        @if (ViewBag.Status == 0) { <option value="0" selected>Hoạt động</option> } else { <option value="0">Hoạt động</option> }
+                        @if (ViewBag.Status == 1) { <option value="1" selected>Không hoạt động</option> } else { <option value="1">Không hoạt động</option> }
+                        @if (ViewBag.Status == 2) { <option value="2" selected>Khóa</option> } else { <option value="2">Khóa</option> }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="pageSize" class="form-label-custom">Số lượng/trang</label>
+                    <select class="form-control-custom" id="pageSize" name="pageSize">
+                        @if (ViewBag.PageSize == 10) { <option value="10" selected>10</option> } else { <option value="10">10</option> }
+                        @if (ViewBag.PageSize == 25) { <option value="25" selected>25</option> } else { <option value="25">25</option> }
+                        @if (ViewBag.PageSize == 50) { <option value="50" selected>50</option> } else { <option value="50">50</option> }
+                        @if (ViewBag.PageSize == 100) { <option value="100" selected>100</option> } else { <option value="100">100</option> }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn-primary-custom btn-medium">
+                        <i class="bi bi-search"></i> Tìm kiếm
+                    </button>
+                    <a asp-action="Index" class="btn-secondary-custom btn-medium">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card-custom">
+        <div class="card-header-custom d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 heading-h2">
+                <i class="bi bi-people"></i> Danh sách người dùng
+                <span class="badge-custom info ms-2">@Model.TotalCount</span>
+            </h5>
+            <div class="bulk-actions">
+                <button type="button" class="btn-secondary-custom btn-small" onclick="bulkChangeStatus(0)">
+                    <i class="bi bi-check-circle"></i> Kích hoạt hàng loạt
+                </button>
+                <button type="button" class="btn-secondary-custom btn-small" onclick="bulkChangeStatus(1)">
+                    <i class="bi bi-pause-circle"></i> Vô hiệu hóa hàng loạt
+                </button>
+                <button type="button" class="btn-error-custom btn-small" onclick="bulkDelete()">
+                    <i class="bi bi-trash"></i> Xóa hàng loạt
+                </button>
+            </div>
+        </div>
+        <div class="card-body-custom p-0">
+            <div class="table-responsive">
+                <table class="table-custom table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th width="50">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                            </th>
+                            <th data-sort="UserId">ID</th>
+                            <th data-sort="FullName">Họ tên</th>
+                            <th data-sort="Email">Email</th>
+                            <th data-sort="Phone">Số điện thoại</th>
+                            <th data-sort="RoleId">Vai trò</th>
+                            <th data-sort="Status">Trạng thái</th>
+                            <th data-sort="CreatedAt">Ngày tạo</th>
+                            <th width="200">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Users == null || !Model.Users.Any())
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <i class="bi bi-inbox" style="font-size: 48px; color: var(--neutral-gray-300);"></i>
+                                        <p class="mt-3 body-base text-gray-custom">Không tìm thấy người dùng nào</p>
+                                        <p class="body-small text-gray-custom">Thử thay đổi bộ lọc tìm kiếm của bạn</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var user in Model.Users)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="user-checkbox" value="@user.UserId">
+                                    </td>
+                                    <td>@user.UserId</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                @user.FullName.Substring(0, 1).ToUpper()
+                                            </div>
+                                            <div>
+                                                <div class="fw-semibold">@user.FullName</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>@user.Email</td>
+                                    <td>@(user.Phone ?? "N/A")</td>
+                                    <td>
+                                        <span class="badge-custom @(user.RoleName?.ToLower() == "owner" || user.RoleName?.ToLower() == "admin" ? "error" : user.RoleName?.ToLower() == "manager" ? "warning" : "info")">
+                                            @(user.RoleName ?? "N/A")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-custom @(user.Status == 0 ? "success" : user.Status == 1 ? "error" : "warning")">
+                                            @(user.Status == 0 ? "Hoạt động" : user.Status == 1 ? "Không hoạt động" : "Khóa")
+                                        </span>
+                                    </td>
+                                    <td>@(user.CreatedAt?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                                    <td>
+                                        <div class="action-buttons" role="group">
+                                            <a asp-action="Details" asp-route-id="@user.UserId" 
+                                               class="btn-text-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Chi tiết">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@user.UserId" 
+                                               class="btn-secondary-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            @if (User.IsInRole("Admin") || User.IsInRole("Owner"))
+                                            {
+                                                <a asp-action="ResetPassword" asp-route-id="@user.UserId" 
+                                                   class="btn-text-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Đặt lại mật khẩu">
+                                                    <i class="bi bi-key"></i>
+                                                </a>
+                                            }
+                                            @if (user.Status == 0)
+                                            {
+                                                <form asp-action="ChangeStatus" method="post" style="display: inline;" class="change-status-form">
+                                                    <input type="hidden" name="id" value="@user.UserId" />
+                                                    <input type="hidden" name="status" value="1" />
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn-secondary-custom btn-small change-status-btn" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                            data-user-id="@user.UserId"
+                                                            data-user-name="@user.FullName"
+                                                            data-status="1"
+                                                            title="Vô hiệu hóa">
+                                                        <i class="bi bi-pause"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <form asp-action="ChangeStatus" method="post" style="display: inline;" class="change-status-form">
+                                                    <input type="hidden" name="id" value="@user.UserId" />
+                                                    <input type="hidden" name="status" value="0" />
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn-primary-custom btn-small change-status-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Kích hoạt">
+                                                        <i class="bi bi-play"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            <form asp-action="Delete" method="post" style="display: inline;" class="delete-user-form">
+                                                <input type="hidden" name="id" value="@user.UserId" />
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn-error-custom btn-small delete-user-btn" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                        data-user-id="@user.UserId"
+                                                        data-user-name="@user.FullName"
+                                                        title="Xóa">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <nav aria-label="User pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                    @if (Model.HasPreviousPage)
+                    {
+                        <a class="page-link" href="@BuildPaginationUrl(Model.Page - 1, Model.PageSize)">
+                            <i class="bi bi-chevron-left"></i> Trước
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="page-link"><i class="bi bi-chevron-left"></i> Trước</span>
+                    }
+                </li>
+                
+                @{
+                    int startPage = Math.Max(1, Model.Page - 2);
+                    int endPage = Math.Min(Model.TotalPages, Model.Page + 2);
+                    
+                    if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@BuildPaginationUrl(1, Model.PageSize)">1</a>
+                        </li>
+                        @if (startPage > 2)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                    }
+                    
+                    @for (int i = startPage; i <= endPage; i++)
+                    {
+                        <li class="page-item @(i == Model.Page ? "active" : "")">
+                            <a class="page-link" href="@BuildPaginationUrl(i, Model.PageSize)">@i</a>
+                        </li>
+                    }
+                    
+                    if (endPage < Model.TotalPages)
+                    {
+                        @if (endPage < Model.TotalPages - 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="@BuildPaginationUrl(Model.TotalPages, Model.PageSize)">@Model.TotalPages</a>
+                        </li>
+                    }
+                }
+                
+                <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                    @if (Model.HasNextPage)
+                    {
+                        <a class="page-link" href="@BuildPaginationUrl(Model.Page + 1, Model.PageSize)">
+                            Sau <i class="bi bi-chevron-right"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="page-link">Sau <i class="bi bi-chevron-right"></i></span>
+                    }
+                </li>
+            </ul>
+            <div class="text-center mt-2">
+                <small class="text-gray-custom body-small">
+                    Hiển thị @((Model.Page - 1) * Model.PageSize + 1) - @(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) 
+                    trong tổng số @Model.TotalCount người dùng
+                </small>
+            </div>
+        </nav>
+    }
+    
+    @functions {
+        private string BuildPaginationUrl(int page, int pageSize)
+        {
+            var queryParams = new System.Text.StringBuilder();
+            queryParams.Append($"?page={page}&pageSize={pageSize}");
+            
+            if (!string.IsNullOrEmpty(ViewBag.SearchTerm as string))
+            {
+                queryParams.Append($"&searchTerm={Uri.EscapeDataString(ViewBag.SearchTerm.ToString())}");
+            }
+            
+            if (ViewBag.RoleId != null)
+            {
+                queryParams.Append($"&roleId={ViewBag.RoleId}");
+            }
+            
+            if (ViewBag.Status != null)
+            {
+                queryParams.Append($"&status={ViewBag.Status}");
+            }
+            
+            if (!string.IsNullOrEmpty(ViewBag.SortBy as string))
+            {
+                queryParams.Append($"&sortBy={Uri.EscapeDataString(ViewBag.SortBy.ToString())}");
+            }
+            
+            if (!string.IsNullOrEmpty(ViewBag.SortOrder as string))
+            {
+                queryParams.Append($"&sortOrder={Uri.EscapeDataString(ViewBag.SortOrder.ToString())}");
+            }
+            
+            return queryParams.ToString();
+        }
+    }
+</div>
+
+<!-- Bulk Actions Form -->
+<form id="bulkForm" asp-action="BulkDelete" method="post" style="display: none;">
+    <input type="hidden" name="userIds" id="bulkUserIds" />
+</form>
+
+<form id="bulkStatusForm" asp-action="BulkChangeStatus" method="post" style="display: none;">
+    <input type="hidden" name="userIds" id="bulkStatusUserIds" />
+    <input type="hidden" name="status" id="bulkStatus" />
+</form>
+
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/users.css">
+    <link rel="stylesheet" href="~/css/users/index.css">
+}
+
+@section Scripts {
+    <script src="~/js/toast-notification.js"></script>
+    <script src="~/js/users/index.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+        });
+    </script>
+}
+
+<script>
+    // Show TempData messages as Toasts
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <text>
+        showSuccessToast('@Html.Raw(TempData["SuccessMessage"])');
+        </text>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <text>
+        showErrorToast('@Html.Raw(TempData["ErrorMessage"])');
+        </text>
+    }
+    @if (TempData["WarningMessage"] != null)
+    {
+        <text>
+        showWarningToast('@Html.Raw(TempData["WarningMessage"])');
+        </text>
+    }
+</script>

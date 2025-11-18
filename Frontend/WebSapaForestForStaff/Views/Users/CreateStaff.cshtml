@@ -1,0 +1,194 @@
+@model WebSapaForestForStaff.DTOs.UserManagement.CreateStaffRequest
+
+@{
+    ViewData["Title"] = "Tạo nhân viên mới";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Tạo nhân viên mới</h1>
+            <p class="page-subtitle">Thêm tài khoản nhân viên mới vào hệ thống</p>
+        </div>
+        <div class="page-actions">
+            <a asp-action="Index" class="btn-secondary-custom btn-medium">
+                <i class="mdi mdi-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+complete and improve the user management page based on what is already available            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="card-title mb-0 heading-h2">
+                        <i class="mdi mdi-account-plus"></i> Thông tin nhân viên
+                    </h5>
+                </div>
+                <div class="card-body-custom">
+                    <form asp-action="CreateStaff" method="post" id="createStaffForm">
+                        @Html.AntiForgeryToken()
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FullName" class="form-label-custom required"></label>
+                                    <input asp-for="FullName" class="form-control-custom" placeholder="Nhập họ và tên" />
+                                    <span asp-validation-for="FullName" class="text-danger body-small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label-custom required"></label>
+                                    <input asp-for="Email" type="email" class="form-control-custom" placeholder="example@email.com" />
+                                    <span asp-validation-for="Email" class="text-danger body-small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Phone" class="form-label-custom"></label>
+                                    <input asp-for="Phone" class="form-control-custom" placeholder="Nhập số điện thoại" />
+                                    <span asp-validation-for="Phone" class="text-danger body-small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="HireDate" class="form-label-custom required"></label>
+                                    <input asp-for="HireDate" type="date" class="form-control-custom" value="@Model.HireDate.ToString("yyyy-MM-dd")" />
+                                    <span asp-validation-for="HireDate" class="text-danger body-small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="SalaryBase" class="form-label-custom required"></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" style="background-color: var(--primary-100); border-color: var(--neutral-gray-300); color: var(--primary-700);">VNĐ</span>
+                                        <input asp-for="SalaryBase" type="number" step="10000" min="0" class="form-control-custom" placeholder="Nhập lương cơ bản" id="salaryBaseInput" />
+                                    </div>
+                                    <small class="body-small text-gray-custom mt-1">Ví dụ: 5.000.000 VNĐ (nhập: 5000000)</small>
+                                    <div id="salaryDisplay" class="text-primary fw-bold mt-1 body-base" style="color: var(--primary-500);"></div>
+                                    <span asp-validation-for="SalaryBase" class="text-danger body-small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="RoleId" class="form-label-custom"></label>
+                                    <select asp-for="RoleId" class="form-control-custom">
+                                        <option value="">-- Chọn vai trò (tùy chọn) --</option>
+                                        <option value="4" selected>Staff</option>
+                                        <option value="3">Manager</option>
+                                    </select>
+                                    <small class="body-small text-gray-custom mt-1">Mặc định: Staff</small>
+                                    <span asp-validation-for="RoleId" class="text-danger body-small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="PositionIds" class="form-label-custom">Vị trí công việc</label>
+                            @if (ViewBag.Positions != null && ((List<WebSapaForestForStaff.DTOs.Position>)ViewBag.Positions).Count > 0)
+                            {
+                                <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto; border-color: var(--neutral-gray-300) !important;">
+                                    @foreach (var position in (List<WebSapaForestForStaff.DTOs.Position>)ViewBag.Positions)
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input position-checkbox" 
+                                                   type="checkbox" 
+                                                   name="PositionIds" 
+                                                   value="@position.PositionId" 
+                                                   id="position_@position.PositionId"
+                                                   @(Model.PositionIds != null && Model.PositionIds.Contains(position.PositionId) ? "checked" : "") />
+                                            <label class="form-check-label body-base" for="position_@position.PositionId">
+                                                @position.PositionName
+                                                @if (!string.IsNullOrEmpty(position.Description))
+                                                {
+                                                    <small class="body-small text-gray-custom d-block">@position.Description</small>
+                                                }
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info" style="background-color: #f5faff; border-color: #cfe8ff; color: #0b5ed7;">
+                                    <i class="mdi mdi-information-outline"></i>
+                                    <span class="body-base">Chưa có vị trí công việc nào trong hệ thống.</span>
+                                    <br />
+                                    <small class="body-small text-gray-custom">Bạn vẫn có thể tạo nhân viên bây giờ và gán vị trí sau.</small>
+                                </div>
+                            }
+                            <span asp-validation-for="PositionIds" class="text-danger body-small"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a asp-action="Index" class="btn-secondary-custom btn-medium">
+                                <i class="mdi mdi-close"></i> Hủy
+                            </a>
+                            <button type="submit" class="btn-primary-custom btn-medium">
+                                <i class="mdi mdi-content-save"></i> Tạo nhân viên
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <h5 class="card-title mb-0 heading-h2">
+                        <i class="mdi mdi-information-outline"></i> Hướng dẫn
+                    </h5>
+                </div>
+                <div class="card-body-custom">
+                    <div class="info-card">
+                        <div class="alert alert-info" style="background-color: var(--primary-100); border-color: var(--primary-500);">
+                            <h6 class="heading-h2" style="color: var(--primary-700); margin-bottom: 8px;"><i class="mdi mdi-lightbulb-outline"></i> Lưu ý quan trọng:</h6>
+                            <ul class="mb-0 body-base">
+                                <li>Email phải là duy nhất trong hệ thống</li>
+                                <li>Hệ thống sẽ tự động tạo mật khẩu tạm thời</li>
+                                <li>Nhân viên sẽ nhận email thông báo tài khoản mới</li>
+                                <li>Vị trí công việc có thể chọn nhiều (nếu nhân viên kiêm nhiệm)</li>
+                                <li>Ngày tuyển dụng phải là ngày hợp lệ</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <h6 class="heading-h2">Vai trò nhân viên:</h6>
+                        <div class="role-info">
+                            <div class="role-item">
+                                <span class="badge-custom info">Staff</span>
+                                <small class="body-small text-gray-custom">Nhân viên cơ bản (mặc định)</small>
+                            </div>
+                            <div class="role-item">
+                                <span class="badge-custom warning">Manager</span>
+                                <small class="body-small text-gray-custom">Quản lý nhân viên</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/users.css">
+    <link rel="stylesheet" href="~/css/users/createStaff.css">
+}
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="~/js/toast-notification.js"></script>
+    <script src="~/js/users/createStaff.js"></script>
+}
+

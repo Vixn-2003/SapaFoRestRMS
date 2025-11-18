@@ -17,3 +17,4 @@
         public string CodeSupplier { get; set; } = string.Empty!;
     }
 }
+        

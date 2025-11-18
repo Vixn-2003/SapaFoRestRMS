@@ -32,10 +32,12 @@ namespace DataAccessLayer.Repositories
         public async Task<IEnumerable<Ingredient>> GetAllAsync()
         {
             return await _context.Ingredients
+                .Include(i => i.Unit)
                 .Include(i => i.InventoryBatches)
-                    .ThenInclude(b => b.StockTransactions)                    
+                .Include(i => i.StockTransactions)
                 .ToListAsync();
         }
+
 
         public async Task<(decimal totalImport, decimal totalExport, decimal totalFirst)> GetTotalImportExportBatches( int BatchesId, DateTime? startDate, DateTime? endDate)
         {
@@ -126,7 +128,7 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<Ingredient>> GetAllIngredientSearch(string search)
         {
-            return await _context.Ingredients.Where(x => x.IngredientCode.Contains(search) || x.Name.Contains(search))
+            return await _context.Ingredients.Where(x => x.IngredientCode.Contains(search) || x.Name.Contains(search)).Include(i => i.Unit)
                 .Include(i => i.InventoryBatches)
                     .ThenInclude(b => b.StockTransactions)
                 .ToListAsync();
@@ -172,7 +174,7 @@ namespace DataAccessLayer.Repositories
         public async Task<Ingredient> GetIngredientById(int id)
         {
 
-           var ingredient = await _context.Ingredients.FirstOrDefaultAsync(p => p.IngredientId == id);
+           var ingredient = await _context.Ingredients.Include(i => i.Unit).FirstOrDefaultAsync(p => p.IngredientId == id);
 
             if (ingredient != null)
             {
@@ -183,7 +185,7 @@ namespace DataAccessLayer.Repositories
            
         }
 
-        public async Task<(bool success, string message)> UpdateInforIngredient(int idIngredient, string nameIngredient, string unit)
+        public async Task<(bool success, string message)> UpdateInforIngredient(int idIngredient, string nameIngredient, int unit)
         {
             try
             {
@@ -196,7 +198,7 @@ namespace DataAccessLayer.Repositories
                 }
 
                 // Kiểm tra có thay đổi không
-                if (ingredient.Name == nameIngredient && ingredient.Unit == unit)
+                if (ingredient.Name == nameIngredient && ingredient.UnitId.Equals(unit))
                 {
                     return (false, "Không có thay đổi nào");
                 }
@@ -212,7 +214,7 @@ namespace DataAccessLayer.Repositories
 
                 // Cập nhật thông tin
                 ingredient.Name = nameIngredient;
-                ingredient.Unit = unit;
+                ingredient.UnitId = unit;
                 // ingredient.UpdatedAt = DateTime.Now; // Nếu có field này
 
                 _context.Ingredients.Update(ingredient);

@@ -12,6 +12,7 @@ namespace BusinessAccessLayer.Services.Interfaces
     {
         Task<IEnumerable<WarehouseDTO>> GetAllWarehouse();
         Task<WarehouseDTO> GetWarehouseById(int id);
+        Task<int> GetWarehouseByString(string warehouse);
         
     }
 }

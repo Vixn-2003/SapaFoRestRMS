@@ -15,6 +15,5 @@ namespace DomainAccessLayer.Models
         public bool IsActive { get; set; } = true; 
 
         public virtual ICollection<InventoryBatch> InventoryBatches { get; set; } = new List<InventoryBatch>();
-        public virtual ICollection<PurchaseOrderDetail> PurchaseOrderDetails { get; set; } = new List<PurchaseOrderDetail>();
     }
 }

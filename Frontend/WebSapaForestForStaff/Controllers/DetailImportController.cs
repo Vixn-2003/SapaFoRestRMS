@@ -13,10 +13,8 @@ namespace WebSapaForestForStaff.Controllers
 
         public DetailImportController(HttpClient httpClient)
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri("https://localhost:7096/")
-            };
+            _httpClient = httpClient;
+            _httpClient.BaseAddress = new Uri("https://localhost:7096/");
         }
 
         [HttpGet("Detail/{id}")]
@@ -35,9 +33,11 @@ namespace WebSapaForestForStaff.Controllers
             return View("~/Views/Menu/DetailImport.cshtml", order);
         }
 
+
         [HttpPost("Confirm")]
         public async Task<IActionResult> Confirm([FromForm] ConfirmImportRequest model)
         {
+
             model.CheckId = 3;
 
             if (string.IsNullOrEmpty(model.PurchaseOrderId))
@@ -61,6 +61,7 @@ namespace WebSapaForestForStaff.Controllers
                     var errorObj = JsonConvert.DeserializeObject<dynamic>(errorJson);
 
                     TempData["ErrorMessage"] = errorObj?.message?.ToString() ?? "Không thể xử lý đơn hàng.";
+                    TempData["ShowModal"] = "error"; // ✅ THÊM DÒNG NÀY
                     return RedirectToAction("Detail", new { id = model.PurchaseOrderId });
                 }
 
@@ -70,17 +71,20 @@ namespace WebSapaForestForStaff.Controllers
                 if (model.Status == "Completed")
                 {
                     TempData["SuccessMessage"] = "Đã xác nhận đơn nhập hàng thành công! Tất cả nguyên liệu đã được thêm vào kho.";
+                    TempData["ShowModal"] = "success"; // ✅ THÊM DÒNG NÀY
                 }
                 else if (model.Status == "Cancelled")
                 {
                     TempData["SuccessMessage"] = "Đã từ chối đơn nhập hàng thành công!";
+                    TempData["ShowModal"] = "success"; // ✅ THÊM DÒNG NÀY
                 }
 
-                return RedirectToAction("Index", "MainImportInventory");
+                return RedirectToAction("Detail", new { id = model.PurchaseOrderId }); // ✅ SỬA DÒNG NÀY - Quay lại Detail thay vì Index
             }
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = "Lỗi kết nối: " + ex.Message;
+                TempData["ShowModal"] = "error"; // ✅ THÊM DÒNG NÀY
                 return RedirectToAction("Detail", new { id = model.PurchaseOrderId });
             }
         }

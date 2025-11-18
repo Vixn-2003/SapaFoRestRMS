@@ -1,4 +1,5 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
+using WebSapaForestForStaff.DTOs.Inventory;
 
 namespace WebSapaForestForStaff.DTOs
 {
@@ -12,5 +13,7 @@ namespace WebSapaForestForStaff.DTOs
         public string SearchIngredent { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+
+        public List<UnitDTO> Units { get; set; } = new List<UnitDTO>();
     }
 }

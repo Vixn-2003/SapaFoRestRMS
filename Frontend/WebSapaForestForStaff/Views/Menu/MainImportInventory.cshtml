@@ -243,6 +243,7 @@
         }
 
         .status-completed {
+            color: white;
             background: #10b981;
         }
 
@@ -259,7 +260,7 @@
         }
 
         .order-price {
-            color: #3b82f6;
+            color: #ffdf00;
             font-weight: 600;
         }
 
@@ -589,7 +590,6 @@
             }
         }
 
-        // ✅ Render đơn đang xử lý - SỬA: Dùng PascalCase
         function renderProcessingOrders() {
             const processingOrders = purchaseList.filter(p => {
                 const status = (p.Status || p.status || '').toLowerCase();
@@ -611,38 +611,32 @@
 
             container.innerHTML = processingOrders.map(order => {
                 const total = calculateTotal(order);
-                const details = order.PurchaseOrderDetails || order.purchaseOrderDetails || [];
-                const itemCount = details.length;
                 const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
-                const supplierId = order.SupplierId || order.supplierId || 0;
+                const supplierName = order.Supplier?.Name || 'Chưa xác định'; // ✅ Lấy từ object Supplier
                 const status = order.Status || order.status || '';
                 const orderDate = order.OrderDate || order.orderDate || '';
-                const idCreator = order.IdCreator || order.idCreator;
 
                 return `
-                        <div class="order-item">
-                            <div class="order-header">
-                                <div>
-                                    <div class="order-id">${orderId}</div>
-                                    <div class="order-details">NCC: ${getSupplierName(supplierId)}</div>
-                                </div>
-                                <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                    <div class="order-item">
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">Mã: ${orderId}</div>
+                                <div class="order-details">NCC: ${supplierName}</div>
                             </div>
-                            <div class="order-details">Ngày tạo: ${formatDate(orderDate)}</div>
-                            <div class="order-details">Người tạo: ${idCreator ? `User #${idCreator}` : '-'}</div>
-                            <div class="order-footer">
-                                <span class="order-price">${formatCurrency(total)}</span>
-                                <span class="order-details">${itemCount} mặt hàng</span>
-                                <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
-                            </div>
+                            <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
                         </div>
-                    `;
+                        <div class="order-details">Ngày tạo: ${formatDate(orderDate)}</div>
+                        <div class="order-footer">
+                            <span class="order-price">${formatCurrency(total)}</span>
+                            <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                        </div>
+                    </div>
+                `;
             }).join('');
 
             document.getElementById('processingCount').textContent = `${processingOrders.length} đơn hàng`;
         }
 
-        // ✅ Render tất cả đơn hàng - SỬA: Dùng PascalCase
         function renderAllOrders(filteredList = null) {
             const orders = filteredList || purchaseList;
             const container = document.getElementById('allOrdersList');
@@ -661,32 +655,31 @@
             container.innerHTML = orders.map(order => {
                 const total = calculateTotal(order);
                 const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
-                const supplierId = order.SupplierId || order.supplierId || 0;
+                const supplierName = order.Supplier?.Name || 'Chưa xác định'; // ✅ Lấy từ object Supplier
                 const status = order.Status || order.status || '';
                 const orderDate = order.OrderDate || order.orderDate || '';
 
                 return `
-                        <div class="order-item">
-                            <div class="order-header">
-                                <div>
-                                    <div class="order-id">${orderId}</div>
-                                    <div class="order-details">${getSupplierName(supplierId)}</div>
-                                </div>
-                                <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                    <div class="order-item">
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">Mã: ${orderId}</div>
+                                <div class="order-details">NCC: ${supplierName}</div>
                             </div>
-                            <div class="order-footer">
-                                <span class="order-price">${formatCurrency(total)}</span>
-                                <span class="order-details">${formatDate(orderDate)}</span>
-                                <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
-                            </div>
+                            <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
                         </div>
-                    `;
+                        <div class="order-details">Ngày: ${formatDate(orderDate)}</div>
+                        <div class="order-footer">
+                            <span class="order-price">${formatCurrency(total)}</span>
+                            <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                        </div>
+                    </div>
+                `;
             }).join('');
 
             document.getElementById('allOrdersCount').textContent = `${orders.length} đơn`;
         }
 
-        // ✅ Render lịch sử hoàn thành - SỬA: Dùng PascalCase
         function renderCompletedHistory() {
             const completedOrders = purchaseList.filter(p => {
                 const status = (p.Status || p.status || '').toLowerCase();
@@ -703,24 +696,23 @@
             tbody.innerHTML = completedOrders.map(order => {
                 const total = calculateTotal(order);
                 const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
-                const supplierId = order.SupplierId || order.supplierId || 0;
+                const supplierName = order.Supplier?.Name || 'Chưa xác định'; // ✅ Lấy từ object Supplier
                 const status = order.Status || order.status || '';
                 const orderDate = order.OrderDate || order.orderDate || '';
 
                 return `
-                        <tr>
-                            <td>${orderId}</td>
-                            <td>${getSupplierName(supplierId)}</td>
-                            <td>${formatDate(orderDate)}</td>
-                            <td class="price-completed">${formatCurrency(total)}</td>
-                            <td><span class="order-status status-completed">${getStatusText(status)}</span></td>
-                            <td><button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button></td>
-                        </tr>
-                    `;
+                    <tr>
+                        <td>${orderId}</td>
+                        <td>${supplierName}</td>
+                        <td>${formatDate(orderDate)}</td>
+                        <td class="price-completed">${formatCurrency(total)}</td>
+                        <td><span class="order-status status-completed">${getStatusText(status)}</span></td>
+                        <td><button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button></td>
+                    </tr>
+                `;
             }).join('');
         }
 
-        // Tìm kiếm đơn hàng
         function searchOrders(keyword) {
             keyword = keyword.trim().toLowerCase();
 
@@ -731,8 +723,7 @@
 
             const filtered = purchaseList.filter(order => {
                 const orderId = (order.PurchaseOrderId || order.purchaseOrderId || '').toLowerCase();
-                const supplierId = order.SupplierId || order.supplierId || 0;
-                const supplierName = getSupplierName(supplierId).toLowerCase();
+                const supplierName = (order.Supplier?.Name || '').toLowerCase(); // ✅ Lấy từ object Supplier
 
                 return orderId.includes(keyword) || supplierName.includes(keyword);
             });

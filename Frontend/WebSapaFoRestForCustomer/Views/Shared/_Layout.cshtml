@@ -11,6 +11,8 @@
     <!-- Site CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="@Url.Content("~/css/reservation.css")" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/design-system.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth/login-modal.css" asp-append-version="true" />
 
 
     <!-- Google Fonts -->
@@ -141,12 +143,79 @@
                         <div class="me-3 hotline">
                             📞 <a href="tel:0123456789" class="text-decoration-none hotline">Hotline: 0123 456 789</a>
                         </div>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <div class="dropdown me-2">
+                                <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-circle"></i> @User.Identity.Name
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
+                                            <button type="submit" class="btn btn-link dropdown-item p-0 m-0">
+                                                <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#loginModal">
+                                <i class="bi bi-box-arrow-in-right"></i> Đăng nhập
+                            </button>
+                        }
                         <a class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reservationModal">Đặt bàn</a>
                     </div>
                 </div>
             </div>
         </nav>
     </header>
+
+    <!-- Modal Đăng nhập (OTP) -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loginModalLabel">Đăng nhập</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span>Đăng nhập để xem lịch sử đặt bàn.</span>
+                    </div>
+                    <!-- Step 1: Nhập SĐT để nhận OTP -->
+                    <form id="loginRequestOtpForm" method="post" action="/Auth/RequestOtp">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label for="loginPhone" class="form-label">Số điện thoại</label>
+                            <input type="text" class="form-control" id="loginPhone" name="Phone" placeholder="VD: 0912345678" />
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" id="loginSendOtpBtn">Gửi mã OTP</button>
+                        </div>
+                    </form>
+
+                    <!-- Step 2: Xác thực OTP -->
+                    <form id="loginVerifyOtpForm" method="post" action="/Auth/VerifyOtp" style="display:none;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="verifyPhoneHidden" name="Phone" />
+                        <div class="mb-3 mt-2">
+                            <label for="loginOtpCode" class="form-label">Mã OTP</label>
+                            <input type="text" class="form-control" id="loginOtpCode" name="Code" placeholder="Nhập mã OTP" />
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success" id="loginVerifyBtn">Đăng nhập</button>
+                            <button type="button" class="btn btn-link" id="loginBackToPhoneBtn">Quay lại</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Đặt bàn -->
     <div class="modal fade" id="reservationModal" tabindex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true">
@@ -208,6 +277,8 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/toast-notification.js" asp-append-version="true"></script>
+    <script src="~/js/auth/login-modal.js" asp-append-version="true"></script>
 
     <script>
         // Load logo động
@@ -297,6 +368,8 @@
         });
 
     </script>
+
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

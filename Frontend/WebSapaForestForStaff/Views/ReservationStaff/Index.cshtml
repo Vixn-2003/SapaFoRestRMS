@@ -71,6 +71,7 @@
                 <th>Ngày đặt</th>
                 <th>Ca</th>
                 <th>Số người</th>
+                 <th>Đặt cọc (VND)</th>
                 <th>Trạng thái</th>
                 <th class="text-center">Thao tác</th>
             </tr>
@@ -87,6 +88,16 @@
                         <td class="text-center">@r.ReservationDate.ToString("dd/MM/yyyy")</td>
                         <td class="text-center">@r.TimeSlot</td>
                         <td class="text-center">@r.NumberOfGuests</td>
+                         <td>
+                    @if (r.DepositAmount.HasValue && r.DepositAmount.Value > 0)
+                    {
+                        @String.Format("{0:N0}", r.DepositAmount) 
+                    }
+                    else
+                    {
+                        <span class="text-muted">Chưa cọc/Không cần cọc </span>
+                    }
+                </td>
                         <td class="text-center">
                             <span class="badge @(r.Status == "Pending" ? "bg-warning text-dark" : "bg-success")">
                                 @(r.Status == "Pending" ? "Chờ xử lý" : "Đã xác nhận")
@@ -96,6 +107,26 @@
                             <a class="btn btn-sm btn-outline-primary" href="@Url.Action("AssignTables", "ReservationStaff", new { id = r.ReservationId })">
                                 <i class="bi bi-clipboard-check"></i> Xử lý
                             </a>
+                             <form asp-action="CancelReservation" asp-controller="ReservationStaff"
+          method="post" class="d-inline">
+        <input type="hidden" name="id" value="@r.ReservationId" />
+        <input type="hidden" name="refund" value="false" />
+        <button type="submit" class="btn btn-sm btn-outline-danger"
+                onclick="return confirm('Xác nhận hủy đơn KHÔNG hoàn cọc?');">
+            <i class="bi bi-x-circle"></i> Hủy
+        </button>
+    </form>
+
+    <!-- Nút Hủy + Hoàn cọc -->
+    <form asp-action="CancelReservation" asp-controller="ReservationStaff"
+          method="post" class="d-inline">
+        <input type="hidden" name="id" value="@r.ReservationId" />
+        <input type="hidden" name="refund" value="true" />
+        <button type="submit" class="btn btn-sm btn-outline-success"
+                onclick="return confirm('Xác nhận HỦY ĐƠN và HOÀN CỌC cho khách hàng?');">
+            <i class="bi bi-check-circle"></i> Hủy + Hoàn cọc
+        </button>
+    </form>
                         </td>
                     </tr>
                 }

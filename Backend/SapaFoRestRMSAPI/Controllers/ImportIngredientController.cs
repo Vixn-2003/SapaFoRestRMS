@@ -116,7 +116,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     Unit = item.Unit,
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
-                    WarehouseId = item.WarehouseId,
+                    WarehouseName = item.WarehouseName,
                     TotalPrice = item.TotalPrice
                 }).ToList();
 

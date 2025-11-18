@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Text;
 using WebSapaForestForStaff.DTOs;
+using WebSapaForestForStaff.DTOs.Inventory;
 using WebSapaForestForStaff.Models;
 
 namespace WebSapaForestForStaff.Controllers
@@ -21,59 +22,67 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Gọi API nguyên liệu
+            // Gọi các API
             var response = await _httpClient.GetAsync("api/InventoryIngredient");
-
-            // Gọi API mã lô
             var responseIdPurchase = await _httpClient.GetAsync("api/PurchaseOrder");
-
-            // Gọi API nhà cung cấp
             var responseSupplier = await _httpClient.GetAsync("api/Supplier");
-
-            // ✅ THÊM: Gọi API warehouse
             var responseWarehouse = await _httpClient.GetAsync("api/Warehouse");
+            var responseUnit = await _httpClient.GetAsync("api/Unit");
 
             // Kiểm tra phản hồi
             if (!response.IsSuccessStatusCode)
-            {
                 return NotFound("Không tìm thấy nguyên liệu nào.");
-            }
 
             if (!responseSupplier.IsSuccessStatusCode)
-            {
                 return NotFound("Không tìm thấy nhà cung cấp nào.");
-            }
 
-            // ✅ THÊM: Kiểm tra warehouse response
             if (!responseWarehouse.IsSuccessStatusCode)
-            {
                 return NotFound("Không tìm thấy danh sách kho nào.");
-            }
 
-            // Đọc dữ liệu đúng cho từng response
+            if (!responseUnit.IsSuccessStatusCode)
+                return NotFound("Không tìm thấy danh sách đơn vị tính nào.");
+
+            // Đọc dữ liệu
             var json = await response.Content.ReadAsStringAsync();
             var jsonSupplier = await responseSupplier.Content.ReadAsStringAsync();
             var jsonIdPurchase = await responseIdPurchase.Content.ReadAsStringAsync();
-
-            // ✅ THÊM: Đọc dữ liệu warehouse
             var jsonWarehouse = await responseWarehouse.Content.ReadAsStringAsync();
+            var jsonUnit = await responseUnit.Content.ReadAsStringAsync();
 
-            // Giải mã dữ liệu JSON
+            // Giải mã JSON
             var supplierList = JsonConvert.DeserializeObject<List<SupplierDTO>>(jsonSupplier);
             var purchaseList = JsonConvert.DeserializeObject<List<PurchaseOrderDTO>>(jsonIdPurchase);
             var ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json);
-
-            // ✅ THÊM: Giải mã warehouse và lọc chỉ lấy kho active
             var warehouseList = JsonConvert.DeserializeObject<List<WarehouseDTO>>(jsonWarehouse);
+            var unitList = JsonConvert.DeserializeObject<List<UnitDTO>>(jsonUnit);
+
             warehouseList = warehouseList?.Where(w => w.IsActive).ToList() ?? new List<WarehouseDTO>();
 
-            // ✅ SỬA: Tạo model tổng hợp - THÊM WarehouseDTOs
+            // ✅ THÊM: MAP UNIT VÀO INGREDIENT
+            if (ingredientList != null && unitList != null)
+            {
+                foreach (var ingredient in ingredientList)
+                {
+                    if (ingredient.UnitId.HasValue)
+                    {
+                        ingredient.Unit = unitList.FirstOrDefault(u => u.UnitId == ingredient.UnitId.Value)
+                                          ?? new UnitDTO(); // Tạo Unit rỗng nếu không tìm thấy
+                    }
+                    else
+                    {
+                        ingredient.Unit = new UnitDTO(); // Tạo Unit rỗng nếu không có UnitId
+                    }
+                }
+            }
+
+            // Tạo model
             var importIngredient = new ImportIngredient
             {
                 SupplierDTOs = supplierList,
                 InventoryIngredientDTOs = ingredientList,
                 WarehouseDTOs = warehouseList,
-                PurchaseOrderDTOs = purchaseList
+                PurchaseOrderDTOs = purchaseList,
+                unitDTOs = unitList
             };
 
             return View("~/Views/Menu/ImportInventory.cshtml", importIngredient);
@@ -139,7 +148,7 @@ namespace WebSapaForestForStaff.Controllers
                     Unit = item.Unit,
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
-                    WarehouseId = item.WarehouseId,
+                    WarehouseName = item.WarehouseName,
                     TotalPrice = item.Quantity * item.UnitPrice
                 }));
 
