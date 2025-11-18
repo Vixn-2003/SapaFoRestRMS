@@ -726,6 +726,8 @@ public partial class SapaFoRestRmsContext : DbContext
                   .HasMaxLength(255);
             entity.Property(e => e.Unit)
                   .HasMaxLength(50);
+            entity.Property(e => e.WarehouseName)
+          .HasMaxLength(200);
 
             // 💰 Giá trị số
             entity.Property(e => e.Quantity)

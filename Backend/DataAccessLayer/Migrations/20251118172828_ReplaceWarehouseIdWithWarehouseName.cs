@@ -1,11 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class RemoveWarehouseFromPurchaseOrderDetail : Migration
+    public partial class ReplaceWarehouseIdWithWarehouseName : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -14,11 +15,28 @@ namespace DataAccessLayer.Migrations
                 name: "FK__Inventory__Wareh__WarehouseId",
                 table: "InventoryBatches");
 
+            migrationBuilder.DropForeignKey(
+                name: "FK_PurchaseOrderDetails_Warehouses",
+                table: "PurchaseOrderDetails");
+
+            migrationBuilder.DropIndex(
+                name: "IX_PurchaseOrderDetails_WarehouseId",
+                table: "PurchaseOrderDetails");
+
+            migrationBuilder.DropColumn(
+                name: "WarehouseId",
+                table: "PurchaseOrderDetails");
+
+
+            
             migrationBuilder.AddColumn<string>(
                 name: "WarehouseName",
                 table: "PurchaseOrderDetails",
-                type: "nvarchar(max)",
+                type: "nvarchar(200)",
+                maxLength: 200,
                 nullable: true);
+
+          
 
             migrationBuilder.AddForeignKey(
                 name: "FK_InventoryBatch_Warehouses",
@@ -27,6 +45,8 @@ namespace DataAccessLayer.Migrations
                 principalTable: "Warehouses",
                 principalColumn: "WarehouseId",
                 onDelete: ReferentialAction.Restrict);
+
+           
         }
 
         /// <inheritdoc />
@@ -34,11 +54,12 @@ namespace DataAccessLayer.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_InventoryBatch_Warehouses",
-                table: "InventoryBatches");
+                table: "InventoryBatches");            
 
             migrationBuilder.DropColumn(
                 name: "WarehouseName",
                 table: "PurchaseOrderDetails");
+
 
             migrationBuilder.AddColumn<int>(
                 name: "WarehouseId",
