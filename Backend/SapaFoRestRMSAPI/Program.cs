@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using DomainAccessLayer.Enums;
 using BusinessLogicLayer.Services.Interfaces;
 using BusinessLogicLayer.Services;
+using Microsoft.AspNetCore.Http.Features;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -141,6 +142,17 @@ builder.Services.AddScoped<IEventService, EventService>();
 
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
+builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
+builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
+builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+
+
+
+
 
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
@@ -225,6 +237,16 @@ builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestServi
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
+
+// ✅ Đảm bảo hỗ trợ multipart form data
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
+
+// ✅ Cấu hình kích thước file upload (nếu cần)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 52428800; // 50MB
+});
 
 
 builder.Services.AddAuthorization(options =>

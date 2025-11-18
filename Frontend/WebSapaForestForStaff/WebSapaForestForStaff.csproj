@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="DTOs\Filter\" />
     <Folder Include="Views\Admin\Users\" />
     <Folder Include="Views\Auth\" />
     <Folder Include="Views\Manager\" />

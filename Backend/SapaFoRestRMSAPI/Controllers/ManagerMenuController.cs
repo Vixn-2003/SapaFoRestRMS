@@ -11,7 +11,7 @@ namespace SapaFoRestRMSAPI.Controllers
     [Route("api/[controller]")]
     public class ManagerMenuController : ControllerBase
     {
-        private readonly IManagerMenuService _managerMenuService ;
+        private readonly IManagerMenuService _managerMenuService;
 
         public ManagerMenuController(IManagerMenuService managerMenuService)
         {
@@ -57,19 +57,19 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult<ManagerMenuDTO>> UpdateMenuById(int id)
+        [HttpGet("recipes/{menuId}")]
+        public async Task<ActionResult<RecipeDTO>> ListRecipeMenuItem(int menuId)
         {
             try
             {
-                var menu = await _managerMenuService.ManagerMenuById(id);
+                var recipe = await _managerMenuService.GetRecipeByMenuItem(menuId);
 
-                if (menu == null)
+                if (recipe == null)
                 {
-                    return NotFound("No menu found");
+                    return NotFound("No recipe found");
                 }
 
-                return Ok(menu);
+                return Ok(recipe);
             }
             catch (Exception ex)
             {
@@ -78,6 +78,56 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+
+        [HttpPut("update")]
+        public async Task<IActionResult> UpdateMenu([FromBody] FormUpdateMenuDTO request)
+        {
+            try
+            {
+                if (request == null || request.MenuId <= 0)
+                    return BadRequest("Invalid menu data");
+
+                // 🧩 1. Cập nhật thông tin món
+                var managerMenuDTO = new ManagerMenuDTO
+                {
+                    MenuItemId = request.MenuId,
+                    Name = request.Name,
+                    CategoryId = request.CategoryId,
+                    Price = request.Price,
+                    IsAvailable = request.IsAvailable,
+                    CourseType = request.CourseType,
+                    Description = request.Description,
+                    ImageUrl = request.ImageUrl
+                };
+
+                var resultMenu = await _managerMenuService.UpdateManagerMenu(managerMenuDTO);
+
+                // 🧩 2. Cập nhật danh sách nguyên liệu
+                if (request.Recipes != null && request.Recipes.Any())
+                {
+                    // Xóa toàn bộ công thức cũ của món này
+                    await _managerMenuService.DeleteRecipeByMenuItemId(request.MenuId);
+
+                    // Thêm lại danh sách mới
+                    foreach (var recipe in request.Recipes)
+                    {
+                        var recipeDTO = new RecipeDTO
+                        {
+                            MenuItemId = request.MenuId,
+                            IngredientId = recipe.IngredientId,
+                            QuantityNeeded = recipe.Quantity
+                        };
+                        await _managerMenuService.AddRecipe(recipeDTO);
+                    }
+                }
+
+                return Ok(new { message = "Menu updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
 
     }
 }

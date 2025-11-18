@@ -198,9 +198,111 @@
             max-height: 400px;
             overflow-y: auto;
         }
+
+        .toast-container {
+            position: fixed !important;
+            top: 80px !important;
+            right: 20px !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+            pointer-events: none !important;
+        }
+
+        .toast {
+            min-width: 300px !important;
+            max-width: 400px !important;
+            padding: 16px 20px !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            animation: slideIn 0.3s ease-out !important;
+            background: white !important;
+            pointer-events: auto !important;
+        }
+
+        @@keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @@keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.hiding {
+            animation: slideOut 0.3s ease-in;
+        }
+
+        .toast-success {
+            border-left: 4px solid #48bb78 !important;
+        }
+
+        .toast-error {
+            border-left: 4px solid #f56565 !important;
+        }
+
+        .toast-icon {
+            font-size: 24px !important;
+            flex-shrink: 0 !important;
+        }
+
+        .toast-content {
+            flex: 1 !important;
+        }
+
+        .toast-title {
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            margin-bottom: 4px !important;
+            color: #2d3748 !important;
+        }
+
+        .toast-message {
+            font-size: 13px !important;
+            color: #718096 !important;
+        }
+
+        .toast-close {
+            cursor: pointer !important;
+            font-size: 20px !important;
+            color: #a0aec0 !important;
+            border: none !important;
+            background: none !important;
+            padding: 0 !important;
+            width: 20px !important;
+            height: 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+            .toast-close:hover {
+                color: #4a5568 !important;
+            }
     </style>
 </head>
 <body>
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <div class="header">
             <h1>✏️ Chỉnh sửa món ăn</h1>
@@ -208,6 +310,9 @@
 
         <div class="form-content">
             <form id="foodForm">
+                <!-- Hidden input cho MenuItemId -->
+                <input type="hidden" id="menuItemId" name="ProductsMenu.MenuItemId" value="@Model.ProductsMenu.MenuItemId">
+
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="foodName">Tên món ăn *</label>
@@ -233,7 +338,9 @@
 
                     <div class="form-group">
                         <label for="price">Giá (đ) *</label>
-                        <input type="number" id="price" name="price" required placeholder="0" min="0" asp-for="ProductsMenu.Price">
+                        <input type="number" id="price" name="price"
+                               required placeholder="0" min="0"
+                               value="@Model.ProductsMenu.Price.ToString("0.##")" />
                     </div>
 
                     <div class="form-group">
@@ -251,7 +358,6 @@
                             <option value="Dessert">Món tráng miệng</option>
                             <option value="MainDish">Món chính</option>
                             <option value="Appetizer">Món khai vị</option>
-                            
                         </select>
                     </div>
 
@@ -299,19 +405,22 @@
                                     <tbody id="availableIngredientsBody">
                                         @foreach (var ingredient in Model.Ingredient)
                                         {
+                                            var isSelected = Model.Recipe != null && Model.Recipe.Any(r => r.IngredientId == ingredient.IngredientId);
+                                            var unitName = ingredient.Unit?.UnitName ?? "";
                                             <tr data-ingredient-id="@ingredient.IngredientId"
                                                 data-ingredient-name="@ingredient.Name"
-                                                data-ingredient-unit="@ingredient.Unit">
+                                                data-ingredient-unit="@unitName">
                                                 <td style="text-align: center;">
                                                     <input type="checkbox"
                                                            class="ingredient-checkbox"
                                                            value="@ingredient.IngredientId"
                                                            data-name="@ingredient.Name"
-                                                           data-unit="@ingredient.Unit"
+                                                           data-unit="@unitName"
+                                                    @(isSelected ? "checked" : "")
                                                            onchange="toggleIngredient(this)">
                                                 </td>
                                                 <td>@ingredient.Name</td>
-                                                <td>@(ingredient.Unit == "piece" ? "Cái" : ingredient.Unit)</td>
+                                                <td>@(ingredient.Unit?.UnitName ?? "N/A")</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -335,11 +444,49 @@
                                         </tr>
                                     </thead>
                                     <tbody id="selectedIngredientsBody">
-                                        <tr>
-                                            <td colspan="4" class="empty-state">
-                                                Chưa chọn nguyên liệu nào
-                                            </td>
-                                        </tr>
+                                        @if (Model.Recipe != null && Model.Recipe.Any())
+                                        {
+                                            foreach (var recipe in Model.Recipe)
+                                            {
+                                                var ingredient = Model.Ingredient.FirstOrDefault(i => i.IngredientId == recipe.IngredientId);
+                                                if (ingredient != null)
+                                                {
+                                                    var unitName = ingredient.Unit?.UnitName ?? "";
+
+                                                    <tr data-ingredient-id="@ingredient.IngredientId"
+                                                        data-ingredient-name="@ingredient.Name"
+                                                        data-ingredient-unit="@unitName">
+                                                        <td>@ingredient.Name</td>
+                                                        <td>
+                                                            <input type="number"
+                                                                   value="@recipe.QuantityNeeded"
+                                                                   min="0"
+                                                                   step="0.01"
+                                                                   style="width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;"
+                                                                   onchange="updateQuantityFromTable(@ingredient.IngredientId, this.value)"
+                                                                   required>
+                                                        </td>
+                                                        <td>@unitName</td>
+                                                        <td style="text-align: center;">
+                                                            <button type="button"
+                                                                    class="btn btn-danger"
+                                                                    onclick="removeIngredient(@ingredient.IngredientId, event)"
+                                                                    style="padding: 4px 8px; font-size: 12px;">
+                                                                ✕
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="4" class="empty-state">
+                                                    Chưa chọn nguyên liệu nào
+                                                </td>
+                                            </tr>
+                                        }
                                     </tbody>
                                 </table>
                             </div>
@@ -348,7 +495,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" class="btn" style="background: #cbd5e0; color: #2d3748;">Hủy</button>
+                    <button type="button" class="btn" style="background: #cbd5e0; color: #2d3748;" onclick="window.location.href='/ManagerMenu/DisplayMenu'">Hủy</button>
                     <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
                 </div>
             </form>
@@ -356,6 +503,80 @@
     </div>
 
     <script>
+        // Khởi tạo danh sách nguyên liệu đã chọn từ server
+        let selectedIngredients = [
+        @if (Model.Recipe != null && Model.Recipe.Any())
+        {
+            foreach (var recipe in Model.Recipe)
+            {
+                var ingredient = Model.Ingredient.FirstOrDefault(i => i.IngredientId == recipe.IngredientId);
+                if (ingredient != null)
+                {
+                    @:{
+                    @:id: @ingredient.IngredientId,
+                    @:name: "@ingredient.Name",
+                    @:unit: "@(ingredient.Unit?.UnitName ?? "")",
+                    @:quantity: @recipe.QuantityNeeded
+                    @:},
+                }
+            }
+        }
+                ];
+
+        // Toast System
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!document.getElementById('toastContainer')) {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+        });
+
+        function showToast(type, title, message, duration = 4000) {
+            let container = document.getElementById('toastContainer');
+
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            toast.innerHTML = `
+                        <div class="toast-icon">${icons[type]}</div>
+                        <div class="toast-content">
+                            <div class="toast-title">${title}</div>
+                            <div class="toast-message">${message}</div>
+                        </div>
+                        <button class="toast-close" onclick="closeToast(this)">×</button>
+                    `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                closeToast(toast.querySelector('.toast-close'));
+            }, duration);
+        }
+
+        function closeToast(button) {
+            const toast = button.closest('.toast');
+            toast.classList.add('hiding');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }
+
         function previewLocalImage(event) {
             const file = event.target.files[0];
             const img = document.getElementById('imagePreview');
@@ -372,8 +593,6 @@
                 img.style.display = 'none';
             }
         }
-
-        let selectedIngredients = [];
 
         // Xử lý tìm kiếm nguyên liệu
         document.getElementById('searchIngredient').addEventListener('input', function (e) {
@@ -397,6 +616,15 @@
             const ingredientUnit = checkbox.getAttribute('data-unit');
 
             if (checkbox.checked) {
+                // Kiểm tra xem nguyên liệu đã tồn tại chưa
+                const existingIndex = selectedIngredients.findIndex(ing => ing.id === ingredientId);
+
+                if (existingIndex !== -1) {
+                    // Nguyên liệu đã tồn tại, không thêm lại
+                    showToast('warning', 'Nguyên liệu đã tồn tại', `${ingredientName} đã có trong danh sách`);
+                    return;
+                }
+
                 // Thêm nguyên liệu vào danh sách đã chọn
                 const ingredient = {
                     id: ingredientId,
@@ -405,11 +633,13 @@
                     quantity: ingredientUnit.toLowerCase() === 'piece' ? 1 : 0
                 };
                 selectedIngredients.push(ingredient);
+                showToast('success', 'Đã thêm nguyên liệu', `${ingredientName} đã được thêm vào danh sách`);
             } else {
                 // Xóa nguyên liệu khỏi danh sách
                 const index = selectedIngredients.findIndex(ing => ing.id === ingredientId);
                 if (index !== -1) {
                     selectedIngredients.splice(index, 1);
+                    showToast('success', 'Đã xóa nguyên liệu', `${ingredientName} đã được xóa khỏi danh sách`);
                 }
             }
 
@@ -419,6 +649,7 @@
         // Hiển thị danh sách nguyên liệu đã chọn
         function renderSelectedIngredients() {
             const tbody = document.getElementById('selectedIngredientsBody');
+            const menuItemId = document.getElementById('menuItemId').value;
 
             if (selectedIngredients.length === 0) {
                 tbody.innerHTML = `
@@ -437,7 +668,7 @@
                 const min = isPiece ? '1' : '0';
 
                 return `
-                            <tr>
+                            <tr data-ingredient-id="${ing.id}">
                                 <td>${ing.name}</td>
                                 <td>
                                     <input type="number"
@@ -447,15 +678,16 @@
                                            style="width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;"
                                            onchange="updateQuantity(${index}, this.value)"
                                            required>
-                                    <input type="hidden" name="MenuIngredients[${index}].IngredientId" value="${ing.id}">
-                                    <input type="hidden" name="MenuIngredients[${index}].Quantity" value="${ing.quantity}" id="hidden_quantity_${index}">
-                                    <input type="hidden" name="MenuIngredients[${index}].Unit" value="${ing.unit}">
+                                    <input type="hidden" name="MenuRecipes[${index}].IngredientId" value="${ing.id}">
+                                    <input type="hidden" name="MenuRecipes[${index}].MenuItemId" value="${menuItemId}">
+                                    <input type="hidden" name="MenuRecipes[${index}].QuantityNeeded" value="${ing.quantity}" id="hidden_quantity_${index}">
+                                    <input type="hidden" name="MenuRecipes[${index}].Unit" value="${ing.unit}">
                                 </td>
-                                <td>${ing.unit === 'piece' ? 'Cái' : ing.unit}</td>
+                                                <td>${ing.unit || 'N/A'}</td>
                                 <td style="text-align: center;">
                                     <button type="button"
                                             class="btn btn-danger"
-                                            onclick="removeIngredient(${ing.id})"
+                                            onclick="removeIngredient(${ing.id}, event)"
                                             style="padding: 4px 8px; font-size: 12px;">
                                         ✕
                                     </button>
@@ -463,6 +695,14 @@
                             </tr>
                         `;
             }).join('');
+        }
+
+        // Cập nhật số lượng từ bảng (khi load dữ liệu có sẵn)
+        function updateQuantityFromTable(ingredientId, value) {
+            const index = selectedIngredients.findIndex(ing => ing.id === ingredientId);
+            if (index !== -1) {
+                updateQuantity(index, value);
+            }
         }
 
         // Cập nhật số lượng nguyên liệu
@@ -485,22 +725,36 @@
         }
 
         // Xóa nguyên liệu
-        function removeIngredient(ingredientId) {
-            if (confirm('Bạn có chắc muốn xóa nguyên liệu này?')) {
-                // Bỏ check checkbox
-                const checkbox = document.querySelector(`input[type="checkbox"][value="${ingredientId}"]`);
-                if (checkbox) {
-                    checkbox.checked = false;
-                }
-
-                // Xóa khỏi danh sách
-                const index = selectedIngredients.findIndex(ing => ing.id === ingredientId);
-                if (index !== -1) {
-                    selectedIngredients.splice(index, 1);
-                }
-
-                renderSelectedIngredients();
+        function removeIngredient(ingredientId, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
             }
+
+            console.log('Removing ingredient:', ingredientId);
+
+            const ingredient = selectedIngredients.find(ing => ing.id === ingredientId);
+
+            if (!ingredient) {
+                console.error('Ingredient not found:', ingredientId);
+                return;
+            }
+
+            // Bỏ check checkbox
+            const checkbox = document.querySelector(`input[type="checkbox"][value="${ingredientId}"]`);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+
+            // Xóa khỏi danh sách
+            const index = selectedIngredients.findIndex(ing => ing.id === ingredientId);
+            if (index !== -1) {
+                selectedIngredients.splice(index, 1);
+            }
+
+            renderSelectedIngredients();
+
+            showToast('success', 'Đã xóa', `Nguyên liệu "${ingredient.name}" đã được xóa khỏi danh sách`);
         }
 
         // Xử lý submit form
@@ -509,7 +763,7 @@
 
             // Validate có nguyên liệu được chọn không
             if (selectedIngredients.length === 0) {
-                alert('Vui lòng chọn ít nhất một nguyên liệu!');
+                showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn ít nhất một nguyên liệu!');
                 return;
             }
 
@@ -522,18 +776,22 @@
             });
 
             if (hasInvalidQuantity) {
-                alert('Vui lòng nhập số lượng hợp lệ cho tất cả nguyên liệu!');
+                showToast('warning', 'Số lượng không hợp lệ', 'Vui lòng nhập số lượng hợp lệ cho tất cả nguyên liệu!');
                 return;
             }
 
             // Tạo FormData để gửi cả file và dữ liệu
             const formData = new FormData();
 
+            // Thêm MenuItemId
+            formData.append('ProductsMenu.MenuItemId', document.getElementById('menuItemId').value);
+
             // Thêm thông tin món ăn
             formData.append('ProductsMenu.Name', document.getElementById('foodName').value);
             formData.append('ProductsMenu.CategoryId', document.querySelector('[name="ProductsMenu.CategoryId"]').value);
             formData.append('ProductsMenu.Price', document.getElementById('price').value);
             formData.append('ProductsMenu.IsAvailable', document.querySelector('[name="ProductsMenu.IsAvailable"]').value);
+            formData.append('ProductsMenu.CourseType', document.querySelector('[name="ProductsMenu.CourseType"]').value);
             formData.append('ProductsMenu.Description', document.getElementById('description').value);
 
             // Thêm file ảnh (nếu có)
@@ -544,9 +802,10 @@
 
             // Thêm danh sách nguyên liệu
             selectedIngredients.forEach((ingredient, index) => {
-                formData.append(`MenuIngredients[${index}].IngredientId`, ingredient.id);
-                formData.append(`MenuIngredients[${index}].Quantity`, ingredient.quantity);
-                formData.append(`MenuIngredients[${index}].Unit`, ingredient.unit);
+                formData.append(`MenuRecipes[${index}].RecipeId`, ingredient.id);
+                formData.append(`MenuRecipes[${index}].MenuItemId`, document.getElementById('menuItemId').value);
+                formData.append(`MenuRecipes[${index}].IngredientId`, ingredient.id);
+                formData.append(`MenuRecipes[${index}].QuantityNeeded`, ingredient.quantity);
             });
 
             try {
@@ -557,27 +816,59 @@
                 submitBtn.innerHTML = '⏳ Đang lưu...';
 
                 // Gửi dữ liệu đến controller
-                const response = await fetch('/Menu/UpdateMenu', {
+                const response = await fetch('/ManagerMenu/UpdateMenu', {
                     method: 'POST',
                     body: formData
                 });
 
-                if (response.ok) {
-                    const result = await response.json();
-                    alert('✅ Cập nhật món ăn thành công!');
-                    // Chuyển hướng hoặc reload trang
-                    window.location.href = '/Menu/Index';
-                } else {
-                    const error = await response.json();
-                    alert('❌ Lỗi: ' + (error.message || 'Không thể cập nhật món ăn'));
-                }
-
                 // Khôi phục nút submit
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
+
+                if (response.ok) {
+                    const contentType = response.headers.get('content-type');
+
+                    if (contentType && contentType.includes('application/json')) {
+                        const result = await response.json();
+                        showToast('success', 'Cập nhật thành công!', 'Món ăn đã được cập nhật thành công');
+
+                        setTimeout(() => {
+                            window.location.href = '/ManagerMenu/DisplayMenu';
+                        }, 1500);
+                    } else {
+                        const text = await response.text();
+                        console.log('Response:', text);
+                        showToast('success', 'Cập nhật thành công!', 'Món ăn đã được cập nhật thành công');
+
+                        setTimeout(() => {
+                            window.location.href = '/ManagerMenu/DisplayMenu';
+                        }, 1500);
+                    }
+                } else {
+                    const contentType = response.headers.get('content-type');
+                    let errorMessage = 'Không thể cập nhật món ăn';
+
+                    try {
+                        if (contentType && contentType.includes('application/json')) {
+                            const error = await response.json();
+                            errorMessage = error.message || errorMessage;
+                        } else {
+                            const text = await response.text();
+                            console.error('Error response:', text);
+                        }
+                    } catch (parseError) {
+                        console.error('Parse error:', parseError);
+                    }
+
+                    showToast('error', 'Lỗi cập nhật', errorMessage);
+                }
             } catch (error) {
                 console.error('Error:', error);
-                alert('❌ Có lỗi xảy ra: ' + error.message);
+                showToast('error', 'Có lỗi xảy ra', error.message || 'Không thể kết nối đến server');
+
+                const submitBtn = document.querySelector('button[type="submit"]');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '💾 Lưu thay đổi';
             }
         });
     </script>

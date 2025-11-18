@@ -58,8 +58,6 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync();
         }
 
-
-
         public Task<MenuItem> GetByIdAsync(int id)
         {
             throw new NotImplementedException();
@@ -69,11 +67,57 @@ namespace DataAccessLayer.Repositories
             throw new NotImplementedException();
         }
 
-        public Task UpdateAsync(MenuItem entity)
+        public async Task UpdateAsync(MenuItem entity)
         {
             throw new NotImplementedException();
         }
 
-        
+        public async Task<bool> ManagerUpdateMenu(MenuItem menuItem)
+        {
+            var existingItem = await _context.MenuItems
+                .FirstOrDefaultAsync(x => x.MenuItemId == menuItem.MenuItemId);
+
+            if (existingItem == null)
+                return false; // Không tìm thấy item để cập nhật
+
+            // Cập nhật các thuộc tính
+            existingItem.Name = menuItem.Name;
+            existingItem.CategoryId = menuItem.CategoryId;
+            existingItem.Price = menuItem.Price;
+            existingItem.IsAvailable = menuItem.IsAvailable;
+            existingItem.CourseType = menuItem.CourseType;
+            existingItem.Description = menuItem.Description;
+            existingItem.ImageUrl = menuItem.ImageUrl;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<Recipe>> GetRecipeByMenuItem(int id)
+        {
+            return await _context.Recipes.Where(x => x.MenuItemId == id).ToListAsync();
+        }
+
+        public async Task<bool> DeleteRecipeByMenuItemId(int menuItemId)
+        {
+            var recipes = _context.Recipes.Where(r => r.MenuItemId == menuItemId);
+            _context.Recipes.RemoveRange(recipes);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> AddRecipe(Recipe recipe)
+        {
+            var entity = new Recipe
+            {
+                MenuItemId = recipe.MenuItemId,
+                IngredientId = recipe.IngredientId,
+                QuantityNeeded = recipe.QuantityNeeded
+            };
+            _context.Recipes.Add(entity);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }
