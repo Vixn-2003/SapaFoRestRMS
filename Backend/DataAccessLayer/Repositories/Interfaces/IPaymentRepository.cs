@@ -1,6 +1,7 @@
-using DomainAccessLayer.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using DomainAccessLayer.Models;
 
 namespace DataAccessLayer.Repositories.Interfaces;
 
@@ -15,9 +16,14 @@ public interface IPaymentRepository : IRepository<Order>
     Task<Order?> GetOrderWithItemsAsync(int orderId);
 
     /// <summary>
-    /// Lấy danh sách đơn hàng chờ thanh toán
+    /// Lấy danh sách đơn hàng theo ngày (kèm đầy đủ navigation properties)
     /// </summary>
-    Task<IEnumerable<Order>> GetPendingOrdersAsync();
+    Task<IEnumerable<Order>> GetOrdersByDateAsync(DateOnly date);
+
+    /// <summary>
+    /// Lấy toàn bộ đơn hàng (kèm đầy đủ navigation properties)
+    /// </summary>
+    Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync();
 
     /// <summary>
     /// Lấy đơn hàng theo mã đơn hoặc số bàn

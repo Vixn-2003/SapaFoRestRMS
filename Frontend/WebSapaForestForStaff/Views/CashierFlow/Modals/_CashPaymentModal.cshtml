@@ -9,7 +9,6 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- Order Summary -->
                 <div class="card mb-3">
                     <div class="card-body">
                         <h6 class="card-title mb-3">
@@ -35,15 +34,14 @@
                     </div>
                 </div>
 
-                <!-- Payment Input -->
                 <div class="mb-3">
                     <label for="amountReceived" class="form-label fw-bold">
                         <i class="bi bi-currency-dollar me-2"></i>Số tiền khách đưa <span class="text-danger">*</span>
                     </label>
                     <div class="input-group input-group-lg">
-                        <input type="number" 
-                               class="form-control" 
-                               id="amountReceived" 
+                        <input type="number"
+                               class="form-control"
+                               id="amountReceived"
                                placeholder="Nhập số tiền..."
                                min="0"
                                step="1000"
@@ -53,7 +51,6 @@
                     <small class="text-muted">Nhập số tiền khách hàng đưa</small>
                 </div>
 
-                <!-- Change Display -->
                 <div id="changeDisplay" class="alert alert-info d-none">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-arrow-left-right me-2 fs-4"></i>
@@ -64,7 +61,6 @@
                     </div>
                 </div>
 
-                <!-- Underpaid Warning -->
                 <div id="underpaidWarning" class="alert alert-warning d-none">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -76,18 +72,16 @@
                     </div>
                 </div>
 
-                <!-- Notes -->
                 <div class="mb-3">
                     <label for="paymentNotes" class="form-label">
                         <i class="bi bi-sticky me-2"></i>Ghi chú (tùy chọn)
                     </label>
-                    <textarea class="form-control" 
-                              id="paymentNotes" 
-                              rows="2" 
+                    <textarea class="form-control"
+                              id="paymentNotes"
+                              rows="2"
                               placeholder="Nhập ghi chú nếu có..."></textarea>
                 </div>
 
-                <!-- Refund Confirmation (for overpaid) -->
                 <div id="refundConfirmation" class="form-check mb-3 d-none">
                     <input class="form-check-input" type="checkbox" id="refundConfirmed" onchange="toggleConfirmButton()">
                     <label class="form-check-label" for="refundConfirmed">
@@ -99,8 +93,8 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle me-1"></i>Hủy
                 </button>
-                <button type="button" 
-                        class="btn btn-primary" 
+                <button type="button"
+                        class="btn btn-primary"
                         id="confirmCashPaymentBtn"
                         onclick="confirmCashPayment()"
                         disabled>

@@ -1,4 +1,5 @@
-﻿using WebSapaForestForStaff.Services;
+﻿using Microsoft.AspNetCore.Authentication;
+using WebSapaForestForStaff.Services;
 using WebSapaForestForStaff.Services.Api;
 using WebSapaForestForStaff.Services.Api.Interfaces;
 
@@ -16,6 +17,7 @@ builder.Services.AddHttpClient<IAuthApiService, AuthApiService>();
 builder.Services.AddHttpClient<IUserApiService, UserApiService>();
 builder.Services.AddHttpClient<IProfileApiService, ProfileApiService>();
 builder.Services.AddHttpClient<IPositionApiService, PositionApiService>();
+builder.Services.AddHttpClient<IPaymentApiService, PaymentApiService>();
 
 // Keep backward compatibility with old ApiService (can be removed after migration)
 builder.Services.AddHttpClient<ApiService>();
@@ -63,6 +65,30 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseAuthentication();
+
+app.Use(async (context, next) =>
+{
+    if (context.User?.Identity?.IsAuthenticated == true)
+    {
+        var token = context.Session.GetString("Token");
+        var refreshToken = context.Session.GetString("RefreshToken");
+
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(refreshToken))
+        {
+            await context.SignOutAsync("Cookies");
+            context.Session.Clear();
+
+            if (!context.Response.HasStarted)
+            {
+                context.Response.Redirect("/Auth/Login");
+            }
+            return;
+        }
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllerRoute(
