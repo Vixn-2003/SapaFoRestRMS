@@ -1,0 +1,113 @@
+@*
+    QR Payment Modal - Manual Confirmation
+    Displays VietQR code for customer to scan, then allows cashier to manually confirm payment
+*@
+
+<div class="modal fade" id="qrPaymentModal" tabindex="-1" aria-labelledby="qrPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="qrPaymentModalLabel">
+                    <i class="bi bi-qr-code me-2"></i>Thanh toán qua QR VietQR
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading State -->
+                <div id="qrLoading" class="text-center py-5">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Đang tải...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Đang tạo mã QR...</p>
+                </div>
+
+                <!-- QR Content -->
+                <div id="qrContent" class="d-none">
+                    <div class="text-center mb-4">
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Quét mã QR bằng ứng dụng ngân hàng để chuyển khoản
+                        </p>
+                    </div>
+
+                    <!-- QR Image -->
+                    <div class="text-center mb-4">
+                        <img id="qrImage" 
+                             src="" 
+                             alt="VietQR Code" 
+                             class="img-fluid border rounded p-3 bg-white shadow-sm"
+                             style="max-width: 400px; max-height: 400px;">
+                    </div>
+
+                    <!-- Payment Info -->
+                    <div class="card border-success mb-3">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">
+                                            <i class="bi bi-receipt me-2"></i><strong>Số tiền:</strong>
+                                        </span>
+                                        <span class="fs-5 fw-bold text-success" id="qrAmount">0 ₫</span>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">
+                                            <i class="bi bi-tag me-2"></i><strong>Nội dung chuyển khoản:</strong>
+                                        </span>
+                                        <span class="badge bg-primary fs-6" id="qrDescription">RMS#ORD000000</span>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted">
+                                            <i class="bi bi-hash me-2"></i><strong>Mã giao dịch:</strong>
+                                        </span>
+                                        <span class="text-muted small" id="qrTransactionCode">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="alert alert-info mb-0">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-lightbulb me-2"></i>Hướng dẫn:
+                        </h6>
+                        <ol class="mb-0 small">
+                            <li>Khách hàng quét mã QR bằng ứng dụng ngân hàng</li>
+                            <li>Nhập đúng số tiền và nội dung chuyển khoản</li>
+                            <li>Xác nhận chuyển khoản</li>
+                            <li>Nhấn <strong>"Đã nhận tiền"</strong> sau khi khách hàng đã chuyển khoản</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div id="qrError" class="d-none text-center py-5">
+                    <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                    <p class="mt-3 text-danger" id="qrErrorMessage">Đã xảy ra lỗi khi tạo mã QR</p>
+                    <button type="button" class="btn btn-outline-primary" onclick="retryLoadQR()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Thử lại
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" 
+                        class="btn btn-secondary" 
+                        data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Hủy
+                </button>
+                <button type="button" 
+                        id="confirmQRPaymentBtn" 
+                        class="btn btn-success d-none"
+                        onclick="confirmQRPayment()">
+                    <i class="bi bi-check-circle me-2"></i>Đã nhận tiền
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

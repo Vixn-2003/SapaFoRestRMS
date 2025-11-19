@@ -14,7 +14,10 @@ namespace WebSapaFoRestForCustomer.Controllers
         {
             _client = httpClientFactory.CreateClient();
         }
-
+        public IActionResult ReservationList()
+        {
+            return View();
+        }
         // Gửi OTP
         [HttpPost]
         public async Task<IActionResult> SendOtp([FromBody] OtpRequestDto dto)

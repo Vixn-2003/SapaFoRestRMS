@@ -154,6 +154,64 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Attendance", (string)null);
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.AuditLog", b =>
+                {
+                    b.Property<int>("AuditLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditLogId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AuditLogId")
+                        .HasName("PK__AuditLogs__AuditLogId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_AuditLogs_CreatedAt");
+
+                    b.HasIndex("EventType")
+                        .HasDatabaseName("IX_AuditLogs_EventType");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_AuditLogs_UserId");
+
+                    b.HasIndex("EntityType", "EntityId")
+                        .HasDatabaseName("IX_AuditLogs_EntityType_EntityId");
+
+                    b.ToTable("AuditLogs", (string)null);
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.BrandBanner", b =>
                 {
                     b.Property<int>("BannerId")
@@ -333,6 +391,11 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IngredientId"));
 
+                    b.Property<string>("IngredientCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -343,12 +406,13 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("decimal(18, 2)")
                         .HasDefaultValue(0m);
 
-                    b.Property<string>("Unit")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<int>("UnitId")
+                        .HasColumnType("int");
 
                     b.HasKey("IngredientId")
                         .HasName("PK__Ingredie__BEAEB25ACD112DE2");
+
+                    b.HasIndex("UnitId");
 
                     b.ToTable("Ingredients");
                 });
@@ -378,12 +442,17 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("QuantityRemaining")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<int>("WarehouseId")
+                        .HasColumnType("int");
+
                     b.HasKey("BatchId")
                         .HasName("PK__Inventor__5D55CE5868089E90");
 
                     b.HasIndex("IngredientId");
 
                     b.HasIndex("PurchaseOrderDetailId");
+
+                    b.HasIndex("WarehouseId");
 
                     b.ToTable("InventoryBatches");
                 });
@@ -676,6 +745,53 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("OrderDetails");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.OrderLock", b =>
+                {
+                    b.Property<int>("OrderLockId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderLockId"));
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime>("LockedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int>("LockedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasDefaultValue("Payment in progress");
+
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("OrderLockId")
+                        .HasName("PK__OrderLocks__OrderLockId");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("IX_OrderLocks_ExpiresAt");
+
+                    b.HasIndex("LockedByUserId");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_OrderLocks_OrderId");
+
+                    b.ToTable("OrderLocks", (string)null);
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Payment", b =>
                 {
                     b.Property<int>("PaymentId")
@@ -788,6 +904,11 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PositionId"));
 
+                    b.Property<decimal>("BaseSalary")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -809,11 +930,15 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.PurchaseOrder", b =>
                 {
-                    b.Property<int>("PurchaseOrderId")
-                        .ValueGeneratedOnAdd()
+                    b.Property<string>("PurchaseOrderId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("IdConfirm")
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PurchaseOrderId"));
+                    b.Property<int?>("IdCreator")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("OrderDate")
                         .ValueGeneratedOnAdd()
@@ -829,8 +954,19 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("SupplierId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("TimeConfirm")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("UrlImg")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.HasKey("PurchaseOrderId")
                         .HasName("PK__Purchase__036BACA49E3BAAAB");
+
+                    b.HasIndex("IdConfirm");
+
+                    b.HasIndex("IdCreator");
 
                     b.HasIndex("SupplierId");
 
@@ -845,20 +981,40 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PurchaseOrderDetailId"));
 
-                    b.Property<int>("IngredientId")
+                    b.Property<string>("IngredientCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("IngredientId")
                         .HasColumnType("int");
 
-                    b.Property<int>("PurchaseOrderId")
-                        .HasColumnType("int");
+                    b.Property<string>("IngredientName")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("PurchaseOrderId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18, 2)");
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasColumnType("decimal(15, 2)");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18, 2)");
+                        .HasColumnType("decimal(15, 2)");
 
-                    b.HasKey("PurchaseOrderDetailId")
-                        .HasName("PK__Purchase__5026B698B2854271");
+                    b.Property<string>("WarehouseName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("PurchaseOrderDetailId");
 
                     b.HasIndex("IngredientId");
 
@@ -986,6 +1142,9 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<decimal?>("TotalDepositPaid")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("ZaloMessageId")
                         .HasColumnType("nvarchar(max)");
 
@@ -997,6 +1156,46 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("StaffId");
 
                     b.ToTable("Reservations");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ReservationDeposit", b =>
+                {
+                    b.Property<int>("DepositId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepositId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DepositCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("DepositDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ReceiptImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ReservationId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DepositId");
+
+                    b.HasIndex("ReservationId");
+
+                    b.ToTable("ReservationDeposits");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.ReservationTable", b =>
@@ -1117,6 +1316,69 @@ namespace DataAccessLayer.Migrations
                             RoleId = 5,
                             RoleName = "Customer"
                         });
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.SalaryChangeRequest", b =>
+                {
+                    b.Property<int>("RequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
+
+                    b.Property<int?>("ApprovedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<decimal>("CurrentBaseSalary")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("OwnerNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PositionId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ProposedBaseSalary")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RequestedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.HasKey("RequestId")
+                        .HasName("PK__SalaryChangeRequest__RequestId");
+
+                    b.HasIndex("ApprovedBy");
+
+                    b.HasIndex("PositionId")
+                        .HasDatabaseName("IX_SalaryChangeRequests_PositionId");
+
+                    b.HasIndex("RequestedBy")
+                        .HasDatabaseName("IX_SalaryChangeRequests_RequestedBy");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_SalaryChangeRequests_Status");
+
+                    b.ToTable("SalaryChangeRequests", (string)null);
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.SalaryRule", b =>
@@ -1269,6 +1531,11 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("CodeSupplier")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("ContactInfo")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -1370,6 +1637,210 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Tables");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Transaction", b =>
+                {
+                    b.Property<int>("TransactionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TransactionId"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal?>("AmountReceived")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<int?>("ConfirmedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<string>("GatewayErrorCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("GatewayErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("GatewayReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsManualConfirmed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastRetryAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ParentTransactionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("TransactionCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("TransactionId")
+                        .HasName("PK__Transact__55433A6B");
+
+                    b.HasIndex("ConfirmedByUserId");
+
+                    b.HasIndex("OrderId")
+                        .HasDatabaseName("IX_Transactions_OrderId");
+
+                    b.HasIndex("ParentTransactionId");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("IX_Transactions_SessionId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_Transactions_Status");
+
+                    b.ToTable("Transactions", (string)null);
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Unit", b =>
+                {
+                    b.Property<int>("UnitId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UnitId"));
+
+                    b.Property<string>("UnitName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("UnitType")
+                        .HasColumnType("int");
+
+                    b.HasKey("UnitId");
+
+                    b.ToTable("Units");
+
+                    b.HasData(
+                        new
+                        {
+                            UnitId = 1,
+                            UnitName = "quả",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 2,
+                            UnitName = "cái",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 3,
+                            UnitName = "hộp",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 4,
+                            UnitName = "chai",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 5,
+                            UnitName = "gói",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 6,
+                            UnitName = "bịch",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 7,
+                            UnitName = "bó",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 8,
+                            UnitName = "con",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 9,
+                            UnitName = "túi",
+                            UnitType = 1
+                        },
+                        new
+                        {
+                            UnitId = 10,
+                            UnitName = "kg",
+                            UnitType = 2
+                        },
+                        new
+                        {
+                            UnitId = 11,
+                            UnitName = "gram",
+                            UnitType = 2
+                        },
+                        new
+                        {
+                            UnitId = 12,
+                            UnitName = "lít",
+                            UnitType = 2
+                        },
+                        new
+                        {
+                            UnitId = 13,
+                            UnitName = "ml",
+                            UnitType = 2
+                        });
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -1377,6 +1848,10 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -1537,6 +2012,30 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Vouchers");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Warehouse", b =>
+                {
+                    b.Property<int>("WarehouseId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WarehouseId"));
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("WarehouseId")
+                        .HasName("PK__Warehouse__ID");
+
+                    b.ToTable("Warehouses");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.ZaloMessage", b =>
                 {
                     b.Property<int>("MessageId")
@@ -1630,6 +2129,17 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.AuditLog", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK__AuditLogs__UserId");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.BrandBanner", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.User", "CreatedByNavigation")
@@ -1680,6 +2190,17 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("CreatedByNavigation");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Ingredient", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Unit", "Unit")
+                        .WithMany("Ingredients")
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Unit");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.InventoryBatch", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Ingredient", "Ingredient")
@@ -1693,9 +2214,18 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("PurchaseOrderDetailId")
                         .HasConstraintName("FK__Inventory__Purch__2739D489");
 
+                    b.HasOne("DomainAccessLayer.Models.Warehouse", "Warehouse")
+                        .WithMany("InventoryBatches")
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_InventoryBatch_Warehouses");
+
                     b.Navigation("Ingredient");
 
                     b.Navigation("PurchaseOrderDetail");
+
+                    b.Navigation("Warehouse");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.KitchenTicket", b =>
@@ -1800,6 +2330,27 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.OrderLock", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.User", "LockedByUser")
+                        .WithMany()
+                        .HasForeignKey("LockedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK__OrderLocks__LockedByUserId");
+
+                    b.HasOne("DomainAccessLayer.Models.Order", "Order")
+                        .WithMany("OrderLocks")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__OrderLocks__OrderId");
+
+                    b.Navigation("LockedByUser");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Payment", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Order", "Order")
@@ -1831,11 +2382,27 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.PurchaseOrder", b =>
                 {
+                    b.HasOne("DomainAccessLayer.Models.User", "Confirmer")
+                        .WithMany()
+                        .HasForeignKey("IdConfirm")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_PurchaseOrders_Users_Confirmer");
+
+                    b.HasOne("DomainAccessLayer.Models.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("IdCreator")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK_PurchaseOrders_Users_Creator");
+
                     b.HasOne("DomainAccessLayer.Models.Supplier", "Supplier")
                         .WithMany("PurchaseOrders")
                         .HasForeignKey("SupplierId")
                         .IsRequired()
                         .HasConstraintName("FK__PurchaseO__Suppl__3587F3E0");
+
+                    b.Navigation("Confirmer");
+
+                    b.Navigation("Creator");
 
                     b.Navigation("Supplier");
                 });
@@ -1845,15 +2412,15 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("DomainAccessLayer.Models.Ingredient", "Ingredient")
                         .WithMany("PurchaseOrderDetails")
                         .HasForeignKey("IngredientId")
-                        .IsRequired()
-                        .HasConstraintName("FK__PurchaseO__Ingre__339FAB6E");
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_PurchaseOrderDetails_Ingredients");
 
                     b.HasOne("DomainAccessLayer.Models.PurchaseOrder", "PurchaseOrder")
                         .WithMany("PurchaseOrderDetails")
                         .HasForeignKey("PurchaseOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("FK__PurchaseO__Purch__3493CFA7");
+                        .HasConstraintName("FK_PurchaseOrderDetails_PurchaseOrders");
 
                     b.Navigation("Ingredient");
 
@@ -1907,6 +2474,17 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.ReservationDeposit", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
+                        .WithMany("ReservationDeposits")
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.ReservationTable", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
@@ -1935,6 +2513,35 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK_RestaurantIntro_Users");
 
                     b.Navigation("CreatedByNavigation");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.SalaryChangeRequest", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK__SalaryChangeRequest__ApprovedBy");
+
+                    b.HasOne("DomainAccessLayer.Models.Position", "Position")
+                        .WithMany("SalaryChangeRequests")
+                        .HasForeignKey("PositionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK__SalaryChangeRequest__Position");
+
+                    b.HasOne("DomainAccessLayer.Models.User", "RequestedByUser")
+                        .WithMany()
+                        .HasForeignKey("RequestedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK__SalaryChangeRequest__RequestedBy");
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("Position");
+
+                    b.Navigation("RequestedByUser");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Shift", b =>
@@ -1996,6 +2603,34 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Area");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Transaction", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.User", "ConfirmedByUser")
+                        .WithMany()
+                        .HasForeignKey("ConfirmedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK__Transactions__ConfirmedByUserId");
+
+                    b.HasOne("DomainAccessLayer.Models.Order", "Order")
+                        .WithMany("Transactions")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK__Transacti__Order__Transaction_OrderId");
+
+                    b.HasOne("DomainAccessLayer.Models.Transaction", "ParentTransaction")
+                        .WithMany("ChildTransactions")
+                        .HasForeignKey("ParentTransactionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK__Transactions__ParentTransactionId");
+
+                    b.Navigation("ConfirmedByUser");
+
+                    b.Navigation("Order");
+
+                    b.Navigation("ParentTransaction");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>
@@ -2104,12 +2739,21 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("OrderDetails");
 
+                    b.Navigation("OrderLocks");
+
                     b.Navigation("Payments");
+
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.OrderDetail", b =>
                 {
                     b.Navigation("KitchenTicketDetails");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Position", b =>
+                {
+                    b.Navigation("SalaryChangeRequests");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.PurchaseOrder", b =>
@@ -2125,6 +2769,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("DomainAccessLayer.Models.Reservation", b =>
                 {
                     b.Navigation("Orders");
+
+                    b.Navigation("ReservationDeposits");
 
                     b.Navigation("ReservationTables");
                 });
@@ -2153,6 +2799,16 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("ReservationTables");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.Transaction", b =>
+                {
+                    b.Navigation("ChildTransactions");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Unit", b =>
+                {
+                    b.Navigation("Ingredients");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>
                 {
                     b.Navigation("Announcements");
@@ -2179,6 +2835,11 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("MarketingCampaigns");
 
                     b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Warehouse", b =>
+                {
+                    b.Navigation("InventoryBatches");
                 });
 #pragma warning restore 612, 618
         }

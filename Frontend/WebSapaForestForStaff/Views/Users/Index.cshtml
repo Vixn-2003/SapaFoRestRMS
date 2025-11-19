@@ -12,97 +12,67 @@
             <p class="page-subtitle">Quản lý tài khoản nhân viên và phân quyền hệ thống</p>
         </div>
         <div class="page-actions">
-            @if (User.IsInRole("Admin") || User.IsInRole("Owner"))
-            {
-                <a asp-action="Create" class="btn btn-primary">
-                    <i class="bi bi-person-plus"></i> Tạo người dùng mới
-                </a>
-            }
-            @if (User.IsInRole("Admin") || User.IsInRole("Owner"))
-            {
-                <a asp-action="CreateManager" class="btn btn-success">
-                    <i class="bi bi-person-badge"></i> Tạo quản lý
-                </a>
-            }
             @if (User.IsInRole("Manager") || User.IsInRole("Admin") || User.IsInRole("Owner"))
             {
-                <a asp-action="CreateStaff" class="btn btn-info">
-                    <i class="bi bi-people"></i> Tạo nhân viên
+                <a asp-action="CreateUnified" class="btn-primary-custom btn-medium" data-bs-toggle="tooltip" data-bs-placement="top" title="Tạo người dùng / quản lý / nhân viên">
+                    <i class="bi bi-person-gear"></i>
                 </a>
             }
         </div>
     </div>
 
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (TempData["WarningMessage"] != null)
-    {
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle"></i> @TempData["WarningMessage"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
+    <!-- TempData messages will be shown via Toast in JS -->
 
     <!-- Search and Filter Section -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
+    <div class="card-custom mb-4">
+        <div class="card-header-custom">
+            <h5 class="card-title mb-0 heading-h2">
                 <i class="bi bi-search"></i> Tìm kiếm và lọc
             </h5>
         </div>
-        <div class="card-body">
-            <form method="get" asp-action="Index" class="row g-3">
+        <div class="card-body-custom">
+            <form method="get" asp-action="Index" class="row g-3" id="searchForm">
+                <input type="hidden" name="sortBy" id="sortBy" value="@ViewBag.SortBy" />
+                <input type="hidden" name="sortOrder" id="sortOrder" value="@ViewBag.SortOrder" />
                 <div class="col-md-4">
-                    <label for="searchTerm" class="form-label">Tìm kiếm</label>
-                    <input type="text" class="form-control" id="searchTerm" name="searchTerm" 
+                    <label for="searchTerm" class="form-label-custom">Tìm kiếm</label>
+                    <input type="text" class="form-control-custom" id="searchTerm" name="searchTerm" 
                            placeholder="Tên, email, số điện thoại..." value="@ViewBag.SearchTerm">
                 </div>
-              @*   <div class="col-md-3">
-                    <label for="roleId" class="form-label">Vai trò</label>
-                    <select class="form-select" id="roleId" name="roleId">
+                <div class="col-md-3">
+                    <label for="roleId" class="form-label-custom">Vai trò</label>
+                    <select class="form-control-custom" id="roleId" name="roleId">
                         <option value="">Tất cả vai trò</option>
-                        <option value="1" @(ViewBag.RoleId == 1 ? "selected" : "")>Owner</option>
-                        <option value="2" @(ViewBag.RoleId == 2 ? "selected" : "")>Admin</option>
-                        <option value="3" @(ViewBag.RoleId == 3 ? "selected" : "")>Manager</option>
-                        <option value="4" @(ViewBag.RoleId == 4 ? "selected" : "")>Staff</option>
-                        <option value="5" @(ViewBag.RoleId == 5 ? "selected" : "")>Customer</option>
+                        @if (ViewBag.RoleId == 1) { <option value="1" selected>Owner</option> } else { <option value="1">Owner</option> }
+                        @if (ViewBag.RoleId == 2) { <option value="2" selected>Admin</option> } else { <option value="2">Admin</option> }
+                        @if (ViewBag.RoleId == 3) { <option value="3" selected>Manager</option> } else { <option value="3">Manager</option> }
+                        @if (ViewBag.RoleId == 4) { <option value="4" selected>Staff</option> } else { <option value="4">Staff</option> }
+                        @if (ViewBag.RoleId == 5) { <option value="5" selected>Customer</option> } else { <option value="5">Customer</option> }
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label for="status" class="form-label">Trạng thái</label>
-                    <select class="form-select" id="status" name="status">
+                    <label for="status" class="form-label-custom">Trạng thái</label>
+                    <select class="form-control-custom" id="status" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="0" @(ViewBag.Status == 0 ? "selected" : "")>Hoạt động</option>
-                        <option value="1" @(ViewBag.Status == 1 ? "selected" : "")>Không hoạt động</option>
-                        <option value="2" @(ViewBag.Status == 2 ? "selected" : "")>Khóa</option>
+                        @if (ViewBag.Status == 0) { <option value="0" selected>Hoạt động</option> } else { <option value="0">Hoạt động</option> }
+                        @if (ViewBag.Status == 1) { <option value="1" selected>Không hoạt động</option> } else { <option value="1">Không hoạt động</option> }
+                        @if (ViewBag.Status == 2) { <option value="2" selected>Khóa</option> } else { <option value="2">Khóa</option> }
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="pageSize" class="form-label">Số lượng/trang</label>
-                    <select class="form-select" id="pageSize" name="pageSize">
-                        <option value="10" @(ViewBag.PageSize == 10 ? "selected" : "")>10</option>
-                        <option value="25" @(ViewBag.PageSize == 25 ? "selected" : "")>25</option>
-                        <option value="50" @(ViewBag.PageSize == 50 ? "selected" : "")>50</option>
-                        <option value="100" @(ViewBag.PageSize == 100 ? "selected" : "")>100</option>
+                    <label for="pageSize" class="form-label-custom">Số lượng/trang</label>
+                    <select class="form-control-custom" id="pageSize" name="pageSize">
+                        @if (ViewBag.PageSize == 10) { <option value="10" selected>10</option> } else { <option value="10">10</option> }
+                        @if (ViewBag.PageSize == 25) { <option value="25" selected>25</option> } else { <option value="25">25</option> }
+                        @if (ViewBag.PageSize == 50) { <option value="50" selected>50</option> } else { <option value="50">50</option> }
+                        @if (ViewBag.PageSize == 100) { <option value="100" selected>100</option> } else { <option value="100">100</option> }
                     </select>
                 </div> *@
                 <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn-primary-custom btn-medium">
                         <i class="bi bi-search"></i> Tìm kiếm
                     </button>
-                    <a asp-action="Index" class="btn btn-secondary">
+                    <a asp-action="Index" class="btn-secondary-custom btn-medium">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </a>
                 </div>
@@ -111,121 +81,144 @@
     </div>
 
     <!-- Users Table -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">
+    <div class="card-custom">
+        <div class="card-header-custom d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 heading-h2">
                 <i class="bi bi-people"></i> Danh sách người dùng
-                <span class="badge bg-primary ms-2">@Model.TotalCount</span>
+                <span class="badge-custom info ms-2">@Model.TotalCount</span>
             </h5>
             <div class="bulk-actions">
-                <button type="button" class="btn btn-warning btn-sm" onclick="bulkChangeStatus(0)">
+                <button type="button" class="btn-secondary-custom btn-small" onclick="bulkChangeStatus(0)">
                     <i class="bi bi-check-circle"></i> Kích hoạt hàng loạt
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="bulkChangeStatus(1)">
+                <button type="button" class="btn-secondary-custom btn-small" onclick="bulkChangeStatus(1)">
                     <i class="bi bi-pause-circle"></i> Vô hiệu hóa hàng loạt
                 </button>
-                <button type="button" class="btn btn-danger btn-sm" onclick="bulkDelete()">
+                <button type="button" class="btn-error-custom btn-small" onclick="bulkDelete()">
                     <i class="bi bi-trash"></i> Xóa hàng loạt
                 </button>
             </div>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body-custom p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="table-custom table-hover mb-0">
+                    <thead>
                         <tr>
                             <th width="50">
                                 <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
                             </th>
-                            <th>ID</th>
-                            <th>Họ tên</th>
-                            <th>Email</th>
-                            <th>Số điện thoại</th>
-                            <th>Vai trò</th>
-                            <th>Trạng thái</th>
-                            <th>Ngày tạo</th>
+                            <th data-sort="UserId">ID</th>
+                            <th data-sort="FullName">Họ tên</th>
+                            <th data-sort="Email">Email</th>
+                            <th data-sort="Phone">Số điện thoại</th>
+                            <th data-sort="RoleId">Vai trò</th>
+                            <th data-sort="Status">Trạng thái</th>
+                            <th data-sort="CreatedAt">Ngày tạo</th>
                             <th width="200">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var user in Model.Users)
+                        @if (Model.Users == null || !Model.Users.Any())
                         {
                             <tr>
-                                <td>
-                                    <input type="checkbox" class="user-checkbox" value="@user.UserId">
-                                </td>
-                                <td>@user.UserId</td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                            @user.FullName.Substring(0, 1).ToUpper()
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold">@user.FullName</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>@user.Email</td>
-                                <td>@(user.Phone ?? "N/A")</td>
-                                <td>
-                                    <span class="badge role-badge role-@user.RoleName?.ToLower()">
-                                        @(user.RoleName ?? "N/A")
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge status-badge status-@user.Status">
-                                        @(user.Status == 0 ? "Hoạt động" : user.Status == 1 ? "Không hoạt động" : "Khóa")
-                                    </span>
-                                </td>
-                                <td>@(user.CreatedAt?.ToString("dd/MM/yyyy") ?? "N/A")</td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a asp-action="Details" asp-route-id="@user.UserId" 
-                                           class="btn btn-info btn-sm" title="Chi tiết">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a asp-action="Edit" asp-route-id="@user.UserId" 
-                                           class="btn btn-warning btn-sm" title="Sửa">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        @if (User.IsInRole("Admin") || User.IsInRole("Owner"))
-                                        {
-                                            <a asp-action="ResetPassword" asp-route-id="@user.UserId" 
-                                               class="btn btn-secondary btn-sm" title="Đặt lại mật khẩu">
-                                                <i class="bi bi-key"></i>
-                                            </a>
-                                        }
-                                        @if (user.Status == 0)
-                                        {
-                                            <form asp-action="ChangeStatus" method="post" style="display: inline;">
-                                                <input type="hidden" name="id" value="@user.UserId" />
-                                                <input type="hidden" name="status" value="1" />
-                                                <button type="submit" class="btn btn-secondary btn-sm" 
-                                                        onclick="return confirm('Bạn có chắc muốn vô hiệu hóa người dùng này?')" title="Vô hiệu hóa">
-                                                    <i class="bi bi-pause"></i>
-                                                </button>
-                                            </form>
-                                        }
-                                        else
-                                        {
-                                            <form asp-action="ChangeStatus" method="post" style="display: inline;">
-                                                <input type="hidden" name="id" value="@user.UserId" />
-                                                <input type="hidden" name="status" value="0" />
-                                                <button type="submit" class="btn btn-success btn-sm" title="Kích hoạt">
-                                                    <i class="bi bi-play"></i>
-                                                </button>
-                                            </form>
-                                        }
-                                        <form asp-action="Delete" method="post" style="display: inline;">
-                                            <input type="hidden" name="id" value="@user.UserId" />
-                                            <button type="submit" class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('Bạn có chắc muốn xóa người dùng này?')" title="Xóa">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                <td colspan="9" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <i class="bi bi-inbox" style="font-size: 48px; color: var(--neutral-gray-300);"></i>
+                                        <p class="mt-3 body-base text-gray-custom">Không tìm thấy người dùng nào</p>
+                                        <p class="body-small text-gray-custom">Thử thay đổi bộ lọc tìm kiếm của bạn</p>
                                     </div>
                                 </td>
                             </tr>
+                        }
+                        else
+                        {
+                            @foreach (var user in Model.Users)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="user-checkbox" value="@user.UserId">
+                                    </td>
+                                    <td>@user.UserId</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                @user.FullName.Substring(0, 1).ToUpper()
+                                            </div>
+                                            <div>
+                                                <div class="fw-semibold">@user.FullName</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>@user.Email</td>
+                                    <td>@(user.Phone ?? "N/A")</td>
+                                    <td>
+                                        <span class="badge-custom @(user.RoleName?.ToLower() == "owner" || user.RoleName?.ToLower() == "admin" ? "error" : user.RoleName?.ToLower() == "manager" ? "warning" : "info")">
+                                            @(user.RoleName ?? "N/A")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-custom @(user.Status == 0 ? "success" : user.Status == 1 ? "error" : "warning")">
+                                            @(user.Status == 0 ? "Hoạt động" : user.Status == 1 ? "Không hoạt động" : "Khóa")
+                                        </span>
+                                    </td>
+                                    <td>@(user.CreatedAt?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                                    <td>
+                                        <div class="action-buttons" role="group">
+                                            <a asp-action="Details" asp-route-id="@user.UserId" 
+                                               class="btn-text-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Chi tiết">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@user.UserId" 
+                                               class="btn-secondary-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            @if (User.IsInRole("Admin") || User.IsInRole("Owner"))
+                                            {
+                                                <a asp-action="ResetPassword" asp-route-id="@user.UserId" 
+                                                   class="btn-text-custom btn-small" data-bs-toggle="tooltip" data-bs-placement="top" title="Đặt lại mật khẩu">
+                                                    <i class="bi bi-key"></i>
+                                                </a>
+                                            }
+                                            @if (user.Status == 0)
+                                            {
+                                                <form asp-action="ChangeStatus" method="post" style="display: inline;" class="change-status-form">
+                                                    <input type="hidden" name="id" value="@user.UserId" />
+                                                    <input type="hidden" name="status" value="1" />
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn-secondary-custom btn-small change-status-btn" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                            data-user-id="@user.UserId"
+                                                            data-user-name="@user.FullName"
+                                                            data-status="1"
+                                                            title="Vô hiệu hóa">
+                                                        <i class="bi bi-pause"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <form asp-action="ChangeStatus" method="post" style="display: inline;" class="change-status-form">
+                                                    <input type="hidden" name="id" value="@user.UserId" />
+                                                    <input type="hidden" name="status" value="0" />
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn-primary-custom btn-small change-status-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Kích hoạt">
+                                                        <i class="bi bi-play"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            <form asp-action="Delete" method="post" style="display: inline;" class="delete-user-form">
+                                                <input type="hidden" name="id" value="@user.UserId" />
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn-error-custom btn-small delete-user-btn" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                        data-user-id="@user.UserId"
+                                                        data-user-name="@user.FullName"
+                                                        title="Xóa">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
@@ -239,21 +232,111 @@
         <nav aria-label="User pagination" class="mt-4">
             <ul class="pagination justify-content-center">
                 <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                    <a class="page-link" href="?page=@(Model.Page - 1)&pageSize=@Model.PageSize">Trước</a>
+                    @if (Model.HasPreviousPage)
+                    {
+                        <a class="page-link" href="@BuildPaginationUrl(Model.Page - 1, Model.PageSize)">
+                            <i class="bi bi-chevron-left"></i> Trước
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="page-link"><i class="bi bi-chevron-left"></i> Trước</span>
+                    }
                 </li>
                 
-                @for (int i = Math.Max(1, Model.Page - 2); i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
-                {
-                    <li class="page-item @(i == Model.Page ? "active" : "")">
-                        <a class="page-link" href="?page=@i&pageSize=@Model.PageSize">@i</a>
-                    </li>
+                @{
+                    int startPage = Math.Max(1, Model.Page - 2);
+                    int endPage = Math.Min(Model.TotalPages, Model.Page + 2);
+                    
+                    if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@BuildPaginationUrl(1, Model.PageSize)">1</a>
+                        </li>
+                        @if (startPage > 2)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                    }
+                    
+                    @for (int i = startPage; i <= endPage; i++)
+                    {
+                        <li class="page-item @(i == Model.Page ? "active" : "")">
+                            <a class="page-link" href="@BuildPaginationUrl(i, Model.PageSize)">@i</a>
+                        </li>
+                    }
+                    
+                    if (endPage < Model.TotalPages)
+                    {
+                        @if (endPage < Model.TotalPages - 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="@BuildPaginationUrl(Model.TotalPages, Model.PageSize)">@Model.TotalPages</a>
+                        </li>
+                    }
                 }
                 
                 <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                    <a class="page-link" href="?page=@(Model.Page + 1)&pageSize=@Model.PageSize">Sau</a>
+                    @if (Model.HasNextPage)
+                    {
+                        <a class="page-link" href="@BuildPaginationUrl(Model.Page + 1, Model.PageSize)">
+                            Sau <i class="bi bi-chevron-right"></i>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="page-link">Sau <i class="bi bi-chevron-right"></i></span>
+                    }
                 </li>
             </ul>
+            <div class="text-center mt-2">
+                <small class="text-gray-custom body-small">
+                    Hiển thị @((Model.Page - 1) * Model.PageSize + 1) - @(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) 
+                    trong tổng số @Model.TotalCount người dùng
+                </small>
+            </div>
         </nav>
+    }
+    
+    @functions {
+        private string BuildPaginationUrl(int page, int pageSize)
+        {
+            var queryParams = new System.Text.StringBuilder();
+            queryParams.Append($"?page={page}&pageSize={pageSize}");
+            
+            if (!string.IsNullOrEmpty(ViewBag.SearchTerm as string))
+            {
+                queryParams.Append($"&searchTerm={Uri.EscapeDataString(ViewBag.SearchTerm.ToString())}");
+            }
+            
+            if (ViewBag.RoleId != null)
+            {
+                queryParams.Append($"&roleId={ViewBag.RoleId}");
+            }
+            
+            if (ViewBag.Status != null)
+            {
+                queryParams.Append($"&status={ViewBag.Status}");
+            }
+            
+            if (!string.IsNullOrEmpty(ViewBag.SortBy as string))
+            {
+                queryParams.Append($"&sortBy={Uri.EscapeDataString(ViewBag.SortBy.ToString())}");
+            }
+            
+            if (!string.IsNullOrEmpty(ViewBag.SortOrder as string))
+            {
+                queryParams.Append($"&sortOrder={Uri.EscapeDataString(ViewBag.SortOrder.ToString())}");
+            }
+            
+            return queryParams.ToString();
+        }
     }
 </div>
 
@@ -267,121 +350,41 @@
     <input type="hidden" name="status" id="bulkStatus" />
 </form>
 
-<style>
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid #dee2e6;
-    }
 
-    .header-content .page-title {
-        margin: 0;
-        color: #2f2f2f;
-        font-weight: 600;
-    }
+@section Styles {
+    <link rel="stylesheet" href="~/css/users.css">
+    <link rel="stylesheet" href="~/css/users/index.css">
+}
 
-    .header-content .page-subtitle {
-        margin: 0.5rem 0 0 0;
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-
-    .page-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .avatar-sm {
-        width: 32px;
-        height: 32px;
-        font-size: 0.875rem;
-        font-weight: 600;
-    }
-
-    .role-badge {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .role-owner { background-color: #6f42c1; color: white; }
-    .role-admin { background-color: #dc3545; color: white; }
-    .role-manager { background-color: #ffc107; color: #212529; }
-    .role-staff { background-color: #17a2b8; color: white; }
-    .role-customer { background-color: #28a745; color: white; }
-
-    .status-badge {
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-
-    .status-0 { background-color: #d4edda; color: #155724; }
-    .status-1 { background-color: #f8d7da; color: #721c24; }
-    .status-2 { background-color: #fff3cd; color: #856404; }
-
-    .bulk-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .table th {
-        font-weight: 600;
-        color: #495057;
-        border-top: none;
-    }
-
-    .btn-group .btn {
-        margin-right: 2px;
-    }
-
-    .btn-group .btn:last-child {
-        margin-right: 0;
-    }
-</style>
+@section Scripts {
+    <script src="~/js/toast-notification.js"></script>
+    <script src="~/js/users/index.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+        });
+    </script>
+}
 
 <script>
-    function toggleSelectAll() {
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.user-checkbox');
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAll.checked;
-        });
+    // Show TempData messages as Toasts
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <text>
+        showSuccessToast('@Html.Raw(TempData["SuccessMessage"])');
+        </text>
     }
-
-    function bulkDelete() {
-        const selectedIds = getSelectedUserIds();
-        if (selectedIds.length === 0) {
-            alert('Vui lòng chọn ít nhất một người dùng để xóa');
-            return;
-        }
-
-        if (confirm(`Bạn có chắc muốn xóa ${selectedIds.length} người dùng đã chọn?`)) {
-            document.getElementById('bulkUserIds').value = selectedIds.join(',');
-            document.getElementById('bulkForm').submit();
-        }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <text>
+        showErrorToast('@Html.Raw(TempData["ErrorMessage"])');
+        </text>
     }
-
-    function bulkChangeStatus(status) {
-        const selectedIds = getSelectedUserIds();
-        if (selectedIds.length === 0) {
-            alert('Vui lòng chọn ít nhất một người dùng để thay đổi trạng thái');
-            return;
-        }
-
-        const statusText = status === 0 ? 'kích hoạt' : 'vô hiệu hóa';
-        if (confirm(`Bạn có chắc muốn ${statusText} ${selectedIds.length} người dùng đã chọn?`)) {
-            document.getElementById('bulkStatusUserIds').value = selectedIds.join(',');
-            document.getElementById('bulkStatus').value = status;
-            document.getElementById('bulkStatusForm').submit();
-        }
-    }
-
-    function getSelectedUserIds() {
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        return Array.from(checkboxes).map(cb => cb.value);
+    @if (TempData["WarningMessage"] != null)
+    {
+        <text>
+        showWarningToast('@Html.Raw(TempData["WarningMessage"])');
+        </text>
     }
 </script>

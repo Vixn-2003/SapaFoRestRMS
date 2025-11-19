@@ -1,4 +1,6 @@
-﻿using System.Net.Http; // <-- Thêm using này
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Net.Http;
+using WebSapaFoRestForCustomer.Services; // <-- Thêm using này
 
 namespace WebSapaFoRestForCustomer
 {
@@ -11,6 +13,8 @@ namespace WebSapaFoRestForCustomer
             // Add services to the container.
             builder.Services.AddControllersWithViews();
             builder.Services.AddHttpClient(); // Dòng này đã có
+            // Needed for ApiService to access HttpContext.User claims
+            builder.Services.AddHttpContextAccessor();
 
             // === THÊM KHỐI NÀY VÀO (Lấy từ dự án cũ) ===
             // Cấu hình HttpClient tên "API"
@@ -32,18 +36,43 @@ namespace WebSapaFoRestForCustomer
                 };
             });
             // ===============================================
+            // Register ApiService
+            builder.Services.AddScoped<ApiService>();
+            builder.Services.AddSession();
 
-            var app = builder.Build();
+            // Configure Authentication
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Auth/Login";
+                    options.LogoutPath = "/Auth/Logout";
+                    options.AccessDeniedPath = "/Auth/Login";
+                    options.ExpireTimeSpan = TimeSpan.FromHours(24);
+                    options.SlidingExpiration = true;
+                });
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+            // Configure Authorization
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
+            });
+
+            // Configure API settings
+
+            var app = builder.Build();
+
+
+            // Configure the HTTP request pipeline.
+            if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
             }
             app.UseStaticFiles();
+            app.UseSession();
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
@@ -52,5 +81,10 @@ namespace WebSapaFoRestForCustomer
 
             app.Run();
         }
+    }
+
+    public class ApiSettings
+    {
+        public string BaseUrl { get; set; } = "https://localhost:7096";
     }
 }

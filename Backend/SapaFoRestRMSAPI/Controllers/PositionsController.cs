@@ -1,165 +1,171 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using DomainAccessLayer.Models;
+using BusinessAccessLayer.DTOs.Positions;
+using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using DataAccessLayer.Dbcontext;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
+    /// <summary>
+    /// Controller quản lý Positions
+    /// Admin/Owner: Tạo, sửa, xóa Position
+    /// Manager: Chỉ xem Position (không thể sửa BaseSalary trực tiếp)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Manager,Owner")]
+    [Authorize]
     public class PositionsController : ControllerBase
     {
-        private readonly SapaFoRestRmsContext _context;
+        private readonly IPositionService _positionService;
 
-        public PositionsController(SapaFoRestRmsContext context)
+        public PositionsController(IPositionService positionService)
         {
-            _context = context;
+            _positionService = positionService;
         }
 
-        // GET: api/positions
+        /// <summary>
+        /// Admin/Owner/Manager: Xem danh sách Position
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll(CancellationToken ct)
+        [Authorize(Roles = "Admin,Owner,Manager")]
+        public async Task<IActionResult> GetAll(CancellationToken ct = default)
         {
-            var list = await _context.Positions.AsNoTracking().ToListAsync(ct);
-            return Ok(list);
+            var positions = await _positionService.GetAllAsync(ct);
+            return Ok(positions);
         }
 
-        // GET: api/positions/search?term=&status=&page=1&pageSize=10
+        /// <summary>
+        /// Admin/Owner/Manager: Tìm kiếm Position
+        /// </summary>
         [HttpGet("search")]
+        [Authorize(Roles = "Admin,Owner,Manager")]
         public async Task<IActionResult> Search(
-            [FromQuery] string? term,
+            [FromQuery] string? searchTerm,
             [FromQuery] int? status,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             CancellationToken ct = default)
         {
-            if (page < 1) page = 1;
-            if (pageSize <= 0 || pageSize > 200) pageSize = 10;
-
-            var query = _context.Positions.AsNoTracking().AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(term))
+            var request = new PositionSearchRequest
             {
-                var keyword = term.Trim();
-                query = query.Where(p => p.PositionName.Contains(keyword) || (p.Description != null && p.Description.Contains(keyword)));
-            }
-
-            if (status.HasValue)
-            {
-                query = query.Where(p => p.Status == status.Value);
-            }
-
-            var totalCount = await query.CountAsync(ct);
-            var items = await query
-                .OrderBy(p => p.PositionName)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync(ct);
-
-            return Ok(new
-            {
-                Items = items,
-                TotalCount = totalCount,
+                SearchTerm = searchTerm,
+                Status = status,
                 Page = page,
-                PageSize = pageSize,
-                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
-            });
+                PageSize = pageSize
+            };
+
+            var result = await _positionService.SearchAsync(request, ct);
+            return Ok(result);
         }
 
-        // GET: api/positions/5
+        /// <summary>
+        /// Admin/Owner/Manager: Xem chi tiết Position
+        /// </summary>
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id, CancellationToken ct)
+        [Authorize(Roles = "Admin,Owner,Manager")]
+        public async Task<IActionResult> Get(int id, CancellationToken ct = default)
         {
-            var pos = await _context.Positions.FindAsync(new object?[] { id }, ct);
-            if (pos == null) return NotFound();
-            return Ok(pos);
+            var position = await _positionService.GetByIdAsync(id, ct);
+            if (position == null)
+            {
+                return NotFound();
+            }
+            return Ok(position);
         }
 
-        // POST: api/positions
+        /// <summary>
+        /// Tạo Position mới
+        /// Lưu ý: Chỉ Owner/Admin mới có quyền tạo Position với BaseSalary
+        /// Manager muốn thay đổi BaseSalary phải tạo SalaryChangeRequest
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Position create, CancellationToken ct)
+        [Authorize(Roles = "Admin,Owner")]
+        public async Task<IActionResult> Create([FromBody] PositionCreateRequest request, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(create.PositionName))
+            if (!ModelState.IsValid)
             {
-                return BadRequest("PositionName is required");
+                return BadRequest(ModelState);
             }
 
-            var exists = await _context.Positions.AnyAsync(p => p.PositionName == create.PositionName, ct);
-            if (exists)
+            try
             {
-                return Conflict("Position with the same name already exists");
+                var position = await _positionService.CreateAsync(request, ct);
+                return CreatedAtAction(nameof(Get), new { id = position.PositionId }, position);
             }
-
-            // Default active if not set
-            if (create.Status == 0 || create.Status == 1 || create.Status == 2)
+            catch (System.InvalidOperationException ex)
             {
-                // leave as provided
+                return Conflict(new { message = ex.Message });
             }
-            else
+            catch (System.ArgumentException ex)
             {
-                create.Status = 0;
+                return BadRequest(new { message = ex.Message });
             }
-
-            await _context.Positions.AddAsync(create, ct);
-            await _context.SaveChangesAsync(ct);
-            return CreatedAtAction(nameof(Get), new { id = create.PositionId }, create);
         }
 
-        // PUT: api/positions/5
+        /// <summary>
+        /// Admin/Owner: Cập nhật Position
+        /// Lưu ý: BaseSalary KHÔNG được cập nhật ở đây
+        /// Manager muốn thay đổi BaseSalary phải tạo SalaryChangeRequest
+        /// </summary>
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Position update, CancellationToken ct)
+        [Authorize(Roles = "Admin,Owner")]
+        public async Task<IActionResult> Update(int id, [FromBody] PositionUpdateRequest request, CancellationToken ct = default)
         {
-            var pos = await _context.Positions.FindAsync(new object?[] { id }, ct);
-            if (pos == null) return NotFound();
-
-            // Check duplicate name if name changed
-            if (!string.Equals(pos.PositionName, update.PositionName, StringComparison.OrdinalIgnoreCase))
+            if (!ModelState.IsValid)
             {
-                var nameTaken = await _context.Positions.AnyAsync(p => p.PositionName == update.PositionName && p.PositionId != id, ct);
-                if (nameTaken)
-                {
-                    return Conflict("Position with the same name already exists");
-                }
+                return BadRequest(ModelState);
             }
 
-            pos.PositionName = update.PositionName;
-            pos.Description = update.Description;
-            pos.Status = update.Status;
-
-            _context.Positions.Update(pos);
-            await _context.SaveChangesAsync(ct);
-            return NoContent();
+            try
+            {
+                await _positionService.UpdateAsync(id, request, ct);
+                return NoContent();
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
 
-        // DELETE: api/positions/5
+        /// <summary>
+        /// Admin/Owner: Xóa Position
+        /// </summary>
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id, CancellationToken ct)
+        [Authorize(Roles = "Admin,Owner")]
+        public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
         {
-            var pos = await _context.Positions.FindAsync(new object?[] { id }, ct);
-            if (pos == null) return NotFound();
-
-            _context.Positions.Remove(pos);
-            await _context.SaveChangesAsync(ct);
-            return NoContent();
+            try
+            {
+                await _positionService.DeleteAsync(id, ct);
+                return NoContent();
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
 
-        // PATCH: api/positions/5/status/1
+        /// <summary>
+        /// Admin/Owner: Thay đổi trạng thái Position
+        /// </summary>
         [HttpPatch("{id:int}/status/{status:int}")]
-        public async Task<IActionResult> ChangeStatus(int id, int status, CancellationToken ct)
+        [Authorize(Roles = "Admin,Owner")]
+        public async Task<IActionResult> ChangeStatus(int id, int status, CancellationToken ct = default)
         {
-            if (status < 0 || status > 2) return BadRequest("Invalid status");
-            var pos = await _context.Positions.FindAsync(new object?[] { id }, ct);
-            if (pos == null) return NotFound();
-            pos.Status = status;
-            _context.Positions.Update(pos);
-            await _context.SaveChangesAsync(ct);
-            return NoContent();
+            try
+            {
+                await _positionService.ChangeStatusAsync(id, status, ct);
+                return NoContent();
+            }
+            catch (System.ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
     }
 }

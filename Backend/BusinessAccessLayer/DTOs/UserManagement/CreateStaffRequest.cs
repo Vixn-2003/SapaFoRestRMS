@@ -15,17 +15,16 @@ namespace BusinessAccessLayer.DTOs.UserManagement
         [StringLength(100)]
         public string Email { get; set; } = null!;
 
-        [Phone]
-        [StringLength(20)]
-        public string? Phone { get; set; }
-
         [Required]
-        public DateOnly HireDate { get; set; }
+        [StringLength(6, MinimumLength = 6)]
+        [RegularExpression(@"^\d{6}$")]
+        public string VerificationCode { get; set; } = null!;
 
-        [Required]
-        public decimal SalaryBase { get; set; }
+        public DateOnly? HireDate { get; set; }
 
-        // Positions to assign to this staff
+        public decimal? SalaryBase { get; set; }
+
+        // Positions to assign to this staff (optional, can be empty)
         public List<int> PositionIds { get; set; } = new();
 
         // Optional explicit role id; if null, role will be resolved by name "Staff"

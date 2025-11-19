@@ -22,6 +22,24 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// -----------------------------
+// ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
+// -----------------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins(
+            "http://localhost:5158",  // frontend chạy http
+            "https://localhost:5158", // phòng khi chạy https
+             "http://localhost:5054",  // module Staff
+            "https://localhost:5054"  // phòng khi chạy https
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+    );
+});
+
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
 
@@ -113,6 +131,17 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Add Repositories
 builder.Services.AddScoped<ISystemLogoRepository, SystemLogoRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IPositionRepository, PositionRepository>();
+builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
+// Role Management
+builder.Services.AddScoped<IRoleService, RoleService>();
+
+// Position Management
+builder.Services.AddScoped<IPositionService, PositionService>();
+
+// Các dịch vụ khác
+builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 // Add Services
 builder.Services.AddScoped<ISystemLogoService, SystemLogoService>();
@@ -132,21 +161,39 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
+builder.Services.AddScoped<IRestaurantIntroRepository, RestaurantIntroRepository>();
+builder.Services.AddScoped<IRestaurantIntroService, RestaurantIntroService>();
+
+builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
+builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
+builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+
+
+
+
+
+
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
+
 //UnitOfWork
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
-
+builder.Services.AddScoped<IReservationDepositRepository, ReservationDepositRepository>();
+builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // Unit of Work and User Repository mapping
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository>(sp => sp.GetRequiredService<IUnitOfWork>().Users);
+builder.Services.AddScoped<IUserService, UserService>();
 
 // Auth and User Management services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -201,6 +248,26 @@ builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
+
+// Payment Service/Repository
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+// AuditLog Service
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+// Receipt Service - Pass WebRootPath from IWebHostEnvironment
+builder.Services.AddScoped<IReceiptService>(sp =>
+{
+    var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    return new ReceiptService(unitOfWork, env.WebRootPath);
+});
+
+// SalaryChangeRequest Service/Repository
+builder.Services.AddScoped<ISalaryChangeRequestRepository, SalaryChangeRequestRepository>();
+builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestService>();
+
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 
 
@@ -208,6 +275,17 @@ builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 builder.Services.AddSignalR();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
+
+// ✅ Đảm bảo hỗ trợ multipart form data
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
+
+// ✅ Cấu hình kích thước file upload (nếu cần)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 52428800; // 50MB
+});
+
 
 
 builder.Services.AddAuthorization(options =>
@@ -295,10 +373,15 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
+    await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
+
     await DataSeeder.SeedPositionsAsync(ctx);
     await DataSeeder.SeedTestCustomerAsync(ctx);
+    await DataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
+    Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);
+    Console.WriteLine("Environment: " + builder.Environment.EnvironmentName);
     if (!string.IsNullOrWhiteSpace(adminEmail) && !string.IsNullOrWhiteSpace(adminPassword))
     {
         var adminRoleId = await ctx.Roles.Where(r => r.RoleName == "Admin").Select(r => r.RoleId).FirstOrDefaultAsync();
@@ -341,5 +424,6 @@ using (var scope = app.Services.CreateScope())
         await ctx.SaveChangesAsync();
     }
 }
+
 
 app.Run();

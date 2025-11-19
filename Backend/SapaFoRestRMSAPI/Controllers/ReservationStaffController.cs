@@ -56,6 +56,12 @@ namespace SapaFoRestRMSAPI.Controllers
             var result = await _service.GetBookedTableIdsAsync(reservationDate, timeSlot);
             return Ok(new { BookedTableIds = result });
         }
+        [HttpGet("tables/booked-with-time")]
+        public async Task<IActionResult> GetBookedTablesWithTime(DateTime reservationDate, string timeSlot)
+        {
+            var result = await _service.GetBookedTableDetailsAsync(reservationDate, timeSlot);
+            return Ok(new { BookedTables = result });
+        }
 
         [HttpGet("tables/suggest-by-areas")]
         public async Task<IActionResult> SuggestTablesByAreas(DateTime reservationDate, string timeSlot, int numberOfGuests, int? currentReservationId = null)
@@ -106,6 +112,64 @@ namespace SapaFoRestRMSAPI.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { Message = ex.Message });
+            }
+        }
+        [HttpPost("add")]
+        public async Task<IActionResult> AddReservation([FromBody] ReservationCreateDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var result = await _service.CreateReservationAsync(dto);
+
+                if (result == null)
+                    return Conflict(new { message = "Khách hàng đã có đơn đặt bàn trong khung giờ này." });
+
+                return Ok(new
+                {
+                    message = "Tạo đơn đặt bàn thành công.",
+                    data = new
+                    {
+                        result.ReservationId,
+                        result.CustomerNameReservation,
+                        result.ReservationDate,
+                        result.ReservationTime,
+                        result.TimeSlot,
+                        result.NumberOfGuests,
+                        result.Status
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpPut("update/{reservationId}")]
+        public async Task<IActionResult> UpdateReservation(int reservationId, [FromBody] ReservationUpdateDto dto)
+        {
+            try
+            {
+                if (dto == null)
+                    return BadRequest(new { message = "Dữ liệu cập nhật không hợp lệ." });
+
+                var result = await _service.UpdateReservationAsync(reservationId, dto);
+                return Ok(new
+                {
+                    success = true,
+                    message = "Cập nhật đơn đặt bàn thành công.",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
     }

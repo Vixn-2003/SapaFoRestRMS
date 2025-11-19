@@ -1,0 +1,75 @@
+@model WebSapaForestForStaff.DTOs.UserManagement.UnifiedCreateUserRequest
+@{
+    ViewData["Title"] = "Tạo người dùng";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+    var roles = ViewBag.Roles as List<WebSapaForestForStaff.DTOs.Role> ?? new();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/design-system.css" />
+    <link rel="stylesheet" href="~/css/users.css" />
+}
+
+<div class="container-fluid">
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Tạo người dùng</h1>
+            <p class="page-subtitle">Gộp tạo User / Manager / Staff trong một form</p>
+        </div>
+        <a asp-action="Index" class="btn-text-custom" data-bs-toggle="tooltip" title="Quay lại">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+    </div>
+
+    <div class="card-custom">
+        <div class="card-body-custom">
+            <form asp-action="CreateUnified" method="post" id="createUnifiedForm">
+                @Html.AntiForgeryToken()
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom required">Họ và tên</label>
+                        <input asp-for="FullName" class="form-control form-control-custom" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom required">Email</label>
+                        <input asp-for="Email" class="form-control form-control-custom" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom">Số điện thoại</label>
+                        <input asp-for="Phone" class="form-control form-control-custom" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom required">Vai trò</label>
+                        <select asp-for="RoleId" class="form-select form-control-custom" id="roleSelect">
+                            @foreach (var r in roles)
+                            {
+                                <option value="@r.RoleId">@r.RoleName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn-primary-custom" data-bs-toggle="tooltip" title="Lưu"> 
+                        <i class="bi bi-check2-circle"></i>
+                    </button>
+                    <a asp-action="Index" class="btn-secondary-custom" data-bs-toggle="tooltip" title="Hủy">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof bootstrap !== 'undefined') {
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+            }
+        });
+    </script>
+}

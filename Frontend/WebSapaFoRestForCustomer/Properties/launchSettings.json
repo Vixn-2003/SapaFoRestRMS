@@ -21,6 +21,7 @@
       //"applicationUrl": "http://localhost:5123;http://192.168.105.100:5123", //mang dt
       //"applicationUrl": "http://localhost:5123;http://192.168.16.106:5123", //mang hieu
 
+      "applicationUrl": "http://localhost:5158",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

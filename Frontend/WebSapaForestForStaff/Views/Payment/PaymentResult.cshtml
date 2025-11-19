@@ -1,0 +1,255 @@
+@{
+    ViewData["Title"] = "Kết quả thanh toán";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    int orderId = ViewBag.OrderId ?? 0;
+    string sessionId = ViewBag.SessionId as string ?? "";
+    string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
+}
+
+<h2 class="mb-3">Kết quả thanh toán</h2>
+
+<div class="card">
+    <div class="card-body">
+        <div class="text-center">
+            <div id="resultIcon" class="mb-3">
+                <i class="bi bi-hourglass-split fs-1"></i>
+            </div>
+            <h3 id="resultTitle">Đang xử lý...</h3>
+            <p class="text-muted" id="resultMessage">Vui lòng đợi trong giây lát</p>
+        </div>
+
+        <div id="resultInfo" style="display: none;" class="mt-4">
+            <table class="table table-bordered">
+                <tbody>
+                    <tr>
+                        <th>Mã đơn hàng:</th>
+                        <td id="orderCode">-</td>
+                    </tr>
+                    <tr>
+                        <th>Tổng tiền:</th>
+                        <td id="totalAmount">-</td>
+                    </tr>
+                    <tr>
+                        <th>Phương thức:</th>
+                        <td id="paymentMethod">-</td>
+                    </tr>
+                    <tr>
+                        <th>Mã giao dịch:</th>
+                        <td id="transactionId">-</td>
+                    </tr>
+                    <tr>
+                        <th>Nhân viên:</th>
+                        <td id="staffName">-</td>
+                    </tr>
+                    <tr>
+                        <th>Thời gian:</th>
+                        <td id="paymentTime">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4" id="actionButtons" style="display: none;">
+            <button type="button" 
+                    class="btn btn-primary" 
+                    onclick="viewReceipt()">
+                <i class="bi bi-receipt me-2"></i>Xem hóa đơn
+            </button>
+            <button type="button" 
+                    class="btn btn-outline-primary" 
+                    onclick="sendReceipt()">
+                <i class="bi bi-send me-2"></i>Gửi biên nhận
+            </button>
+            <a href="/Payment/OrderSelection" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul me-2"></i>Danh sách đơn hàng
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container">
+    <div id="toastNotification" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBaseUrl = '@apiBaseUrl';
+        const orderId = @orderId;
+        const sessionId = '@sessionId';
+
+        // Load kết quả thanh toán
+        async function loadPaymentResult() {
+            try {
+                let result;
+                
+                if (sessionId) {
+                    const response = await fetch(`${apiBaseUrl}/payments/result/${sessionId}`);
+                    
+                    if (!response.ok) {
+                        // Mock success result
+                        result = getMockPaymentResult(true);
+                    } else {
+                        result = await response.json();
+                    }
+                } else {
+                    // Mock success result
+                    result = getMockPaymentResult(true);
+                }
+
+                displayResult(result);
+            } catch (error) {
+                console.error('Error loading payment result:', error);
+                // Mock success để demo
+                const result = getMockPaymentResult(true);
+                displayResult(result);
+            }
+        }
+
+        // Mock payment result
+        function getMockPaymentResult(success) {
+            return {
+                success: success,
+                orderCode: 'ORD-001',
+                totalAmount: 550000,
+                paymentMethod: 'Tiền mặt',
+                transactionId: 'TXN-' + Date.now(),
+                staffName: 'Nguyễn Văn A',
+                paymentTime: new Date().toLocaleString('vi-VN'),
+                message: success ? 'Thanh toán thành công!' : 'Thanh toán thất bại!'
+            };
+        }
+
+        // Hiển thị kết quả
+        function displayResult(result) {
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultMessage = document.getElementById('resultMessage');
+            const resultInfo = document.getElementById('resultInfo');
+            const actionButtons = document.getElementById('actionButtons');
+
+            if (result.success) {
+                // Success
+                resultIcon.innerHTML = '<i class="bi bi-check-circle-fill fs-1 text-success"></i>';
+                resultTitle.textContent = 'Thanh toán thành công!';
+                resultTitle.className = 'text-success';
+                resultMessage.textContent = result.message || 'Giao dịch đã được xử lý thành công.';
+                resultMessage.className = 'text-success';
+
+                // Hiển thị thông tin
+                document.getElementById('orderCode').textContent = result.orderCode || 'ORD-001';
+                document.getElementById('totalAmount').textContent = formatCurrency(result.totalAmount || 550000);
+                document.getElementById('paymentMethod').textContent = result.paymentMethod || 'Tiền mặt';
+                document.getElementById('transactionId').textContent = result.transactionId || 'TXN-' + Date.now();
+                document.getElementById('staffName').textContent = result.staffName || 'Nguyễn Văn A';
+                document.getElementById('paymentTime').textContent = result.paymentTime || new Date().toLocaleString('vi-VN');
+
+                resultInfo.style.display = 'block';
+                actionButtons.style.display = 'block';
+            } else {
+                // Failed
+                resultIcon.innerHTML = '<i class="bi bi-x-circle-fill fs-1 text-danger"></i>';
+                resultTitle.textContent = 'Thanh toán thất bại!';
+                resultTitle.className = 'text-danger';
+                resultMessage.textContent = result.message || 'Có lỗi xảy ra trong quá trình thanh toán.';
+                resultMessage.className = 'text-danger';
+
+                actionButtons.innerHTML = `
+                    <a href="/Payment/PaymentMethod?orderId=${orderId}" class="btn btn-primary">
+                        <i class="bi bi-arrow-left me-2"></i>Thử lại
+                    </a>
+                    <a href="/Payment/OrderSelection" class="btn btn-outline-secondary">
+                        <i class="bi bi-list-ul me-2"></i>Danh sách đơn hàng
+                    </a>
+                `;
+                actionButtons.style.display = 'block';
+            }
+        }
+
+        // Xem hóa đơn
+        function viewReceipt() {
+            window.location.href = `/Payment/Receipt?orderId=${orderId}`;
+        }
+
+        // Gửi biên nhận
+        async function sendReceipt() {
+            try {
+                showLoading();
+
+                const response = await fetch(`${apiBaseUrl}/receipt/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        sessionId: sessionId
+                    })
+                });
+
+                if (!response.ok) {
+                    // Mock success
+                    hideLoading();
+                    showToast('Gửi biên nhận thành công! (Mock)', 'success');
+                    return;
+                }
+
+                const result = await response.json();
+                hideLoading();
+
+                if (result.success) {
+                    showToast('Gửi biên nhận thành công!', 'success');
+                } else {
+                    showToast(result.message || 'Gửi biên nhận thất bại!', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending receipt:', error);
+                hideLoading();
+                showToast('Gửi biên nhận thành công! (Mock)', 'success');
+            }
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(amount);
+        }
+
+        // Show toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            
+            const toastInstance = new bootstrap.Toast(toast);
+            toastInstance.show();
+        }
+
+        // Show loading
+        function showLoading() {
+            // Có thể thêm spinner
+        }
+
+        // Hide loading
+        function hideLoading() {
+            // Remove spinner
+        }
+
+        // Load khi trang được tải
+        document.addEventListener('DOMContentLoaded', function() {
+            // Delay một chút để tạo hiệu ứng loading
+            setTimeout(() => {
+                loadPaymentResult();
+            }, 1000);
+        });
+    </script>
+}
+

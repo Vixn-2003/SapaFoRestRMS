@@ -1,0 +1,287 @@
+@{
+    ViewData["Title"] = "Hóa đơn thanh toán";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    int orderId = ViewBag.OrderId ?? 0;
+    string apiBaseUrl = ViewBag.ApiBaseUrl as string ?? "https://localhost:7000/api";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/payment.css" asp-append-version="true" />
+}
+
+<div class="payment-container">
+    <div class="receipt-container">
+        <!-- Header -->
+        <div class="receipt-header">
+            <div class="receipt-logo">🍜</div>
+            <div class="receipt-restaurant-name">SapaFo Restaurant</div>
+            <div class="receipt-info">
+                123 Đường ABC, Quận XYZ, TP.HCM<br>
+                ĐT: 0123 456 789 | Email: info@sapafo.com
+            </div>
+        </div>
+
+        <!-- Order Info -->
+        <div class="receipt-section">
+            <div class="receipt-section-title">Thông tin đơn hàng</div>
+            <div class="receipt-item">
+                <span>Mã đơn:</span>
+                <span class="fw-bold" id="orderCode">ORD-001</span>
+            </div>
+            <div class="receipt-item">
+                <span>Bàn:</span>
+                <span class="fw-bold" id="tableNumber">Bàn 5</span>
+            </div>
+            <div class="receipt-item">
+                <span>Nhân viên:</span>
+                <span class="fw-bold" id="staffName">Nguyễn Văn A</span>
+            </div>
+            <div class="receipt-item">
+                <span>Thời gian:</span>
+                <span class="fw-bold" id="orderTime">-</span>
+            </div>
+        </div>
+
+        <!-- Items -->
+        <div class="receipt-section">
+            <div class="receipt-section-title">Danh sách món</div>
+            <div id="receiptItems">
+                <!-- Items will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="receipt-section">
+            <div class="receipt-item">
+                <span>Tạm tính:</span>
+                <span id="subtotal">0 ₫</span>
+            </div>
+            <div class="receipt-item">
+                <span>VAT (10%):</span>
+                <span id="vat">0 ₫</span>
+            </div>
+            <div class="receipt-item">
+                <span>Phí dịch vụ (5%):</span>
+                <span id="serviceFee">0 ₫</span>
+            </div>
+            <div class="receipt-item">
+                <span>Ưu đãi:</span>
+                <span class="text-danger" id="discount">-0 ₫</span>
+            </div>
+            <div class="receipt-total">
+                <span>Tổng cộng:</span>
+                <span id="total">0 ₫</span>
+            </div>
+        </div>
+
+        <!-- Payment Info -->
+        <div class="receipt-section">
+            <div class="receipt-section-title">Thanh toán</div>
+            <div class="receipt-item">
+                <span>Phương thức:</span>
+                <span class="fw-bold" id="paymentMethod">Tiền mặt</span>
+            </div>
+            <div class="receipt-item">
+                <span>Mã giao dịch:</span>
+                <span class="fw-bold" id="transactionId">TXN-001</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="receipt-footer">
+            <div class="mb-2">
+                <strong>Cảm ơn quý khách!</strong>
+            </div>
+            <div>
+                Hẹn gặp lại quý khách lần sau
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-center mt-4 no-print">
+        <button type="button" 
+                class="btn btn-primary me-2" 
+                onclick="printReceipt()">
+            <i class="bi bi-printer me-2"></i>In hóa đơn
+        </button>
+        <button type="button" 
+                class="btn btn-outline-primary me-2" 
+                onclick="sendReceipt()">
+            <i class="bi bi-send me-2"></i>Gửi Email/SMS
+        </button>
+        <a href="/Payment/OrderSelection" class="btn btn-outline-secondary">
+            <i class="bi bi-list-ul me-2"></i>Danh sách đơn hàng
+        </a>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container">
+    <div id="toastNotification" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <strong class="me-auto">Thông báo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBaseUrl = '@apiBaseUrl';
+        const orderId = @orderId;
+
+        // Load thông tin hóa đơn
+        async function loadReceipt() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/orders/${orderId}/details`);
+                
+                if (!response.ok) {
+                    // Mock data
+                    const receiptData = getMockReceiptData();
+                    renderReceipt(receiptData);
+                    return;
+                }
+
+                const data = await response.json();
+                renderReceipt(data);
+            } catch (error) {
+                console.error('Error loading receipt:', error);
+                const receiptData = getMockReceiptData();
+                renderReceipt(receiptData);
+            }
+        }
+
+        // Mock receipt data
+        function getMockReceiptData() {
+            return {
+                orderCode: 'ORD-001',
+                tableNumber: 'Bàn 5',
+                staffName: 'Nguyễn Văn A',
+                orderTime: new Date().toLocaleString('vi-VN'),
+                items: [
+                    { name: 'Phở Bò', quantity: 2, price: 85000, total: 170000 },
+                    { name: 'Bánh Mì Thịt Nướng', quantity: 1, price: 45000, total: 45000 },
+                    { name: 'Coca Cola', quantity: 3, price: 25000, total: 75000 },
+                    { name: 'Gỏi Cuốn', quantity: 2, price: 80000, total: 160000 }
+                ],
+                subtotal: 450000,
+                vat: 45000,
+                serviceFee: 22500,
+                discount: 50000,
+                total: 467500,
+                paymentMethod: 'Tiền mặt',
+                transactionId: 'TXN-' + Date.now()
+            };
+        }
+
+        // Render hóa đơn
+        function renderReceipt(data) {
+            document.getElementById('orderCode').textContent = data.orderCode || 'ORD-001';
+            document.getElementById('tableNumber').textContent = data.tableNumber || 'Bàn 5';
+            document.getElementById('staffName').textContent = data.staffName || 'Nguyễn Văn A';
+            document.getElementById('orderTime').textContent = data.orderTime || new Date().toLocaleString('vi-VN');
+
+            // Render items
+            const itemsContainer = document.getElementById('receiptItems');
+            if (data.items && data.items.length > 0) {
+                itemsContainer.innerHTML = data.items.map(item => `
+                    <div class="receipt-item">
+                        <div class="receipt-item-name">${item.name}</div>
+                        <div class="receipt-item-quantity">x${item.quantity}</div>
+                        <div class="receipt-item-price">${formatCurrency(item.total)}</div>
+                    </div>
+                `).join('');
+            }
+
+            // Render summary
+            document.getElementById('subtotal').textContent = formatCurrency(data.subtotal || 0);
+            document.getElementById('vat').textContent = formatCurrency(data.vat || 0);
+            document.getElementById('serviceFee').textContent = formatCurrency(data.serviceFee || 0);
+            document.getElementById('discount').textContent = `-${formatCurrency(data.discount || 0)}`;
+            document.getElementById('total').textContent = formatCurrency(data.total || 0);
+
+            // Payment info
+            document.getElementById('paymentMethod').textContent = data.paymentMethod || 'Tiền mặt';
+            document.getElementById('transactionId').textContent = data.transactionId || 'TXN-001';
+        }
+
+        // In hóa đơn
+        function printReceipt() {
+            window.print();
+        }
+
+        // Gửi biên nhận
+        async function sendReceipt() {
+            try {
+                showLoading();
+
+                const response = await fetch(`${apiBaseUrl}/receipt/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        method: 'email' // hoặc 'sms'
+                    })
+                });
+
+                if (!response.ok) {
+                    // Mock success
+                    hideLoading();
+                    showToast('Gửi biên nhận thành công! (Mock)', 'success');
+                    return;
+                }
+
+                const result = await response.json();
+                hideLoading();
+
+                if (result.success) {
+                    showToast('Gửi biên nhận thành công!', 'success');
+                } else {
+                    showToast(result.message || 'Gửi biên nhận thất bại!', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending receipt:', error);
+                hideLoading();
+                showToast('Gửi biên nhận thành công! (Mock)', 'success');
+            }
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(amount);
+        }
+
+        // Show toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toastNotification');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            
+            const toastInstance = new bootstrap.Toast(toast);
+            toastInstance.show();
+        }
+
+        // Show loading
+        function showLoading() {
+            // Có thể thêm spinner
+        }
+
+        // Hide loading
+        function hideLoading() {
+            // Remove spinner
+        }
+
+        // Load khi trang được tải
+        document.addEventListener('DOMContentLoaded', function() {
+            loadReceipt();
+        });
+    </script>
+}
+

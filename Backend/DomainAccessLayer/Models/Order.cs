@@ -27,5 +27,9 @@ public partial class Order
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
+    public virtual ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+
     public virtual Reservation? Reservation { get; set; }
+
+    public virtual ICollection<OrderLock> OrderLocks { get; set; } = new List<OrderLock>();
 }

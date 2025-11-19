@@ -1,0 +1,257 @@
+/**
+ * Users Index Page - CSS
+ * Specific styles for Index view
+ */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--neutral-gray-300);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-content .page-title {
+    margin: 0;
+}
+
+.header-content .page-subtitle {
+    margin: 0.5rem 0 0 0;
+}
+
+.page-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background-color: var(--primary-500) !important;
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.bulk-actions button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 3rem 1rem;
+}
+
+.empty-state i {
+    opacity: 0.5;
+}
+
+/* Sortable Headers */
+.sortable-header {
+    user-select: none;
+    position: relative;
+    padding-right: 24px;
+}
+
+.sortable-header:hover {
+    background-color: var(--primary-100);
+}
+
+.sortable-header::after {
+    content: '⇅';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--neutral-gray-600);
+    opacity: 0.5;
+}
+
+.sortable-header.sort-asc::after {
+    content: '↑';
+    opacity: 1;
+    color: var(--primary-500);
+}
+
+.sortable-header.sort-desc::after {
+    content: '↓';
+    opacity: 1;
+    color: var(--primary-500);
+}
+
+/* Pagination Improvements */
+.pagination {
+    margin-top: 2rem;
+}
+
+.pagination .page-link {
+    color: var(--primary-500);
+    border-color: var(--neutral-gray-300);
+    padding: 0.5rem 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--primary-100);
+    border-color: var(--primary-500);
+    color: var(--primary-700);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--primary-500);
+    border-color: var(--primary-500);
+    color: var(--neutral-white);
+}
+
+.pagination .page-item.disabled .page-link {
+    color: var(--neutral-gray-300);
+    cursor: not-allowed;
+    background-color: var(--neutral-white);
+}
+
+/* Loading Overlay */
+.page-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    background-color: var(--neutral-white);
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.loading-spinner .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3rem;
+}
+
+/* Action Buttons Container */
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.action-buttons form {
+    display: inline-flex;
+}
+
+/* Table Improvements */
+.table-custom { width: 100%; }
+.table-custom thead { background: #fafafa; }
+.table-custom thead th,
+.table-custom tbody td { vertical-align: middle; text-align: left; }
+.table-custom tbody tr { transition: background-color 0.2s ease; }
+.table-custom tbody tr:hover { background-color: rgba(0,0,0,0.02); }
+
+/* Action Buttons Styling */
+.action-buttons .btn-small {
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.card-header-custom .bulk-actions { margin-left: auto; }
+
+/* Checkbox Styling */
+.user-checkbox {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+#selectAll {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+/* Responsive Improvements */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .page-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .bulk-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .bulk-actions button {
+        width: 100%;
+    }
+
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .action-buttons form {
+        width: 100%;
+    }
+
+    .action-buttons button,
+    .action-buttons a {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* Card Improvements */
+.card-custom { margin-bottom: 1.5rem; }
+.card-header-custom { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+
+/* Badges pastel */
+.badge-custom { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:600; line-height:1; }
+.badge-custom.info { background-color: rgba(25,118,210,0.10); color:#1976d2; }
+.badge-custom.success { background-color: rgba(46,125,50,0.10); color:#2e7d32; }
+.badge-custom.warning { background-color: rgba(255,179,0,0.12); color:#f57c00; }
+.badge-custom.error { background-color: rgba(211,47,47,0.10); color:#d32f2f; }
+
+/* FIX CARD COLOR OVERRIDE */
+.card-custom { background-color:#fff !important; border:1px solid var(--neutral-gray-300, #e5e5e5); border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,0.03); }
+.card-header-custom { background-color:#fff !important; border-bottom:1px solid var(--neutral-gray-300, #e5e5e5); }
+
+/* Bulk-actions color polish */
+.bulk-actions .btn-secondary-custom { background:#fff; color: var(--primary-500, #FF6B6B); border:1px solid var(--primary-500, #FF6B6B); }
+.bulk-actions .btn-secondary-custom:hover { background: rgba(255,107,107,0.08); }
+.bulk-actions .btn-error-custom { background: var(--semantic-error-500, #F44336); border:1px solid var(--semantic-error-500, #F44336); }
+.bulk-actions .btn-error-custom:hover { background:#d32f2f; }
