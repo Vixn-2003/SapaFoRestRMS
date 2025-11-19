@@ -185,7 +185,6 @@ namespace DataAccessLayer.Repositories
         // Đặt hàm này ở cuối file Repository
         public async Task<Combo> GetComboWithDetailsAsync(int comboId)
         {
-            // Chúng ta cần .Include() 2 cấp:
             // 1. Lấy danh sách ComboItems (bảng trung gian)
             // 2. Từ ComboItems, lấy MenuItem (món ăn thật)
             return await _context.Combos

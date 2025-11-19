@@ -4,206 +4,499 @@
     var currentFloor = ViewData["CurrentFloor"] as int?;
     var currentArea = ViewData["CurrentArea"] as string;
     var currentStatus = ViewData["CurrentStatus"] as string;
-   
+    var currentSearch = ViewData["CurrentSearch"] as string;
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
-    /* CSS của bạn đã đúng, giữ nguyên */
-    .table-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
+    :root {
+        --primary-orange: #ff7b00;
+        --primary-orange-light: #fff5eb;
+        --active-purple: #594a87;
+        --success-green: #28a745;
+        --success-green-light: #e8f5e9;
+        --bg-light: #f0f2f5;
+        --text-gray: #6c757d;
+        --card-radius: 12px;
     }
 
-    .table-card {
+    body {
+        background-color: var(--bg-light);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 14px;
+        overflow: hidden;
+    }
+
+    .main-wrapper {
+        padding: 15px;
+        height: calc(100vh - 50px);
+        display: flex;
+        gap: 20px;
+    }
+
+    /* --- Sidebar --- */
+    .col-sidebar {
+        width: 240px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar-card {
+        background: white;
+        border-radius: var(--card-radius);
+        padding: 20px;
+        height: 100%;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        border: 1px solid #fff;
+    }
+
+    .nav-pills .nav-link {
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 5px;
+        padding: 10px 15px;
         border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s;
     }
 
-    .status-trong {
-        background-color: #f0f0f0;
-        border-left: 5px solid gray;
+        .nav-pills .nav-link:hover {
+            background: #f8f9fa;
+            color: var(--primary-orange);
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: var(--active-purple);
+            color: white;
+            box-shadow: 0 4px 6px rgba(89, 74, 135, 0.2);
+        }
+
+    /* --- Main Content --- */
+    .col-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
     }
 
-    .status-hoat-dong {
-        background-color: #e0f8e0;
-        border-left: 5px solid green;
+    /* Top Bar */
+    .top-bar {
+        background: white;
+        padding: 10px 20px;
+        border-radius: var(--card-radius);
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        height: 60px;
     }
 
-    .filter-link {
-        display: block;
-        padding: 8px;
+    .search-box-wrapper {
+        background: #f8f9fa;
+        border: 1px solid #eee;
+        border-radius: 20px;
+        padding: 5px 15px;
+        display: flex;
+        align-items: center;
+        width: 300px;
+    }
+
+        .search-box-wrapper input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            outline: none;
+            margin-left: 10px;
+        }
+
+    /* Filters */
+    .status-filters {
+        margin-bottom: 15px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-status {
+        border: none;
+        background: white;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-weight: 600;
+        color: #666;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
         text-decoration: none;
-        color: black;
+        font-size: 13px;
+        transition: all 0.2s;
     }
 
-        .filter-link.active {
-            background-color: #f0ad4e;
+        .btn-status:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-status.active-all {
+            background-color: #6c757d;
             color: white;
         }
+
+        .btn-status.active-empty {
+            background-color: var(--success-green);
+            color: white;
+        }
+
+        .btn-status.active-busy {
+            background-color: var(--primary-orange);
+            color: white;
+        }
+
+    /* --- Table Grid --- */
+    .table-grid-scroll {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-right: 10px;
+        padding-bottom: 20px;
+    }
+
+        .table-grid-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .table-grid-scroll::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+    /* --- NEW TABLE CARD DESIGN --- */
+    .table-card {
+        background: white;
+        border-radius: var(--card-radius);
+        display: flex;
+        flex-direction: column;
+        text-decoration: none !important;
+        color: var(--text-dark);
+        border: 1px solid transparent;
+        transition: all 0.2s;
+        overflow: hidden;
+        height: 100%; /* Quan trọng: Lấp đầy chiều cao cột grid */
+        min-height: 210px; /* Chiều cao tối thiểu cố định để đều nhau */
+        position: relative;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+        .table-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        }
+
+    /* Header: Số bàn + Trạng thái */
+    .card-header-custom {
+        padding: 12px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f1f1f1;
+    }
+
+    .table-number {
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+
+    /* Body: Thông tin vị trí */
+    .card-body-custom {
+        padding: 15px;
+        flex-grow: 1; /* Đẩy footer xuống đáy */
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 6px;
+        font-size: 13px;
+        color: #555;
+    }
+
+        .info-item i {
+            width: 20px;
+            text-align: center;
+            margin-right: 8px;
+            color: #999;
+        }
+
+    /* Footer: Khu vực thời gian (Đã thiết kế lại) */
+    .card-footer-custom {
+        padding: 12px 15px;
+        background: #fafafa;
+        border-top: 1px solid #f1f1f1;
+        font-size: 12px;
+    }
+
+    /* Style cho bàn TRỐNG */
+    .table-card.status-available {
+        border-color: transparent;
+    }
+
+        .table-card.status-available .table-number {
+            color: var(--success-green);
+        }
+
+        .table-card.status-available .status-text {
+            color: var(--success-green);
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .table-card.status-available .status-dot {
+            background: var(--success-green);
+            box-shadow: 0 0 0 3px var(--success-green-light);
+        }
+
+        .table-card.status-available .card-footer-custom {
+            background: var(--success-green-light);
+            color: var(--success-green);
+            font-weight: 600;
+            text-align: center;
+        }
+
+    /* Style cho bàn CÓ KHÁCH */
+    .table-card.status-active {
+        border: 1px solid #ffe0b2;
+    }
+
+        .table-card.status-active .table-number {
+            color: var(--primary-orange);
+        }
+
+        .table-card.status-active .status-text {
+            color: var(--primary-orange);
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .table-card.status-active .status-dot {
+            background: var(--primary-orange);
+            box-shadow: 0 0 0 3px var(--primary-orange-light);
+        }
+
+        .table-card.status-active .card-footer-custom {
+            background: #fff8f0;
+        }
+
+    /* Layout chi tiết thời gian */
+    .time-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+        .time-row:last-child {
+            margin-bottom: 0;
+        }
+
+    .time-label {
+        color: #888;
+        font-weight: 500;
+    }
+
+    .time-value {
+        font-weight: 700;
+        color: #333;
+    }
+
+    /* Bộ đếm giờ nổi bật */
+    .stopwatch-value {
+        font-family: 'Consolas', monospace;
+        font-size: 15px;
+        color: #d35400; /* Cam đậm */
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }
+
 </style>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-3 filter-sidebar">
-            <h3>Vị trí bàn</h3>
-            <div>
-                <a class="filter-link @(currentFloor == null ? "active" : "")"
-                   asp-controller="DashboardTable" asp-action="Index"
-                   asp-route-floor=""
-                   asp-route-areaName="@currentArea"
-                   asp-route-status="@currentStatus">
-                    Tất cả Tầng
-                </a>
+<div class="main-wrapper">
 
-                @* Các tầng khác *@
+    <div class="col-sidebar">
+        <div class="sidebar-card">
+            <h6 class="text-uppercase fw-bold text-purple mb-3" style="color: var(--active-purple); font-size: 13px;">Vị trí</h6>
+            <div class="nav flex-column nav-pills">
+                <a class="nav-link @(currentFloor == null ? "active" : "")" asp-route-floor="" asp-route-areaName="@currentArea" asp-route-status="@currentStatus" asp-route-searchString="@currentSearch">Tất cả tầng</a>
                 @foreach (var floor in Model.Floors.OrderBy(f => f))
                 {
-                    <a class="filter-link @(currentFloor == floor ? "active" : "")"
-                       asp-controller="DashboardTable" asp-action="Index"
-                       asp-route-floor="@floor"
-                       asp-route-areaName="@currentArea"
-                       asp-route-status="@currentStatus">
-                        Tầng @floor
-                    </a>
+                    <a class="nav-link @(currentFloor == floor ? "active" : "")" asp-route-floor="@floor" asp-route-areaName="@currentArea" asp-route-status="@currentStatus" asp-route-searchString="@currentSearch">Tầng @floor</a>
                 }
             </div>
 
-            <h3>Khu vực</h3>
-            <div>
-                <a class="filter-link @(string.IsNullOrEmpty(currentArea) ? "active" : "")"
-                   asp-controller="DashboardTable" asp-action="Index"
-                   asp-route-areaName=""
-                   asp-route-floor="@currentFloor"
-                   asp-route-status="@currentStatus">
-                    Tất cả Khu vực
-                </a>
+            <hr class="my-4" style="opacity: 0.1">
 
-                @* Các khu vực khác *@
+            <h6 class="text-uppercase fw-bold text-purple mb-3" style="color: var(--active-purple); font-size: 13px;">Khu vực</h6>
+            <div class="nav flex-column nav-pills">
+                <a class="nav-link @(string.IsNullOrEmpty(currentArea) ? "active" : "")" asp-route-areaName="" asp-route-floor="@currentFloor" asp-route-status="@currentStatus" asp-route-searchString="@currentSearch">Tất cả khu vực</a>
                 @foreach (var area in Model.AreaNames.OrderBy(a => a))
                 {
-                    <a class="filter-link @(currentArea == area ? "active" : "")"
-                       asp-controller="DashboardTable" asp-action="Index"
-                       asp-route-areaName="@area"
-                       asp-route-floor="@currentFloor"
-                       asp-route-status="@currentStatus">
-                        Khu @area
-                    </a>
+                    <a class="nav-link @(currentArea == area ? "active" : "")" asp-route-areaName="@area" asp-route-floor="@currentFloor" asp-route-status="@currentStatus" asp-route-searchString="@currentSearch">Khu @area</a>
                 }
             </div>
         </div>
+    </div>
 
-        <div class="col-md-9">
+    <div class="col-content">
 
+        <div class="top-bar">
             <div>
-                <a class="btn @(currentStatus == "Available" ? "btn-secondary" : "btn-outline-secondary")"
-                   asp-controller="DashboardTable" asp-action="Index"
-                   asp-route-status="Available"
-                   asp-route-floor="@currentFloor"
-                   asp-route-areaName="@currentArea">Đang trống</a>
+                <h4 class="fw-bold m-0 text-dark" style="font-size: 18px;">
+                    @if (currentFloor != null)
+                    {
+                        <span>Tầng @currentFloor</span>
+                    }
+                    else
+                    {
 
-                <a class="btn @(currentStatus == "Active" ? "btn-success" : "btn-outline-success")"
-                   asp-controller="DashboardTable" asp-action="Index"
-                   asp-route-status="Active"
-                   asp-route-floor="@currentFloor"
-                   asp-route-areaName="@currentArea">Đang phục vụ</a>
-
-                <a class="btn btn-outline-dark"
-                   asp-controller="DashboardTable" asp-action="Index"
-                   asp-route-status=""
-                   asp-route-floor="@currentFloor"
-                   asp-route-areaName="@currentArea">Bỏ lọc TT</a>
-
-                <a class="btn btn-danger"
-                   asp-controller="DashboardTable" asp-action="Index"
-                   asp-route-status=""
-                   asp-route-floor=""
-                   asp-route-areaName="">
-                    Xóa tất cả bộ lọc
-                </a>
+                        <span>Toàn bộ nhà hàng</span>
+                    }
+                    @if (!string.IsNullOrEmpty(currentArea))
+                    {
+                        <span> - Khu @currentArea</span>
+                    }
+                </h4>
+                <small class="text-muted">@DateTime.Now.ToString("dd/MM/yyyy")</small>
             </div>
 
-            <hr />
+            <form method="get" asp-action="Index" class="d-flex align-items-center">
+                <input type="hidden" name="floor" value="@currentFloor" />
+                <input type="hidden" name="areaName" value="@currentArea" />
+                <input type="hidden" name="status" value="@currentStatus" />
 
-            <div class="table-grid">
-                @foreach (var table in Model.Tables)
-                {
-                    var statusClass = table.Status.ToLower() != "available" ? "status-hoat-dong" : "status-trong";
-                    var statusColor = table.Status.ToLower() != "available" ? "text-success" : "text-secondary";
+                <div class="search-box-wrapper">
+                    <i class="fa-solid fa-magnifying-glass text-secondary"></i>
+                    <input type="text" name="searchString" placeholder="Tìm theo số bàn..." value="@currentSearch">
+                    @if (!string.IsNullOrEmpty(currentSearch))
+                    {
+                        <a href="@Url.Action("Index", new { floor = currentFloor, areaName = currentArea, status = currentStatus })" class="text-danger ms-2"><i class="fa-solid fa-times"></i></a>
+                    }
+                </div>
+            </form>
+        </div>
 
-                    <div class="table-card @statusClass">
-                        <strong>Tên bàn: @table.TableNumber</strong>
-                        <div>Sức chứa: @table.Capacity</div>
+        <div class="status-filters">
+            <a class="btn-status @(string.IsNullOrEmpty(currentStatus) ? "active-all" : "")" asp-route-status="" asp-route-floor="@currentFloor" asp-route-areaName="@currentArea" asp-route-searchString="@currentSearch">Tất cả</a>
+            <a class="btn-status @(currentStatus == "Available" ? "active-empty" : "")" asp-route-status="Available" asp-route-floor="@currentFloor" asp-route-areaName="@currentArea" asp-route-searchString="@currentSearch"><i class="fa-regular fa-circle me-1"></i> Trống</a>
+            <a class="btn-status @(currentStatus == "Active" ? "active-busy" : "")" asp-route-status="Active" asp-route-floor="@currentFloor" asp-route-areaName="@currentArea" asp-route-searchString="@currentSearch"><i class="fa-solid fa-utensils me-1"></i> Đang dùng</a>
+        </div>
 
-                        @* ⚙️ Đặt đoạn xử lý hiển thị trạng thái ở đây *@
-                        @{
-                            var displayStatus = table.Status.ToLower() == "active"
-                            ? "Đang hoạt động"
-                            : table.Status.ToLower() == "available" || table.Status.ToLower() == "available"
-                            ? "Đang trống"
-                            : table.Status;
-                        }
-
-                        <div class="@statusColor">Trạng thái: @displayStatus</div>
-
-                        <div>Số khách: @table.GuestCount</div>
-                        <div>Thời gian: @table.GuestSeatedTime</div>
-                    </div>
-                }
-
-
-                @if (!Model.Tables.Any())
-                {
-                    <p>Không tìm thấy bàn nào khớp với điều kiện lọc.</p>
-                }
-            </div>
-
-            <hr />
-            @{
-                var currentPage = (int)ViewData["CurrentPage"];
-                var pageSize = (int)ViewData["PageSize"];
-                var totalPages = (Model.TotalCount > 0)
-                ? (int)Math.Ceiling((double)Model.TotalCount / pageSize)
-                : 1;
-            }
-
-            @if (totalPages > 1)
+        <div class="table-grid-scroll">
+            @if (!Model.Tables.Any())
             {
-                <nav>
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                            <a class="page-link"
-                               asp-controller="DashboardTable" asp-action="Index"
-                               asp-route-page="@(currentPage - 1)"
-                               asp-route-floor="@currentFloor"
-                               asp-route-areaName="@currentArea"
-                               asp-route-status="@currentStatus">Trước</a>
-                        </li>
-
-                        @for (int i = 1; i <= totalPages; i++)
-                        {
-                            <li class="page-item @(i == currentPage ? "active" : "")">
-                                <a class="page-link"
-                                   asp-controller="DashboardTable" asp-action="Index"
-                                   asp-route-page="@i"
-                                   asp-route-floor="@currentFloor"
-                                   asp-route-areaName="@currentArea"
-                                   asp-route-status="@currentStatus">@i</a>
-                            </li>
-                        }
-
-                        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
-                            <a class="page-link"
-                               asp-controller="DashboardTable" asp-action="Index"
-                               asp-route-page="@(currentPage + 1)"
-                               asp-route-floor="@currentFloor"
-                               asp-route-areaName="@currentArea"
-                               asp-route-status="@currentStatus">Sau</a>
-                        </li>
-                    </ul>
-                </nav>
+                <div class="text-center mt-5 text-muted">
+                    <i class="fa-solid fa-chair fs-1 mb-3 opacity-25"></i>
+                    <p>Không tìm thấy dữ liệu bàn.</p>
+                </div>
             }
+            else
+            {
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-4 g-3">
+                    @foreach (var table in Model.Tables)
+                    {
+                        var isActive = table.Status.Equals("Active", StringComparison.OrdinalIgnoreCase);
+                        var statusClass = isActive ? "status-active" : "status-available";
+                        var statusText = isActive ? "Đang phục vụ" : "Sẵn sàng";
+
+                        <div class="col">
+                            <a asp-controller="DashboardTable" asp-action="OrderDetail" asp-route-id="@table.TableId" class="table-card @statusClass">
+
+                                <div class="card-header-custom">
+                                    <span class="table-number">Bàn @table.TableNumber</span>
+                                    <div class="d-flex align-items-center">
+                                        <span class="status-dot"></span>
+                                        <span class="status-text">@statusText</span>
+                                    </div>
+                                </div>
+
+                                <div class="card-body-custom">
+                                    <div class="info-item">
+                                        <i class="fas fa-layer-group"></i>
+                                        <span>Tầng @table.Floor - Khu @table.AreaName</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-users"></i>
+                                        <span>@table.GuestCount / @table.Capacity khách</span>
+                                    </div>
+                                </div>
+
+                                <div class="card-footer-custom">
+                                    @if (isActive && table.GuestSeatedTime != null)
+                                    {
+                                        <div class="time-row border-bottom pb-1 mb-1" style="border-color: rgba(0,0,0,0.05) !important;">
+                                            <span class="time-label">Giờ vào:</span>
+                                            <span class="time-value">@table.GuestSeatedTime?.ToString("HH:mm")</span>
+                                        </div>
+
+                                        <div class="time-row">
+                                            <span class="time-label">Thời gian ngồi:</span>
+                                            <span class="stopwatch-value" data-seated-time="@table.GuestSeatedTime?.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                                00:00:00
+                                            </span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-center py-2">
+                                            <i class="fa-solid fa-circle-check me-1"></i> Vui lòng chọn bàn
+                                        </div>
+                                    }
+                                </div>
+
+                            </a>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="mt-4">
+                @await Html.PartialAsync("_Paging", Model)
+            </div>
         </div>
     </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        function updateTimers() {
+            $('.stopwatch-value').each(function () {
+                var seatedTimeStr = $(this).data('seated-time');
+                if (!seatedTimeStr) return;
+
+                var seatedTime = new Date(seatedTimeStr);
+                var now = new Date();
+                var diff = now - seatedTime;
+                if (diff < 0) diff = 0;
+
+                var hours = Math.floor(diff / (1000 * 60 * 60));
+                var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                var seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                var hStr = hours.toString().padStart(2, '0');
+                var mStr = minutes.toString().padStart(2, '0');
+                var sStr = seconds.toString().padStart(2, '0');
+
+                $(this).text(hStr + ":" + mStr + ":" + sStr);
+            });
+        }
+        updateTimers();
+        setInterval(updateTimers, 1000);
+    });
+</script>

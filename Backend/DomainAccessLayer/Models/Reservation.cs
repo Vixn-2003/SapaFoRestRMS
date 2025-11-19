@@ -31,6 +31,12 @@ public partial class Reservation
 
     public string? Notes { get; set; }
     public string? ZaloMessageId { get; set; }
+
+    //kích hoạt mã QR của đơn order
+    public DateTime? ArrivalAt { get; set; }          // Khi khách bắt đầu ngồi vào bàn
+    public DateTime? StatusUpdatedAt { get; set; }    // Lần cập nhật trạng thái cuối
+
+
     public virtual Customer Customer { get; set; } = null!;
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
