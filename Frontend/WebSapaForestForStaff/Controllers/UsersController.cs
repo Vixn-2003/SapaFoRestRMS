@@ -331,39 +331,39 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        [HttpGet]
-        [Authorize(Roles = "Admin,Manager,Owner")]
-        public async Task<IActionResult> Edit(int id)
-        {
-            try
-            {
-                var user = await _apiService.GetUserAsync(id);
-                if (user == null)
-                {
-                    return NotFound();
-                }
+        //[HttpGet]
+        //[Authorize(Roles = "Admin,Manager,Owner")]
+        //public async Task<IActionResult> Edit(int id)
+        //{
+        //    try
+        //    {
+        //        var user = await _apiService.GetUserAsync(id);
+        //        if (user == null)
+        //        {
+        //            return NotFound();
+        //        }
 
-                var roles = await _apiService.GetRolesAsync();
-                ViewBag.Roles = roles ?? new List<Role>();
+        //        var roles = await _apiService.GetRolesAsync();
+        //        ViewBag.Roles = roles ?? new List<Role>();
 
-                var updateRequest = new UserUpdateRequest
-                {
-                    UserId = user.UserId,
-                    FullName = user.FullName,
-                    Email = user.Email,
-                    Phone = user.Phone,
-                    RoleId = user.RoleId,
-                    Status = user.Status
-                };
+        //        var updateRequest = new UserUpdateRequest
+        //        {
+        //            UserId = user.UserId,
+        //            FullName = user.FullName,
+        //            Email = user.Email,
+        //            Phone = user.Phone,
+        //            RoleId = user.RoleId,
+        //            Status = user.Status
+        //        };
 
-                return View(updateRequest);
-            }
-            catch
-            {
-                TempData["ErrorMessage"] = "Lỗi khi tải thông tin người dùng";
-                return RedirectToAction("Index");
-            }
-        }
+        //        return View(updateRequest);
+        //    }
+        //    catch
+        //    {
+        //        TempData["ErrorMessage"] = "Lỗi khi tải thông tin người dùng";
+        //        return RedirectToAction("Index");
+        //    }
+        //}
 
         [HttpPost]
         [ValidateAntiForgeryToken]

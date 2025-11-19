@@ -1,23 +1,23 @@
 
-using Microsoft.EntityFrameworkCore;
+using BusinessAccessLayer.Hubs;
+using BusinessAccessLayer.Mapping;
+using BusinessAccessLayer.Services;
+using BusinessAccessLayer.Services.Interfaces;
+using BusinessLogicLayer.Services;
+using BusinessLogicLayer.Services.Interfaces;
 using DataAccessLayer;
 using DataAccessLayer.Dbcontext;
-using BusinessAccessLayer.Mapping;
-using BusinessAccessLayer.Services.Interfaces;
-using BusinessAccessLayer.Services;
-using DataAccessLayer.UnitOfWork.Interfaces;
-using DataAccessLayer.UnitOfWork;
 using DataAccessLayer.Repositories;
 using DataAccessLayer.Repositories.Interfaces;
-using SapaFoRestRMSAPI.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using DataAccessLayer.UnitOfWork;
+using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
-using BusinessLogicLayer.Services.Interfaces;
-using BusinessLogicLayer.Services;
-using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using SapaFoRestRMSAPI.Services;
+using System.Text;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -233,9 +233,18 @@ builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
 builder.Services.AddScoped<IPayrollService, PayrollService>();
 
+builder.Services.AddScoped<ICounterStaffRepository, CounterStaffRepository>();
+builder.Services.AddScoped<ICounterStaffService, CounterStaffService>();
+
+
 // Area Repository
 builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
 builder.Services.AddScoped<IOrderTableService, OrderTableService>();
+
+//DashBoardTable
+builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
+builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
+
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 
@@ -260,6 +269,10 @@ builder.Services.AddScoped<ISalaryChangeRequestRepository, SalaryChangeRequestRe
 builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
+
+
+
+builder.Services.AddSignalR();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
 
@@ -319,10 +332,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
         policy.WithOrigins(
-            "http://localhost:5054",    // 👈 Frontend bạn đang chạy
+            "http://localhost:5054",    // 👈 Frontend bạn đang chạy 
             "http://localhost:5123",    // Razor nội bộ
-            "http://192.168.1.47:5123", // IP Razor
-            "http://192.168.1.47:5180"  // Swagger
+                                        "http://192.168.1.47:5123", // IP Razor Wifi nhà
+                                        "http://192.168.1.47:5180"  // Swagger wifi nhà
+                                        //   "http://192.168.105.100:5123", // IP Razor
+                                        //  "http://192.168.105.100:5180"  // Swagger
+
+        // "http://10.33.8.77:5123", // IP Razor
+        //"http://10.33.8.77:5180"  // Swagger
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
@@ -346,7 +364,7 @@ app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 app.UseAuthentication();
 app.UseAuthorization();
 
-
+app.MapHub<ReservationHub>("/reservationHub");
 app.MapControllers();
 
 // Upsert Admin from configuration (Development)

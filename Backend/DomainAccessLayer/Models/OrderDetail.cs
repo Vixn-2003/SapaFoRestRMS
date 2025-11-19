@@ -9,7 +9,7 @@ public partial class OrderDetail
 
     public int OrderId { get; set; }
 
-    public int MenuItemId { get; set; }
+    public int? MenuItemId { get; set; }
 
     public int Quantity { get; set; }
 
@@ -19,6 +19,12 @@ public partial class OrderDetail
 
     //new
     public DateTime CreatedAt { get; set; }
+
+    // === THÊM CÁC DÒNG NÀY ===
+    // Thêm cột ComboId (nullable)
+    public int? ComboId { get; set; }
+    public Combo Combo { get; set; }
+
     public string? Notes { get; set; } // Thêm ? để cho phép null
 
     public virtual ICollection<KitchenTicketDetail> KitchenTicketDetails { get; set; } = new List<KitchenTicketDetail>();

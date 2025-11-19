@@ -80,6 +80,44 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Areas");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.AssistanceRequest", b =>
+                {
+                    b.Property<int>("RequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
+
+                    b.Property<DateTime?>("HandledTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RequestTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReservationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("TableId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("ReservationId");
+
+                    b.HasIndex("TableId");
+
+                    b.ToTable("AssistanceRequests");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Attendance", b =>
                 {
                     b.Property<int>("AttendanceId")
@@ -668,10 +706,13 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderDetailId"));
 
+                    b.Property<int?>("ComboId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("MenuItemId")
+                    b.Property<int?>("MenuItemId")
                         .HasColumnType("int");
 
                     b.Property<string>("Notes")
@@ -694,6 +735,8 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("OrderDetailId")
                         .HasName("PK__OrderDet__D3B9D36CA2DB7F7A");
+
+                    b.HasIndex("ComboId");
 
                     b.HasIndex("MenuItemId");
 
@@ -1047,6 +1090,9 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReservationId"));
 
+                    b.Property<DateTime?>("ArrivalAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<TimeSpan?>("ArrivalTime")
                         .HasColumnType("time");
 
@@ -1087,6 +1133,9 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("StatusUpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("TimeSlot")
                         .IsRequired()
@@ -2052,6 +2101,23 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("CreatedByNavigation");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.AssistanceRequest", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId");
+
+                    b.HasOne("DomainAccessLayer.Models.Table", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
+
+                    b.Navigation("Table");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Attendance", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
@@ -2241,10 +2307,13 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.OrderDetail", b =>
                 {
+                    b.HasOne("DomainAccessLayer.Models.Combo", "Combo")
+                        .WithMany()
+                        .HasForeignKey("ComboId");
+
                     b.HasOne("DomainAccessLayer.Models.MenuItem", "MenuItem")
                         .WithMany("OrderDetails")
                         .HasForeignKey("MenuItemId")
-                        .IsRequired()
                         .HasConstraintName("FK__OrderDeta__MenuI__2CF2ADDF");
 
                     b.HasOne("DomainAccessLayer.Models.Order", "Order")
@@ -2253,6 +2322,8 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK__OrderDeta__Order__2DE6D218");
+
+                    b.Navigation("Combo");
 
                     b.Navigation("MenuItem");
 

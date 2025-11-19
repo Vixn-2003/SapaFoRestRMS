@@ -106,7 +106,10 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
- 
+
+    // Thêm bảng mới
+    public DbSet<AssistanceRequest> AssistanceRequests { get; set; }
+
 
     public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
 
