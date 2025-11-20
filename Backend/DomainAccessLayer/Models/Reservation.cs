@@ -27,13 +27,25 @@ public partial class Reservation
     public decimal? DepositAmount { get; set; }
 
     public bool DepositPaid { get; set; } = false;
+
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? TotalDepositPaid { get; set; } = 0;
+
     public string? Status { get; set; }
 
     public string? Notes { get; set; }
     public string? ZaloMessageId { get; set; }
+
+    //kích hoạt mã QR của đơn order
+    public DateTime? ArrivalAt { get; set; }          // Khi khách bắt đầu ngồi vào bàn
+    public DateTime? StatusUpdatedAt { get; set; }    // Lần cập nhật trạng thái cuối
+
+
     public virtual Customer Customer { get; set; } = null!;
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
     public virtual ICollection<ReservationTable> ReservationTables { get; set; } = new List<ReservationTable>();
+    public virtual ICollection<ReservationDeposit> ReservationDeposits { get; set; } = new List<ReservationDeposit>();
+
 }

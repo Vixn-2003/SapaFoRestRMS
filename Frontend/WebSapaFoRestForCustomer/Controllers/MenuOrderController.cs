@@ -1,130 +1,122 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
+using System.Diagnostics;
+// Thêm các DTOs của bạn ở đây
 using WebSapaFoRestForCustomer.DTOs.OrderTable;
-using WebSapaFoRestForCustomer.Models;
+using WebSapaFoRestForCustomer.Models; // (Nếu bạn có ErrorViewModel)
 
-namespace WebSapaFoRestForCustomer.Controllers
+public class MenuOrderController : Controller
 {
-    public class MenuOrderController : Controller
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConfiguration _configuration;
+    private readonly string _apiBaseUrl;
+
+    public MenuOrderController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
     {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration; // Thêm dòng này
-        private readonly string _apiBaseUrl; //  Thêm dòng này
+        _httpClientFactory = httpClientFactory;
+        _configuration = configuration;
+        // Đảm bảo "ApiSettings:BaseUrl" trong appsettings.json là đúng
+        _apiBaseUrl = _configuration.GetValue<string>("ApiSettings:BaseUrl").Replace("/api", "");
+    }
 
-        public MenuOrderController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
-        {
-            _httpClientFactory = httpClientFactory;
-            _configuration = configuration; 
-
-            _apiBaseUrl = _configuration.GetValue<string>("ApiSettings:BaseUrl").Replace("/api", "");
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Index(
+    [HttpGet]
+    public async Task<IActionResult> Index(
         int tableId,
-        int? categoryId,     
-        string? searchString) 
+        int? categoryId, // Giờ sẽ nhận cả 0, -1
+        string? searchString)
+    {
+        var httpClient = _httpClientFactory.CreateClient("API");
+
+        // 1. Build query string (ĐÃ SỬA)
+        var queryBuilder = new StringBuilder();
+        queryBuilder.Append($"api/OrderTable/MenuOrder/{tableId}?");
+
+        // === ĐÃ SỬA: Chấp nhận 0 (Tất cả) và -1 (Combos) ===
+        if (categoryId.HasValue)
         {
-            var httpClient = _httpClientFactory.CreateClient("API");
+            queryBuilder.Append($"categoryId={categoryId.Value}&");
+        }
+        // ===============================================
 
-            // 1. Build query string cho API
-            var queryBuilder = new StringBuilder();
-            queryBuilder.Append($"api/OrderTable/MenuOrder/{tableId}?");
-            if (categoryId.HasValue && categoryId > 0)
-            {
-                queryBuilder.Append($"categoryId={categoryId}&");
-            }
-            if (!string.IsNullOrEmpty(searchString))
-            {
-                queryBuilder.Append($"searchString={searchString}");
-            }
-            string apiEndpoint = queryBuilder.ToString();
+        if (!string.IsNullOrEmpty(searchString))
+        {
+            queryBuilder.Append($"searchString={searchString}");
+        }
+        string apiEndpoint = queryBuilder.ToString().TrimEnd('&'); // Xóa dấu & thừa
 
-            try
-            {
-                // 2. Gọi API lấy Menu (đã lọc)
-                var response = await httpClient.GetAsync(apiEndpoint);
+        try
+        {
+            // 2. Gọi API lấy Menu (đã lọc)
+            var response = await httpClient.GetAsync(apiEndpoint);
 
-                if (response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
+            {
+                // Đọc viewModel
+                var viewModel = await response.Content.ReadFromJsonAsync<MenuPageViewModel>();
+
+                // Gửi dữ liệu cơ bản sang View qua ViewBag
+                ViewBag.TableId = tableId;
+                ViewBag.ApiBaseUrl = _apiBaseUrl;
+                ViewBag.OrderedItems = viewModel.OrderedItems; // Dùng cho JS
+                ViewBag.TableNumber = viewModel.TableNumber;
+                ViewBag.AreaName = viewModel.AreaName;
+                ViewBag.Floor = viewModel.Floor;
+
+                // 3. Lấy danh sách Danh mục (ĐÃ SỬA: Thêm try-catch rõ ràng)
+                try
                 {
-                    var viewModel = await response.Content.ReadFromJsonAsync<MenuPageViewModel>();
+                    var categories = await httpClient.GetFromJsonAsync<List<MenuCategoryViewModel>>("api/OrderTable/MenuCategories");
 
-                    // Nhóm menu theo CategoryName (như cũ)
-                    var menuGrouped = viewModel.MenuItems
-                        .Where(m => m.IsAvailable)
-                        .GroupBy(m => m.CategoryName)
-                        .OrderBy(g => g.Key);
-
-                    // Gửi dữ liệu sang View (như cũ)
-                    ViewBag.TableId = tableId;
-                    ViewBag.ApiBaseUrl = _apiBaseUrl;
-                    ViewBag.OrderedItems = viewModel.OrderedItems;
-                    ViewBag.TableNumber = viewModel.TableNumber;
-                    ViewBag.AreaName = viewModel.AreaName;
-                    ViewBag.Floor = viewModel.Floor;
-
-                    // 3. (MỚI) Gọi API lấy danh sách Danh mục
-                    try
-                    {
-                        var categories = await httpClient.GetFromJsonAsync<List<MenuCategoryViewModel>>("api/OrderTable/MenuCategories");
-                        ViewBag.Categories = new SelectList(categories, "CategoryId", "CategoryName", categoryId); // (categoryId là selected value)
-                    }
-                    catch
-                    {
-                        ViewBag.Categories = new SelectList(new List<MenuCategoryViewModel>()); // Lỗi thì trả về list rỗng
-                    }
-
-                    // 4. (MỚI) Gửi giá trị lọc hiện tại
-                    ViewBag.CurrentSearchString = searchString;
-
-                    return View(menuGrouped);
+                    ViewBag.Categories = categories; // Gửi thẳng List
+                    ViewBag.CurrentCategoryId = categoryId; // Báo cho View biết tab nào đang active
                 }
-                else // API trả về lỗi
+                catch (Exception ex)
                 {
-                    string errorMsg = $"Lỗi không xác định từ API ({response.StatusCode})."; // Default message
-                    try
+                    // Lỗi này xảy ra nếu MenuCategoryViewModel.cs (MVC) không khớp với MenuCategoryDto.cs (API)
+                    ViewBag.Categories = new List<MenuCategoryViewModel>(); // Lỗi thì trả về list rỗng
+
+                    // Ném lỗi này ra màn hình vàng để bạn biết LỖI THỰC SỰ
+                    throw new Exception($"Lỗi khi deserialize MenuCategories: {ex.Message}. Vui lòng kiểm tra lại file MenuCategoryViewModel.cs.", ex);
+                }
+
+                // 4. Gửi giá trị lọc (Giữ nguyên)
+                ViewBag.CurrentSearchString = searchString;
+
+                // 5. (ĐÃ SỬA) Gửi TOÀN BỘ viewModel sang View
+                // File Index.cshtml của bạn phải có @model MenuPageViewModel
+                return View(viewModel);
+            }
+            else // API /MenuOrder/ trả về lỗi (ví dụ: "Bàn không có khách")
+            {
+                string errorMsg = $"Lỗi không xác định từ API ({response.StatusCode}).";
+                try
+                {
+                    var errorResponse = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                    if (errorResponse != null && errorResponse.TryGetValue("message", out var messageValue))
                     {
-                        // Cố gắng đọc JSON {"message": "..."}
-                        var errorResponse = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-                        if (errorResponse != null && errorResponse.TryGetValue("message", out var messageValue))
-                        {
-                            // === CHỈ LẤY NỘI DUNG MESSAGE ===
-                            errorMsg = messageValue;
-                        }
-                        else
-                        {
-                            // Nếu không có key "message", đọc cả nội dung text
-                            errorMsg = await response.Content.ReadAsStringAsync();
-                        }
+                        errorMsg = messageValue;
                     }
-                    catch (System.Text.Json.JsonException) // Nếu không phải JSON hợp lệ
+                    else
                     {
-                        // Đọc lỗi dạng text thường
                         errorMsg = await response.Content.ReadAsStringAsync();
                     }
-                    catch (Exception readEx) // Các lỗi đọc khác
-                    {
-                        errorMsg = $"Lỗi khi đọc phản hồi từ API: {readEx.Message}";
-                    }
-
-
-                    ViewBag.Error = errorMsg; // Gán lỗi đã được cắt
-
-                    // Tạo và truyền ErrorViewModel
-                    return View("ErrorPage", new ErrorViewModel
-                    {
-                        RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
-                    });
                 }
+                catch { /* Bỏ qua nếu đọc lỗi thất bại */ }
+
+                ViewBag.Error = errorMsg;
+                return View("ErrorPage", new ErrorViewModel // Đảm bảo bạn có View "ErrorPage"
+                {
+                    RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                });
             }
-            catch (Exception ex)
+        }
+        catch (Exception ex) // Lỗi kết nối API
+        {
+            ViewBag.Error = $"Không thể kết nối đến API: {ex.Message}";
+            return View("ErrorPage", new ErrorViewModel
             {
-                ViewBag.Error = $"Không thể kết nối đến API: {ex.Message}";
-                return View("Error");
-            }
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            });
         }
     }
 }

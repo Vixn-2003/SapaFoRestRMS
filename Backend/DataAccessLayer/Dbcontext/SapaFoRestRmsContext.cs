@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using DomainAccessLayer.Models;
 using Microsoft.Extensions.Configuration;
+using DomainAccessLayer.Enums;
 namespace DataAccessLayer.Dbcontext;
 
 public partial class SapaFoRestRmsContext : DbContext
@@ -67,7 +68,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<Regulation> Regulations { get; set; }
 
     public virtual DbSet<Reservation> Reservations { get; set; }
-
+    public virtual DbSet<ReservationDeposit> ReservationDeposits { get; set; } = null!;
     public virtual DbSet<ReservationTable> ReservationTables { get; set; }
 
     public virtual DbSet<RestaurantIntro> RestaurantIntros { get; set; }
@@ -99,10 +100,16 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<Table> Tables { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+    public DbSet<Warehouse> Warehouses { get; set; } = null!;
+
+    public DbSet<Unit> Units { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
- 
+
+    // Thêm bảng mới
+    public DbSet<AssistanceRequest> AssistanceRequests { get; set; }
+
 
     public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
 
@@ -214,11 +221,16 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.IngredientId).HasName("PK__Ingredie__BEAEB25ACD112DE2");
 
+            entity.Property(e => e.IngredientCode).HasMaxLength(50);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.ReorderLevel)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Unit).HasMaxLength(20);
+            entity.HasOne(d => d.Unit)
+      .WithMany(p => p.Ingredients)
+      .HasForeignKey(d => d.UnitId)
+      .OnDelete(DeleteBehavior.Restrict);
+
         });
 
         modelBuilder.Entity<InventoryBatch>(entity =>
@@ -228,17 +240,45 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
-            entity.Property(e => e.QuantityRemaining).HasColumnType("decimal(18, 2)");
 
-            entity.HasOne(d => d.Ingredient).WithMany(p => p.InventoryBatches)
+            entity.Property(e => e.QuantityRemaining)
+                .HasColumnType("decimal(18, 2)");
+
+            // ====== Quan hệ Ingredient - InventoryBatch ======
+            entity.HasOne(d => d.Ingredient)
+                .WithMany(p => p.InventoryBatches)
                 .HasForeignKey(d => d.IngredientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Inventory__Ingre__2645B050");
 
-            entity.HasOne(d => d.PurchaseOrderDetail).WithMany(p => p.InventoryBatches)
+            // ====== Quan hệ PurchaseOrderDetail - InventoryBatch ======
+            entity.HasOne(d => d.PurchaseOrderDetail)
+                .WithMany(p => p.InventoryBatches)
                 .HasForeignKey(d => d.PurchaseOrderDetailId)
                 .HasConstraintName("FK__Inventory__Purch__2739D489");
+
+            // ====== Quan hệ Warehouse - InventoryBatch ======
+            entity.HasOne(d => d.Warehouse)
+                  .WithMany(w => w.InventoryBatches)
+                  .HasForeignKey(d => d.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict)
+                  .HasConstraintName("FK_InventoryBatch_Warehouses");
+
         });
+
+
+        modelBuilder.Entity<Warehouse>(entity =>
+        {
+            entity.HasKey(e => e.WarehouseId).HasName("PK__Warehouse__ID");
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true);
+        });
+
 
         modelBuilder.Entity<KitchenTicket>(entity =>
         {
@@ -633,9 +673,20 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.PurchaseOrderId).HasName("PK__Purchase__036BACA49E3BAAAB");
 
+            // Cấu hình PurchaseOrderId là string và không tự động tạo
+            entity.Property(e => e.PurchaseOrderId)
+                .HasMaxLength(50) // Hoặc độ dài phù hợp
+                .ValueGeneratedNever(); // Không tự động tạo giá trị
+
             entity.Property(e => e.OrderDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+
+            entity.Property(e => e.TimeConfirm)
+            .HasColumnType("datetime")
+            .HasDefaultValue(null);
+
+
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Pending");
@@ -644,24 +695,68 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.SupplierId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PurchaseO__Suppl__3587F3E0");
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.IdCreator)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PurchaseOrders_Users_Creator");
+            entity.HasOne(d => d.Confirmer)
+                .WithMany()
+                .HasForeignKey(d => d.IdConfirm)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PurchaseOrders_Users_Confirmer");
+            entity.Property(e => e.UrlImg)
+                .HasMaxLength(500);
         });
 
         modelBuilder.Entity<PurchaseOrderDetail>(entity =>
         {
-            entity.HasKey(e => e.PurchaseOrderDetailId).HasName("PK__Purchase__5026B698B2854271");
+            // 🔑 Khóa chính
+            entity.HasKey(e => e.PurchaseOrderDetailId);
 
-            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PurchaseOrderDetailId)
+                  .ValueGeneratedOnAdd();
 
-            entity.HasOne(d => d.Ingredient).WithMany(p => p.PurchaseOrderDetails)
-                .HasForeignKey(d => d.IngredientId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PurchaseO__Ingre__339FAB6E");
+            // 🔗 FK đến PurchaseOrder
+            entity.Property(e => e.PurchaseOrderId)
+                  .HasMaxLength(50)
+                  .IsRequired();
 
-            entity.HasOne(d => d.PurchaseOrder).WithMany(p => p.PurchaseOrderDetails)
-                .HasForeignKey(d => d.PurchaseOrderId)
-                .HasConstraintName("FK__PurchaseO__Purch__3493CFA7");
+            // 🧾 Thông tin snapshot nguyên liệu
+            entity.Property(e => e.IngredientCode)
+                  .HasMaxLength(50);
+            entity.Property(e => e.IngredientName)
+                  .HasMaxLength(255);
+            entity.Property(e => e.Unit)
+                  .HasMaxLength(50);
+            entity.Property(e => e.WarehouseName)
+          .HasMaxLength(200);
+
+            // 💰 Giá trị số
+            entity.Property(e => e.Quantity)
+                  .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UnitPrice)
+                  .HasColumnType("decimal(15, 2)");
+            entity.Property(e => e.Subtotal)
+                  .HasColumnType("decimal(15, 2)");
+
+            // 🔗 Quan hệ với PurchaseOrder
+            entity.HasOne(d => d.PurchaseOrder)
+                  .WithMany(p => p.PurchaseOrderDetails)
+                  .HasForeignKey(d => d.PurchaseOrderId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_PurchaseOrderDetails_PurchaseOrders");
+
+            // 🔗 Quan hệ với Ingredient (nullable)
+            entity.HasOne(d => d.Ingredient)
+                  .WithMany(p => p.PurchaseOrderDetails)
+                  .HasForeignKey(d => d.IngredientId)
+                  .OnDelete(DeleteBehavior.SetNull)
+                  .HasConstraintName("FK_PurchaseOrderDetails_Ingredients");
+
         });
+
+
 
         modelBuilder.Entity<Recipe>(entity =>
         {
@@ -777,6 +872,19 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(18, 2)");
         });
+
+        modelBuilder.Entity<Unit>(entity =>
+        {
+            entity.HasKey(e => e.UnitId);
+
+            entity.Property(e => e.UnitName)
+                  .HasMaxLength(50)
+                  .IsRequired();
+
+            entity.Property(e => e.UnitType)
+                  .IsRequired();
+        });
+
 
         modelBuilder.Entity<Shift>(entity =>
         {
@@ -931,6 +1039,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.CodeSupplier).HasMaxLength(50);
         });
 
         modelBuilder.Entity<SystemLogo>(entity =>
@@ -1018,8 +1127,29 @@ public partial class SapaFoRestRmsContext : DbContext
         });
 
 
+
+        modelBuilder.Entity<Unit>().HasData(
+    new Unit { UnitId = 1, UnitName = "quả", UnitType = UnitType.Integer },
+    new Unit { UnitId = 2, UnitName = "cái", UnitType = UnitType.Integer },
+    new Unit { UnitId = 3, UnitName = "hộp", UnitType = UnitType.Integer },
+    new Unit { UnitId = 4, UnitName = "chai", UnitType = UnitType.Integer },
+    new Unit { UnitId = 5, UnitName = "gói", UnitType = UnitType.Integer },
+    new Unit { UnitId = 6, UnitName = "bịch", UnitType = UnitType.Integer },
+    new Unit { UnitId = 7, UnitName = "bó", UnitType = UnitType.Integer },
+    new Unit { UnitId = 8, UnitName = "con", UnitType = UnitType.Integer },
+    new Unit { UnitId = 9, UnitName = "túi", UnitType = UnitType.Integer },
+
+    new Unit { UnitId = 10, UnitName = "kg", UnitType = UnitType.Decimal },
+    new Unit { UnitId = 11, UnitName = "gram", UnitType = UnitType.Decimal },
+    new Unit { UnitId = 12, UnitName = "lít", UnitType = UnitType.Decimal },
+    new Unit { UnitId = 13, UnitName = "ml", UnitType = UnitType.Decimal }
+);
+
+
         OnModelCreatingPartial(modelBuilder);
     }
+
+
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

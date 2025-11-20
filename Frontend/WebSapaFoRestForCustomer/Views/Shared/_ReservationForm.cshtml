@@ -1,5 +1,18 @@
 ﻿@model ReservationViewModel
 
+@{
+    var now = DateTime.Now;
+
+    // Giờ mở cửa và đóng cửa
+    var startTime = new TimeSpan(8, 0, 0);
+    var endTime = new TimeSpan(22, 0, 0);
+
+    // Làm tròn lên 30 phút gần nhất
+    int roundedMinutes = (int)Math.Ceiling(now.Minute / 30.0) * 30;
+    var defaultTime = new TimeSpan(now.Hour, roundedMinutes % 60, 0);
+    if (roundedMinutes == 60)
+        defaultTime = new TimeSpan(now.Hour + 1, 0, 0);
+}
 
 <form id="reservationForm" method="post" asp-controller="Reservation" asp-action="Confirm">
     @Html.AntiForgeryToken()
@@ -13,7 +26,7 @@
     <div class="mb-3">
         <label asp-for="Phone" class="form-label"></label>
         <div class="input-group">
-            <input asp-for="Phone"  class="form-control" placeholder="Nhập số điện thoại" />
+            <input asp-for="Phone" class="form-control" placeholder="Nhập số điện thoại" />
             <button type="button" id="sendOtpBtn" class="btn btn-outline-primary">Gửi OTP</button>
         </div>
         <span asp-validation-for="Phone" class="text-danger"></span>
@@ -25,28 +38,33 @@
         <span asp-validation-for="OtpCode" class="text-danger"></span>
     </div>
 
-    <!-- Ngày và giờ cùng hàng -->
+    <!-- Ngày và giờ -->
     <div class="mb-3 date-time-row">
         <div class="form-group">
             <label asp-for="ReservationDate" class="form-label"></label>
-            <input asp-for="ReservationDate" type="date" class="form-control" />
-            <span asp-validation-for="ReservationDate" class="text-danger"></span>
+            <input asp-for="ReservationDate" type="date" class="form-control"
+                   id="ReservationDate"
+                   value="@now.ToString("yyyy-MM-dd")"
+                   min="@now.ToString("yyyy-MM-dd")" />
         </div>
         <div class="form-group">
             <label asp-for="ReservationTime" class="form-label"></label>
-            <select asp-for="ReservationTime" class="form-select">
+            <select asp-for="ReservationTime" id="ReservationTime" class="form-select">
                 @{
-                    var start = new TimeSpan(6, 0, 0);
-                    var end = new TimeSpan(22, 0, 0);
-                    for (var time = start; time <= end; time += TimeSpan.FromMinutes(30))
+                    var time = startTime;
+                    while (time <= endTime)
                     {
-                        <option value="@time">@time.ToString(@"hh\:mm")</option>
+                        var display = time.ToString(@"hh\:mm");
+                        <option value="@display">@display</option>
+                        ;
+                        time = time.Add(TimeSpan.FromMinutes(30));
                     }
                 }
             </select>
-            <span asp-validation-for="ReservationTime" class="text-danger"></span>
         </div>
     </div>
+
+    <span class="text-danger mt-1" id="dateTimeValidation"></span>
 
     <div class="mb-3">
         <label asp-for="NumberOfGuests" class="form-label"></label>
@@ -63,8 +81,122 @@
     <button type="submit" class="btn btn-reservation w-100">Xác nhận đặt bàn</button>
 </form>
 
+<style>
+    .date-time-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+        .date-time-row .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+    #dateTimeValidation {
+        font-size: 0.875rem;
+        color: #dc3545;
+        margin-top: 0.25rem;
+    }
+
+    input.input-validation-error,
+    select.input-validation-error,
+    textarea.input-validation-error {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25);
+    }
+</style>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-   
 
+    <script>
+        const form = document.getElementById('reservationForm');
+        const dateInput = document.getElementById('ReservationDate');
+        const timeSelect = document.getElementById('ReservationTime');
+        const errorSpan = document.getElementById('dateTimeValidation');
+
+        const startHour = 8;
+        const endHour = 22;
+
+        function parseLocalDate(dateStr) {
+            // dateStr dạng "yyyy-MM-dd" -> tạo Date theo giờ local (tránh lệch UTC)
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+
+        function filterTimeOptions() {
+            if (!dateInput.value) return;
+            const selectedDate = parseLocalDate(dateInput.value);
+            const now = new Date();
+
+            // reset hiển thị tất cả option
+            for (let option of timeSelect.options) {
+                option.hidden = false;
+            }
+
+            // Nếu là hôm nay
+            if (selectedDate.toDateString() === now.toDateString()) {
+                const currentHour = now.getHours();
+                const currentMinute = now.getMinutes();
+                let nextSlotHour = currentHour;
+                let nextSlotMinute = currentMinute <= 30 ? 30 : 0;
+
+                if (currentMinute > 30) nextSlotHour++;
+
+                // Nếu sau 22h => ẩn toàn bộ
+                if (currentHour >= endHour) {
+                    for (let option of timeSelect.options) {
+                        option.hidden = true;
+                    }
+                    timeSelect.value = "";
+                    errorSpan.textContent = "Đã quá giờ đặt bàn hôm nay, vui lòng chọn ngày khác.";
+                    return;
+                } else {
+                    errorSpan.textContent = "";
+                }
+
+                // Ẩn giờ đã qua
+                for (let option of timeSelect.options) {
+                    const [hour, minute] = option.value.split(':').map(Number);
+                    if (hour < nextSlotHour || (hour === nextSlotHour && minute < nextSlotMinute)) {
+                        option.hidden = true;
+                    }
+                }
+
+                // Chọn option đầu tiên hợp lệ
+                const firstVisible = Array.from(timeSelect.options).find(o => !o.hidden);
+                if (firstVisible) {
+                    timeSelect.value = firstVisible.value;
+                } else {
+                    timeSelect.value = "";
+                }
+            } else {
+                // Nếu chọn ngày khác hôm nay -> hiển thị full
+                errorSpan.textContent = "";
+                timeSelect.value = timeSelect.options[0].value;
+                for (let option of timeSelect.options) {
+                    option.hidden = false;
+                }
+            }
+        }
+
+        // Khi load trang (lọc cho hôm nay)
+        window.addEventListener('DOMContentLoaded', filterTimeOptions);
+        // Khi đổi ngày
+        dateInput.addEventListener('change', filterTimeOptions);
+
+        // Validation khi submit
+        form.addEventListener('submit', function (e) {
+            const date = dateInput.value;
+            const time = timeSelect.value;
+            errorSpan.textContent = '';
+
+            if (!date || !time) {
+                e.preventDefault();
+                errorSpan.textContent = 'Vui lòng chọn ngày và giờ đặt bàn hợp lệ';
+            }
+        });
+    </script>
 }

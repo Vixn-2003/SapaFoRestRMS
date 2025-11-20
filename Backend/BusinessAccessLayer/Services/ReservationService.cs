@@ -4,6 +4,7 @@ using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using System;
 using System.Threading.Tasks;
+using static DataAccessLayer.Repositories.ReservationRepository;
 
 namespace BusinessAccessLayer.Services
 {
@@ -108,7 +109,8 @@ namespace BusinessAccessLayer.Services
                     r.TimeSlot,
                     r.NumberOfGuests,
                     r.Status,
-                    r.DepositAmount,  
+                    r.DepositAmount,
+                    r.TotalDepositPaid,
                     r.DepositPaid,
                     TableIds = r.ReservationTables.Select(rt => rt.TableId).ToList()
                 }).ToList()
@@ -141,6 +143,10 @@ namespace BusinessAccessLayer.Services
         public async Task<List<int>> GetBookedTableIdsAsync(DateTime date, string slot)
         {
             return await _reservationRepository.GetBookedTableIdsAsync(date, slot);
+        }
+        public async Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime date, string slot)
+        {
+            return await _reservationRepository.GetBookedTableDetailsAsync(date, slot);
         }
 
         public async Task<object> SuggestTablesByAreasAsync(DateTime date, string slot, int guests, int? currentReservationId = null)
@@ -321,6 +327,117 @@ namespace BusinessAccessLayer.Services
                 Refunded = refund
             };
         }
+        // Lấy danh sách đặt bàn của khách hàng
+        public async Task<object> GetReservationsByCustomerAsync(int customerId)
+        {
+            var reservations = await _reservationRepository.GetReservationsByCustomerAsync(customerId);
+
+            return reservations.Select(r => new
+            {
+                r.ReservationId,
+                r.CustomerNameReservation,
+                r.ReservationDate,
+                r.ReservationTime,
+                r.TimeSlot,
+                r.NumberOfGuests,
+                r.Status,
+                r.Notes,
+                r.DepositAmount,
+                r.DepositPaid
+            }).ToList();
+        }
+
+        //  Cập nhật đặt bàn khi trạng thái là Pending
+        public async Task<object> UpdateReservationAsync(int reservationId, ReservationUpdateDto dto)
+        {
+            //  1. Lấy thông tin đặt bàn
+            var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
+            if (reservation == null)
+                throw new Exception("Không tìm thấy đơn đặt bàn.");
+
+            //  2. Chỉ cho phép chỉnh sửa khi trạng thái là Pending
+            if (reservation.Status != "Pending")
+                throw new Exception("Chỉ có thể chỉnh sửa đơn ở trạng thái 'Pending'.");
+
+            //  3. Kiểm tra dữ liệu hợp lệ
+            if (dto.NumberOfGuests <= 0)
+                throw new Exception("Số lượng khách phải lớn hơn 0.");
+
+            if (dto.ReservationDate == DateTime.MinValue)
+                throw new Exception("Vui lòng chọn ngày đặt bàn hợp lệ.");
+
+            if (dto.ReservationTime == DateTime.MinValue)
+                throw new Exception("Vui lòng chọn giờ đặt bàn hợp lệ.");
+
+            //  4. Kiểm tra ngày & giờ đặt
+            DateTime currentDate = DateTime.Now.Date;
+            DateTime currentDateTime = DateTime.Now;
+            DateTime reservationDate = dto.ReservationDate.Date;
+            DateTime combinedTime = reservationDate + dto.ReservationTime.TimeOfDay;
+
+            if (reservationDate < currentDate)
+                throw new Exception("Ngày đặt không được nhỏ hơn ngày hiện tại.");
+
+            // Nếu là hôm nay thì phải đặt sau thời điểm hiện tại
+            if (reservationDate == currentDate && combinedTime <= currentDateTime)
+                throw new Exception("Thời gian đặt bàn hôm nay phải lớn hơn thời điểm hiện tại.");
+
+            //Cập nhật thông tin đặt bàn
+            reservation.ReservationDate = reservationDate;
+            reservation.ReservationTime = combinedTime;
+            reservation.NumberOfGuests = dto.NumberOfGuests;
+            reservation.Notes = dto.Notes;
+
+            //  Cập nhật lại TimeSlot theo giờ
+            string GetTimeSlot(DateTime time)
+            {
+                int hour = time.Hour;
+                if (hour >= 6 && hour < 10) return "Ca sáng";
+                if (hour >= 10 && hour < 14) return "Ca trưa";
+                return "Ca tối";
+            }
+            reservation.TimeSlot = GetTimeSlot(reservation.ReservationTime);
+
+            // 7. Lưu thay đổi
+            await _reservationRepository.SaveChangesAsync();
+
+            // 8. Trả về dữ liệu cập nhật
+            return new
+            {
+                reservation.ReservationId,
+                reservation.ReservationDate,
+                reservation.ReservationTime,
+                reservation.TimeSlot,
+                reservation.NumberOfGuests,
+                reservation.Notes,
+                reservation.Status
+            };
+        }
+
+
+
+        // Hủy đặt bàn do khách hàng thực hiện
+        public async Task<object> CancelReservationByCustomerAsync(int reservationId)
+        {
+            var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
+            if (reservation == null)
+                throw new Exception("Không tìm thấy đơn đặt bàn.");
+
+            if (reservation.Status != "Pending" && reservation.Status != "Confirmed")
+                throw new Exception("Chỉ có thể hủy đơn ở trạng thái 'Pending' hoặc 'Confirmed'.");
+
+            reservation.Status = "Cancelled";
+            reservation.ReservationTables.Clear();
+
+            await _reservationRepository.SaveChangesAsync();
+
+            return new
+            {
+                reservation.ReservationId,
+                reservation.Status
+            };
+        }
+
 
     }
 }

@@ -1,0 +1,158 @@
+﻿@model WebSapaForestForStaff.DTOs.DashboardDataDto
+@{
+    int currentPage = (int)(ViewData["CurrentPage"] ?? 1);
+    int pageSize = (int)(ViewData["PageSize"] ?? 20);
+    // Tính toán lại TotalPages phòng trường hợp Model chưa tính
+    int totalPages = (Model.TotalCount > 0)
+        ? (int)Math.Ceiling((double)Model.TotalCount / pageSize)
+        : 1;
+
+    var currentFloor = ViewData["CurrentFloor"] as int?;
+    var currentArea = ViewData["CurrentArea"] as string;
+    var currentStatus = ViewData["CurrentStatus"] as string;
+    // ⭐️ QUAN TRỌNG: Lấy từ khóa tìm kiếm để giữ lại khi chuyển trang
+    var currentSearch = ViewData["CurrentSearch"] as string;
+}
+
+<style>
+    /* Container phân trang */
+    .paging-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px dashed #eee;
+    }
+
+    /* Override Bootstrap Pagination */
+    .pagination {
+        margin: 0;
+        gap: 6px; /* Khoảng cách giữa các nút */
+    }
+
+    .page-item .page-link {
+        border: none;
+        border-radius: 8px !important; /* Bo góc */
+        color: #666;
+        background-color: white;
+        font-weight: 600;
+        font-size: 13px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+        transition: all 0.2s;
+    }
+
+        /* Hover state */
+        .page-item .page-link:hover {
+            background-color: #f0f2f5;
+            color: var(--primary-orange);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+
+    /* Active state (Trang hiện tại) */
+    .page-item.active .page-link {
+        background-color: var(--active-purple); /* Màu tím chủ đạo */
+        color: white;
+        box-shadow: 0 4px 10px rgba(89, 74, 135, 0.3);
+    }
+
+    /* Disabled state */
+    .page-item.disabled .page-link {
+        background-color: #f9f9f9;
+        color: #ccc;
+        pointer-events: none;
+        box-shadow: none;
+    }
+
+    /* Focus state (xóa viền xanh mặc định của Bootstrap) */
+    .page-link:focus {
+        box-shadow: none;
+    }
+</style>
+
+@if (totalPages > 1)
+{
+    <nav class="paging-wrapper">
+        <div class="text-muted small me-3 d-none d-md-block">
+            Trang <b>@currentPage</b> / @totalPages
+        </div>
+
+        <ul class="pagination">
+
+            <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                <a class="page-link"
+                   asp-route-page="@(currentPage - 1)"
+                   asp-route-floor="@currentFloor"
+                   asp-route-areaName="@currentArea"
+                   asp-route-status="@currentStatus"
+                   asp-route-searchString="@currentSearch"
+                   aria-label="Previous">
+                    <i class="fa-solid fa-chevron-left" style="font-size: 12px;"></i>
+                </a>
+            </li>
+
+            @* Logic hiển thị thông minh: Nếu quá nhiều trang, chỉ hiện 1 vài trang quanh trang hiện tại *@
+            @{
+                int startPage = Math.Max(1, currentPage - 2);
+                int endPage = Math.Min(totalPages, currentPage + 2);
+
+                // Luôn hiện trang 1
+                if (startPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-route-page="1"
+                           asp-route-floor="@currentFloor" asp-route-areaName="@currentArea" asp-route-status="@currentStatus" asp-route-searchString="@currentSearch">1</a>
+                    </li>
+                    if (startPage > 2)
+                    {
+                        <li class="page-item disabled"><span class="page-link bg-transparent shadow-none">...</span></li>
+                    }
+                }
+
+                for (int i = startPage; i <= endPage; i++)
+                {
+                    <li class="page-item @(i == currentPage ? "active" : "")">
+                        <a class="page-link"
+                           asp-route-page="@i"
+                           asp-route-floor="@currentFloor"
+                           asp-route-areaName="@currentArea"
+                           asp-route-status="@currentStatus"
+                           asp-route-searchString="@currentSearch">@i</a>
+                    </li>
+                }
+
+                // Luôn hiện trang cuối
+                if (endPage < totalPages)
+                {
+                    if (endPage < totalPages - 1)
+                    {
+                        <li class="page-item disabled"><span class="page-link bg-transparent shadow-none">...</span></li>
+                    }
+                    <li class="page-item">
+                        <a class="page-link" asp-route-page="@totalPages"
+                           asp-route-floor="@currentFloor" asp-route-areaName="@currentArea" asp-route-status="@currentStatus" asp-route-searchString="@currentSearch">@totalPages</a>
+                    </li>
+                }
+            }
+
+            <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                <a class="page-link"
+                   asp-route-page="@(currentPage + 1)"
+                   asp-route-floor="@currentFloor"
+                   asp-route-areaName="@currentArea"
+                   asp-route-status="@currentStatus"
+                   asp-route-searchString="@currentSearch"
+                   aria-label="Next">
+                    <i class="fa-solid fa-chevron-right" style="font-size: 12px;"></i>
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+}

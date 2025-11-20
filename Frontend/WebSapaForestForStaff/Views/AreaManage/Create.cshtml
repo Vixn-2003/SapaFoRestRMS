@@ -1,0 +1,41 @@
+﻿@model WebSapaForestForStaff.DTOs.AreaManage.AreaCreateDto
+
+@{
+    ViewData["Title"] = "Thêm khu vực mới";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-success">➕ Thêm khu vực mới</h2>
+    <hr />
+
+    <form asp-action="Create" method="post">
+     
+        <div class="form-group mb-3">
+            <label asp-for="AreaName" class="form-label fw-bold">Tên khu vực</label>
+            <input asp-for="AreaName" class="form-control" placeholder="Nhập tên khu vực..." />
+            <span asp-validation-for="AreaName" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="Floor" class="form-label fw-bold">Tầng</label>
+            <input asp-for="Floor" type="number" min="1" class="form-control" placeholder="Nhập số tầng..." />
+            <span asp-validation-for="Floor" class="text-danger"></span>
+        </div>
+
+        <div class="form-group mb-3">
+            <label asp-for="Description" class="form-label fw-bold">Mô tả</label>
+            <textarea asp-for="Description" class="form-control" rows="3" placeholder="Thêm mô tả (nếu có)..."></textarea>
+        </div>
+
+        <div class="d-flex justify-content-between">
+            <a asp-action="Index" class="btn btn-secondary px-4">⬅ Quay lại</a>
+            <button type="submit" class="btn btn-success px-4">💾 Lưu khu vực</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

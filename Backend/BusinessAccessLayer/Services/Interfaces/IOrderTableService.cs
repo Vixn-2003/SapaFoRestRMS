@@ -37,7 +37,12 @@ namespace BusinessAccessLayer.Services.Interfaces
         /// <summary>
         /// Nhận giỏ hàng từ khách và tạo Order
         /// </summary>
-        Task<OrderResultDto> SubmitOrderAsync(OrderSubmissionDto orderDto);
+        Task<OrderResultDto> SubmitOrderAsync(SubmitOrderRequest orderDto);
+        //Gọi xử lý sự cố
+        Task RequestAssistanceAsync(AssistanceRequestDto requestDto);
 
+        Task<ComboDetailDto> GetComboDetailsAsync(int comboId);
+
+        Task<MenuItemDetailDto> GetMenuItemDetailsAsync(int menuItemId);
     }
 }

@@ -1,53 +1,74 @@
-﻿/* --- Form tổng thể --- */
-#reservationForm {
-    max-width: 550px;
-    margin: 30px auto;
-    background: linear-gradient(to bottom, #e0f2f1, #a5d6a7); /* xanh rừng nhạt */
-    padding: 25px;
+﻿.modal-content {
+    background: linear-gradient(135deg, #1b5e20, #33691e);
+    color: #fff;
     border-radius: 20px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    border-top: 5px solid #2e7d32; /* viền xanh rừng đậm */
+    border: none;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
 }
 
-    /* --- Labels --- */
-    #reservationForm .form-label {
-        font-weight: 600;
-        color: #1b5e20; /* xanh rừng đậm */
+/*mẫu 6*/
+#reservationForm {
+    max-width: 550px;
+    margin: 40px auto;
+    background: linear-gradient(to bottom, #e8f5e9, #c8e6c9);
+    border: 1px solid #795548;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 5px 18px rgba(0,0,0,0.3);
+    font-family: "Segoe UI", sans-serif;
+}
+
+.form-label {
+    color: #3e2723;
+    font-weight: 600;
+}
+
+.form-control, .form-select, textarea {
+    border: 1px solid #8d6e63;
+    border-radius: 8px;
+    background-color: #fdfcfb;
+}
+
+.btn-reservation {
+    background-color: #6d4c41;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+    .btn-reservation:hover {
+        background-color: #4e342e;
     }
 
-    /* --- Inputs & select --- */
-    #reservationForm .form-control,
-    #reservationForm .form-select,
-    #reservationForm textarea {
-        border-radius: 10px;
-        border: 1px solid #66bb6a;
-        padding: 10px;
-    }
-
-    /* --- Button Xác nhận --- */
-    #reservationForm .btn-reservation {
-        background-color: #388e3c;
-        color: #fff;
-        font-weight: bold;
-        border-radius: 10px;
-        transition: all 0.3s ease;
-    }
-
-        #reservationForm .btn-reservation:hover {
-            background-color: #2e7d32;
-        }
-
-/* --- Button Gửi OTP --- */
 #sendOtpBtn {
-    background-color: #81c784;
-    color: #1b5e20;
-    border-radius: 10px;
-    transition: all 0.3s ease;
+    background-color: #a1887f;
+    color: #fff;
+    border-radius: 8px;
 }
 
     #sendOtpBtn:hover {
-        background-color: #66bb6a;
+        background-color: #8d6e63;
     }
+
+
+.date-time-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+    .date-time-row .form-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+#dateTimeValidation {
+    font-size: 0.875rem;
+    color: #dc3545;
+    margin-top: 0.25rem;
+}
 
 /* --- Thông báo lỗi --- */
 #reservationForm .text-danger {

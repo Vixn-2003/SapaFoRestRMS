@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"] - WareHouse</title>
     <style>
+        /* Reset cho toàn bộ trang */
         * {
             margin: 0;
             padding: 0;
@@ -18,241 +19,305 @@
             overflow: hidden;
         }
 
-        .container {
+        /* Scope tất cả CSS của layout vào container chính */
+        .layout-container {
             display: flex;
             height: 100vh;
         }
 
-        /* Sidebar */
-        .sidebar {
+        /* Sidebar - prefix với .layout-sidebar */
+        .layout-sidebar {
             width: 250px;
             background: linear-gradient(180deg, #c4c4c4 0%, #a8a8a8 100%);
             display: flex;
             flex-direction: column;
             padding: 20px 0;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
         }
 
-        .logo {
-            padding: 0 20px 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        }
+            .layout-sidebar .sidebar-logo {
+                padding: 0 20px 10px;
+                margin-bottom: 20px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            }
 
-        .logo h1 {
-            color: #22c55e;
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
+                .layout-sidebar .sidebar-logo h1 {
+                    color: #22c55e;
+                    font-size: 24px;
+                    font-weight: 700;
+                    margin-bottom: 5px;
+                }
 
-        .logo p {
-            color: #333;
-            font-size: 12px;
-            font-weight: 500;
-        }
+                .layout-sidebar .sidebar-logo p {
+                    color: #333;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
 
-        .menu {
-            flex: 1;
-            overflow-y: auto;
-        }
+            .layout-sidebar .sidebar-menu {
+                flex: 1;
+                overflow-y: auto;
+            }
 
-        .menu-item {
-            display: flex;
-            align-items: center;
-            padding: 14px 20px;
-            color: #333;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            margin: 0 15px 5px;
-            border-radius: 8px;
-        }
+            .layout-sidebar .sidebar-menu-item {
+                display: flex;
+                align-items: center;
+                padding: 14px 20px;
+                color: #333;
+                text-decoration: none;
+                transition: all 0.3s ease;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                margin: 0 15px 5px;
+                border-radius: 8px;
+            }
 
-        .menu-item:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
+                .layout-sidebar .sidebar-menu-item:hover {
+                    background-color: rgba(255, 255, 255, 0.2);
+                }
 
-        .menu-item.active {
-            background-color: #22c55e;
-            color: white;
-        }
+                /* Active state - màu xanh lá với chữ trắng */
+                .layout-sidebar .sidebar-menu-item.active {
+                    background-color: #22c55e;
+                    color: white;
+                    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+                }
 
-        .menu-item svg {
-            width: 20px;
-            height: 20px;
-            margin-right: 12px;
-        }
+                    .layout-sidebar .sidebar-menu-item.active svg {
+                        color: white;
+                    }
 
-        /* User Section */
-        .user-section {
-            padding: 15px 20px;
-            margin: 10px 15px;
-            background-color: rgba(255, 255, 255, 0.15);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+                .layout-sidebar .sidebar-menu-item svg {
+                    width: 20px;
+                    height: 20px;
+                    margin-right: 12px;
+                    flex-shrink: 0;
+                    color: #333;
+                    transition: color 0.3s ease;
+                }
 
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: #3b82f6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 16px;
-        }
+            /* User Section */
+            .layout-sidebar .sidebar-user-section {
+                padding: 15px 20px;
+                margin: 10px 15px;
+                background-color: rgba(255, 255, 255, 0.15);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
 
-        .user-info {
-            flex: 1;
-        }
+            .layout-sidebar .sidebar-user-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background-color: #3b82f6;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: 600;
+                font-size: 16px;
+                flex-shrink: 0;
+            }
 
-        .user-name {
-            font-size: 13px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 2px;
-        }
+            .layout-sidebar .sidebar-user-info {
+                flex: 1;
+                min-width: 0;
+            }
 
-        .user-email {
-            font-size: 11px;
-            color: #555;
-        }
+            .layout-sidebar .sidebar-user-name {
+                font-size: 13px;
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
-        .logout-btn {
-            width: calc(100% - 30px);
-            margin: 10px 15px;
-            padding: 12px;
-            background-color: #dc2626;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
+            .layout-sidebar .sidebar-user-email {
+                font-size: 11px;
+                color: #555;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
 
-        .logout-btn:hover {
-            background-color: #b91c1c;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-        }
+            .layout-sidebar .sidebar-logout-btn {
+                width: calc(100% - 30px);
+                margin: 10px 15px;
+                padding: 12px;
+                background-color: #dc2626;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
 
-        /* Main Content */
-        .main-content {
+                .layout-sidebar .sidebar-logout-btn:hover {
+                    background-color: #b91c1c;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+                }
+
+        /* Main Content - prefix với .layout-main */
+        .layout-main-content {
             margin: 20px;
             flex: 1;
             overflow-y: auto;
             background-color: #e8eaed;
+            min-width: 0;
         }
 
-        /* Scrollbar styling */
-        .menu::-webkit-scrollbar,
-        .main-content::-webkit-scrollbar {
-            width: 6px;
-        }
+            /* Scrollbar styling - chỉ cho layout */
+            .layout-sidebar .sidebar-menu::-webkit-scrollbar,
+            .layout-main-content::-webkit-scrollbar {
+                width: 6px;
+            }
 
-        .menu::-webkit-scrollbar-track,
-        .main-content::-webkit-scrollbar-track {
-            background: transparent;
-        }
+            .layout-sidebar .sidebar-menu::-webkit-scrollbar-track,
+            .layout-main-content::-webkit-scrollbar-track {
+                background: transparent;
+            }
 
-        .menu::-webkit-scrollbar-thumb,
-        .main-content::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 3px;
-        }
+            .layout-sidebar .sidebar-menu::-webkit-scrollbar-thumb,
+            .layout-main-content::-webkit-scrollbar-thumb {
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 3px;
+            }
 
-        .menu::-webkit-scrollbar-thumb:hover,
-        .main-content::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.3);
-        }
+                .layout-sidebar .sidebar-menu::-webkit-scrollbar-thumb:hover,
+                .layout-main-content::-webkit-scrollbar-thumb:hover {
+                    background: rgba(0, 0, 0, 0.3);
+                }
 
         /* Responsive */
         @@media (max-width: 768px) {
-            .sidebar {
+            .layout-sidebar {
                 width: 200px;
             }
 
-            .content-wrapper {
-                padding: 20px;
+            .layout-main-content {
+                padding: 15px;
             }
+        }
+
+        @@media (max-width: 576px) {
+            .layout-sidebar {
+                width: 70px;
+            }
+
+                .layout-sidebar .sidebar-logo p,
+                .layout-sidebar .sidebar-user-info,
+                .layout-sidebar .sidebar-menu-item span {
+                    display: none;
+                }
+
+                .layout-sidebar .sidebar-logo h1 {
+                    font-size: 18px;
+                }
+
+                .layout-sidebar .sidebar-menu-item svg {
+                    margin-right: 0;
+                }
+
+                .layout-sidebar .sidebar-logout-btn {
+                    font-size: 0;
+                    padding: 12px;
+                }
+
+                    .layout-sidebar .sidebar-logout-btn::before {
+                        content: '↩';
+                        font-size: 18px;
+                    }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="layout-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">
+        <aside class="layout-sidebar">
+            <div class="sidebar-logo">
                 <h1>WareHouse</h1>
                 <p>Quản lý kho</p>
             </div>
 
-            <nav class="menu">
-                <a href="/Dashboard" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/Dashboard" ? "active" : "")">
+            <nav class="sidebar-menu">
+                <a href="@Url.Action("Index", "Dashboard")"
+                   class="sidebar-menu-item"
+                   data-controller="Dashboard">
                     <svg fill="currentColor" viewBox="0 0 24 24">
                         <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
                     </svg>
-                    Dashboard
+                    <span>Dashboard</span>
                 </a>
 
-                <a href="/NhapHang" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/NhapHang" ? "active" : "")">
+                <a href="@Url.Action("Index", "MainImportInventory")"
+                   class="sidebar-menu-item"
+                   data-controller="MainImportInventory">
                     <svg fill="currentColor" viewBox="0 0 24 24">
                         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z" />
                     </svg>
-                    Nhập hàng
+                    <span>Nhập hàng</span>
                 </a>
 
-                <a href="/XuatHang" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/XuatHang" ? "active" : "")">
+                <a href="@Url.Action("Index", "ExportManagement")"
+                   class="sidebar-menu-item"
+                   data-controller="XuatHang">
                     <svg fill="currentColor" viewBox="0 0 24 24">
                         <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" />
                     </svg>
-                    Xuất hàng
+                    <span>Xuất hàng</span>
                 </a>
 
-                <a href="/TonKho" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/TonKho" ? "active" : "")">
+                <a href="@Url.Action("DisplayIngredent", "ManagerIngredent")"
+                   class="sidebar-menu-item"
+                   data-controller="ManagerIngredent">
                     <svg fill="currentColor" viewBox="0 0 24 24">
                         <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" />
                     </svg>
-                    Tồn kho
+                    <span>Nguyên liệu</span>
                 </a>
 
-                <a href="/BaoCao" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/BaoCao" ? "active" : "")">
+                <a href="@Url.Action("Index", "BaoCao")"
+                   class="sidebar-menu-item"
+                   data-controller="BaoCao">
                     <svg fill="currentColor" viewBox="0 0 24 24">
                         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
                     </svg>
-                    Báo cáo
+                    <span>Báo cáo</span>
                 </a>
 
-                <a href="/NhaCungCap" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/NhaCungCap" ? "active" : "")">
+                <a href="@Url.Action("Index", "NhaCungCap")"
+                   class="sidebar-menu-item"
+                   data-controller="NhaCungCap">
                     <svg fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                     </svg>
-                    Nhà cung cấp
+                    <span>Nhà cung cấp</span>
                 </a>
 
-                <a href="/CaiDat" class="menu-item @(ViewContext.RouteData.Values["Page"]?.ToString() == "/CaiDat" ? "active" : "")">
+                <a href="@Url.Action("Index", "CaiDat")"
+                   class="sidebar-menu-item"
+                   data-controller="CaiDat">
                     <svg fill="currentColor" viewBox="0 0 24 24">
                         <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
                     </svg>
-                    Cài đặt
+                    <span>Cài đặt</span>
                 </a>
             </nav>
 
-            <div class="user-section">
-                <div class="user-avatar">A</div>
-                <div class="user-info">
-                    <div class="user-name">Admin User</div>
-                    <div class="user-email">admin@warehouse.vn</div>
+            <div class="sidebar-user-section">
+                <div class="sidebar-user-avatar">A</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name">Admin User</div>
+                    <div class="sidebar-user-email">admin@warehouse.vn</div>
                 </div>
             </div>
 
@@ -262,23 +327,26 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                @RenderBody()
-            </div>
+        <main class="layout-main-content">
+            @RenderBody()
         </main>
     </div>
 
     <script>
         // No JS needed; form posts to logout
 
-        // Highlight active menu item based on current URL
-        document.addEventListener('DOMContentLoaded', function() {
-            const currentPath = window.location.pathname;
-            const menuItems = document.querySelectorAll('.menu-item');
+        // Highlight active menu item based on current controller
+        document.addEventListener('DOMContentLoaded', function () {
+            const currentController = '@ViewContext.RouteData.Values["Controller"]';
+            const menuItems = document.querySelectorAll('.sidebar-menu-item');
+
+            console.log('Current Controller:', currentController); // Debug log
 
             menuItems.forEach(item => {
-                if (item.getAttribute('href') === currentPath) {
+                const itemController = item.getAttribute('data-controller');
+                console.log('Item Controller:', itemController); // Debug log
+                
+                if (itemController && itemController.toLowerCase() === currentController.toLowerCase()) {
                     item.classList.add('active');
                 } else {
                     item.classList.remove('active');

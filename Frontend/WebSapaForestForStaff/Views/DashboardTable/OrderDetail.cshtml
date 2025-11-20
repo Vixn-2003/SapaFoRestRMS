@@ -1,0 +1,550 @@
+﻿@model WebSapaForestForStaff.DTOs.OrderGuest.StaffOrderScreenDto
+@{
+    ViewData["Title"] = $"Chi tiết bàn: {Model.TableNumber}";
+
+    // --- KHAI BÁO BIẾN ---
+    var currentSearch = ViewData["CurrentSearch"] as string;
+    var currentCategory = ViewData["CurrentCategory"] as int?;
+    var tableId = ViewData["TableId"] ?? Model.TableId;
+    var categories = ViewData["Categories"] as List<WebSapaForestForStaff.DTOs.OrderGuest.CategoryDto>;
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    :root {
+        --primary-orange: #ff7b00;
+        --active-purple: #594a87;
+        --bg-light: #f5f7fa;
+        --text-dark: #333;
+        --card-radius: 16px;
+    }
+
+    body {
+        background-color: var(--bg-light);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden; /* Tránh thanh cuộn ngang toàn trang */
+    }
+
+    /* --- Header --- */
+    .top-header {
+        background: white;
+        padding: 10px 20px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background-color: #eee;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: var(--active-purple);
+    }
+
+    /* --- Search Box --- */
+    .search-box-wrapper {
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 20px;
+        padding: 5px 15px;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        max-width: 400px;
+    }
+
+        .search-box-wrapper input {
+            border: none;
+            outline: none;
+            width: 100%;
+            margin-left: 10px;
+        }
+
+    /* --- Left Side: Menu --- */
+    .category-nav {
+        padding: 15px 0;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+        /* Ẩn thanh cuộn cho đẹp */
+        .category-nav::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .category-nav::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+    .cat-btn {
+        border: none;
+        background: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        margin-right: 10px;
+        font-weight: 600;
+        color: #555;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        text-decoration: none;
+        display: inline-block;
+        transition: 0.2s;
+    }
+
+        .cat-btn:hover {
+            color: var(--active-purple);
+        }
+
+        .cat-btn.active {
+            background-color: var(--active-purple);
+            color: white;
+        }
+
+    /* Product Card */
+    .product-card {
+        border: none;
+        border-radius: var(--card-radius);
+        overflow: hidden;
+        transition: transform 0.2s;
+        height: 100%;
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+    }
+
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+
+    .card-img-top {
+        height: 140px;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .card-body {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        flex-grow: 1;
+    }
+
+    .card-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 5px;
+        /* Giới hạn 2 dòng tên món */
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-top: auto;
+    }
+
+    .price {
+        font-weight: 700;
+        font-size: 15px;
+        color: #333;
+    }
+
+    .old-price {
+        font-size: 11px;
+        text-decoration: line-through;
+        color: #999;
+        display: block;
+    }
+
+    .btn-add {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--primary-orange);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        transition: 0.2s;
+    }
+
+        .btn-add:hover {
+            background-color: #e67e22;
+            color: white;
+        }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--active-purple);
+        margin: 20px 0 10px 0;
+        padding-bottom: 5px;
+        border-bottom: 2px solid #eee;
+    }
+
+    /* --- Right Side: Cart --- */
+    .right-sidebar {
+        background: white;
+        height: calc(100vh - 70px); /* Trừ đi chiều cao header chính nếu có */
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #eee;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.05);
+    }
+
+    .cart-header {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        background: #fff;
+    }
+
+    .cart-items {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 15px;
+        background: #f8f9fa;
+    }
+
+    .cart-item {
+        margin-bottom: 15px;
+        background: white;
+        padding: 12px;
+        border-radius: 12px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+        border: 1px solid #eee;
+    }
+
+    .item-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 5px;
+        color: var(--active-purple);
+    }
+
+    .item-status {
+        font-size: 11px;
+        color: #666;
+        background: #eee;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .note-input {
+        background: #f8f9fa;
+        border: 1px solid #eee;
+        font-size: 12px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        width: 100%;
+        color: #555;
+        margin: 8px 0;
+        resize: none;
+    }
+
+    /* Quantity Control */
+    .qty-control {
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-qty {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        cursor: pointer;
+    }
+
+    .btn-minus {
+        border: 1px solid var(--primary-orange);
+        color: var(--primary-orange);
+        background: white;
+    }
+
+    .btn-plus {
+        background: var(--primary-orange);
+        color: white;
+        border: none;
+    }
+
+    .qty-val {
+        width: 25px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .item-price {
+        font-weight: 700;
+        text-align: right;
+        color: var(--text-dark);
+        font-size: 14px;
+    }
+
+    /* Cart Footer */
+    .cart-footer {
+        padding: 20px;
+        border-top: 1px solid #eee;
+        background: white;
+    }
+
+    .btn-checkout {
+        background: var(--primary-orange);
+        color: white;
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .btn-checkout:hover {
+            background-color: #d96900;
+            color: white;
+        }
+
+    .btn-save-order {
+        background: var(--active-purple);
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+</style>
+
+<div class="container-fluid p-0">
+
+    @if (!string.IsNullOrEmpty(ViewData["ErrorMessage"] as string))
+    {
+        <div class="alert alert-danger m-3">@ViewData["ErrorMessage"]</div>
+    }
+    else
+    {
+        <div class="row g-0" style="height: 100vh; overflow: hidden;">
+            <div class="col-md-8 col-lg-9 d-flex flex-column h-100">
+
+                <header class="top-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3 w-100">
+                        <i class="fa-solid fa-bars fs-4 text-secondary d-none d-md-block"></i>
+
+                        <form method="get" action="@Url.Action("OrderDetail", new { id = tableId })" class="flex-grow-1 me-4">
+                            @if (currentCategory.HasValue)
+                            {
+                                <input type="hidden" name="categoryId" value="@currentCategory" />
+                            }
+                            <div class="search-box-wrapper">
+                                <i class="fa-solid fa-magnifying-glass text-secondary"></i>
+                                <input type="text" name="searchString" placeholder="Tìm món ăn, combo..." value="@currentSearch">
+                            </div>
+                        </form>
+
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-2">NV</div>
+                            <div class="user-info d-none d-sm-block">
+                                <h6>Staff</h6>
+                                <small class="text-muted">Nhân viên</small>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="flex-grow-1 p-3 overflow-auto bg-light">
+
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="category-nav flex-grow-1">
+                            <a href="@Url.Action("OrderDetail", new { id = tableId, searchString = currentSearch })"
+                               class="cat-btn @(currentCategory == null || currentCategory == 0 ? "active" : "")">
+                                Tất cả
+                            </a>
+
+                            @if (categories != null)
+                            {
+                                @foreach (var cat in categories)
+                                {
+                                    <a href="@Url.Action("OrderDetail", new { id = tableId, categoryId = cat.CategoryId, searchString = currentSearch })"
+                                       class="cat-btn @(currentCategory == cat.CategoryId ? "active" : "")">
+                                        @cat.CategoryName
+                                    </a>
+                                }
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(currentSearch) || currentCategory.HasValue)
+                        {
+                            <a href="@Url.Action("OrderDetail", new { id = tableId })" class="btn btn-sm btn-outline-secondary ms-2" title="Đặt lại">
+                                <i class="fas fa-sync"></i>
+                            </a>
+                        }
+                    </div>
+
+                    <div class="product-grid-container">
+
+                        @if (Model.Combos.Any())
+                        {
+                            <h4 class="section-title"><i class="fa-solid fa-star text-warning"></i> Combos & Ưu đãi</h4>
+                            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-4">
+                                @foreach (var combo in Model.Combos)
+                                {
+                                    <div class="col">
+                                        <div class="product-card h-100" onclick="addItemToOrder(@combo.ComboId, true)" style="cursor: pointer;">
+                                            <img src="@combo.ImageUrl" class="card-img-top" alt="@combo.Name" onerror="this.src='/images/default-food.png'">
+                                            <div class="card-body">
+                                                <h5 class="card-title">@combo.Name</h5>
+                                                <div class="price-row">
+                                                    <div>
+                                                        @if (combo.OriginalPrice > combo.Price)
+                                                        {
+                                                            <span class="old-price">@(((decimal)combo.OriginalPrice).ToString("N0"))</span>
+                                                        }
+                                                        <span class="price text-danger">@combo.Price.ToString("N0")</span>
+                                                    </div>
+                                                    <button type="button" class="btn-add"><i class="fa-solid fa-plus"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @foreach (var categoryGroup in Model.MenuItems.GroupBy(m => m.CategoryName))
+                        {
+                            <h4 class="section-title">@categoryGroup.Key</h4>
+                            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-4">
+                                @foreach (var item in categoryGroup)
+                                {
+                                    <div class="col">
+                                        <div class="product-card h-100" onclick="addItemToOrder(@item.MenuItemId, false)" style="cursor: pointer;">
+                                            <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" onerror="this.src='/images/default-food.png'">
+                                            <div class="card-body">
+                                                <h5 class="card-title">@item.Name</h5>
+                                                <div class="price-row">
+                                                    <span class="price">@item.Price.ToString("N0")</span>
+                                                    <button type="button" class="btn-add"><i class="fa-solid fa-plus"></i></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 col-lg-3 right-sidebar">
+
+                <div class="cart-header">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="fw-bold fs-5">Bàn: @Model.TableNumber</div>
+                        <span class="badge bg-secondary">@Model.AreaName - Tầng @Model.Floor</span>
+                    </div>
+
+                    @if (Model.ReservationId.HasValue)
+                    {
+                        <div class="small text-muted bg-light p-2 rounded">
+                            <i class="fa-solid fa-user"></i> @Model.CustomerName <br>
+                            <i class="fa-solid fa-phone"></i> @Model.CustomerPhone (@Model.GuestCount khách)
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted fst-italic">Khách vãng lai (Bàn trống)</div>
+                    }
+                </div>
+
+                <div class="cart-items">
+                    @if (Model.OrderedItems.Any())
+                    {
+                        @foreach (var item in Model.OrderedItems)
+                        {
+                            <div class="cart-item">
+                                <div class="d-flex justify-content-between">
+                                    <div class="item-name">@item.ItemName</div>
+                                    <div class="item-price">@item.TotalPrice.ToString("N0")</div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="item-status">@item.Status</span>
+                                    <div>
+                                        <button class="btn btn-link text-danger p-0 me-2" style="font-size: 12px;"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
+
+                                <textarea class="note-input" rows="1" placeholder="Ghi chú...">@item.Note</textarea>
+
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <div class="qty-control">
+                                        <div class="btn-qty btn-minus"><i class="fa-solid fa-minus"></i></div>
+                                        <div class="qty-val">@item.Quantity</div>
+                                        <div class="btn-qty btn-plus"><i class="fa-solid fa-plus"></i></div>
+                                    </div>
+                                    <div class="text-muted small" style="font-size: 11px;">
+                                        Đơn giá: @((item.TotalPrice / item.Quantity).ToString("N0"))
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted mt-5">
+                            <i class="fa-solid fa-utensils fs-1 mb-3 opacity-25"></i>
+                            <p>Chưa có món nào được gọi.</p>
+                        </div>
+                    }
+                </div>
+
+                <div class="cart-footer">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="fw-bold">Tổng tiền</div>
+                        <div class="fw-bold fs-4" style="color: var(--primary-orange)">
+                            @Model.GrandTotal.ToString("N0")
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn-save-order flex-fill">
+                            Lưu Order
+                        </button>
+                        <button class="btn-checkout flex-fill">
+                            Thanh toán <i class="fa-solid fa-chevron-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    }
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    function addItemToOrder(itemId, isCombo) {
+        // TODO: Implement AJAX or Redirect logic here based on your Controller
+        console.log("Adding item: " + itemId + ", IsCombo: " + isCombo);
+        // Ví dụ: window.location.href = '/Order/Add?tableId=@tableId&itemId=' + itemId ...
+    }
+</script>

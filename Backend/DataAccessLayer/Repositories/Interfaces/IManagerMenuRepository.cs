@@ -13,5 +13,12 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<IEnumerable<MenuItem>> GetManagerAllMenus();     
         Task<MenuItem> ManagerMenuByIds(int id);
 
-}
+        Task<bool> ManagerUpdateMenu(MenuItem menuItem);
+
+        Task<IEnumerable<Recipe>> GetRecipeByMenuItem(int id);
+
+        Task<bool> DeleteRecipeByMenuItemId(int menuItemId);
+
+        Task<bool> AddRecipe(Recipe recipe);
+    }
 }

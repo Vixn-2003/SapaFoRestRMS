@@ -1,25 +1,44 @@
 
-using Microsoft.EntityFrameworkCore;
+using BusinessAccessLayer.Hubs;
+using BusinessAccessLayer.Mapping;
+using BusinessAccessLayer.Services;
+using BusinessAccessLayer.Services.Interfaces;
+using BusinessLogicLayer.Services;
+using BusinessLogicLayer.Services.Interfaces;
 using DataAccessLayer;
 using DataAccessLayer.Dbcontext;
-using BusinessAccessLayer.Mapping;
-using BusinessAccessLayer.Services.Interfaces;
-using BusinessAccessLayer.Services;
-using DataAccessLayer.UnitOfWork.Interfaces;
-using DataAccessLayer.UnitOfWork;
 using DataAccessLayer.Repositories;
 using DataAccessLayer.Repositories.Interfaces;
-using SapaFoRestRMSAPI.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using DataAccessLayer.UnitOfWork;
+using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
-using BusinessLogicLayer.Services.Interfaces;
-using BusinessLogicLayer.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using SapaFoRestRMSAPI.Services;
+using System.Text;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+// -----------------------------
+// ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
+// -----------------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins(
+            "http://localhost:5158",  // frontend chạy http
+            "https://localhost:5158", // phòng khi chạy https
+             "http://localhost:5054",  // module Staff
+            "https://localhost:5054"  // phòng khi chạy https
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+    );
+});
 
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
     options.UseSqlServer(
@@ -159,6 +178,22 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
+builder.Services.AddScoped<IRestaurantIntroRepository, RestaurantIntroRepository>();
+builder.Services.AddScoped<IRestaurantIntroService, RestaurantIntroService>();
+
+builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
+builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
+builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+
+
+
+
+
+
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
@@ -169,7 +204,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
-
+builder.Services.AddScoped<IReservationDepositRepository, ReservationDepositRepository>();
+builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // Unit of Work and User Repository mapping
@@ -214,11 +250,21 @@ builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
 builder.Services.AddScoped<IPayrollService, PayrollService>();
 
+builder.Services.AddScoped<ICounterStaffRepository, CounterStaffRepository>();
+builder.Services.AddScoped<ICounterStaffService, CounterStaffService>();
+
+
 // Area Repository
 builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
 builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
+//DashBoardTable
+builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
+builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
+
+
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
+
 
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
@@ -251,8 +297,23 @@ builder.Services.AddScoped<ISalaryChangeRequestRepository, SalaryChangeRequestRe
 builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
+
+
+
+builder.Services.AddSignalR();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
+
+// ✅ Đảm bảo hỗ trợ multipart form data
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
+
+// ✅ Cấu hình kích thước file upload (nếu cần)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 52428800; // 50MB
+});
+
 
 
 builder.Services.AddAuthorization(options =>
@@ -299,10 +360,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
         policy.WithOrigins(
-            "http://localhost:5054",    // 👈 Frontend bạn đang chạy
+            "http://localhost:5054",    // 👈 Frontend bạn đang chạy 
             "http://localhost:5123",    // Razor nội bộ
-            "http://192.168.1.47:5123", // IP Razor
-            "http://192.168.1.47:5180"  // Swagger
+                                        "http://192.168.1.47:5123", // IP Razor Wifi nhà
+                                        "http://192.168.1.47:5180"  // Swagger wifi nhà
+                                        //   "http://192.168.105.100:5123", // IP Razor
+                                        //  "http://192.168.105.100:5180"  // Swagger
+
+        // "http://10.33.8.77:5123", // IP Razor
+        //"http://10.33.8.77:5180"  // Swagger
         )
         .AllowAnyHeader()
         .AllowAnyMethod()
@@ -326,7 +392,7 @@ app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 app.UseAuthentication();
 app.UseAuthorization();
 
-
+app.MapHub<ReservationHub>("/reservationHub");
 app.MapControllers();
 
 // Upsert Admin from configuration (Development)

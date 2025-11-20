@@ -2,8 +2,11 @@
 using BusinessLogicLayer.Services.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SapaFoRestRMSAPI.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using BusinessAccessLayer.Services.Interfaces; 
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -12,14 +15,15 @@ namespace SapaFoRestRMSAPI.Controllers
     public class BrandBannerController : ControllerBase
     {
         private readonly IBrandBannerService _bannerService;
-        private readonly CloudinaryService _cloudinaryService;
+        private readonly ICloudinaryService _cloudinaryService; 
 
-        public BrandBannerController(IBrandBannerService bannerService, CloudinaryService cloudinaryService)
+        public BrandBannerController(IBrandBannerService bannerService, ICloudinaryService cloudinaryService)
         {
             _bannerService = bannerService;
             _cloudinaryService = cloudinaryService;
         }
 
+       
         [HttpGet("active")]
         public async Task<ActionResult<IEnumerable<BrandBannerDto>>> GetActiveBanners()
         {
@@ -27,6 +31,7 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(banners);
         }
 
+       
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BrandBannerDto>>> GetAll()
         {
@@ -34,11 +39,14 @@ namespace SapaFoRestRMSAPI.Controllers
             await AutoUpdateBannerStatus(banners);
             return Ok(banners);
         }
+
+       
         [HttpGet("filter")]
         public async Task<IActionResult> Filter([FromQuery] string? status, [FromQuery] string? title, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 7)
         {
             var banners = await _bannerService.GetAllAsync();
             await AutoUpdateBannerStatus(banners);
+
             if (!string.IsNullOrEmpty(status))
                 banners = banners.Where(b => b.Status != null && b.Status.Equals(status, StringComparison.OrdinalIgnoreCase));
 
@@ -64,6 +72,8 @@ namespace SapaFoRestRMSAPI.Controllers
 
             return Ok(result);
         }
+
+        
         private async Task AutoUpdateBannerStatus(IEnumerable<BrandBannerDto> banners)
         {
             var now = DateTime.Now;
@@ -81,23 +91,23 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-
+       
         [HttpGet("{id}")]
         public async Task<ActionResult<BrandBanner>> GetById(int id)
         {
             var banner = await _bannerService.GetByIdAsync(id);
-            if (banner == null) return NotFound();
+            if (banner == null) return NotFound(new { message = "Không tìm thấy banner." });
             return Ok(banner);
         }
 
-
+        
         [HttpPost]
         public async Task<ActionResult> Add([FromForm] BrandBannerUpdateDto dto)
         {
             string? imageUrl = null;
             if (dto.ImageFile != null)
             {
-                imageUrl = await _cloudinaryService.UploadFileAsync(dto.ImageFile);
+                imageUrl = await _cloudinaryService.UploadFileAsync(dto.ImageFile); 
             }
 
             var banner = new BrandBanner
@@ -113,6 +123,8 @@ namespace SapaFoRestRMSAPI.Controllers
             await _bannerService.AddAsync(banner);
             return CreatedAtAction(nameof(GetById), new { id = banner.BannerId }, banner);
         }
+
+       
         [HttpGet("statuses")]
         public IActionResult GetBannerStatuses()
         {
@@ -120,14 +132,14 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(statuses);
         }
 
-
+       
         [HttpPut("{id}")]
         public async Task<ActionResult> Update(int id, [FromForm] BrandBannerUpdateDto dto)
         {
             if (id != dto.BannerId) return BadRequest();
 
             var banner = await _bannerService.GetByIdAsync(id);
-            if (banner == null) return NotFound();
+            if (banner == null) return NotFound(new { message = "Không tìm thấy banner để cập nhật." });
 
             banner.Title = dto.Title;
             banner.StartDate = dto.StartDate;
@@ -137,13 +149,14 @@ namespace SapaFoRestRMSAPI.Controllers
 
             if (dto.ImageFile != null)
             {
-                banner.ImageUrl = await _cloudinaryService.UploadFileAsync(dto.ImageFile);
+                banner.ImageUrl = await _cloudinaryService.UploadFileAsync(dto.ImageFile); 
             }
 
             await _bannerService.UpdateAsync(banner);
             return NoContent();
         }
 
+      
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {

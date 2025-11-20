@@ -1,4 +1,5 @@
 ﻿using BusinessAccessLayer.DTOs;
+using BusinessAccessLayer.DTOs.Inventory;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Text;
@@ -26,7 +27,7 @@ namespace WebSapaForestForStaff.Controllers
             var responseCombo = await _httpClient.GetAsync("api/ManagerCombo");
             var responseCategory = await _httpClient.GetAsync("api/ManagerCategory");
 
-            if (responseMenu.IsSuccessStatusCode && responseCombo.IsSuccessStatusCode)
+            if (responseMenu.IsSuccessStatusCode)
             {
                 var jsonMenu = await responseMenu.Content.ReadAsStringAsync();
                 var jsonCombo = await responseCombo.Content.ReadAsStringAsync();
@@ -55,6 +56,7 @@ namespace WebSapaForestForStaff.Controllers
             var response = await _httpClient.GetAsync($"/api/ManagerMenu/{id}");
             var responseCategory = await _httpClient.GetAsync("api/ManagerCategory");
             var responseIngredient = await _httpClient.GetAsync("api/InventoryIngredient");
+            var responseRecipe = await _httpClient.GetAsync($"/api/ManagerMenu/recipes/{id}");
 
             if (!response.IsSuccessStatusCode)
             {
@@ -64,15 +66,20 @@ namespace WebSapaForestForStaff.Controllers
             var jsonData = await response.Content.ReadAsStringAsync();
             var jsonCategory = await responseCategory.Content.ReadAsStringAsync();
             var jsonIngredient = await responseIngredient.Content.ReadAsStringAsync();
+            var jsonRecipe = await responseRecipe.Content.ReadAsStringAsync();
+
+
             var menu = JsonConvert.DeserializeObject<ManagerMenuDTO>(jsonData);
             var category = JsonConvert.DeserializeObject<List<ManagerCategoryDTO>>(jsonCategory);
-            var ingredient = JsonConvert.DeserializeObject<List<InventoryIngredientWithBatchDTO>>(jsonIngredient);
+            var ingredient = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(jsonIngredient);
+            var recipe = JsonConvert.DeserializeObject<List<ManagerRecipeDTO>>(jsonRecipe);
 
             var vm = new MenuViewModel
             {
-                ProductsMenu = menu ?? new(),               
+                ProductsMenu = menu ?? new(),
                 ProductsCategory = category ?? new(),
-                Ingredient = ingredient ?? new()
+                Ingredient = ingredient ?? new(),
+                Recipe = recipe ?? new()
             };
 
             return View("~/Views/Menu/ManagerEditMenu.cshtml", vm);
@@ -80,42 +87,75 @@ namespace WebSapaForestForStaff.Controllers
 
         // POST: Menu/UpdateMenu
         [HttpPost]
-        public async Task<IActionResult> UpdateMenu([FromForm] UpdateMenuRequest request)
+        public async Task<IActionResult> UpdateMenu()
         {
             try
             {
-                // Validate dữ liệu
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(new { message = "Dữ liệu không hợp lệ", errors = ModelState.Values });
-                }
+                // Lấy dữ liệu từ form
+                var menuItemId = Convert.ToInt32(Request.Form["ProductsMenu.MenuItemId"]);
+                var name = Request.Form["ProductsMenu.Name"].ToString();
+                var categoryId = Convert.ToInt32(Request.Form["ProductsMenu.CategoryId"]);
+                var price = Convert.ToDecimal(Request.Form["ProductsMenu.Price"]);
+                var isAvailable = Convert.ToBoolean(Request.Form["ProductsMenu.IsAvailable"]);
+                var courseType = Request.Form["ProductsMenu.CourseType"].ToString();
+                var description = Request.Form["ProductsMenu.Description"].ToString();
+                var imageUrl = Request.Form["ProductsMenu.ImageUrl"].ToString();
 
                 // Xử lý upload file ảnh (nếu có)
-                string imageUrl = null;
+                var imageFile = Request.Form.Files["ImageFile"];
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    // TODO: Xử lý upload file lên server/cloud
+                    // imageUrl = await UploadImage(imageFile);
+                }
+
+                // Lấy danh sách recipes
+                var recipe = new List<object>();
+                int index = 0;
+                while (Request.Form.ContainsKey($"MenuRecipes[{index}].IngredientId"))
+                {
+                    var ingredientId = Convert.ToInt32(Request.Form[$"MenuRecipes[{index}].IngredientId"]);
+                    var quantity = Convert.ToDecimal(Request.Form[$"MenuRecipes[{index}].QuantityNeeded"]);
+
+                    recipe.Add(new
+                    {
+                        ingredientId = ingredientId,
+                        quantity = quantity
+                    });
+
+                    index++;
+                }
+
+                // Validate
+                if (string.IsNullOrEmpty(name))
+                {
+                    return BadRequest(new { message = "Tên món ăn không được để trống" });
+                }
+
+                if (recipe.Count == 0)
+                {
+                    return BadRequest(new { message = "Vui lòng chọn ít nhất một nguyên liệu" });
+                }
 
                 // Chuẩn bị dữ liệu để gửi API
                 var menuData = new
                 {
-                    menuId = request.ProductsMenu.MenuItemId,
-                    name = request.ProductsMenu.Name,
-                    categoryId = request.ProductsMenu.CategoryId,
-                    price = request.ProductsMenu.Price,
-                    isAvailable = request.ProductsMenu.IsAvailable,
-                    courseType = request.ProductsMenu.CourseType,
-                    description = request.ProductsMenu.Description,
-                    imageUrl = imageUrl ?? request.ProductsMenu.ImageUrl,
-                    recipes = request.MenuRecipes.Select(i => new
-                    {
-                        ingredientId = i.IngredientId,
-                        quantity = i.QuantityNeeded
-                    }).ToList()
+                    menuId = menuItemId,
+                    name = name,
+                    categoryId = categoryId,
+                    price = price,
+                    isAvailable = isAvailable,
+                    courseType = courseType,
+                    description = description,
+                    imageUrl = imageUrl,
+                    recipes = recipe
                 };
 
                 // Gọi API để cập nhật
                 var jsonContent = JsonConvert.SerializeObject(menuData);
                 var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PutAsync($"api/menu/update", content);
+                var response = await _httpClient.PutAsync($"api/ManagerMenu/update", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -132,8 +172,6 @@ namespace WebSapaForestForStaff.Controllers
                 return StatusCode(500, new { message = "Có lỗi xảy ra", error = ex.Message });
             }
         }
-
-
     }
 
     public class MenuComboViewModel
@@ -147,8 +185,9 @@ namespace WebSapaForestForStaff.Controllers
     {
         public ManagerMenuDTO ProductsMenu { get; set; } = new();
 
-        public List<InventoryIngredientWithBatchDTO> Ingredient { get; set; } = new();
+        public List<InventoryIngredientDTO> Ingredient { get; set; } = new();
         public List<ManagerCategoryDTO> ProductsCategory { get; set; } = new();
+        public List<ManagerRecipeDTO> Recipe { get; set; } = new();
     }
 
     public class UpdateMenuRequest

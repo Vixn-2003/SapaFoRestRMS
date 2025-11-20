@@ -1,69 +1,72 @@
-﻿@model ReservationViewModel
+﻿@model WebSapaForestForStaff.Models.ReservationViewModel
+
 @{
-    ViewData["Title"] = "Đặt bàn cho khách";
+    ViewData["Title"] = "Tạo đơn đặt bàn mới";
 }
 
 <div class="container mt-4">
-    <h2 class="mb-4 text-center">Đặt bàn tại Nhà hàng Rừng Xanh</h2>
+    <h3>🪑 Thêm đơn đặt bàn mới</h3>
 
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success">@TempData["Success"]</div>
+        <div class="alert alert-success fade-message">@TempData["Success"]</div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger fade-message">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+        </div>
     }
 
     <form asp-action="CreateReservation" method="post">
-        @Html.AntiForgeryToken()
-
         <div class="mb-3">
-            <label asp-for="CustomerName" class="form-label"></label>
-            <input asp-for="CustomerName" class="form-control" placeholder="Nhập tên khách" />
-            <span asp-validation-for="CustomerName" class="text-danger"></span>
+            <label class="form-label">Tên khách hàng</label>
+            <input asp-for="CustomerName" class="form-control" required />
         </div>
 
         <div class="mb-3">
-            <label asp-for="Phone" class="form-label"></label>
-            <input asp-for="Phone" class="form-control" placeholder="Nhập số điện thoại" />
-            <span asp-validation-for="Phone" class="text-danger"></span>
-        </div>
-
-        <div class="mb-3 d-flex gap-3">
-            <div class="flex-fill">
-                <label asp-for="ReservationDate" class="form-label"></label>
-                <input asp-for="ReservationDate" type="date" class="form-control" />
-                <span asp-validation-for="ReservationDate" class="text-danger"></span>
-            </div>
-            <div class="flex-fill">
-                <label asp-for="ReservationTime" class="form-label"></label>
-                <select asp-for="ReservationTime" class="form-select">
-                    @{
-                        var start = new TimeSpan(6, 0, 0);
-                        var end = new TimeSpan(22, 0, 0);
-                        for (var time = start; time <= end; time += TimeSpan.FromMinutes(30))
-                        {
-                            <option value="@time">@time.ToString(@"hh\:mm")</option>
-                        }
-                    }
-                </select>
-                <span asp-validation-for="ReservationTime" class="text-danger"></span>
-            </div>
+            <label class="form-label">Số điện thoại</label>
+            <input asp-for="Phone" class="form-control" required />
         </div>
 
         <div class="mb-3">
-            <label asp-for="NumberOfGuests" class="form-label"></label>
-            <input asp-for="NumberOfGuests" type="number" min="1" class="form-control" />
-            <span asp-validation-for="NumberOfGuests" class="text-danger"></span>
+            <label class="form-label">Ngày đặt</label>
+            <input asp-for="ReservationDate" type="date" class="form-control" required />
         </div>
 
         <div class="mb-3">
-            <label asp-for="Notes" class="form-label"></label>
-            <textarea asp-for="Notes" class="form-control" placeholder="Ghi chú (nếu có)"></textarea>
-            <span asp-validation-for="Notes" class="text-danger"></span>
+            <label class="form-label">Giờ đến</label>
+            <input asp-for="ReservationTime" type="time" class="form-control" required />
         </div>
 
-        <button type="submit" class="btn btn-primary w-100">Xác nhận đặt bàn</button>
+        <div class="mb-3">
+            <label class="form-label">Số lượng khách</label>
+            <input asp-for="NumberOfGuests" type="number" min="1" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Ghi chú</label>
+            <textarea asp-for="Notes" class="form-control"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Tạo đơn</button>
+        <a asp-action="Index" class="btn btn-secondary">Quay lại</a>
     </form>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Ẩn các thông báo sau 3 giây
+        setTimeout(() => {
+            document.querySelectorAll('.fade-message').forEach(el => {
+                el.style.transition = "opacity 0.5s ease";
+                el.style.opacity = 0;
+                setTimeout(() => el.remove(), 500); // Xóa hoàn toàn sau khi ẩn
+            });
+        }, 3000);
+    </script>
 }

@@ -17,8 +17,5 @@ namespace BusinessAccessLayer.DTOs.Manager
 
         public decimal QuantityNeeded { get; set; }
 
-        public virtual Ingredient Ingredient { get; set; } = null!;
-
-        public virtual MenuItem MenuItem { get; set; } = null!;
     }
 }
