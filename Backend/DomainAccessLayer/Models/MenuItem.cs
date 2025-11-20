@@ -23,6 +23,8 @@ public partial class MenuItem
 
     public int? TimeCook { get; set; } // Thời gian nấu (phút)
 
+    public int? BatchSize { get; set; } // Số lượng mỗi mẻ nấu
+
     public virtual MenuCategory? Category { get; set; }
 
     public virtual ICollection<ComboItem> ComboItems { get; set; } = new List<ComboItem>();

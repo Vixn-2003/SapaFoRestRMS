@@ -13,6 +13,8 @@ namespace WebSapaForestForStaff.DTOs.Kitchen
         public string? ImageUrl { get; set; }
         public int TotalQuantity { get; set; }
         public string CourseType { get; set; } = string.Empty;
+        public int? TimeCook { get; set; }
+        public int? BatchSize { get; set; }
         public List<GroupedItemDetailDto> ItemDetails { get; set; } = new();
     }
 

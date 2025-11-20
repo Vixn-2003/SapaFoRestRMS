@@ -34,6 +34,8 @@ namespace WebSapaForestForStaff.DTOs.Kitchen
         public DateTime? StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public bool IsUrgent { get; set; } // Đánh dấu được yêu cầu từ bếp phó
+        public int? TimeCook { get; set; } // Thời gian nấu (phút)
+        public int? BatchSize { get; set; } // Số lượng mỗi mẻ nấu
     }
 }
 

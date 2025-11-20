@@ -23,7 +23,12 @@ using SapaFoRestRMSAPI.Hubs;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase"), sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(60); // 60 seconds command timeout
+    });
+});
 
 //Show connection string in console
 Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));

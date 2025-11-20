@@ -389,7 +389,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 25
+                        TimeCook = 25,
+                        BatchSize = 4
                     },
                     new MenuItem
                     {
@@ -399,7 +400,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 30
+                        TimeCook = 30,
+                        BatchSize = 2
                     },
                     new MenuItem
                     {
@@ -409,7 +411,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 20
+                        TimeCook = 20,
+                        BatchSize = 6
                     },
                     new MenuItem
                     {
@@ -419,7 +422,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 22
+                        TimeCook = 22,
+                        BatchSize = 3
                     },
                     // Món Xào (Món chính) -> Trạm "Xào – Chiên"
                     new MenuItem
@@ -430,7 +434,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 10
+                        TimeCook = 10,
+                        BatchSize = 8
                     },
                     new MenuItem
                     {
@@ -440,7 +445,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 12
+                        TimeCook = 12,
+                        BatchSize = 6
                     },
                     new MenuItem
                     {
@@ -450,7 +456,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 15
+                        TimeCook = 15,
+                        BatchSize = 4
                     },
                     new MenuItem
                     {
@@ -460,7 +467,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 15
+                        TimeCook = 15,
+                        BatchSize = 4
                     },
                     // Món Chiên (Món chính) -> Trạm "Xào – Chiên"
                     new MenuItem
@@ -471,7 +479,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 12
+                        TimeCook = 12,
+                        BatchSize = 10
                     },
                     new MenuItem
                     {
@@ -481,7 +490,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 15
+                        TimeCook = 15,
+                        BatchSize = 4
                     },
                     // Lẩu (Món chính) -> Trạm "Lẩu"
                     new MenuItem
@@ -492,7 +502,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = lauCategory.CategoryId,
-                        TimeCook = 20
+                        TimeCook = 20,
+                        BatchSize = 1
                     },
                     // Canh (Món chính) -> Trạm "Trạm Cơm – Canh"
                     new MenuItem
@@ -503,7 +514,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = comCanhCategory.CategoryId,
-                        TimeCook = 18
+                        TimeCook = 18,
+                        BatchSize = 3
                     },
                     new MenuItem
                     {
@@ -513,7 +525,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = comCanhCategory.CategoryId,
-                        TimeCook = 20
+                        TimeCook = 20,
+                        BatchSize = 2
                     },
                     new MenuItem
                     {
@@ -523,7 +536,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Món chính",
                         IsAvailable = true,
                         CategoryId = comCanhCategory.CategoryId,
-                        TimeCook = 15
+                        TimeCook = 15,
+                        BatchSize = 3
                     },
                     // Salad (Khai vị) -> Trạm "Khai Vị"
                     new MenuItem
@@ -534,7 +548,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Khai vị",
                         IsAvailable = true,
                         CategoryId = khaiViCategory.CategoryId,
-                        TimeCook = 8
+                        TimeCook = 8,
+                        BatchSize = 10
                     },
                     new MenuItem
                     {
@@ -544,7 +559,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Khai vị",
                         IsAvailable = true,
                         CategoryId = khaiViCategory.CategoryId,
-                        TimeCook = 10
+                        TimeCook = 10,
+                        BatchSize = 8
                     },
                     // Tráng miệng -> Trạm "Tráng Miệng"
                     new MenuItem
@@ -555,7 +571,8 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Tráng miệng",
                         IsAvailable = true,
                         CategoryId = trangMiengCategory.CategoryId,
-                        TimeCook = 5
+                        TimeCook = 5,
+                        BatchSize = 12
                     },
                     new MenuItem
                     {
@@ -565,9 +582,15 @@ namespace SapaFoRestRMSAPI.Services
                         CourseType = "Tráng miệng",
                         IsAvailable = true,
                         CategoryId = trangMiengCategory.CategoryId,
-                        TimeCook = 3
+                        TimeCook = 3,
+                        BatchSize = 15
                     }
                 };
+
+                foreach (var item in menuItems)
+                {
+                    item.BatchSize ??= 1;
+                }
 
                 await context.MenuItems.AddRangeAsync(menuItems);
                 await context.SaveChangesAsync();
@@ -609,6 +632,47 @@ namespace SapaFoRestRMSAPI.Services
                 foreach (var item in existingMenuItems.Where(m => m.TimeCook == null && timeCookMap.ContainsKey(m.Name)))
                 {
                     item.TimeCook = timeCookMap[item.Name];
+                }
+
+                var batchSizeMap = new Dictionary<string, int>
+                {
+                    // Món Nướng
+                    { "Thịt nướng", 4 },
+                    { "Gà nướng", 2 },
+                    { "Tôm nướng", 6 },
+                    { "Cá nướng", 3 },
+                    // Món Xào
+                    { "Rau xào", 8 },
+                    { "Mực xào", 6 },
+                    { "Thịt bò xào", 4 },
+                    { "Gà xào sả ớt", 4 },
+                    // Món Chiên
+                    { "Khoai tây chiên", 10 },
+                    { "Cá chiên", 4 },
+                    // Lẩu
+                    { "Lẩu thái", 1 },
+                    // Canh
+                    { "Canh chua cá", 3 },
+                    { "Canh khổ qua", 2 },
+                    { "Canh chua tôm", 3 },
+                    // Salad
+                    { "Salad rau củ", 10 },
+                    { "Salad tôm", 8 },
+                    // Tráng miệng
+                    { "Chè đậu xanh", 12 },
+                    { "Kem dừa", 15 }
+                };
+
+                foreach (var item in existingMenuItems)
+                {
+                    if (batchSizeMap.TryGetValue(item.Name, out var batchSize))
+                    {
+                        item.BatchSize = batchSize;
+                    }
+                    else if (item.BatchSize == null)
+                    {
+                        item.BatchSize = 1;
+                    }
                 }
                 
                 await context.SaveChangesAsync();

@@ -321,6 +321,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.BatchSize).HasColumnType("int").HasDefaultValue(1);
             entity.HasOne(d => d.Category).WithMany(p => p.MenuItems)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK__MenuItems__Categ__2BFE89A6");

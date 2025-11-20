@@ -689,7 +689,9 @@ function renderGroupedItems(groupedItems) {
         return;
     }
 
-    grid.innerHTML = groupedItems.map(item => createItemCard(item)).join('');
+    const sortedItems = sortGroupedItems(groupedItems);
+
+    grid.innerHTML = sortedItems.map(item => createItemCard(item)).join('');
     
     // Attach click handlers for "Bắt đầu nấu" buttons
     setTimeout(() => {
@@ -705,11 +707,67 @@ function renderGroupedItems(groupedItems) {
     }, 50);
 }
 
+function sortGroupedItems(items) {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+
+    const LONG_COOK_THRESHOLD = 15;
+
+    return [...items].sort((a, b) => {
+        const timeCookA = Number(a.timeCook) || 0;
+        const timeCookB = Number(b.timeCook) || 0;
+        const isLongCookA = timeCookA > LONG_COOK_THRESHOLD;
+        const isLongCookB = timeCookB > LONG_COOK_THRESHOLD;
+
+        if (isLongCookA && isLongCookB) {
+            if (timeCookB !== timeCookA) {
+                return timeCookB - timeCookA;
+            }
+            return compareByWaiting(a, b);
+        }
+
+        if (isLongCookA) return -1;
+        if (isLongCookB) return 1;
+
+        return compareByWaiting(a, b);
+    });
+}
+
+function compareByWaiting(a, b) {
+    const waitingA = getItemWaitingScore(a);
+    const waitingB = getItemWaitingScore(b);
+
+    if (waitingB !== waitingA) {
+        // Higher waiting minutes means older order, so show first
+        return waitingB - waitingA;
+    }
+
+    const nameA = (a.menuItemName || '').toLowerCase();
+    const nameB = (b.menuItemName || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+}
+
+function getItemWaitingScore(item) {
+    if (!item) return 0;
+
+    const baseWaiting = Number(item.waitingMinutes) || 0;
+
+    if (!Array.isArray(item.itemDetails) || item.itemDetails.length === 0) {
+        return baseWaiting;
+    }
+
+    return item.itemDetails.reduce((maxWait, detail) => {
+        const waitValue = Number(detail.waitingMinutes);
+        if (!isNaN(waitValue) && waitValue > maxWait) {
+            return waitValue;
+        }
+        return maxWait;
+    }, baseWaiting);
+}
+
 // Create item card
 function createItemCard(item) {
-    const imageUrl = item.imageUrl || '';
-    const hasImage = imageUrl && imageUrl.trim() !== '';
-
     // Get all pending order detail IDs
     const pendingOrderDetailIds = item.itemDetails
         .filter(detail => detail.status === 'Pending' || !detail.status)
@@ -723,21 +781,18 @@ function createItemCard(item) {
                         !isNaN(Number(item.timeCook)) &&
                         Number(item.timeCook) > 0;
     
-    const timeCookDisplay = hasTimeCook 
-        ? ` : <span style="color: #ff9800; font-weight: 600;">${item.timeCook}p</span>` 
-        : '';
+    const timeCookDisplay = hasTimeCook
+        ? `<span style="color: #ff9800; font-weight: 600;">${item.timeCook}p</span>`
+        : '<span style="color: #9e9e9e;">Không xác định</span>';
 
     return `
         <div class="item-card" data-menu-item-id="${item.menuItemId}">
-            <div class="item-image-container">
-                ${hasImage
-            ? `<img src="${imageUrl}" alt="${item.menuItemName}" class="item-image" onerror="this.parentElement.innerHTML='<div class=\\'item-image-placeholder\\'><i class=\\'mdi mdi-food\\'></i></div>'">`
-            : `<div class="item-image-placeholder"><i class="mdi mdi-food"></i></div>`}
-            </div>
-
-            <div class="item-header">
+            <div class="item-header" style="display: flex; flex-direction: column; gap: 4px;">
                 <div class="item-name-large">
-                    ${item.menuItemName} x${item.totalQuantity}${timeCookDisplay}
+                    ${item.menuItemName} x${item.totalQuantity}
+                </div>
+                <div class="item-time-cook">
+                    Thời gian nấu: ${timeCookDisplay}
                 </div>
             </div>
 

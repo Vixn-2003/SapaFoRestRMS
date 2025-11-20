@@ -32,6 +32,8 @@ namespace WebSapaForestForStaff.DTOs.Kitchen
         public bool IsUrgent { get; set; }
         public DateTime? StartedAt { get; set; }
         public string FireTime { get; set; } = string.Empty; // Format: HH:mm
+        public int? TimeCook { get; set; }
+        public int? BatchSize { get; set; }
     }
 }
 

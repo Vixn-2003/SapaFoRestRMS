@@ -35,6 +35,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
         public DateTime? CompletedAt { get; set; }
         public bool IsUrgent { get; set; } // Đánh dấu được yêu cầu từ bếp phó
         public int? TimeCook { get; set; } // Thời gian nấu (phút)
+        public int? BatchSize { get; set; } // Số lượng mỗi mẻ nấu
     }
 
     /// <summary>
@@ -98,6 +99,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
         public int TotalQuantity { get; set; } // Tổng số lượng từ tất cả các order
         public string CourseType { get; set; } = string.Empty;
         public int? TimeCook { get; set; } // Thời gian nấu (phút)
+        public int? BatchSize { get; set; } // Số lượng mỗi mẻ nấu
         public List<GroupedItemDetailDto> ItemDetails { get; set; } = new(); // Chi tiết từng order
     }
 
@@ -137,6 +139,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
         public DateTime? StartedAt { get; set; } // Thời gian bắt đầu nấu (khi bếp phó fire)
         public string FireTime { get; set; } = string.Empty; // Format: HH:mm - thời gian fire
         public int? TimeCook { get; set; } // Thời gian nấu (phút)
+        public int? BatchSize { get; set; } // Số lượng mỗi mẻ nấu
     }
 
     /// <summary>

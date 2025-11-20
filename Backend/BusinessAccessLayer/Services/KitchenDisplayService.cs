@@ -44,7 +44,8 @@ namespace BusinessAccessLayer.Services
                         StartedAt = null, // OrderDetail doesn't have StartedAt
                         CompletedAt = null, // OrderDetail doesn't have CompletedAt
                         IsUrgent = od.IsUrgent,
-                        TimeCook = od.MenuItem.TimeCook // Thời gian nấu (phút)
+                        TimeCook = od.MenuItem.TimeCook, // Thời gian nấu (phút)
+                        BatchSize = od.MenuItem.BatchSize
                     })
                     .ToList();
 
@@ -194,7 +195,8 @@ namespace BusinessAccessLayer.Services
                         StartedAt = null, // Không dùng KitchenTicketDetail nữa
                         CompletedAt = null, // Không dùng KitchenTicketDetail nữa
                         IsUrgent = orderDetail.IsUrgent,
-                        TimeCook = orderDetail.MenuItem.TimeCook // Thời gian nấu (phút)
+                        TimeCook = orderDetail.MenuItem.TimeCook, // Thời gian nấu (phút)
+                        BatchSize = orderDetail.MenuItem.BatchSize
                     }
                 };
             }
@@ -304,7 +306,8 @@ namespace BusinessAccessLayer.Services
                     item.MenuItem.Name,
                     item.MenuItem.ImageUrl,
                     item.MenuItem.CourseType,
-                    item.MenuItem.TimeCook
+                    item.MenuItem.TimeCook,
+                    item.MenuItem.BatchSize
                 })
                 .Select(g => new GroupedMenuItemDto
                 {
@@ -313,6 +316,7 @@ namespace BusinessAccessLayer.Services
                     ImageUrl = g.Key.ImageUrl,
                     CourseType = g.Key.CourseType ?? "Other",
                     TimeCook = g.Key.TimeCook, // Thời gian nấu (phút)
+                    BatchSize = g.Key.BatchSize,
                     // TotalQuantity chỉ tính những món còn Pending (chưa nấu)
                     // Ví dụ: có 7 món mực xào, đã nấu 2 món → chỉ hiển thị x5
                     TotalQuantity = g.Sum(item => item.OrderDetail.Quantity),
@@ -330,10 +334,9 @@ namespace BusinessAccessLayer.Services
                     }).OrderByDescending(d => d.WaitingMinutes).ToList() // Sắp xếp theo thời gian chờ giảm dần
                 })
                 .Where(g => g.TotalQuantity > 0) // Chỉ lấy những món có ít nhất 1 item Pending
-                .OrderByDescending(g => g.TotalQuantity) // Sắp xếp theo tổng số lượng giảm dần
                 .ToList();
 
-            return grouped;
+            return SortGroupedMenuItems(grouped);
         }
 
         // Helper methods
@@ -385,6 +388,69 @@ namespace BusinessAccessLayer.Services
             if (waitingMinutes > 15) return "Critical";  // Red - >15 phút
             if (waitingMinutes >= 10) return "Warning";  // Yellow - 10-15 phút
             return "Normal";                             // White/Light - 1-10 phút
+        }
+
+        private List<GroupedMenuItemDto> SortGroupedMenuItems(List<GroupedMenuItemDto> items)
+        {
+            if (items == null || items.Count == 0)
+            {
+                return new List<GroupedMenuItemDto>();
+            }
+
+            var sortedItems = new List<GroupedMenuItemDto>(items);
+            sortedItems.Sort(CompareGroupedMenuItems);
+            return sortedItems;
+        }
+
+        private int CompareGroupedMenuItems(GroupedMenuItemDto a, GroupedMenuItemDto b)
+        {
+            const int LONG_COOK_THRESHOLD = 15;
+
+            var timeCookA = a.TimeCook ?? 0;
+            var timeCookB = b.TimeCook ?? 0;
+            var isLongCookA = timeCookA > LONG_COOK_THRESHOLD;
+            var isLongCookB = timeCookB > LONG_COOK_THRESHOLD;
+
+            if (isLongCookA && isLongCookB)
+            {
+                if (timeCookB != timeCookA)
+                {
+                    return timeCookB.CompareTo(timeCookA);
+                }
+
+                return CompareByWaitingMinutes(a, b);
+            }
+
+            if (isLongCookA && !isLongCookB) return -1;
+            if (!isLongCookA && isLongCookB) return 1;
+
+            return CompareByWaitingMinutes(a, b);
+        }
+
+        private int CompareByWaitingMinutes(GroupedMenuItemDto a, GroupedMenuItemDto b)
+        {
+            var waitingA = GetMaxWaitingMinutes(a);
+            var waitingB = GetMaxWaitingMinutes(b);
+
+            if (waitingB != waitingA)
+            {
+                // Higher waiting minutes = older order => xuất hiện trước
+                return waitingB.CompareTo(waitingA);
+            }
+
+            var nameA = (a.MenuItemName ?? string.Empty).ToLowerInvariant();
+            var nameB = (b.MenuItemName ?? string.Empty).ToLowerInvariant();
+            return string.Compare(nameA, nameB, StringComparison.Ordinal);
+        }
+
+        private int GetMaxWaitingMinutes(GroupedMenuItemDto item)
+        {
+            if (item == null || item.ItemDetails == null || item.ItemDetails.Count == 0)
+            {
+                return 0;
+            }
+
+            return item.ItemDetails.Max(detail => detail.WaitingMinutes);
         }
 
         public async Task<StationItemsResponse> GetStationItemsByCategoryAsync(string categoryName)
@@ -526,7 +592,8 @@ namespace BusinessAccessLayer.Services
                         IsUrgent = orderDetail.IsUrgent,
                         StartedAt = startedAt,
                         FireTime = fireTime,
-                        TimeCook = orderDetail.MenuItem.TimeCook // Thời gian nấu (phút)
+                        TimeCook = orderDetail.MenuItem.TimeCook, // Thời gian nấu (phút)
+                        BatchSize = orderDetail.MenuItem.BatchSize
                     };
 
                     allItems.Add(item);
@@ -667,7 +734,8 @@ namespace BusinessAccessLayer.Services
                         CourseType = od.MenuItem.CourseType ?? "Other",
                         IsUrgent = od.IsUrgent,
                         CompletedAt = od.CreatedAt, // Dùng CreatedAt làm proxy (không chính xác 100%)
-                        TimeCook = od.MenuItem.TimeCook // Thời gian nấu (phút)
+                        TimeCook = od.MenuItem.TimeCook, // Thời gian nấu (phút)
+                        BatchSize = od.MenuItem.BatchSize
                     }).ToList()
                 };
 
@@ -745,7 +813,8 @@ namespace BusinessAccessLayer.Services
                         Notes = orderDetail.Notes,
                         CourseType = orderDetail.MenuItem.CourseType ?? "Other",
                         IsUrgent = orderDetail.IsUrgent,
-                        TimeCook = orderDetail.MenuItem.TimeCook // Thời gian nấu (phút)
+                        TimeCook = orderDetail.MenuItem.TimeCook, // Thời gian nấu (phút)
+                        BatchSize = orderDetail.MenuItem.BatchSize
                     }
                 };
             }
