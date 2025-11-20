@@ -865,7 +865,13 @@ namespace SapaFoRestRMSAPI.Services
 
                 // Group by CourseType using the mapping
                 var groupedByCourseType = orderDetailList
-                    .GroupBy(od => menuItemCourseTypeMap[od.MenuItemId])
+                    .GroupBy(od =>
+                    {
+                        var menuItemId = od.MenuItemId ?? 0;
+                        return menuItemCourseTypeMap.TryGetValue(menuItemId, out var courseType)
+                            ? courseType
+                            : "Unknown";
+                    })
                     .ToList();
 
                 foreach (var group in groupedByCourseType)
