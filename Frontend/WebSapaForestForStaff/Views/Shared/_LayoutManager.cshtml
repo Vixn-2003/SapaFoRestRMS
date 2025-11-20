@@ -220,7 +220,54 @@
         </ul>
     </div>
 </li>
+<!-- Add this to your sidebar in _Layout.cshtml -->
 
+<li class="nav-item">
+    <a class="nav-link" data-bs-toggle="collapse" href="#kitchenMenu" aria-expanded="false" aria-controls="kitchenMenu">
+        <i class="menu-icon mdi mdi-chef-hat"></i>
+        <span class="menu-title">Màn hình bếp</span>
+        <i class="menu-arrow"></i>
+    </a>
+    <div class="collapse" id="kitchenMenu">
+        <ul class="nav flex-column sub-menu">
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Index">
+                    <i class="mdi mdi-monitor"></i> Bếp phó (KDS)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Khai Vị">
+                    <i class="mdi mdi-leaf"></i> Trạm Khai Vị
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Lẩu">
+                    <i class="mdi mdi-pot-steam"></i> Trạm Lẩu
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Nướng than">
+                    <i class="mdi mdi-fire"></i> Trạm Nướng than
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Xào – Chiên">
+                    <i class="mdi mdi-stove"></i> Trạm Xào – Chiên
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Trạm Cơm – Canh">
+                    <i class="mdi mdi-bowl"></i> Trạm Cơm – Canh
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Tráng Miệng">
+                    <i class="mdi mdi-cupcake"></i> Trạm Tráng Miệng
+                </a>
+            </li>
+        </ul>
+    </div>
+</li>
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
                             <i class="menu-icon mdi mdi-layers-outline"></i>
@@ -337,14 +384,14 @@
             </div>
         </div>
 
+        <!-- page-body-wrapper ends -->
+    </div>
    <!-- vendor scripts -->
 <script src="~/assets/vendors/js/vendor.bundle.base.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="~/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
 <script src="~/assets/vendors/chart.js/chart.umd.js"></script>
 <script src="~/assets/vendors/progressbar.js/progressbar.min.js"></script>
-
-<!-- jQuery (đặt lại ở đây để đảm bảo sẵn sàng trước JS custom) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- toastr (phụ thuộc jQuery) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
@@ -401,6 +448,12 @@
 <script src="~/assets/js/jquery.cookie.js"></script>
 <script src="~/assets/js/dashboard.js"></script>
 
+<!-- custom scripts -->
+<script src="~/js/vouchers.js"></script>
+<script src="~/js/print-qr.js"></script>
+
+<!-- Render page-specific scripts AFTER jQuery is loaded -->
+@RenderSection("Scripts", required: false)
 
 
 </body>

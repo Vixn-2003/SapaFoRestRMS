@@ -53,5 +53,12 @@ namespace DataAccessLayer.Repositories
         {
             throw new NotImplementedException();
         }
+
+        public async Task<List<string>> GetCategoryNamesAsync()
+        {
+            return await _context.MenuCategories
+                .Select(c => c.CategoryName)
+                .ToListAsync();
+        }
     }
 }

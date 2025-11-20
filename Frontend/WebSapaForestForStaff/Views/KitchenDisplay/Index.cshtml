@@ -1,0 +1,851 @@
+﻿@{
+    ViewData["Title"] = "Kitchen Display System - Bếp Phó";
+}
+@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+@section Styles {
+    <style>
+        /* KDS Specific Styles */
+        .kds-container {
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .kds-header {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .kds-main-layout {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 200px);
+        }
+
+        .completed-orders-column {
+            width: 350px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            border: 2px solid #28a745;
+        }
+
+        .completed-orders-column.hidden {
+            display: none;
+        }
+
+        .completed-orders-header {
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .completed-orders-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .completed-order-card {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .completed-order-card .order-header {
+            background: #28a745;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .completed-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #c3e6cb;
+            gap: 10px;
+        }
+
+        .completed-item:last-child {
+            border-bottom: none;
+        }
+
+        .completed-item-check {
+            color: #28a745;
+            font-size: 20px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .active-orders-column {
+            flex: 1;
+            overflow-y: auto;
+            min-width: 0; /* Cho phép flex item co lại */
+        }
+
+        .orders-grid {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+            grid-auto-flow: row !important;
+            gap: 20px !important;
+            width: 100% !important;
+            align-items: start !important;
+            padding: 0 !important;
+        }
+        
+        /* Đảm bảo order-card không bị stretch */
+        .orders-grid .order-card {
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        /* Table group container cho mode "theo-ban" */
+        .table-group-container {
+            grid-column: 1 / -1; /* Chiếm toàn bộ chiều rộng của grid */
+        }
+        
+        .table-orders-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+
+        /* Toastr Custom Styles - Nền xanh dễ nhìn */
+        #toast-container > .toast {
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
+            opacity: 0.95 !important;
+        }
+
+        #toast-container > .toast-success {
+            background-color: #28a745 !important;
+            color: #ffffff !important;
+        }
+
+        #toast-container > .toast-error {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
+        }
+
+        #toast-container > .toast-info {
+            background-color: #17a2b8 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+        }
+
+        #toast-container > .toast-warning {
+            background-color: #ffc107 !important;
+            color: #212529 !important;
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3) !important;
+        }
+
+        #toast-container > div {
+            opacity: 1 !important;
+        }
+
+        .toast-message {
+            color: inherit !important;
+            font-weight: 500 !important;
+        }
+
+        /* Order Card */
+        .order-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .order-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Timer Badges - Màu theo thời gian */
+        .timer-badge {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        /* 1-10 phút: Màu trắng/xanh nhạt */
+        .timer-normal { 
+            background: #f0f4f8; 
+            color: #2c3e50;
+            border: 2px solid #d1dce5;
+        }
+
+        /* 10-15 phút: Màu vàng */
+        .timer-warning { 
+            background: #fff3cd; 
+            color: #856404;
+            border: 2px solid #ffc107;
+            animation: pulse-warning 2s infinite;
+        }
+
+        /* >15 phút: Màu đỏ */
+        .timer-critical { 
+            background: #f8d7da; 
+            color: #721c24;
+            border: 2px solid #dc3545;
+            animation: pulse-critical 1.5s infinite;
+        }
+
+        /* Animation cho cảnh báo */
+        @@keyframes pulse-warning {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @@keyframes pulse-critical {
+            0%, 100% { 
+                transform: scale(1); 
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            50% { 
+                transform: scale(1.08); 
+                box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+            }
+        }
+
+        /* Item List */
+        .item-list {
+            margin: 15px 0;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+
+        .item-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .item-quantity {
+            margin-right: 15px;
+            color: #666;
+        }
+
+        .item-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending { background: #e3f2fd; color: #1976d2; }
+        .status-cooking { background: #fff3e0; color: #f57c00; }
+        .status-done { background: #e8f5e9; color: #2e7d32; }
+
+        /* Special Instructions */
+        .special-instructions {
+            color: #d32f2f;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        /* Complete Button */
+        .btn-complete {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            background: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-complete:hover {
+            background: #388e3c;
+            transform: scale(1.02);
+        }
+
+        .btn-complete:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        /* Styles for "Theo từng món" view */
+        .item-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .item-image-container {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .item-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .item-image-placeholder {
+            font-size: 48px;
+            color: #ccc;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .item-name-large {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            flex: 1;
+        }
+
+        .item-details-list {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .item-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 6px;
+            background: #f8f9fa;
+            font-size: 14px;
+        }
+
+        .item-detail-order {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .item-detail-quantity {
+            margin: 0 10px;
+            color: #666;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-tabs .btn {
+            transition: all 0.3s;
+        }
+
+        .filter-tabs .btn.active {
+            background: #1976d2;
+            color: white;
+            border-color: #1976d2;
+        }
+
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        /* Order Card Clickable */
+        .order-card {
+            cursor: pointer;
+        }
+
+        /* Modal Popup Styles */
+        .order-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .order-modal-overlay.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Ensure modal is visible when shown */
+        #orderModalOverlay.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Force modal to be on top */
+        #orderModalOverlay {
+            position: fixed !important;
+            z-index: 99999 !important;
+        }
+
+        .order-modal {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .order-modal-header {
+            padding: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .order-modal-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .order-modal-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .order-modal-time {
+            font-size: 18px;
+            color: #666;
+        }
+
+        .order-modal-header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-rush, .btn-print {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-rush {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-rush:hover {
+            background: #f57c00;
+        }
+
+        .btn-rush.active {
+            background: #f57c00;
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-print {
+            background: #757575;
+            color: white;
+        }
+
+        .btn-print:hover {
+            background: #616161;
+        }
+
+        .order-modal-body {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            max-height: calc(90vh - 200px);
+        }
+
+        .order-modal-items {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .order-modal-item {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .order-modal-item:hover {
+            background: #f5f5f5;
+        }
+
+        .order-modal-item.selected {
+            background: #e3f2fd;
+            border: 2px solid #1976d2;
+        }
+
+        .order-modal-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .order-modal-item-text {
+            flex: 1;
+            font-size: 16px;
+        }
+
+        .order-modal-footer {
+            padding: 15px 10px;
+            border-top: 2px solid #e0e0e0;
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            min-width: 0;
+        }
+
+        .btn-modal {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex: 1 1 0;
+            min-width: 0;
+            white-space: nowrap;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Đặt min-width cụ thể cho từng nút để text hiển thị đầy đủ */
+        .btn-modal-cancel {
+            flex: 0 0 auto;
+            min-width: 70px;
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .btn-modal-cancel:hover {
+            background: #757575;
+        }
+        
+        .btn-modal-select-all {
+            flex: 0 0 auto;
+            min-width: 100px;
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .btn-modal-select-all:hover {
+            background: #757575;
+        }
+        
+        .btn-modal-fire {
+            flex: 0 0 auto;
+            min-width: 115px;
+            background: #64b5f6;
+            color: white;
+        }
+
+        .btn-modal-fire:hover {
+            background: #42a5f5;
+        }
+        
+        .btn-modal-unfulfill {
+            flex: 0 0 auto;
+            min-width: 125px;
+            background: #64b5f6;
+            color: white;
+        }
+
+        .btn-modal-unfulfill:hover {
+            background: #42a5f5;
+        }
+        
+        .btn-modal-fulfill {
+            flex: 0 0 auto;
+            min-width: 110px;
+            background: #1976d2;
+            color: white;
+        }
+
+        .btn-modal-fulfill:hover {
+            background: #1565c0;
+        }
+
+        .btn-modal:disabled {
+            background: #e0e0e0;
+            color: #9e9e9e;
+            cursor: not-allowed;
+        }
+
+        /* Custom Confirm Popup */
+        .confirm-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s;
+        }
+
+        .confirm-popup {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s;
+            overflow: hidden;
+        }
+
+        .confirm-popup-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff3cd;
+        }
+
+        .confirm-popup-icon {
+            font-size: 28px;
+            color: #ffc107;
+        }
+
+        .confirm-popup-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            color: #333;
+        }
+
+        .confirm-popup-body {
+            padding: 24px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .confirm-popup-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .confirm-popup-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .confirm-popup-btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .confirm-popup-btn-cancel:hover {
+            background: #5a6268;
+        }
+
+        .confirm-popup-btn-confirm {
+            background: #007bff;
+            color: white;
+        }
+
+        .confirm-popup-btn-confirm:hover {
+            background: #0056b3;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @@keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+}
+
+<div class="kds-container">
+    <!-- Header -->
+    <div class="kds-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">Tiến độ món ăn</h2>
+                <p class="text-muted mb-0">Kitchen Display System - Bếp Phó</p>
+            </div>
+            <div>
+                <span class="badge bg-primary" id="orderCount">0 đơn</span>
+                <button class="btn btn-outline-info ms-2" id="btnShowRecentlyFulfilled" onclick="toggleRecentlyFulfilled()">
+                    <i class="mdi mdi-history"></i> Hiển thị đơn vừa hoàn thành
+                </button>
+                <button class="btn btn-outline-primary ms-2" onclick="refreshOrders()">
+                    <i class="mdi mdi-refresh"></i> Làm mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <button class="btn btn-sm btn-outline-secondary active" id="filter-theo-ban" onclick="filterByStatus('theo-ban')">
+            Theo bàn
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" id="filter-theo-tung-mon" onclick="filterByStatus('theo-tung-mon')">
+            Tổng từng món
+        </button>
+    </div>
+
+    <!-- Main Layout: Completed Orders (Left) + Active Orders (Right) -->
+    <div class="kds-main-layout">
+        <!-- Cột bên trái: Đơn vừa hoàn thành -->
+        <div class="completed-orders-column hidden" id="completedOrdersColumn">
+            <div class="completed-orders-header">
+                <span><i class="mdi mdi-check-circle"></i> Đơn vừa hoàn thành</span>
+                <span class="badge bg-light text-dark" id="completedOrdersCount">0</span>
+            </div>
+            <div class="completed-orders-grid" id="completedOrdersGrid">
+                <div class="text-center text-muted py-5">
+                    <i class="mdi mdi-loading mdi-spin" style="font-size: 32px;"></i>
+                    <p class="mt-3">Đang tải...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột bên phải: Đơn đang xử lý -->
+        <div class="active-orders-column">
+            <div class="orders-grid" id="ordersGrid">
+                <!-- Orders will be dynamically loaded here -->
+                <div class="empty-state">
+                    <i class="mdi mdi-food-off" style="font-size: 48px;"></i>
+                    <p class="mt-3">Đang tải đơn hàng...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        // Inject API base URL from server configuration
+        window.API_BASE_URL = '@ViewBag.ApiBaseUrl' || 'https://localhost:7096/api';
+        window.SIGNALR_HUB_URL = '@ViewBag.SignalRHubUrl' || 'https://localhost:7096/kitchenHub';
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script src="~/js/kitchenDisplay.js"></script>
+    <script>
+        // Ensure kitchenDisplay initializes even if other scripts have errors
+        window.addEventListener('error', function(e) {
+            // Don't block execution on datepicker errors
+            if (e.message && e.message.includes('datepicker')) {
+                console.warn('Datepicker error ignored:', e.message);
+                e.preventDefault();
+            }
+        }, true);
+    </script>
+}
