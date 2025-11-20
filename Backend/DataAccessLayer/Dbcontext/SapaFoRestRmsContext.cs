@@ -34,6 +34,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<ComboItem> ComboItems { get; set; }
 
     public virtual DbSet<Customer> Customers { get; set; }
+    public virtual DbSet<Department> Departments { get; set; }
 
     public virtual DbSet<Event> Events { get; set; }
 
@@ -81,6 +82,9 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Shift> Shifts { get; set; }
 
+    public virtual DbSet<ShiftHistory> ShiftHistorys { get; set; }
+    public virtual DbSet<ShiftTemplate> ShiftTemplates { get; set; }
+
     public virtual DbSet<Staff> Staffs { get; set; }
 
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
@@ -105,6 +109,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public DbSet<Unit> Units { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
+    public virtual DbSet<WeeklyRecurringShift> WeeklyRecurringShifts { get; set; }
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
  
 

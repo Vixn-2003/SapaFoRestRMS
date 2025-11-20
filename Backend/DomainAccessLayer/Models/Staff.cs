@@ -9,18 +9,23 @@ public partial class Staff
 
     public int UserId { get; set; }
 
+    public int? DepartmentId { get; set; } // NEW – Nhân viên thuộc bộ phận nào
+
     public DateOnly HireDate { get; set; }
 
     public decimal SalaryBase { get; set; }
-    public int Status { get; set; } // add property status
+
+    public int Status { get; set; }
+
+    public virtual User User { get; set; } = null!;
+
+    public virtual Department Department { get; set; } = null!;
 
     public virtual ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
     public virtual ICollection<Payroll> Payrolls { get; set; } = new List<Payroll>();
 
     public virtual ICollection<Shift> Shifts { get; set; } = new List<Shift>();
-
-    public virtual User User { get; set; } = null!;
 
     public virtual ICollection<Position> Positions { get; set; } = new List<Position>();
 }
