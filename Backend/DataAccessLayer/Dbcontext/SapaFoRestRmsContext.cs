@@ -253,6 +253,15 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.QuantityRemaining)
                 .HasColumnType("decimal(18, 2)");
 
+            entity.Property(e => e.QuantityReserved)
+                .HasColumnType("decimal(18, 2)")
+                .HasDefaultValue(0);
+
+            // Available là computed column trong database
+            entity.Property(e => e.Available)
+                .HasColumnType("decimal(18, 2)")
+                .HasComputedColumnSql("([QuantityRemaining] - [QuantityReserved])", stored: true);
+
             // ====== Quan hệ Ingredient - InventoryBatch ======
             entity.HasOne(d => d.Ingredient)
                 .WithMany(p => p.InventoryBatches)

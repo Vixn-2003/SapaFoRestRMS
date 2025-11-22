@@ -5,16 +5,19 @@ using System.Threading.Tasks;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using BusinessAccessLayer.DTOs.Kitchen;
 using DomainAccessLayer.Models;
+using BusinessAccessLayer.Services.Interfaces;
 
 namespace BusinessAccessLayer.Services
 {
     public class KitchenDisplayService : IKitchenDisplayService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IInventoryIngredientService _inventoryService;
 
-        public KitchenDisplayService(IUnitOfWork unitOfWork)
+        public KitchenDisplayService(IUnitOfWork unitOfWork, IInventoryIngredientService inventoryService)
         {
             _unitOfWork = unitOfWork;
+            _inventoryService = inventoryService;
         }
 
         public async Task<List<KitchenOrderCardDto>> GetActiveOrdersAsync()
@@ -31,27 +34,41 @@ namespace BusinessAccessLayer.Services
                 var orderDetails = order.OrderDetails.ToList();
                 if (!orderDetails.Any()) continue;
 
-                // Map OrderDetail to KitchenOrderItemDto
+                // Map OrderDetail to KitchenOrderItemDto với tính toán trạng thái
                 var items = orderDetails
-                    .Select(od => new KitchenOrderItemDto
+                    .Select(od =>
                     {
-                        OrderDetailId = od.OrderDetailId,
-                        MenuItemName = od.MenuItem.Name,
-                        Quantity = od.Quantity,
-                        Status = od.Status ?? "Pending", // Default to Pending if null
-                        Notes = od.Notes,
-                        CourseType = od.MenuItem.CourseType ?? "Other",
-                        StartedAt = null, // OrderDetail doesn't have StartedAt
-                        CompletedAt = null, // OrderDetail doesn't have CompletedAt
-                        IsUrgent = od.IsUrgent,
-                        TimeCook = od.MenuItem.TimeCook, // Thời gian nấu (phút)
-                        BatchSize = od.MenuItem.BatchSize
+                        var currentStatus = od.Status ?? "Pending";
+                        var (calculatedStatus, lateMinutes) = CalculateItemStatus(
+                            currentStatus,
+                            od.StartedAt,
+                            od.MenuItem.TimeCook,
+                            now);
+
+                        return new KitchenOrderItemDto
+                        {
+                            OrderDetailId = od.OrderDetailId,
+                            MenuItemName = od.MenuItem.Name,
+                            Quantity = od.Quantity,
+                            Status = calculatedStatus, // Sử dụng trạng thái đã tính toán
+                            Notes = od.Notes,
+                            CourseType = od.MenuItem.CourseType ?? "Other",
+                            StartedAt = od.StartedAt,
+                            CompletedAt = od.Status == "Done" ? od.CreatedAt : null,
+                            ReadyAt = od.ReadyAt,
+                            IsUrgent = od.IsUrgent,
+                            TimeCook = od.MenuItem.TimeCook, // Thời gian nấu (phút)
+                            BatchSize = od.MenuItem.BatchSize,
+                            LateMinutes = lateMinutes
+                        };
                     })
                     .ToList();
 
                 var waitingMinutes = (int)((now - (order.CreatedAt ?? now)).TotalMinutes);
 
                 var completedCount = items.Count(i => i.Status == "Done");
+                var lateCount = items.Count(i => i.Status == "Late");
+                var readyCount = items.Count(i => i.Status == "Ready");
 
                 var card = new KitchenOrderCardDto
                 {
@@ -64,6 +81,8 @@ namespace BusinessAccessLayer.Services
                     PriorityLevel = GetPriorityLevel(waitingMinutes),
                     TotalItems = items.Count,
                     CompletedItems = completedCount,
+                    LateItems = lateCount,
+                    ReadyItems = readyCount,
                     Items = items
                 };
 
@@ -148,16 +167,69 @@ namespace BusinessAccessLayer.Services
                             Message = $"Không thể chuyển từ trạng thái 'Chờ' sang '{newStatus}'. Phải chuyển sang 'Đang nấu' trước."
                         };
                     }
+                    // Lưu thời gian bắt đầu nấu
+                    orderDetail.StartedAt = DateTime.Now;
+                    
+                    // Bếp phó duyệt → Tăng QuantityReserved của các batch cần dùng
+                    var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(request.OrderDetailId);
+                    if (!reserveResult.success)
+                    {
+                        return new StatusUpdateResponse
+                        {
+                            Success = false,
+                            Message = reserveResult.message
+                        };
+                    }
                 }
-                else if (currentStatus == "Cooking")
+                else if (currentStatus == "Cooking" || currentStatus == "Late")
                 {
-                    // From Cooking, only allow transition to Done
+                    // From Cooking/Late, allow transition to Ready or Done
+                    if (newStatus != "Ready" && newStatus != "Done")
+                    {
+                        return new StatusUpdateResponse
+                        {
+                            Success = false,
+                            Message = $"Không thể chuyển từ trạng thái '{currentStatus}' sang '{newStatus}'. Chỉ có thể chuyển sang 'Sẵn sàng' hoặc 'Hoàn thành'."
+                        };
+                    }
+                    // Nếu chuyển sang Ready, lưu thời gian
+                    if (newStatus == "Ready")
+                    {
+                        orderDetail.ReadyAt = DateTime.Now;
+                    }
+                    // Nếu chuyển sang Done: Nấu xong → Trừ QuantityRemaining + Giảm QuantityReserved + Tạo StockTransaction
+                    else if (newStatus == "Done")
+                    {
+                        var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
+                        if (!consumeResult.success)
+                        {
+                            return new StatusUpdateResponse
+                            {
+                                Success = false,
+                                Message = consumeResult.message
+                            };
+                        }
+                    }
+                }
+                else if (currentStatus == "Ready")
+                {
+                    // From Ready, only allow transition to Done
                     if (newStatus != "Done")
                     {
                         return new StatusUpdateResponse
                         {
                             Success = false,
-                            Message = $"Không thể chuyển từ trạng thái 'Đang nấu' sang '{newStatus}'. Chỉ có thể chuyển sang 'Hoàn thành'."
+                            Message = $"Không thể chuyển từ trạng thái 'Sẵn sàng' sang '{newStatus}'. Chỉ có thể chuyển sang 'Hoàn thành'."
+                        };
+                    }
+                    // Nấu xong → Trừ QuantityRemaining + Giảm QuantityReserved + Tạo StockTransaction
+                    var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
+                    if (!consumeResult.success)
+                    {
+                        return new StatusUpdateResponse
+                        {
+                            Success = false,
+                            Message = consumeResult.message
                         };
                     }
                 }
@@ -172,6 +244,9 @@ namespace BusinessAccessLayer.Services
                             Message = $"Không thể chuyển từ trạng thái 'Hoàn thành' sang '{newStatus}'. Chỉ có thể quay lại 'Đang nấu'."
                         };
                     }
+                    // Reset StartedAt khi quay lại Cooking
+                    orderDetail.StartedAt = DateTime.Now;
+                    orderDetail.ReadyAt = null;
                 }
 
                 // Update status trên OrderDetail (nguồn chính)
@@ -192,11 +267,13 @@ namespace BusinessAccessLayer.Services
                         Status = orderDetail.Status ?? "Pending",
                         Notes = orderDetail.Notes,
                         CourseType = orderDetail.MenuItem.CourseType ?? "Other",
-                        StartedAt = null, // Không dùng KitchenTicketDetail nữa
-                        CompletedAt = null, // Không dùng KitchenTicketDetail nữa
+                        StartedAt = orderDetail.StartedAt,
+                        CompletedAt = orderDetail.Status == "Done" ? DateTime.Now : null,
+                        ReadyAt = orderDetail.ReadyAt,
                         IsUrgent = orderDetail.IsUrgent,
                         TimeCook = orderDetail.MenuItem.TimeCook, // Thời gian nấu (phút)
-                        BatchSize = orderDetail.MenuItem.BatchSize
+                        BatchSize = orderDetail.MenuItem.BatchSize,
+                        LateMinutes = null
                     }
                 };
             }
@@ -388,6 +465,36 @@ namespace BusinessAccessLayer.Services
             if (waitingMinutes > 15) return "Critical";  // Red - >15 phút
             if (waitingMinutes >= 10) return "Warning";  // Yellow - 10-15 phút
             return "Normal";                             // White/Light - 1-10 phút
+        }
+
+        /// <summary>
+        /// Tính toán trạng thái thực tế của món ăn dựa trên status, thời gian nấu và thời gian bắt đầu
+        /// </summary>
+        private (string CalculatedStatus, int? LateMinutes) CalculateItemStatus(
+            string currentStatus, 
+            DateTime? startedAt, 
+            int? timeCook, 
+            DateTime now)
+        {
+            // Nếu đã Ready hoặc Done, giữ nguyên
+            if (currentStatus == "Ready" || currentStatus == "Done")
+            {
+                return (currentStatus, null);
+            }
+
+            // Nếu đang Cooking, kiểm tra xem có trễ không
+            if (currentStatus == "Cooking" && startedAt.HasValue && timeCook.HasValue && timeCook.Value > 0)
+            {
+                var elapsedMinutes = (int)((now - startedAt.Value).TotalMinutes);
+                if (elapsedMinutes > timeCook.Value)
+                {
+                    var lateMinutes = elapsedMinutes - timeCook.Value;
+                    return ("Late", lateMinutes);
+                }
+            }
+
+            // Trả về trạng thái hiện tại
+            return (currentStatus ?? "Pending", null);
         }
 
         private List<GroupedMenuItemDto> SortGroupedMenuItems(List<GroupedMenuItemDto> items)

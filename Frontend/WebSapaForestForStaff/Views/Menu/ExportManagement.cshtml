@@ -427,9 +427,29 @@
 
 <script>
     // ============================================
-    // DỮ LIỆU MẪU - BẠN THAY BẰNG DỮ LIỆU THẬT
+    // LẤY DỮ LIỆU TỪ API
     // ============================================
-    const transactions = [
+    let transactions = [];
+    
+    // Hàm load dữ liệu từ API
+    async function loadTransactions() {
+        try {
+            const response = await fetch('/api/InventoryIngredient/ExportTransactions');
+            if (!response.ok) {
+                throw new Error('Không thể tải dữ liệu');
+            }
+            const data = await response.json();
+            transactions = data || [];
+            render();
+        } catch (error) {
+            console.error('Lỗi khi tải dữ liệu:', error);
+            transactions = [];
+            render();
+        }
+    }
+    
+    // Dữ liệu mẫu (fallback nếu API lỗi)
+    const sampleTransactions = [
         {
             id: 1,
             ingredientId: 1,
@@ -796,5 +816,9 @@
         render();
     });
 
-    render();
+    // Load dữ liệu khi trang được tải
+    loadTransactions();
+    
+    // Reload dữ liệu mỗi 30 giây
+    setInterval(loadTransactions, 30000);
 </script>

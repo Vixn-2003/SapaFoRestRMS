@@ -792,12 +792,37 @@
 
     <!-- Filter Tabs -->
     <div class="filter-tabs">
-        <button class="btn btn-sm btn-outline-secondary active" id="filter-theo-ban" onclick="filterByStatus('theo-ban')">
-            Theo bàn
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" id="filter-theo-tung-mon" onclick="filterByStatus('theo-tung-mon')">
-            Tổng từng món
-        </button>
+        <div class="d-flex align-items-center gap-3">
+            <div class="view-mode-filters">
+                <button class="btn btn-sm btn-outline-secondary active" id="filter-theo-ban" onclick="filterByViewMode('theo-ban')">
+                    Theo bàn
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="filter-theo-tung-mon" onclick="filterByViewMode('theo-tung-mon')">
+                    Tổng từng món
+                </button>
+            </div>
+            <div class="status-filters ms-3">
+                <span class="text-muted me-2">Lọc theo trạng thái:</span>
+                <button class="btn btn-sm btn-outline-primary" id="filter-status-all" onclick="filterByItemStatus('all')">
+                    Tất cả
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="filter-status-pending" onclick="filterByItemStatus('Pending')">
+                    Chờ
+                </button>
+                <button class="btn btn-sm btn-outline-info" id="filter-status-cooking" onclick="filterByItemStatus('Cooking')">
+                    Đang nấu
+                </button>
+                <button class="btn btn-sm btn-outline-warning" id="filter-status-late" onclick="filterByItemStatus('Late')">
+                    Trễ
+                </button>
+                <button class="btn btn-sm btn-outline-success" id="filter-status-ready" onclick="filterByItemStatus('Ready')">
+                    Sẵn sàng
+                </button>
+                <button class="btn btn-sm btn-outline-dark" id="filter-status-done" onclick="filterByItemStatus('Done')">
+                    Hoàn thành
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Main Layout: Completed Orders (Left) + Active Orders (Right) -->

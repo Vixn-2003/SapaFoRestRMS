@@ -32,6 +32,16 @@ public partial class OrderDetail
     /// </summary>
     public bool IsUrgent { get; set; } = false;
 
+    /// <summary>
+    /// Thời gian món được đánh dấu "Sẵn sàng" (Ready)
+    /// </summary>
+    public DateTime? ReadyAt { get; set; }
+
+    /// <summary>
+    /// Thời gian bắt đầu nấu (khi status chuyển sang "Cooking")
+    /// </summary>
+    public DateTime? StartedAt { get; set; }
+
     public virtual ICollection<KitchenTicketDetail> KitchenTicketDetails { get; set; } = new List<KitchenTicketDetail>();
 
     public virtual MenuItem MenuItem { get; set; } = null!;

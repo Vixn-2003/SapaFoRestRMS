@@ -6,6 +6,7 @@ let signalRConnection = null;
 let currentOrders = [];
 let currentGroupedItems = [];
 let currentViewMode = 'theo-ban';
+let currentStatusFilter = 'all'; // 'all', 'Pending', 'Cooking', 'Late', 'Ready', 'Done'
 
 // Main initialization function
 (function () {
@@ -15,6 +16,12 @@ let currentViewMode = 'theo-ban';
 
             // Create modal BEFORE any other initialization
             createModalIfNotExists();
+
+            // Initialize status filter button
+            const allButton = document.getElementById('filter-status-all');
+            if (allButton) {
+                allButton.classList.add('active');
+            }
 
             initializeSignalR();
             loadOrdersByTable(); // Mặc định load theo bàn
@@ -149,7 +156,19 @@ function renderOrders(orders) {
     }
 
     console.log('Rendering', orders.length, 'orders');
-    grid.innerHTML = orders.map(order => createOrderCard(order)).join('');
+    const renderedCards = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '').join('');
+    
+    if (renderedCards.trim() === '') {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="mdi mdi-filter-off" style="font-size: 48px;"></i>
+                <p class="mt-3">Không có món nào với trạng thái "${getStatusText(currentStatusFilter)}"</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = renderedCards;
 
     // Attach click handlers - SIMPLIFIED VERSION
     setTimeout(() => {
@@ -174,11 +193,48 @@ function renderOrders(orders) {
     }, 50);
 }
 
+// Sort items by course type: Khai vị -> Món chính -> Tráng miệng
+function sortItemsByCourseType(items) {
+    const courseTypeOrder = {
+        'Khai vị': 0,
+        'Món chính': 1,
+        'Tráng miệng': 2
+    };
+    
+    return [...items].sort((a, b) => {
+        const courseTypeA = a.courseType || '';
+        const courseTypeB = b.courseType || '';
+        
+        const orderA = courseTypeOrder[courseTypeA] !== undefined ? courseTypeOrder[courseTypeA] : 999;
+        const orderB = courseTypeOrder[courseTypeB] !== undefined ? courseTypeOrder[courseTypeB] : 999;
+        
+        if (orderA !== orderB) {
+            return orderA - orderB;
+        }
+        
+        // Nếu cùng loại, giữ nguyên thứ tự ban đầu
+        return 0;
+    });
+}
+
 // Create single order card HTML
 function createOrderCard(order) {
     const timerClass = getTimerClass(order.priorityLevel);
     const canComplete = order.completedItems === order.totalItems;
     const displayName = order.staffName || order.tableNumber;
+    
+    // Sắp xếp items theo course type
+    let sortedItems = sortItemsByCourseType(order.items || []);
+    
+    // Filter items theo trạng thái nếu có filter
+    if (currentStatusFilter !== 'all') {
+        sortedItems = sortedItems.filter(item => item.status === currentStatusFilter);
+    }
+    
+    // Nếu không có items sau khi filter, không render order card này
+    if (sortedItems.length === 0) {
+        return '';
+    }
 
     return `
         <div class="order-card" data-order-id="${order.orderId}">
@@ -214,7 +270,7 @@ function createOrderCard(order) {
             </div>
 
             <div class="item-list">
-                ${order.items.map(item => createItemRow(item)).join('')}
+                ${sortedItems.length > 0 ? sortedItems.map(item => createItemRow(item)).join('') : '<div class="text-muted text-center p-2">Không có món nào</div>'}
             </div>
 
             <button class="btn-complete" 
@@ -285,7 +341,9 @@ function getStatusText(status) {
     const statusMap = {
         'Pending': 'Chờ',
         'Cooking': 'Đang nấu',
-        'Done': 'Xong'
+        'Late': 'Trễ',
+        'Ready': 'Sẵn sàng',
+        'Done': 'Hoàn thành'
     };
     return statusMap[status] || status;
 }
@@ -476,12 +534,16 @@ function groupOrdersByTable(orders) {
                 tableNumber: tableKey,
                 orders: [],
                 totalItems: 0,
-                completedItems: 0
+                completedItems: 0,
+                lateItems: 0,
+                readyItems: 0
             };
         }
         grouped[tableKey].orders.push(order);
         grouped[tableKey].totalItems += order.totalItems || 0;
         grouped[tableKey].completedItems += order.completedItems || 0;
+        grouped[tableKey].lateItems += order.lateItems || 0;
+        grouped[tableKey].readyItems += order.readyItems || 0;
     });
     
     return Object.values(grouped);
@@ -501,7 +563,19 @@ function renderOrdersByTable(groupedByTable) {
         return;
     }
     
-    grid.innerHTML = groupedByTable.map(group => createTableGroupCard(group)).join('');
+    const renderedGroups = groupedByTable.map(group => createTableGroupCard(group)).filter(html => html.trim() !== '').join('');
+    
+    if (renderedGroups.trim() === '') {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="mdi mdi-filter-off" style="font-size: 48px;"></i>
+                <p class="mt-3">Không có món nào với trạng thái "${getStatusText(currentStatusFilter)}"</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = renderedGroups;
     
     // Attach click handlers
     setTimeout(() => {
@@ -525,6 +599,19 @@ function createTableGroupCard(group) {
     const allOrdersHtml = group.orders.map(order => {
         const timerClass = getTimerClass(order.priorityLevel);
         const canComplete = order.completedItems === order.totalItems;
+        
+        // Sắp xếp items theo course type
+        let sortedItems = sortItemsByCourseType(order.items || []);
+        
+        // Filter items theo trạng thái nếu có filter
+        if (currentStatusFilter !== 'all') {
+            sortedItems = sortedItems.filter(item => item.status === currentStatusFilter);
+        }
+        
+        // Nếu không có items sau khi filter, không render order card này
+        if (sortedItems.length === 0) {
+            return '';
+        }
         
         return `
             <div class="order-card" data-order-id="${order.orderId}" style="margin-bottom: 15px;">
@@ -560,7 +647,7 @@ function createTableGroupCard(group) {
                 </div>
                 
                 <div class="item-list">
-                    ${order.items.map(item => createItemRow(item)).join('')}
+                    ${sortedItems.length > 0 ? sortedItems.map(item => createItemRow(item)).join('') : '<div class="text-muted text-center p-2">Không có món nào</div>'}
                 </div>
                 
                 <button class="btn-complete" 
@@ -570,13 +657,30 @@ function createTableGroupCard(group) {
                 </button>
             </div>
         `;
-    }).join('');
+    }).filter(html => html.trim() !== '').join(''); // Remove empty strings
+    
+    // Nếu không có orders nào có items sau khi filter, không render table group
+    if (allOrdersHtml.trim() === '') {
+        return '';
+    }
+    
+    // Đếm lại số orders và items sau khi filter
+    const filteredOrders = group.orders.filter(order => {
+        const sortedItems = sortItemsByCourseType(order.items || []);
+        const filteredItems = currentStatusFilter !== 'all' 
+            ? sortedItems.filter(item => item.status === currentStatusFilter)
+            : sortedItems;
+        return filteredItems.length > 0;
+    });
     
     return `
         <div class="table-group-container" style="margin-bottom: 30px;">
             <div class="table-group-header" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                    <i class="mdi mdi-table"></i> ${group.orders.length} đơn | ${group.completedItems}/${group.totalItems} món đã hoàn thành
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <i class="mdi mdi-table"></i> 
+                    <span>${filteredOrders.length} đơn | ${group.completedItems}/${group.totalItems} món đã hoàn thành</span>
+                    ${group.lateItems > 0 ? `<span style="color: #dc3545; margin-left: 10px;"><i class="mdi mdi-alert-circle"></i> Món đã trễ: ${group.lateItems}</span>` : ''}
+                    ${group.readyItems > 0 ? `<span style="color: #28a745; margin-left: 10px;"><i class="mdi mdi-check-circle"></i> Món sẵn sàng: ${group.readyItems}</span>` : ''}
                 </h3>
             </div>
             <div class="table-orders-list">
@@ -689,7 +793,36 @@ function renderGroupedItems(groupedItems) {
         return;
     }
 
-    const sortedItems = sortGroupedItems(groupedItems);
+    let filteredItems = groupedItems;
+    
+    // Apply status filter if not 'all'
+    if (currentStatusFilter !== 'all') {
+        filteredItems = groupedItems.map(item => {
+            // Filter itemDetails by status
+            const filteredDetails = item.itemDetails.filter(detail => detail.status === currentStatusFilter);
+            if (filteredDetails.length === 0) {
+                return null; // Exclude items with no matching details
+            }
+            // Return item with filtered details
+            return {
+                ...item,
+                itemDetails: filteredDetails,
+                totalQuantity: filteredDetails.reduce((sum, d) => sum + (d.quantity || 0), 0)
+            };
+        }).filter(item => item !== null); // Remove null items
+    }
+
+    if (filteredItems.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="mdi mdi-filter-off" style="font-size: 48px;"></i>
+                <p class="mt-3">Không có món nào với trạng thái "${getStatusText(currentStatusFilter)}"</p>
+            </div>
+        `;
+        return;
+    }
+
+    const sortedItems = sortGroupedItems(filteredItems);
 
     grid.innerHTML = sortedItems.map(item => createItemCard(item)).join('');
     
@@ -826,8 +959,8 @@ function createItemDetailRow(detail) {
     `;
 }
 
-// Filter by status
-function filterByStatus(type) {
+// Filter by view mode (theo-ban, theo-tung-mon)
+function filterByViewMode(type) {
     // Prevent multiple rapid clicks
     if (currentViewMode === type) {
         return;
@@ -835,7 +968,8 @@ function filterByStatus(type) {
 
     currentViewMode = type;
 
-    document.querySelectorAll('.filter-tabs .btn').forEach(btn => {
+    // Update view mode buttons
+    document.querySelectorAll('.view-mode-filters .btn').forEach(btn => {
         btn.classList.remove('active');
     });
 
@@ -864,6 +998,37 @@ function filterByStatus(type) {
     } else {
         // Mặc định là 'theo-ban'
         grid.className = 'orders-grid';
+        loadOrdersByTable();
+    }
+}
+
+// Filter by item status (Pending, Cooking, Late, Ready, Done)
+function filterByItemStatus(status) {
+    currentStatusFilter = status;
+
+    // Update status filter buttons
+    document.querySelectorAll('.status-filters .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    const buttonMap = {
+        'all': 'filter-status-all',
+        'Pending': 'filter-status-pending',
+        'Cooking': 'filter-status-cooking',
+        'Late': 'filter-status-late',
+        'Ready': 'filter-status-ready',
+        'Done': 'filter-status-done'
+    };
+
+    const activeButton = document.getElementById(buttonMap[status]);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+
+    // Reload current view with new filter
+    if (currentViewMode === 'theo-tung-mon') {
+        loadGroupedItems();
+    } else {
         loadOrdersByTable();
     }
 }

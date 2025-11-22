@@ -95,7 +95,10 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<Recipe>> GetRecipeByMenuItem(int id)
         {
-            return await _context.Recipes.Where(x => x.MenuItemId == id).ToListAsync();
+            return await _context.Recipes
+                .Include(r => r.Ingredient)
+                .Where(x => x.MenuItemId == id)
+                .ToListAsync();
         }
 
         public async Task<bool> DeleteRecipeByMenuItemId(int menuItemId)
