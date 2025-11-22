@@ -429,20 +429,40 @@
     // ============================================
     // LẤY DỮ LIỆU TỪ API
     // ============================================
+    // Get API base URL from ViewBag or use default
+    const API_BASE_URL = '@(ViewBag.ApiBaseUrl ?? "https://localhost:7096/api")';
+    console.log('[ExportManagement] API Base URL:', API_BASE_URL);
+    
     let transactions = [];
     
     // Hàm load dữ liệu từ API
     async function loadTransactions() {
         try {
-            const response = await fetch('/api/InventoryIngredient/ExportTransactions');
+            console.log('[ExportManagement] Đang fetch dữ liệu từ API...');
+            const apiUrl = `${API_BASE_URL}/InventoryIngredient/ExportTransactions`;
+            console.log('[ExportManagement] Full API URL:', apiUrl);
+            const response = await fetch(apiUrl);
+            console.log('[ExportManagement] Response status:', response.status);
+            
             if (!response.ok) {
-                throw new Error('Không thể tải dữ liệu');
+                const errorText = await response.text();
+                console.error('[ExportManagement] Response error:', errorText);
+                throw new Error(`Không thể tải dữ liệu: ${response.status} ${response.statusText}`);
             }
+            
             const data = await response.json();
+            console.log('[ExportManagement] Dữ liệu nhận được:', data);
+            console.log('[ExportManagement] Số lượng transactions:', data?.length || 0);
+            
             transactions = data || [];
+            
+            if (transactions.length === 0) {
+                console.warn('[ExportManagement] Không có dữ liệu transactions nào!');
+            }
+            
             render();
         } catch (error) {
-            console.error('Lỗi khi tải dữ liệu:', error);
+            console.error('[ExportManagement] Lỗi khi tải dữ liệu:', error);
             transactions = [];
             render();
         }
@@ -729,7 +749,9 @@
     }
 
     function render() {
+        console.log('[ExportManagement] render() - Số lượng transactions:', transactions.length);
         const filtered = filterAndSort();
+        console.log('[ExportManagement] render() - Số lượng sau filter:', filtered.length);
         const stats = calculateStats(filtered);
         const totalQuantity = filtered.reduce((sum, item) => sum + item.quantity, 0);
 

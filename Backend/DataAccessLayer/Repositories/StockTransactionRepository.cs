@@ -21,8 +21,7 @@ namespace DataAccessLayer.Repositories
         public async Task<bool> AddNewStockTransaction(StockTransaction stockTransaction)
         {
             await _context.StockTransactions.AddAsync(stockTransaction);
-            await _context.SaveChangesAsync();
-
+            // Don't save here - let UnitOfWork.SaveChangesAsync() handle it
             return true;
         }
 
@@ -30,7 +29,13 @@ namespace DataAccessLayer.Repositories
         {
             return await _context.StockTransactions
                 .Include(st => st.Ingredient)
+                    .ThenInclude(i => i.Unit)
                 .Include(st => st.Batch)
+                    .ThenInclude(b => b.Warehouse)
+                .Include(st => st.Batch)
+                    .ThenInclude(b => b.PurchaseOrderDetail)
+                        .ThenInclude(pod => pod.PurchaseOrder)
+                            .ThenInclude(po => po.Supplier)
                 .Where(st => st.Type == "Export")
                 .OrderByDescending(st => st.TransactionDate)
                 .ToListAsync();

@@ -172,16 +172,24 @@ namespace BusinessAccessLayer.Services
                     var totalNeeded = recipe.QuantityNeeded * orderQuantity;
                     
                     // Get batches with reserved quantity for this ingredient
+                    // Filter to only get batches with QuantityReserved > 0
                     var batches = await _unitOfWork.InventoryIngredient.getBatchById(recipe.IngredientId);
-                    var batchesList = batches.ToList();
+                    var batchesList = batches
+                        .Where(b => b.QuantityReserved > 0)
+                        .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue)
+                        .ThenBy(b => b.CreatedAt)
+                        .ToList();
+                    
+                    if (!batchesList.Any())
+                    {
+                        return (false, $"Không tìm thấy nguyên liệu đã được dành riêng cho {recipe.Ingredient?.Name ?? "N/A"}. Vui lòng đảm bảo món đã được bếp phó duyệt (status = Cooking) trước khi hoàn thành.");
+                    }
                     
                     decimal remainingToConsume = totalNeeded;
                     
-                    foreach (var batch in batchesList.OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue).ThenBy(b => b.CreatedAt))
+                    foreach (var batch in batchesList)
                     {
                         if (remainingToConsume <= 0) break;
-                        
-                        if (batch.QuantityReserved <= 0) continue;
                         
                         var toConsume = Math.Min(batch.QuantityReserved, remainingToConsume);
                         
@@ -190,7 +198,7 @@ namespace BusinessAccessLayer.Services
                         batch.QuantityRemaining -= toConsume;
                         remainingToConsume -= toConsume;
                         
-                        // Create StockTransaction for export
+                        // Create StockTransaction for export (don't save yet)
                         var stockTransaction = new StockTransaction
                         {
                             IngredientId = recipe.IngredientId,
@@ -201,13 +209,14 @@ namespace BusinessAccessLayer.Services
                             Note = $"Xuất kho cho món {orderDetail.MenuItem.Name} (OrderDetailId: {orderDetailId})"
                         };
                         
+                        // Add to context but don't save yet (will save at the end)
                         await _unitOfWork.StockTransaction.AddNewStockTransaction(stockTransaction);
                         await _unitOfWork.InventoryIngredient.UpdateBatchAsync(batch);
                     }
                     
                     if (remainingToConsume > 0)
                     {
-                        return (false, $"Lỗi: Không đủ nguyên liệu đã dành riêng để tiêu thụ cho {recipe.Ingredient?.Name ?? "N/A"}");
+                        return (false, $"Lỗi: Không đủ nguyên liệu đã dành riêng để tiêu thụ cho {recipe.Ingredient?.Name ?? "N/A"}. Cần: {totalNeeded}, Đã có: {totalNeeded - remainingToConsume}");
                     }
                 }
 
