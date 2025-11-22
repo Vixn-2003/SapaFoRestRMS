@@ -259,5 +259,15 @@ namespace DataAccessLayer.Repositories
                 .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
                 .ToListAsync();
         }
+
+        public async Task<List<InventoryBatch>> GetReservedBatchesByIngredientAsync(int ingredientId)
+        {
+            return await _context.InventoryBatches
+                .Where(b => b.IngredientId == ingredientId 
+                    && b.QuantityReserved > 0) // Chỉ lấy batch đã được reserve
+                .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
+                .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
+                .ToListAsync();
+        }
     }
 }

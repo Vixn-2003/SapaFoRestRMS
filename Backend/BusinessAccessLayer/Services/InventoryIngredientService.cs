@@ -171,14 +171,8 @@ namespace BusinessAccessLayer.Services
                 {
                     var totalNeeded = recipe.QuantityNeeded * orderQuantity;
                     
-                    // Get batches with reserved quantity for this ingredient
-                    // Filter to only get batches with QuantityReserved > 0
-                    var batches = await _unitOfWork.InventoryIngredient.getBatchById(recipe.IngredientId);
-                    var batchesList = batches
-                        .Where(b => b.QuantityReserved > 0)
-                        .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue)
-                        .ThenBy(b => b.CreatedAt)
-                        .ToList();
+                    // Get batches with reserved quantity for this ingredient (FEFO - First Expiry First Out)
+                    var batchesList = await _unitOfWork.InventoryIngredient.GetReservedBatchesByIngredientAsync(recipe.IngredientId);
                     
                     if (!batchesList.Any())
                     {

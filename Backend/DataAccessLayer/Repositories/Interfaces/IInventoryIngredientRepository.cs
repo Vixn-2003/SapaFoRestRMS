@@ -23,5 +23,6 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<InventoryBatch?> GetBatchByIdAsync(int batchId);
         Task<bool> UpdateBatchAsync(InventoryBatch batch);
         Task<List<InventoryBatch>> GetAvailableBatchesByIngredientAsync(int ingredientId);
+        Task<List<InventoryBatch>> GetReservedBatchesByIngredientAsync(int ingredientId);
     }
 }
