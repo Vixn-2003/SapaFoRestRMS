@@ -7,10 +7,39 @@
 
 @{
     ViewData["Title"] = "Thanh toán";
-    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
     var tables = Model.TableNumbers != null && Model.TableNumbers.Any()
         ? string.Join(", ", Model.TableNumbers)
         : Model.TableNumber ?? "—";
+
+    string GetStatusBadgeClass(string? status)
+    {
+        var normalized = status?.ToLowerInvariant();
+        return normalized switch
+        {
+            "pending" => "bg-warning text-dark",
+            "confirmed" => "bg-primary",
+            "pending-payment" => "bg-info text-dark",
+            "paid" => "bg-success",
+            "completed" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    string GetStatusDisplayText(string? status)
+    {
+        var normalized = status?.ToLowerInvariant();
+        return normalized switch
+        {
+            "pending" => "Chờ xác nhận",
+            "confirmed" => "Đã xác nhận",
+            "pending-payment" => "Chờ thanh toán",
+            "paid" => "Đã thanh toán",
+            "completed" => "Hoàn tất",
+            _ => status ?? "Không rõ"
+        };
+    }
+
     var orderJson = JsonSerializer.Serialize(new
     {
         Model.OrderId,
@@ -25,6 +54,7 @@
         {
             i.Name,
             i.Quantity,
+            i.QuantityUsed,
             i.UnitPrice,
             i.TotalPrice
         })
@@ -32,6 +62,14 @@
 }
 
 <style>
+    body {
+        background-color: #f5f7fa;
+    }
+
+    .cashier-shell {
+        padding: 32px 40px;
+    }
+
     .payment-summary-card {
         background: linear-gradient(135deg, #0f8b83, #14a58c);
         color: #fff;
@@ -78,8 +116,12 @@
     .table-order-items th {
         background-color: #f6f8fb;
     }
+    .card {
+        border-radius: 18px;
+    }
 </style>
 
+<div class="cashier-shell">
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
         <h2 class="mb-1">Thanh toán đơn hàng</h2>
@@ -92,6 +134,10 @@
         }
     </div>
     <div class="d-flex gap-2">
+        @if (!string.IsNullOrWhiteSpace(Model.Status))
+        {
+            <span class="badge @GetStatusBadgeClass(Model.Status) px-3 py-2 align-self-center">@GetStatusDisplayText(Model.Status)</span>
+        }
         <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" 
            class="btn btn-outline-secondary">
             ← Quay lại danh sách
@@ -101,32 +147,22 @@
 
 @if (TempData["ErrorMessage"] is string errorMessage)
 {
-    <div class="alert alert-danger mb-3">@errorMessage</div>
+    <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+        <i class="bi bi-exclamation-octagon fs-4"></i>
+        <span>@errorMessage</span>
+    </div>
 }
 @if (TempData["SuccessMessage"] is string successMessage)
 {
-    <div class="alert alert-success mb-3">@successMessage</div>
+    <div class="alert alert-success d-flex align-items-center gap-2 mb-3" role="alert">
+        <i class="bi bi-check-circle fs-4"></i>
+        <span>@successMessage</span>
+    </div>
 }
 
 <div class="row g-4">
     <div class="col-lg-7">
-        <div class="card payment-summary-card mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                    <div>
-                        <p class="text-white-50 mb-2">Tổng cộng</p>
-                        <h2 class="fw-bold mb-0">@Model.TotalAmount.ToString("N0") ₫</h2>
-                        <p class="mb-0 opacity-75">Mã đơn: @Model.OrderCode</p>
-                    </div>
-                    <div class="text-end">
-                        <p class="mb-1">Tạm tính: <strong>@Model.Subtotal.ToString("N0") ₫</strong></p>
-                        <p class="mb-1">VAT (10%): <strong>@Model.VatAmount.ToString("N0") ₫</strong></p>
-                        <p class="mb-1">Phí dịch vụ (5%): <strong>@Model.ServiceFee.ToString("N0") ₫</strong></p>
-                        <p class="mb-0">Giảm giá: <strong>-@Model.DiscountAmount.ToString("N0") ₫</strong></p>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
         <div class="card">
             <div class="card-header fw-bold">
@@ -137,7 +173,7 @@
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle mb-0">
                         <thead class="table-light text-center">
-                            <tr>
+                        <tr>
                                 <th>STT</th>
                                 <th>Tên món</th>
                                 <th>SL</th>
@@ -158,10 +194,21 @@
                                 {
                                     foreach (var item in Model.Items)
                                     {
+                                        var usedQuantity = item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity;
                                         <tr>
                                             <td class="text-center">@index</td>
-                                            <td>@item.MenuItemName</td>
-                                            <td class="text-center">@item.Quantity</td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(item.ComboName))
+                                                {
+                                                    <div>@item.ComboName</div>
+                                                    <div class="text-muted small fst-italic">Combo</div>
+                                                }
+                                                else
+                                                {
+                                                    @item.MenuItemName
+                                                }
+                                            </td>
+                                            <td class="text-center">@usedQuantity</td>
                                             <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
                                             <td class="text-end fw-bold">@item.TotalPrice.ToString("N0") ₫</td>
                                         </tr>
@@ -170,6 +217,31 @@
                                 }
                             }
                         </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="fw-semibold ps-3">Tạm tính</td>
+                                <td class="text-end fw-bold">@Model.Subtotal.ToString("N0") ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="fw-semibold ps-3">VAT</td>
+                                <td class="text-end fw-bold">@Model.VatAmount.ToString("N0") ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="fw-semibold ps-3">Phí dịch vụ</td>
+                                <td class="text-end fw-bold">@Model.ServiceFee.ToString("N0") ₫</td>
+                            </tr>
+                            @if (Model.DiscountAmount > 0)
+                            {
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3">Giảm giá</td>
+                                    <td class="text-end fw-bold text-danger">-@Model.DiscountAmount.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                            <tr class="table-success">
+                                <td colspan="4" class="fw-bold fs-5 ps-3">Tổng cộng thanh toán</td>
+                                <td class="text-end fw-bold text-primary fs-4">@Model.TotalAmount.ToString("N0") ₫</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -182,10 +254,10 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <p class="text-muted mb-1">Khách hàng</p>
-                        <h5 class="mb-0">@Model.CustomerName ?? "Khách lẻ"</h5>
-                        <small class="text-muted">@Model.CustomerPhone ?? "Không có số điện thoại"</small>
+                        <h5 class="mb-0">@(Model.CustomerName ?? "Khách lẻ")</h5>
+                        <small class="text-muted">@(Model.CustomerPhone ?? "Không có số điện thoại")</small>
                     </div>
-                    <span class="badge bg-warning text-dark text-uppercase">@Model.Status</span>
+                    <span class="badge bg-warning text-dark">@GetStatusDisplayText(Model.Status)</span>
                 </div>
                 <div class="d-flex justify-content-between text-muted">
                     <span>Nhân viên phục vụ</span>
@@ -268,6 +340,7 @@
         </div>
         <div class="toast-body" id="cashierToastMessage"></div>
     </div>
+</div>
 </div>
 
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_CashPaymentModal.cshtml")

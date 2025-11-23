@@ -14,6 +14,7 @@ using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SapaFoRestRMSAPI.Services;
@@ -395,17 +396,19 @@ app.UseAuthorization();
 app.MapHub<ReservationHub>("/reservationHub");
 app.MapControllers();
 
+await app.EnsureSeededAsync();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+    await DataSeeder.SeedCashierWorkflowTestAsync(context);
+}
+
 // Upsert Admin from configuration (Development)
 using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    // Seed core lookup data
-    await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
-
-    await DataSeeder.SeedPositionsAsync(ctx);
-    await DataSeeder.SeedTestCustomerAsync(ctx);
-    await DataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);

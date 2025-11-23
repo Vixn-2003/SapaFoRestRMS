@@ -48,7 +48,7 @@ namespace WebSapaForestForStaff.Controllers
         {
             var order = await _paymentApiService.GetOrderDetailAsync(id);
             if (order == null) return NotFound();
-            return View("~/Views/CashierFlow/OrderDetail.cshtml", order);
+            return View("~/Views/CashierFlow/ConfirmOrder.cshtml", order);
         }
 
         [HttpGet("confirm/{orderId}")]
@@ -56,7 +56,7 @@ namespace WebSapaForestForStaff.Controllers
         {
             var order = await _paymentApiService.GetOrderDetailAsync(orderId);
             if (order == null) return NotFound();
-            return View("~/Views/CashierFlow/CustomerConfirm.cshtml", order);
+            return View("~/Views/CashierFlow/ConfirmOrder.cshtml", order);
         }
 
         [HttpPost("confirm")]
@@ -76,8 +76,8 @@ namespace WebSapaForestForStaff.Controllers
                 return RedirectToAction(nameof(CustomerConfirm), new { orderId = request.OrderId });
             }
 
-            TempData["SuccessMessage"] = "Khách đã xác nhận đơn hàng thành công. Bạn có thể tiến hành thanh toán.";
-            return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+            TempData["SuccessMessage"] = "Khách đã xác nhận đơn hàng thành công. Bạn có thể tiếp tục xử lý thanh toán.";
+            return RedirectToAction(nameof(OrderDetail), new { id = request.OrderId });
         }
 
         [HttpGet("payment/{id}")]
@@ -88,9 +88,10 @@ namespace WebSapaForestForStaff.Controllers
             
             // Kiểm tra xem đơn hàng đã được khách xác nhận chưa
             var isConfirmed = !string.IsNullOrEmpty(order.Status) && 
-                              (order.Status.Equals("Confirmed", StringComparison.OrdinalIgnoreCase) ||
-                               order.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) ||
-                               order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+                              (order.Status.Equals("confirmed", StringComparison.OrdinalIgnoreCase) ||
+                               order.Status.Equals("pending-payment", StringComparison.OrdinalIgnoreCase) ||
+                               order.Status.Equals("paid", StringComparison.OrdinalIgnoreCase) ||
+                               order.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
             
             if (!isConfirmed)
             {
@@ -120,9 +121,10 @@ namespace WebSapaForestForStaff.Controllers
             }
             
             var isConfirmed = !string.IsNullOrEmpty(order.Status) && 
-                              (order.Status.Equals("pending-payment", StringComparison.OrdinalIgnoreCase) ||
-                               order.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) ||
-                               order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase));
+                              (order.Status.Equals("confirmed", StringComparison.OrdinalIgnoreCase) ||
+                               order.Status.Equals("pending-payment", StringComparison.OrdinalIgnoreCase) ||
+                               order.Status.Equals("paid", StringComparison.OrdinalIgnoreCase) ||
+                               order.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
             
             if (!isConfirmed)
             {
@@ -143,7 +145,7 @@ namespace WebSapaForestForStaff.Controllers
                 Session = session
             };
 
-            return View("~/Views/CashierFlow/Confirm.cshtml", viewModel);
+            return View("~/Views/CashierFlow/PaymentConfirm.cshtml", viewModel);
         }
 
         [HttpPost("payment/confirm")]
@@ -160,7 +162,7 @@ namespace WebSapaForestForStaff.Controllers
                     OrderId = request.OrderId,
                     Session = session
                 };
-                return View("~/Views/CashierFlow/Confirm.cshtml", viewModel);
+                return View("~/Views/CashierFlow/PaymentConfirm.cshtml", viewModel);
             }
 
             TempData["SuccessMessage"] = result.Message;

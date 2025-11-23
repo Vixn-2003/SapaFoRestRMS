@@ -53,6 +53,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Order> Orders { get; set; }
 
+    public virtual DbSet<OrderHistory> OrderHistories { get; set; }
+
     public virtual DbSet<OrderDetail> OrderDetails { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
@@ -370,6 +372,8 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+            entity.Property(e => e.ConfirmedAt)
+                .HasColumnType("datetime");
             entity.Property(e => e.OrderType).HasMaxLength(20);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
@@ -385,6 +389,33 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasOne(d => d.Reservation).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.ReservationId)
                 .HasConstraintName("FK__Orders__Reservat__2FCF1A8A");
+
+            entity.HasOne(d => d.ConfirmedByStaff).WithMany(p => p.ConfirmedOrders)
+                .HasForeignKey(d => d.ConfirmedByStaffId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<OrderHistory>(entity =>
+        {
+            entity.HasKey(e => e.OrderHistoryId);
+
+            entity.Property(e => e.Action)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Reason)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrderHistories)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.OrderHistories)
+                .HasForeignKey(d => d.StaffId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<OrderDetail>(entity =>
@@ -404,6 +435,11 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.OrderDetails)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("FK__OrderDeta__Order__2DE6D218");
+
+            entity.HasOne(od => od.Combo)
+                .WithMany(c => c.OrderDetails)
+                .HasForeignKey(od => od.ComboId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Payment>(entity =>

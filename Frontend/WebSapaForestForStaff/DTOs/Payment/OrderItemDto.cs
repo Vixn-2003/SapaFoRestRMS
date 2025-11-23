@@ -6,8 +6,10 @@ namespace WebSapaForestForStaff.DTOs.Payment
     public class OrderItemDto
     {
         public int OrderDetailId { get; set; }
-        public int MenuItemId { get; set; }
+        public int? MenuItemId { get; set; }
         public string MenuItemName { get; set; } = string.Empty;
+        public int? ComboId { get; set; }
+        public string? ComboName { get; set; }
         public int Quantity { get; set; }
         public int QuantityUsed { get; set; }
         public decimal UnitPrice { get; set; }
@@ -16,7 +18,7 @@ namespace WebSapaForestForStaff.DTOs.Payment
         // Legacy aliases
         public string Name
         {
-            get => MenuItemName;
+            get => !string.IsNullOrEmpty(ComboName) ? ComboName : MenuItemName;
             set => MenuItemName = value;
         }
 

@@ -116,6 +116,33 @@ public class PaymentController : ControllerBase
         }
     }
 
+    [HttpPut("orders/{orderId}/undo-confirm")]
+    public async Task<IActionResult> UndoConfirmOrder(int orderId, [FromBody] UndoConfirmRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            await _paymentService.UndoConfirmOrderAsync(orderId, request, ct);
+            return Ok(new { message = "Order reverted successfully." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi hoàn tác xác nhận", error = ex.Message });
+        }
+    }
+
     /// <summary>
     /// Owner/Manager/Staff: Lấy tóm tắt đơn hàng cho payment screen
     /// GET /api/payment/order/{orderId}

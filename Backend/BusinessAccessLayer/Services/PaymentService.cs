@@ -1,4 +1,5 @@
 using AutoMapper;
+using BusinessAccessLayer.Constants;
 using BusinessAccessLayer.DTOs.Payment;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
@@ -228,7 +229,7 @@ public class PaymentService : IPaymentService
         };
 
         // Cập nhật trạng thái đơn hàng
-        order.Status = "Paid";
+        order.Status = OrderStatusConstants.Paid;
         await _unitOfWork.Payments.UpdateAsync(order);
 
         // Lưu transaction
@@ -274,7 +275,7 @@ public class PaymentService : IPaymentService
         }
 
         // Sau khi khách xác nhận, chuyển trạng thái đơn sang "Confirmed" (đã xác nhận, chờ thanh toán)
-        order.Status = "Confirmed";
+        order.Status = OrderStatusConstants.Confirmed;
 
         await _unitOfWork.SaveChangesAsync();
 
@@ -282,6 +283,67 @@ public class PaymentService : IPaymentService
         CalculateOrderAmounts(order, orderDto);
         PopulateOrderMetadata(order, orderDto);
         return orderDto;
+    }
+
+    public async Task<bool> UndoConfirmOrderAsync(int orderId, UndoConfirmRequestDto request, CancellationToken ct = default)
+    {
+        var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
+        if (order == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {orderId}");
+        }
+
+        if (!string.Equals(order.Status, OrderStatusConstants.Confirmed, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Order cannot be reverted at this stage.");
+        }
+
+        if (order.Payments != null && order.Payments.Any(p => p.PaymentDate.HasValue))
+        {
+            throw new InvalidOperationException("Không thể hoàn tác vì đơn hàng đã bắt đầu thanh toán.");
+        }
+
+        if (order.OrderDetails != null && order.OrderDetails.Any(od =>
+            string.Equals(od.Status, "Cooking", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(od.Status, "Served", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("Không thể hoàn tác vì bếp đã bắt đầu chế biến món.");
+        }
+
+        order.Status = OrderStatusConstants.WaitingConfirmation;
+        order.ConfirmedAt = null;
+        order.ConfirmedByStaffId = null;
+
+        await _unitOfWork.Payments.UpdateAsync(order);
+
+        var staffId = await ResolveStaffIdAsync(request.StaffId, ct);
+
+        var history = new OrderHistory
+        {
+            OrderId = orderId,
+            Action = "Undo Confirmation",
+            Reason = request.Reason,
+            StaffId = staffId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _unitOfWork.Payments.AddOrderHistoryAsync(history);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+    }
+
+    private async Task<int> ResolveStaffIdAsync(int userId, CancellationToken ct = default)
+    {
+        var user = await _unitOfWork.StaffProfiles.GetWithDetailsAsync(userId, ct);
+        var staff = user?.Staff?.FirstOrDefault();
+
+        if (staff == null)
+        {
+            throw new InvalidOperationException("Không tìm thấy hồ sơ nhân viên tương ứng.");
+        }
+
+        return staff.StaffId;
     }
 
     public async Task<TransactionDto?> GetPaymentResultAsync(string sessionId, CancellationToken ct = default)
@@ -508,7 +570,7 @@ public class PaymentService : IPaymentService
             var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
 
             // Cập nhật trạng thái order
-            order.Status = "Paid";
+            order.Status = OrderStatusConstants.Paid;
             await _unitOfWork.Payments.UpdateAsync(order);
             //await _unitOfWork.SaveChangesAsync(ct);
 
@@ -678,7 +740,7 @@ public class PaymentService : IPaymentService
             var order = await _unitOfWork.Payments.GetByIdAsync(transaction.OrderId);
             if (order != null)
             {
-                order.Status = "Paid";
+                order.Status = OrderStatusConstants.Paid;
                 await _unitOfWork.Payments.UpdateAsync(order);
             }
         }
@@ -865,11 +927,11 @@ public class PaymentService : IPaymentService
             {
                 savedParent.Status = "Paid";
                 savedParent.CompletedAt = DateTime.UtcNow;
-                order.Status = "Paid";
+                order.Status = OrderStatusConstants.Paid;
             }
             else
             {
-                order.Status = "PartiallyPaid";
+                order.Status = OrderStatusConstants.PartiallyPaid;
             }
 
             await _unitOfWork.Payments.UpdateTransactionAsync(savedParent);

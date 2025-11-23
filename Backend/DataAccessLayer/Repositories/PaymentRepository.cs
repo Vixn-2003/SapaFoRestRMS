@@ -26,6 +26,8 @@ public class PaymentRepository : IPaymentRepository
         return await _context.Orders
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.MenuItem)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Combo)
             .Include(o => o.Customer)
                 .ThenInclude(c => c!.User)
             .Include(o => o.Reservation)
@@ -76,6 +78,8 @@ public class PaymentRepository : IPaymentRepository
         return await _context.Orders
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.MenuItem)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Combo)
             .Include(o => o.Customer)
                 .ThenInclude(c => c!.User)
             .Include(o => o.Reservation)
@@ -137,6 +141,8 @@ public class PaymentRepository : IPaymentRepository
         return _context.Orders
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.MenuItem)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Combo)
             .Include(o => o.Customer)
                 .ThenInclude(c => c!.User)
             .Include(o => o.Reservation)
@@ -205,6 +211,11 @@ public class PaymentRepository : IPaymentRepository
             .Include(t => t.Order)
             .Include(t => t.ConfirmedByUser)
             .FirstOrDefaultAsync(t => t.TransactionCode == transactionCode);
+    }
+
+    public async Task AddOrderHistoryAsync(OrderHistory history)
+    {
+        await _context.Set<OrderHistory>().AddAsync(history);
     }
 }
 

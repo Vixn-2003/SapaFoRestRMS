@@ -64,5 +64,7 @@ public interface IPaymentRepository : IRepository<Order>
     /// Lấy transaction theo TransactionCode
     /// </summary>
     Task<Transaction?> GetTransactionByCodeAsync(string transactionCode);
+
+    Task AddOrderHistoryAsync(OrderHistory history);
 }
 

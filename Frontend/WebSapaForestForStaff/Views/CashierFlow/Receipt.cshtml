@@ -4,154 +4,199 @@
 
 @{
     ViewData["Title"] = "Hóa đơn thanh toán";
-    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
     var tables = Model.TableNumbers != null && Model.TableNumbers.Any()
         ? string.Join(", ", Model.TableNumbers)
         : Model.TableNumber ?? "—";
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <div>
-        <h2 class="mb-1">Hóa đơn thanh toán</h2>
-        <div class="text-muted">Đơn #@(Model.OrderCode ?? $"#{Model.OrderId}") &nbsp; | &nbsp; Bàn: @tables</div>
-        @if (!string.IsNullOrEmpty(Model.StaffName) || !string.IsNullOrEmpty(Model.PaymentMethod))
-        {
+<style>
+    body {
+        background-color: #f5f7fa;
+    }
+
+    .cashier-shell {
+        padding: 32px 40px;
+    }
+
+    .cashier-card {
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 18px 40px rgba(15, 139, 131, 0.08);
+    }
+</style>
+
+<div class="cashier-shell">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h2 class="mb-1">Hóa đơn thanh toán</h2>
+            <div class="text-muted">Đơn #@(Model.OrderCode ?? $"#{Model.OrderId}") &nbsp; | &nbsp; Bàn: @tables</div>
             <div class="text-muted small mt-1">
-                @if (!string.IsNullOrEmpty(Model.StaffName))
-                {
-                    <span>Thu ngân: @Model.StaffName</span>
-                }
-                @if (!string.IsNullOrEmpty(Model.StaffName) && !string.IsNullOrEmpty(Model.PaymentMethod))
-                {
-                    <span> &nbsp; | &nbsp; </span>
-                }
-                @if (!string.IsNullOrEmpty(Model.PaymentMethod))
-                {
-                    <span>Phương thức: @Model.PaymentMethod</span>
-                }
+                Thu ngân: @(Model.StaffName ?? Model.WaiterName ?? "—") &nbsp;|&nbsp; Phương thức: @(Model.PaymentMethod ?? "—")
             </div>
-        }
-    </div>
-    <div class="d-flex gap-2">
-        <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" 
+        </div>
+        <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")"
            class="btn btn-outline-secondary">
             ← Quay lại danh sách
         </a>
     </div>
-</div>
 
-@if (TempData["ErrorMessage"] is string errorMessage)
-{
-    <div class="alert alert-danger mb-3">@errorMessage</div>
-}
-@if (TempData["SuccessMessage"] is string successMessage)
-{
-    <div class="alert alert-success mb-3">@successMessage</div>
-}
-
-<div class="page-content">
-    <!-- Customer Information -->
-    <div class="card mb-3">
-        <div class="card-header fw-bold bg-white">
-            Thông tin khách hàng
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle fs-4"></i>
+            <span>@errorMessage</span>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-2">
-                        <span class="text-muted">Khách hàng:</span>
-                        <span class="fw-bold ms-2">@(Model.CustomerName ?? "Khách lẻ")</span>
-                    </div>
-                    <div class="mb-2">
-                        <span class="text-muted">Điện thoại:</span>
-                        <span class="ms-2">@(Model.CustomerPhone ?? "—")</span>
-                    </div>
+    }
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-3" role="alert">
+            <i class="bi bi-check-circle fs-4"></i>
+            <span>@successMessage</span>
+        </div>
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card mb-3 cashier-card">
+                <div class="card-header fw-bold bg-white">
+                    Thông tin khách hàng
                 </div>
-                <div class="col-md-6 text-end">
-                    <div class="text-muted mb-1">Thời gian thanh toán</div>
-                    <div class="fw-bold">@(Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
+                <div class="card-body">
+                    <div class="row gy-3">
+                        <div class="col-sm-6">
+                            <div class="text-muted small">Khách hàng</div>
+                            <div class="fw-bold fs-5">@(Model.CustomerName ?? "Khách lẻ")</div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <div class="text-muted small">Điện thoại</div>
+                            <div class="fw-bold">@(Model.CustomerPhone ?? "—")</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-muted small">Thời gian tạo</div>
+                            <div class="fw-semibold">@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <div class="text-muted small">Thời gian thanh toán</div>
+                            <div class="fw-semibold">@(Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Card 1: Danh sách món ăn / đồ uống -->
-    <div class="card mb-3">
-        <div class="card-header fw-bold bg-white">
-            Danh sách món ăn / đồ uống
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0">
-                    <thead class="table-light text-center">
-                        <tr>
-                            <th>STT</th>
-                            <th>Tên món</th>
-                            <th>SL</th>
-                            <th class="text-end">Thành tiền</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @{
-                            var index = 1;
-                            if (Model.Items == null || !Model.Items.Any())
-                            {
+            <div class="card cashier-card">
+                <div class="card-header fw-bold bg-white">
+                    Danh sách món ăn / đồ uống
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-light text-center">
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">Không có món nào trong đơn hàng.</td>
+                                    <th>STT</th>
+                                    <th>Tên món</th>
+                                    <th>SL dùng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
                                 </tr>
-                            }
-                            else
-                            {
-                                foreach (var item in Model.Items)
+                            </thead>
+                            <tbody>
+                                @{
+                                    var index = 1;
+                                    if (Model.Items == null || !Model.Items.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">Không có món nào trong đơn hàng.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var item in Model.Items)
+                                        {
+                                            var usedQuantity = item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity;
+                                            <tr>
+                                                <td class="text-center">@index</td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(item.ComboName))
+                                                    {
+                                                        <div>@item.ComboName</div>
+                                                        <div class="text-muted small fst-italic">Combo</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @item.MenuItemName
+                                                    }
+                                                </td>
+                                                <td class="text-center">@usedQuantity</td>
+                                                <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
+                                                <td class="text-end">@item.TotalPrice.ToString("N0") ₫</td>
+                                            </tr>
+                                            index++;
+                                        }
+                                    }
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3">Tạm tính</td>
+                                    <td class="text-end fw-bold">@Model.Subtotal.ToString("N0") ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3">VAT</td>
+                                    <td class="text-end fw-bold">@Model.VatAmount.ToString("N0") ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3">Phí dịch vụ</td>
+                                    <td class="text-end fw-bold">@Model.ServiceFee.ToString("N0") ₫</td>
+                                </tr>
+                                @if (Model.DiscountAmount > 0)
                                 {
                                     <tr>
-                                        <td class="text-center">@index</td>
-                                        <td>@item.MenuItemName</td>
-                                        <td class="text-center">@item.Quantity</td>
-                                        <td class="text-end">@item.TotalPrice.ToString("N0") ₫</td>
+                                        <td colspan="4" class="fw-semibold ps-3">Giảm giá</td>
+                                        <td class="text-end fw-bold text-danger">-@Model.DiscountAmount.ToString("N0") ₫</td>
                                     </tr>
-                                    index++;
                                 }
-                            }
-                        }
-                    </tbody>
-                </table>
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold fs-5 ps-3">Tổng cộng thanh toán</td>
+                                    <td class="text-end fw-bold text-primary fs-4">@Model.TotalAmount.ToString("N0") ₫</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Card 2: Tổng tạm tính -->
-    <div class="card mb-3">
-        <div class="card-header fw-bold bg-white">
-            Tổng tạm tính
-        </div>
-        <div class="card-body">
-            <div class="fs-5 fw-bold">@Model.Subtotal.ToString("N0") ₫</div>
-        </div>
-    </div>
+        <div class="col-lg-5">
+            <div class="card cashier-card">
+                <div class="card-header fw-bold bg-white">
+                    Thông tin đơn hàng
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-6 text-muted small">Mã đơn</dt>
+                        <dd class="col-6 fw-semibold text-end">@(Model.OrderCode ?? $"#{Model.OrderId}")</dd>
 
-    <!-- Card 3: Tổng cộng thanh toán -->
-    <div class="card">
-        <div class="card-header fw-bold bg-white">
-            Tổng cộng thanh toán
-        </div>
-        <div class="card-body text-end">
-            <div class="text-muted mb-2">VAT: @Model.VatAmount.ToString("N0") ₫</div>
-            <div class="text-muted mb-2">Phí dịch vụ: @Model.ServiceFee.ToString("N0") ₫</div>
-            @if (Model.DiscountAmount > 0)
-            {
-                <div class="text-muted mb-2">Giảm giá: -@Model.DiscountAmount.ToString("N0") ₫</div>
-            }
-            <div class="fs-4 fw-bold text-primary mt-2 mb-3">@Model.TotalAmount.ToString("N0") ₫</div>
-            <div class="d-flex justify-content-end gap-2 mt-3">
-                <a href="@Url.Action(nameof(CashierPaymentFlowController.DownloadReceipt), "CashierPaymentFlow", new { orderId = Model.OrderId })" 
-                   class="btn btn-success">
-                    Tải hóa đơn PDF
-                </a>
-                <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" 
-                   class="btn btn-outline-secondary">
-                    Quay lại danh sách
-                </a>
+                        <dt class="col-6 text-muted small">Bàn</dt>
+                        <dd class="col-6 fw-semibold text-end">@tables</dd>
+
+                        <dt class="col-6 text-muted small">Thu ngân xử lý</dt>
+                        <dd class="col-6 fw-semibold text-end">@(Model.StaffName ?? Model.WaiterName ?? "—")</dd>
+
+                        <dt class="col-6 text-muted small">Phương thức thanh toán</dt>
+                        <dd class="col-6 fw-semibold text-end">@(Model.PaymentMethod ?? "—")</dd>
+                    </dl>
+                </div>
+                <div class="card-footer bg-white d-flex flex-wrap gap-2 justify-content-end">
+                    <a href="@Url.Action(nameof(CashierPaymentFlowController.DownloadReceipt), "CashierPaymentFlow", new { orderId = Model.OrderId })"
+                       class="btn btn-success">
+                        <i class="bi bi-download me-2"></i>Tải hóa đơn PDF
+                    </a>
+                    <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")"
+                       class="btn btn-outline-secondary">
+                        Quay lại danh sách
+                    </a>
+                </div>
             </div>
         </div>
     </div>

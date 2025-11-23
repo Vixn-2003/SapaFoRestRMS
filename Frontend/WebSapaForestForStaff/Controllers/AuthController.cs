@@ -73,7 +73,7 @@ namespace WebSapaForestForStaff.Controllers
                             var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsClaim);
                             if (positions != null && positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
                             {
-                                return RedirectToAction("OrderSelection", "Payment");
+                                return RedirectToAction("Index", "DashboardTable");
                             }
                         }
                         catch
@@ -153,7 +153,7 @@ namespace WebSapaForestForStaff.Controllers
                     if (authResponse.RoleId == 4 && authResponse.Positions != null && 
                         authResponse.Positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
                     {
-                        redirectUrl = returnUrl ?? Url.Action("OrderSelection", "Payment");
+                        redirectUrl = returnUrl ?? Url.Action("Index", "DashboardTable");
                     }
                     else
                     {
