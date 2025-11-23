@@ -26,6 +26,21 @@ public partial class OrderDetail
     public Combo Combo { get; set; }
 
     public string? Notes { get; set; } // Thêm ? để cho phép null
+    
+    /// <summary>
+    /// Đánh dấu order được yêu cầu làm ngay từ bếp phó
+    /// </summary>
+    public bool IsUrgent { get; set; } = false;
+
+    /// <summary>
+    /// Thời gian món được đánh dấu "Sẵn sàng" (Ready)
+    /// </summary>
+    public DateTime? ReadyAt { get; set; }
+
+    /// <summary>
+    /// Thời gian bắt đầu nấu (khi status chuyển sang "Cooking")
+    /// </summary>
+    public DateTime? StartedAt { get; set; }
 
     public virtual ICollection<KitchenTicketDetail> KitchenTicketDetails { get; set; } = new List<KitchenTicketDetail>();
 

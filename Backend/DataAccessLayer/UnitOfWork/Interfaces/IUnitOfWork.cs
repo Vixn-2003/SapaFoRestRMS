@@ -29,6 +29,8 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IPaymentRepository Payments { get; }
         IAuditLogRepository AuditLogs { get; }
         IOrderLockRepository OrderLocks { get; }
+        IOrderRepository Orders { get; }
+        IOrderDetailRepository OrderDetails { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

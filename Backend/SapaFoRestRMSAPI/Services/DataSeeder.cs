@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DataAccessLayer.Dbcontext;
 using DomainAccessLayer.Models;
+using DomainAccessLayer.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using BusinessAccessLayer.Constants;
@@ -365,7 +366,7 @@ namespace SapaFoRestRMSAPI.Services
 
             // Cleanup previous pending/test orders
             var pendingOrderIds = await context.Orders
-                .Where(o => o.Status == OrderStatusConstants.WaitingConfirmation || 
+                .Where(o => o.Status == OrderStatusConstants.WaitingConfirmation ||
                            o.Status == OrderStatusConstants.Confirmed ||
                            o.Status == OrderStatusConstants.PendingPayment)
                 .Select(o => o.OrderId)
@@ -398,7 +399,7 @@ namespace SapaFoRestRMSAPI.Services
             var cashierUser = await context.Users
                 .Include(u => u.Staff)
                 .FirstOrDefaultAsync(u => u.Email == "cashier@test.com" && u.IsDeleted == false);
-            
+
             if (cashierUser == null || cashierUser.Staff == null || !cashierUser.Staff.Any())
             {
                 // Cashier doesn't exist, seed it first
@@ -418,7 +419,7 @@ namespace SapaFoRestRMSAPI.Services
             var customer = await context.Customers
                 .Include(c => c.User)
                 .FirstOrDefaultAsync();
-            
+
             if (customer == null)
             {
                 await SeedTestCustomerAsync(context);
@@ -462,9 +463,9 @@ namespace SapaFoRestRMSAPI.Services
             // Create or get a reservation for the table
             var reservation = await context.Reservations
                 .Include(r => r.ReservationTables)
-                .FirstOrDefaultAsync(r => r.ReservationTables.Any(rt => rt.TableId == table.TableId) && 
+                .FirstOrDefaultAsync(r => r.ReservationTables.Any(rt => rt.TableId == table.TableId) &&
                                           r.Status == "Guest Seated");
-            
+
             if (reservation == null)
             {
                 reservation = new Reservation
@@ -528,7 +529,7 @@ namespace SapaFoRestRMSAPI.Services
             // 3. Seed Combos with ComboItems
             var combo1 = await context.Combos
                 .FirstOrDefaultAsync(c => c.Name.Contains("Steak Dinner"));
-            
+
             if (combo1 == null)
             {
                 combo1 = new Combo
@@ -545,7 +546,7 @@ namespace SapaFoRestRMSAPI.Services
                 // Add ComboItems
                 var steakItem = menuItems.FirstOrDefault(m => m.Name.Contains("Steak") || m.Name.Contains("Bò"));
                 var teaItem = menuItems.FirstOrDefault(m => m.Name.Contains("Trà") || m.Name.Contains("Tea"));
-                
+
                 if (steakItem != null)
                 {
                     await context.ComboItems.AddAsync(new ComboItem
@@ -555,7 +556,7 @@ namespace SapaFoRestRMSAPI.Services
                         Quantity = 1
                     });
                 }
-                
+
                 if (teaItem != null)
                 {
                     await context.ComboItems.AddAsync(new ComboItem
@@ -565,13 +566,13 @@ namespace SapaFoRestRMSAPI.Services
                         Quantity = 1
                     });
                 }
-                
+
                 await context.SaveChangesAsync();
             }
 
             var combo2 = await context.Combos
                 .FirstOrDefaultAsync(c => c.Name.Contains("Family Hotpot"));
-            
+
             if (combo2 == null)
             {
                 combo2 = new Combo
@@ -589,7 +590,7 @@ namespace SapaFoRestRMSAPI.Services
                 var hotpotItem = menuItems.FirstOrDefault(m => m.Name.Contains("Lẩu") || m.Name.Contains("Hotpot"));
                 var vegetableItem = menuItems.FirstOrDefault(m => m.Name.Contains("Rau") || m.Name.Contains("Vegetable"));
                 var drinkItem = menuItems.FirstOrDefault(m => m.Name.Contains("Trà") || m.Name.Contains("Nước"));
-                
+
                 if (hotpotItem != null)
                 {
                     await context.ComboItems.AddAsync(new ComboItem
@@ -599,7 +600,7 @@ namespace SapaFoRestRMSAPI.Services
                         Quantity = 1
                     });
                 }
-                
+
                 if (vegetableItem != null)
                 {
                     await context.ComboItems.AddAsync(new ComboItem
@@ -609,7 +610,7 @@ namespace SapaFoRestRMSAPI.Services
                         Quantity = 1
                     });
                 }
-                
+
                 if (drinkItem != null)
                 {
                     await context.ComboItems.AddAsync(new ComboItem
@@ -619,7 +620,7 @@ namespace SapaFoRestRMSAPI.Services
                         Quantity = 1
                     });
                 }
-                
+
                 await context.SaveChangesAsync();
             }
 
@@ -712,7 +713,7 @@ namespace SapaFoRestRMSAPI.Services
             // Add OrderDetails for Order 2 (with combo)
             // Order is confirmed, so items should be "Confirmed" status
             var order2Details = new List<OrderDetail>();
-            
+
             // Add combo order details
             order2Details.Add(new OrderDetail
             {
@@ -1067,6 +1068,7 @@ namespace SapaFoRestRMSAPI.Services
             Console.WriteLine($"   - paid: Orders 5, 7 (2 orders)");
             Console.WriteLine($"   Total: {ordersCreated} orders created for comprehensive testing.");
         }
+
     }
 }
 

@@ -8,9 +8,6 @@ namespace DataAccessLayer.Dbcontext;
 
 public partial class SapaFoRestRmsContext : DbContext
 {
-    public SapaFoRestRmsContext()
-    {
-    }
 
     public SapaFoRestRmsContext(DbContextOptions<SapaFoRestRmsContext> options)
         : base(options)
@@ -18,10 +15,22 @@ public partial class SapaFoRestRmsContext : DbContext
     }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-        IConfigurationRoot configuration = builder.Build();
-        optionsBuilder.UseSqlServer(configuration.GetConnectionString("MyDatabase"));
+        if (!optionsBuilder.IsConfigured)
+        {
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+            IConfigurationRoot configuration = builder.Build();
+            var connectionString = configuration.GetConnectionString("MyDatabase");
+
+            if (!string.IsNullOrEmpty(connectionString))
+            {
+                optionsBuilder.UseSqlServer(connectionString);
+            }
+        }
     }
+
 
     public virtual DbSet<Announcement> Announcements { get; set; }
     public virtual DbSet<Area> Areas { get; set; } = null!;
@@ -246,6 +255,15 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.QuantityRemaining)
                 .HasColumnType("decimal(18, 2)");
 
+            entity.Property(e => e.QuantityReserved)
+                .HasColumnType("decimal(18, 2)")
+                .HasDefaultValue(0);
+
+            // Available là computed column trong database
+            entity.Property(e => e.Available)
+                .HasColumnType("decimal(18, 2)")
+                .HasComputedColumnSql("([QuantityRemaining] - [QuantityReserved])", stored: true);
+
             // ====== Quan hệ Ingredient - InventoryBatch ======
             entity.HasOne(d => d.Ingredient)
                 .WithMany(p => p.InventoryBatches)
@@ -360,6 +378,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.BatchSize).HasColumnType("int").HasDefaultValue(1);
             entity.HasOne(d => d.Category).WithMany(p => p.MenuItems)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK__MenuItems__Categ__2BFE89A6");

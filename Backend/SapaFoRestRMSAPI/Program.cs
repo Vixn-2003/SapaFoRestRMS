@@ -19,6 +19,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SapaFoRestRMSAPI.Services;
 using System.Text;
+using SapaFoRestRMSAPI.Hubs;
+using Microsoft.AspNetCore.Http.Features;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,12 +44,12 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("MyDatabase"),
-        sqlOptions =>
-        {
-            sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-        }));
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase"), sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(60); // 60 seconds command timeout
+    });
+});
 
 //Show connection string in console
 Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));
@@ -197,6 +199,8 @@ builder.Services.AddScoped<IUnitService, UnitService>();
 
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
+builder.Services.AddScoped<IKitchenDisplayService, KitchenDisplayService>();
+
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
 
 //UnitOfWork
@@ -304,6 +308,7 @@ builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 builder.Services.AddSignalR();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
+builder.Services.AddSignalR();
 
 // ✅ Đảm bảo hỗ trợ multipart form data
 builder.Services.AddControllers()
@@ -392,6 +397,8 @@ app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<KitchenHub>("/kitchenHub");
+
 
 app.MapHub<ReservationHub>("/reservationHub");
 app.MapControllers();
@@ -409,6 +416,13 @@ using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    // Seed core lookup data
+    await DataSeeder.SeedPositionsAsync(ctx);
+    await DataSeeder.SeedTestCustomerAsync(ctx);
+    await DataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
+    await DataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
+    await DataSeeder.SeedKitchenOrdersAsync(ctx);
+    await DataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);

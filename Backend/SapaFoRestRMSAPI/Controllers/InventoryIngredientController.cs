@@ -16,11 +16,16 @@ namespace SapaFoRestRMSAPI.Controllers
 
         private readonly IInventoryIngredientService _inventoryIngredientService;
         private readonly IWarehouseService _warehouseService;
+        private readonly IStockTransactionService _stockTransactionService;
 
-        public InventoryIngredientController(IInventoryIngredientService inventoryIngredientService, IWarehouseService warehouseService)
+        public InventoryIngredientController(
+            IInventoryIngredientService inventoryIngredientService, 
+            IWarehouseService warehouseService,
+            IStockTransactionService stockTransactionService)
         {
             _inventoryIngredientService = inventoryIngredientService;
             _warehouseService = warehouseService;
+            _stockTransactionService = stockTransactionService;
         }
 
         [HttpGet]
@@ -287,6 +292,39 @@ namespace SapaFoRestRMSAPI.Controllers
                 {
                     success = false,
                     message = "Có lỗi xảy ra khi cập nhật nguyên liệu",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("ExportTransactions")]
+        public async Task<ActionResult<IEnumerable<object>>> GetExportTransactions()
+        {
+            try
+            {
+                var transactions = await _stockTransactionService.GetExportTransactionsAsync();
+                
+                var result = transactions.Select(t => new
+                {
+                    id = t.TransactionId,
+                    ingredientId = t.IngredientId,
+                    ingredientName = t.IngredientName ?? "N/A",
+                    type = t.Type,
+                    quantity = t.Quantity,
+                    date = t.TransactionDate?.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    note = t.Note ?? "",
+                    batchId = t.BatchId,
+                    batchName = t.BatchName ?? $"Lô {t.BatchId}"
+                }).ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Có lỗi xảy ra khi lấy dữ liệu xuất kho",
                     error = ex.Message
                 });
             }
