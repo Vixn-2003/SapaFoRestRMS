@@ -387,10 +387,10 @@ using (var scope = app.Services.CreateScope())
     // Seed core lookup data
     await DataSeeder.SeedPositionsAsync(ctx);
     await DataSeeder.SeedTestCustomerAsync(ctx);
-    await DataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
-    await DataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
-    await DataSeeder.SeedKitchenOrdersAsync(ctx);
-    await DataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
+    await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
+    await MenuDataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
+    await MenuDataSeeder.SeedKitchenOrdersAsync(ctx);
+    await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);
