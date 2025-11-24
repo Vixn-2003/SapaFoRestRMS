@@ -7,6 +7,7 @@ using DomainAccessLayer.Models;
 using DomainAccessLayer.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using BusinessAccessLayer.Constants;
 
 namespace SapaFoRestRMSAPI.Services
 {
@@ -40,7 +41,7 @@ namespace SapaFoRestRMSAPI.Services
                 {
                     FullName = "System Admin",
                     Email = email,
-                    PasswordHash = HashPassword("C\"=Nt1,qu@F16oX86"),
+                    PasswordHash = HashPassword("C=Nt1,qu@F16oX86"),
                     RoleId = adminRoleId,
                     Status = 0,
                     CreatedAt = DateTime.UtcNow,
@@ -52,7 +53,7 @@ namespace SapaFoRestRMSAPI.Services
             {
                 // Ensure role and password are correct for development convenience
                 existing.RoleId = adminRoleId;
-                existing.PasswordHash = HashPassword("C\"=Nt1,qu@F16oX86");
+                existing.PasswordHash = HashPassword("C=Nt1,qu@F16oX86");
                 context.Users.Update(existing);
             }
             await context.SaveChangesAsync();

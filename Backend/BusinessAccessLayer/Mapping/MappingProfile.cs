@@ -110,7 +110,10 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(d => d.OrderItems, m => m.MapFrom(s => s.OrderDetails));
 
             CreateMap<OrderDetail, OrderItemDto>()
-                .ForMember(d => d.MenuItemName, m => m.MapFrom(s => s.MenuItem != null ? s.MenuItem.Name : ""))
+                .ForMember(d => d.MenuItemId, m => m.MapFrom(s => s.MenuItemId))
+                .ForMember(d => d.MenuItemName, m => m.MapFrom(s => s.MenuItem != null ? s.MenuItem.Name : (s.Combo != null ? s.Combo.Name : "")))
+                .ForMember(d => d.ComboId, m => m.MapFrom(s => s.ComboId))
+                .ForMember(d => d.ComboName, m => m.MapFrom(s => s.Combo != null ? s.Combo.Name : null))
                 .ForMember(d => d.TotalPrice, m => m.MapFrom(s => s.UnitPrice * s.Quantity));
 
             CreateMap<Transaction, TransactionDto>();

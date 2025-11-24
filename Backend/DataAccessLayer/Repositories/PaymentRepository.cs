@@ -1,10 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace DataAccessLayer.Repositories;
 
@@ -25,10 +26,16 @@ public class PaymentRepository : IPaymentRepository
         return await _context.Orders
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.MenuItem)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Combo)
             .Include(o => o.Customer)
+                .ThenInclude(c => c!.User)
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.ReservationTables)
                     .ThenInclude(rt => rt.Table)
+            .Include(o => o.Reservation)
+                .ThenInclude(r => r.Staff)
+            .Include(o => o.Transactions)
             .FirstOrDefaultAsync(o => o.OrderId == id);
     }
 
@@ -71,40 +78,44 @@ public class PaymentRepository : IPaymentRepository
         return await _context.Orders
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.MenuItem)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Combo)
             .Include(o => o.Customer)
+                .ThenInclude(c => c!.User)
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.ReservationTables)
                     .ThenInclude(rt => rt.Table)
+            .Include(o => o.Reservation)
+                .ThenInclude(r => r.Staff)
             .Include(o => o.Payments)
             .Include(o => o.Transactions)
                 .ThenInclude(t => t.ConfirmedByUser)
             .FirstOrDefaultAsync(o => o.OrderId == orderId);
     }
 
-    public async Task<IEnumerable<Order>> GetPendingOrdersAsync()
+    public async Task<IEnumerable<Order>> GetOrdersByDateAsync(DateOnly date)
     {
-        return await _context.Orders
-            .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.MenuItem)
-            .Include(o => o.Customer)
-            .Include(o => o.Reservation)
-                .ThenInclude(r => r.ReservationTables)
-                    .ThenInclude(rt => rt.Table)
-            .Where(o => o.Status == "Pending" || o.Status == "pending-payment")
+        var dayStart = date.ToDateTime(TimeOnly.MinValue);
+        var dayEnd = date.ToDateTime(TimeOnly.MaxValue);
+
+        return await BuildOrderQuery()
+            .Where(o => o.CreatedAt.HasValue &&
+                        o.CreatedAt.Value >= dayStart &&
+                        o.CreatedAt.Value <= dayEnd)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync()
+    {
+        return await BuildOrderQuery()
             .OrderByDescending(o => o.CreatedAt)
             .ToListAsync();
     }
 
     public async Task<Order?> GetOrderByCodeOrTableAsync(string? orderCode, string? tableNumber)
     {
-        var query = _context.Orders
-            .Include(o => o.OrderDetails)
-                .ThenInclude(od => od.MenuItem)
-            .Include(o => o.Customer)
-            .Include(o => o.Reservation)
-                .ThenInclude(r => r.ReservationTables)
-                    .ThenInclude(rt => rt.Table)
-            .AsQueryable();
+        var query = BuildOrderQuery();
 
         if (!string.IsNullOrWhiteSpace(orderCode))
         {
@@ -123,6 +134,25 @@ public class PaymentRepository : IPaymentRepository
         }
 
         return await query.FirstOrDefaultAsync();
+    }
+
+    private IQueryable<Order> BuildOrderQuery()
+    {
+        return _context.Orders
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.MenuItem)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Combo)
+            .Include(o => o.Customer)
+                .ThenInclude(c => c!.User)
+            .Include(o => o.Reservation)
+                .ThenInclude(r => r.ReservationTables)
+                    .ThenInclude(rt => rt.Table)
+            .Include(o => o.Reservation)
+                .ThenInclude(r => r.Staff)
+            .Include(o => o.Payments)
+            .Include(o => o.Transactions)
+                .ThenInclude(t => t.ConfirmedByUser);
     }
 
     public async Task<Transaction> SaveTransactionAsync(Transaction transaction)
@@ -181,6 +211,11 @@ public class PaymentRepository : IPaymentRepository
             .Include(t => t.Order)
             .Include(t => t.ConfirmedByUser)
             .FirstOrDefaultAsync(t => t.TransactionCode == transactionCode);
+    }
+
+    public async Task AddOrderHistoryAsync(OrderHistory history)
+    {
+        await _context.Set<OrderHistory>().AddAsync(history);
     }
 }
 

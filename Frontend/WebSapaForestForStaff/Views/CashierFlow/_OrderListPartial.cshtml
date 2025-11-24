@@ -1,0 +1,142 @@
+@model List<WebSapaForestForStaff.DTOs.Payment.OrderDto>
+@using WebSapaForestForStaff.Controllers
+@using System
+
+@{
+    string FormatCurrency(decimal amount) => $"{amount:N0} ₫";
+    string FormatTime(DateTime? dateTime) => dateTime?.ToString("HH:mm dd/MM") ?? "--";
+    bool IsAged(DateTime? createdAt) => createdAt.HasValue && (DateTime.Now - createdAt.Value).TotalMinutes >= 15;
+    
+    // Determine status from ViewBag or default to pending
+    var orderStatus = ViewBag.OrderStatus as string ?? "pending";
+    var isPending = orderStatus.Equals("pending", StringComparison.OrdinalIgnoreCase);
+}
+
+@if (Model == null || !Model.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    @if (isPending)
+                    {
+                        <th>Mã đơn</th>
+                        <th>Bàn</th>
+                        <th>Nhân viên phục vụ</th>
+                        <th>Giờ tạo</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Hành động</th>
+                    }
+                    else
+                    {
+                        <th>Mã đơn</th>
+                        <th>Bàn</th>
+                        <th>Nhân viên phục vụ</th>
+                        <th>Giờ thanh toán</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th>Hình thức TT</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Hành động</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="@(isPending ? 7 : 8)" class="text-center text-muted py-4">
+                        @(isPending ? "Không có đơn đang chờ thanh toán." : "Không có đơn đã thanh toán.")
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Bàn</th>
+                    <th>Nhân viên phục vụ</th>
+                    @if (isPending)
+                    {
+                        <th>Giờ tạo</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Hành động</th>
+                    }
+                    else
+                    {
+                        <th>Giờ thanh toán</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th>Hình thức TT</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Hành động</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model)
+                {
+                    var isOver15Minutes = IsAged(order.CreatedAt);
+                    var code = order.OrderCode ?? $"#{order.OrderId}";
+                    var tableName = order.Table ?? "—";
+                    var paidTime = order.PaidAt ?? order.CreatedAt;
+
+                    <tr>
+                        <td class="fw-bold">@code</td>
+                        <td class="fw-bold">@tableName</td>
+                        <td>@(order.WaiterName ?? "—")</td>
+                        @if (isPending)
+                        {
+                            <td>
+                                @FormatTime(order.CreatedAt)
+                                @if (isOver15Minutes)
+                                {
+                                    <span class="text-danger ms-1" title="Đơn đã chờ hơn 15 phút">⏰</span>
+                                }
+                            </td>
+                            <td class="text-end fw-bold text-primary">@FormatCurrency(order.Total)</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">Chờ thanh toán</span>
+                            </td>
+                            <td class="text-end">
+                                <a class="btn btn-success btn-sm me-2"
+                                   href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = order.OrderId })">
+                                    Thanh toán
+                                </a>
+                                <a class="btn btn-outline-secondary btn-sm"
+                                   href="@Url.Action(nameof(CashierPaymentFlowController.OrderDetail), "CashierPaymentFlow", new { id = order.OrderId })">
+                                    Xem chi tiết
+                                </a>
+                            </td>
+                        }
+                        else
+                        {
+                            <td>@FormatTime(paidTime)</td>
+                            <td class="text-end fw-bold text-success">@FormatCurrency(order.Total)</td>
+                            <td>@(order.PaymentMethod ?? "—")</td>
+                            <td>
+                                <span class="badge bg-success">Đã thanh toán</span>
+                            </td>
+                            <td class="text-end">
+                                <a class="btn btn-outline-primary btn-sm me-2"
+                                   href="@Url.Action(nameof(CashierPaymentFlowController.Receipt), "CashierPaymentFlow", new { orderId = order.OrderId })">
+                                    Xem hóa đơn
+                                </a>
+                                <a class="btn btn-outline-secondary btn-sm disabled"
+                                   href="#"
+                                   title="Tính năng gửi biên nhận sẽ được bổ sung">
+                                    Gửi lại biên nhận
+                                </a>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+

@@ -137,7 +137,7 @@ namespace WebSapaForestForStaff.Services
             }
         }
 
-        private async Task<bool> TryRefreshTokenAsync()
+        public async Task<bool> TryRefreshTokenAsync()
         {
             try
             {
