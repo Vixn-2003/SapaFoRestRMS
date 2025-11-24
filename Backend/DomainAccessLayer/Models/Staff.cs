@@ -23,4 +23,6 @@ public partial class Staff
     public virtual User User { get; set; } = null!;
 
     public virtual ICollection<Position> Positions { get; set; } = new List<Position>();
+    public virtual ICollection<OrderHistory> OrderHistories { get; set; } = new List<OrderHistory>();
+    public virtual ICollection<Order> ConfirmedOrders { get; set; } = new List<Order>();
 }

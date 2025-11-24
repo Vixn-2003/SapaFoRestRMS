@@ -1,4 +1,5 @@
 ﻿@model WebSapaForestForStaff.DTOs.OrderGuest.StaffOrderScreenDto
+@using WebSapaForestForStaff.Controllers
 @{
     ViewData["Title"] = $"Chi tiết bàn: {Model.TableNumber}";
 
@@ -7,6 +8,10 @@
     var currentCategory = ViewData["CurrentCategory"] as int?;
     var tableId = ViewData["TableId"] ?? Model.TableId;
     var categories = ViewData["Categories"] as List<WebSapaForestForStaff.DTOs.OrderGuest.CategoryDto>;
+    var hasActiveOrder = Model.ActiveOrderId.HasValue;
+    var checkoutUrl = hasActiveOrder
+        ? Url.Action(nameof(CashierPaymentFlowController.OrderDetail), "CashierPaymentFlow", new { id = Model.ActiveOrderId })
+        : string.Empty;
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
@@ -528,10 +533,23 @@
                         <button class="btn-save-order flex-fill">
                             Lưu Order
                         </button>
-                        <button class="btn-checkout flex-fill">
-                            Thanh toán <i class="fa-solid fa-chevron-right ms-2"></i>
-                        </button>
+                        @if (hasActiveOrder && !string.IsNullOrEmpty(checkoutUrl))
+                        {
+                            <button class="btn-checkout flex-fill" onclick="window.location='@checkoutUrl'">
+                                Thanh toán <i class="fa-solid fa-chevron-right ms-2"></i>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn-checkout flex-fill disabled" disabled title="Không tìm thấy đơn đang mở để thanh toán">
+                                Thanh toán <i class="fa-solid fa-chevron-right ms-2"></i>
+                            </button>
+                        }
                     </div>
+                    @if (!hasActiveOrder)
+                    {
+                        <div class="text-muted small mt-2 text-end">Chưa có đơn hàng đang mở cho bàn này.</div>
+                    }
                 </div>
 
             </div>

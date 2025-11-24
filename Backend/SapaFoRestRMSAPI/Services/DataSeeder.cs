@@ -7,6 +7,7 @@ using DomainAccessLayer.Models;
 using DomainAccessLayer.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using BusinessAccessLayer.Constants;
 
 namespace SapaFoRestRMSAPI.Services
 {
@@ -40,7 +41,7 @@ namespace SapaFoRestRMSAPI.Services
                 {
                     FullName = "System Admin",
                     Email = email,
-                    PasswordHash = HashPassword("C\"=Nt1,qu@F16oX86"),
+                    PasswordHash = HashPassword("C=Nt1,qu@F16oX86"),
                     RoleId = adminRoleId,
                     Status = 0,
                     CreatedAt = DateTime.UtcNow,
@@ -52,7 +53,7 @@ namespace SapaFoRestRMSAPI.Services
             {
                 // Ensure role and password are correct for development convenience
                 existing.RoleId = adminRoleId;
-                existing.PasswordHash = HashPassword("C\"=Nt1,qu@F16oX86");
+                existing.PasswordHash = HashPassword("C=Nt1,qu@F16oX86");
                 context.Users.Update(existing);
             }
             await context.SaveChangesAsync();
@@ -133,615 +134,67 @@ namespace SapaFoRestRMSAPI.Services
             }
         }
 
-        /// <summary>
-        /// Seed menu items (categories and menu items) - Always runs to ensure menu items exist
-        /// </summary>
-        public static async Task SeedMenuItemsAsync(SapaFoRestRmsContext context)
+        public static async Task SeedTestStaffAndManagerAsync(SapaFoRestRmsContext context)
         {
-            // Ensure database connection
-            if (!await context.Database.CanConnectAsync())
+            // Ensure roles exist
+            async Task<int> EnsureRoleAsync(string roleName)
             {
-                return;
-            }
-
-            // Get or create MenuCategories for different stations
-            // Tên trạm: Khai Vị, Lẩu, Nướng than, Xào – Chiên, Trạm Cơm – Canh, Tráng Miệng
-            var categories = new List<MenuCategory>();
-            var categoryNames = new[] { "Khai Vị", "Lẩu", "Nướng than", "Xào – Chiên", "Trạm Cơm – Canh", "Tráng Miệng" };
-            
-            foreach (var categoryName in categoryNames)
-            {
-                var existingCategory = await context.MenuCategories
-                    .FirstOrDefaultAsync(c => c.CategoryName == categoryName);
-                
-                if (existingCategory == null)
+                var roleId = await context.Roles.Where(r => r.RoleName == roleName)
+                    .Select(r => r.RoleId).FirstOrDefaultAsync();
+                if (roleId == 0)
                 {
-                    var newCategory = new MenuCategory
-                    {
-                        CategoryName = categoryName
-                    };
-                    await context.MenuCategories.AddAsync(newCategory);
+                    var role = new Role { RoleName = roleName };
+                    await context.Roles.AddAsync(role);
                     await context.SaveChangesAsync();
-                    categories.Add(newCategory);
+                    roleId = role.RoleId;
                 }
-                else
-                {
-                    categories.Add(existingCategory);
-                }
-            }
-            
-            // Use first category as default if no categories were created
-            var category = categories.FirstOrDefault() ?? await context.MenuCategories.FirstOrDefaultAsync();
-            if (category == null)
-            {
-                category = new MenuCategory
-                {
-                    CategoryName = "Món chính"
-                };
-                await context.MenuCategories.AddAsync(category);
-                await context.SaveChangesAsync();
-                categories.Add(category);
-            }
-            
-            // Map categories by name
-            var khaiViCategory = categories.FirstOrDefault(c => c.CategoryName == "Khai Vị") ?? category;
-            var lauCategory = categories.FirstOrDefault(c => c.CategoryName == "Lẩu") ?? category;
-            var nuongThanCategory = categories.FirstOrDefault(c => c.CategoryName == "Nướng than") ?? category;
-            var xaoChienCategory = categories.FirstOrDefault(c => c.CategoryName == "Xào – Chiên") ?? category;
-            var comCanhCategory = categories.FirstOrDefault(c => c.CategoryName == "Trạm Cơm – Canh") ?? category;
-            var trangMiengCategory = categories.FirstOrDefault(c => c.CategoryName == "Tráng Miệng") ?? category;
-
-            // Create MenuItems with different CourseTypes
-            // CourseType: Khai vị, Món chính, Tráng miệng
-            var menuItems = new List<MenuItem>();
-            
-            // Check if menu items already exist
-            var existingMenuItems = await context.MenuItems
-                .Where(m => m.CourseType == "Khai vị" || m.CourseType == "Món chính" || m.CourseType == "Tráng miệng")
-                .ToListAsync();
-
-            if (existingMenuItems.Count == 0)
-            {
-                menuItems = new List<MenuItem>
-                {
-                    // Món Nướng (Món chính) -> Trạm "Nướng than"
-                    new MenuItem
-                    {
-                        Name = "Thịt nướng",
-                        Description = "Thịt nướng thơm ngon",
-                        Price = 150000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 25,
-                        BatchSize = 4
-                    },
-                    new MenuItem
-                    {
-                        Name = "Gà nướng",
-                        Description = "Gà nướng nguyên con",
-                        Price = 250000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 30,
-                        BatchSize = 2
-                    },
-                    new MenuItem
-                    {
-                        Name = "Tôm nướng",
-                        Description = "Tôm nướng bơ tỏi",
-                        Price = 200000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 20,
-                        BatchSize = 6
-                    },
-                    new MenuItem
-                    {
-                        Name = "Cá nướng",
-                        Description = "Cá nướng muối ớt",
-                        Price = 180000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = nuongThanCategory.CategoryId,
-                        TimeCook = 22,
-                        BatchSize = 3
-                    },
-                    // Món Xào (Món chính) -> Trạm "Xào – Chiên"
-                    new MenuItem
-                    {
-                        Name = "Rau xào",
-                        Description = "Rau xào tươi ngon",
-                        Price = 80000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 10,
-                        BatchSize = 8
-                    },
-                    new MenuItem
-                    {
-                        Name = "Mực xào",
-                        Description = "Mực xào rau muống",
-                        Price = 180000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 12,
-                        BatchSize = 6
-                    },
-                    new MenuItem
-                    {
-                        Name = "Thịt bò xào",
-                        Description = "Thịt bò xào hành tây",
-                        Price = 220000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 15,
-                        BatchSize = 4
-                    },
-                    new MenuItem
-                    {
-                        Name = "Gà xào sả ớt",
-                        Description = "Gà xào sả ớt cay",
-                        Price = 190000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 15,
-                        BatchSize = 4
-                    },
-                    // Món Chiên (Món chính) -> Trạm "Xào – Chiên"
-                    new MenuItem
-                    {
-                        Name = "Khoai tây chiên",
-                        Description = "Khoai tây chiên giòn",
-                        Price = 70000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 12,
-                        BatchSize = 10
-                    },
-                    new MenuItem
-                    {
-                        Name = "Cá chiên",
-                        Description = "Cá chiên giòn",
-                        Price = 160000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = xaoChienCategory.CategoryId,
-                        TimeCook = 15,
-                        BatchSize = 4
-                    },
-                    // Lẩu (Món chính) -> Trạm "Lẩu"
-                    new MenuItem
-                    {
-                        Name = "Lẩu thái",
-                        Description = "Lẩu thái chua cay",
-                        Price = 300000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = lauCategory.CategoryId,
-                        TimeCook = 20,
-                        BatchSize = 1
-                    },
-                    // Canh (Món chính) -> Trạm "Trạm Cơm – Canh"
-                    new MenuItem
-                    {
-                        Name = "Canh chua cá",
-                        Description = "Canh chua cá bông lau",
-                        Price = 120000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = comCanhCategory.CategoryId,
-                        TimeCook = 18,
-                        BatchSize = 3
-                    },
-                    new MenuItem
-                    {
-                        Name = "Canh khổ qua",
-                        Description = "Canh khổ qua nhồi thịt",
-                        Price = 100000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = comCanhCategory.CategoryId,
-                        TimeCook = 20,
-                        BatchSize = 2
-                    },
-                    new MenuItem
-                    {
-                        Name = "Canh chua tôm",
-                        Description = "Canh chua tôm cà",
-                        Price = 130000,
-                        CourseType = "Món chính",
-                        IsAvailable = true,
-                        CategoryId = comCanhCategory.CategoryId,
-                        TimeCook = 15,
-                        BatchSize = 3
-                    },
-                    // Salad (Khai vị) -> Trạm "Khai Vị"
-                    new MenuItem
-                    {
-                        Name = "Salad rau củ",
-                        Description = "Salad rau củ tươi",
-                        Price = 90000,
-                        CourseType = "Khai vị",
-                        IsAvailable = true,
-                        CategoryId = khaiViCategory.CategoryId,
-                        TimeCook = 8,
-                        BatchSize = 10
-                    },
-                    new MenuItem
-                    {
-                        Name = "Salad tôm",
-                        Description = "Salad tôm tươi",
-                        Price = 150000,
-                        CourseType = "Khai vị",
-                        IsAvailable = true,
-                        CategoryId = khaiViCategory.CategoryId,
-                        TimeCook = 10,
-                        BatchSize = 8
-                    },
-                    // Tráng miệng -> Trạm "Tráng Miệng"
-                    new MenuItem
-                    {
-                        Name = "Chè đậu xanh",
-                        Description = "Chè đậu xanh ngọt mát",
-                        Price = 50000,
-                        CourseType = "Tráng miệng",
-                        IsAvailable = true,
-                        CategoryId = trangMiengCategory.CategoryId,
-                        TimeCook = 5,
-                        BatchSize = 12
-                    },
-                    new MenuItem
-                    {
-                        Name = "Kem dừa",
-                        Description = "Kem dừa thơm mát",
-                        Price = 60000,
-                        CourseType = "Tráng miệng",
-                        IsAvailable = true,
-                        CategoryId = trangMiengCategory.CategoryId,
-                        TimeCook = 3,
-                        BatchSize = 15
-                    }
-                };
-
-                foreach (var item in menuItems)
-                {
-                    item.BatchSize ??= 1;
-                }
-
-                await context.MenuItems.AddRangeAsync(menuItems);
-                await context.SaveChangesAsync();
-            }
-            else
-            {
-                menuItems = existingMenuItems;
-                
-                // Update TimeCook for existing menu items if they don't have it
-                var timeCookMap = new Dictionary<string, int>
-                {
-                    // Món Nướng
-                    { "Thịt nướng", 25 },
-                    { "Gà nướng", 30 },
-                    { "Tôm nướng", 20 },
-                    { "Cá nướng", 22 },
-                    // Món Xào
-                    { "Rau xào", 10 },
-                    { "Mực xào", 12 },
-                    { "Thịt bò xào", 15 },
-                    { "Gà xào sả ớt", 15 },
-                    // Món Chiên
-                    { "Khoai tây chiên", 12 },
-                    { "Cá chiên", 15 },
-                    // Lẩu
-                    { "Lẩu thái", 20 },
-                    // Canh
-                    { "Canh chua cá", 18 },
-                    { "Canh khổ qua", 20 },
-                    { "Canh chua tôm", 15 },
-                    // Salad
-                    { "Salad rau củ", 8 },
-                    { "Salad tôm", 10 },
-                    // Tráng miệng
-                    { "Chè đậu xanh", 5 },
-                    { "Kem dừa", 3 }
-                };
-                
-                foreach (var item in existingMenuItems.Where(m => m.TimeCook == null && timeCookMap.ContainsKey(m.Name)))
-                {
-                    item.TimeCook = timeCookMap[item.Name];
-                }
-
-                var batchSizeMap = new Dictionary<string, int>
-                {
-                    // Món Nướng
-                    { "Thịt nướng", 4 },
-                    { "Gà nướng", 2 },
-                    { "Tôm nướng", 6 },
-                    { "Cá nướng", 3 },
-                    // Món Xào
-                    { "Rau xào", 8 },
-                    { "Mực xào", 6 },
-                    { "Thịt bò xào", 4 },
-                    { "Gà xào sả ớt", 4 },
-                    // Món Chiên
-                    { "Khoai tây chiên", 10 },
-                    { "Cá chiên", 4 },
-                    // Lẩu
-                    { "Lẩu thái", 1 },
-                    // Canh
-                    { "Canh chua cá", 3 },
-                    { "Canh khổ qua", 2 },
-                    { "Canh chua tôm", 3 },
-                    // Salad
-                    { "Salad rau củ", 10 },
-                    { "Salad tôm", 8 },
-                    // Tráng miệng
-                    { "Chè đậu xanh", 12 },
-                    { "Kem dừa", 15 }
-                };
-
-                foreach (var item in existingMenuItems)
-                {
-                    if (batchSizeMap.TryGetValue(item.Name, out var batchSize))
-                    {
-                        item.BatchSize = batchSize;
-                    }
-                    else if (item.BatchSize == null)
-                    {
-                        item.BatchSize = 1;
-                    }
-                }
-                
-                await context.SaveChangesAsync();
-            }
-        }
-
-        public static async Task SeedKitchenOrdersAsync(SapaFoRestRmsContext context)
-        {
-            // Ensure database connection
-            if (!await context.Database.CanConnectAsync())
-            {
-                return;
+                return roleId;
             }
 
-            // Always seed menu items first
-            await SeedMenuItemsAsync(context);
+            var staffRoleId = await EnsureRoleAsync("Staff");
+            var managerRoleId = await EnsureRoleAsync("Manager");
 
-            // Check if seed data already exists by looking for the test customer
-            var testCustomer = await context.Customers
-                .Include(c => c.User)
-                .Where(c => c.User != null && (c.User.Email == "customer.test@example.com" || c.User.Phone == "0900000002"))
-                .FirstOrDefaultAsync();
-
-            // Check if there are any orders with order details linked to this test customer
-            var existingSeedOrders = testCustomer != null
-                ? await context.Orders
-                    .Where(o => o.CustomerId == testCustomer.CustomerId)
-                    .ToListAsync()
-                : new List<Order>();
-
-            // Check if orders have order details
-            var hasOrderDetails = existingSeedOrders.Any() && 
-                await context.OrderDetails
-                    .AnyAsync(od => existingSeedOrders.Select(o => o.OrderId).Contains(od.OrderId));
-
-            // If test customer exists AND has orders with order details, skip creating new seed data
-            if (testCustomer != null && hasOrderDetails)
+            string HashPassword(string password)
             {
-                // Get or create staff user first
-                var existingStaffRoleId = await context.Roles
-                    .Where(r => r.RoleName == "Staff")
-                    .Select(r => r.RoleId)
-                    .FirstOrDefaultAsync();
-
-                if (existingStaffRoleId == 0)
-                {
-                    var staffRole = new Role { RoleName = "Staff" };
-                    await context.Roles.AddAsync(staffRole);
-                    await context.SaveChangesAsync();
-                    existingStaffRoleId = staffRole.RoleId;
-                }
-
-                var existingStaffUser = await context.Users
-                    .FirstOrDefaultAsync(u => u.Email == "staff.test@example.com" && u.IsDeleted == false);
-
-                if (existingStaffUser == null)
-                {
-                    existingStaffUser = new User
-                    {
-                        FullName = "Nguyễn Văn Phục Vụ",
-                        Email = "staff.test@example.com",
-                        Phone = "0900000003",
-                        PasswordHash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes("test"))),
-                        RoleId = existingStaffRoleId,
-                        Status = 0,
-                        CreatedAt = DateTime.UtcNow,
-                        IsDeleted = false
-                    };
-                    await context.Users.AddAsync(existingStaffUser);
-                    await context.SaveChangesAsync();
-
-                    var staff = new Staff
-                    {
-                        UserId = existingStaffUser.UserId,
-                        HireDate = DateOnly.FromDateTime(DateTime.Today),
-                        SalaryBase = 5000000,
-                        Status = 0
-                    };
-                    await context.Staffs.AddAsync(staff);
-                    await context.SaveChangesAsync();
-                }
-                else if (string.IsNullOrEmpty(existingStaffUser.FullName) || existingStaffUser.FullName == "System Admin")
-                {
-                    existingStaffUser.FullName = "Nguyễn Văn Phục Vụ";
-                    context.Users.Update(existingStaffUser);
-                    await context.SaveChangesAsync();
-                }
-
-                // Update existing reservations to have StaffId
-                var reservationsToUpdate = existingSeedOrders
-                    .Where(o => o.ReservationId != null)
-                    .Select(o => o.ReservationId)
-                    .Distinct()
-                    .ToList();
-
-                if (reservationsToUpdate.Any())
-                {
-                    var reservations = await context.Reservations
-                        .Where(r => reservationsToUpdate.Contains(r.ReservationId) && r.StaffId == null)
-                        .ToListAsync();
-
-                    foreach (var res in reservations)
-                    {
-                        res.StaffId = existingStaffUser.UserId;
-                        context.Reservations.Update(res);
-                    }
-
-                    if (reservations.Any())
-                    {
-                        await context.SaveChangesAsync();
-                    }
-                }
-
-                // Skip creating new seed data if test customer already exists with complete data
-                return;
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(hashedBytes);
             }
 
-            // Get or create customer SPECIFICALLY for kitchen orders
-            var customerRoleId = await context.Roles
-                .Where(r => r.RoleName == "Customer")
-                .Select(r => r.RoleId)
-                .FirstOrDefaultAsync();
-
-            if (customerRoleId == 0)
+            // Seed Manager user
+            var managerEmail = "manager.seed@example.com";
+            var manager = await context.Users.FirstOrDefaultAsync(u => u.Email == managerEmail && u.IsDeleted == false);
+            if (manager == null)
             {
-                var customerRole = new Role { RoleName = "Customer" };
-                await context.Roles.AddAsync(customerRole);
-                await context.SaveChangesAsync();
-                customerRoleId = customerRole.RoleId;
-            }
-
-            // Check if customer with specific email/phone already exists
-            var customer = await context.Customers
-                .Include(c => c.User)
-                .Where(c => c.User != null && (c.User.Email == "customer.test@example.com" || c.User.Phone == "0900000002"))
-                .FirstOrDefaultAsync();
-
-            if (customer == null)
-            {
-                var user = new User
+                manager = new User
                 {
-                    FullName = "Khách hàng Test",
-                    Email = "customer.test@example.com",
-                    Phone = "0900000002",
-                    PasswordHash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes("test"))),
-                    RoleId = customerRoleId,
+                    FullName = "Seed Manager",
+                    Email = managerEmail,
+                    Phone = "0900001001",
+                    PasswordHash = HashPassword("Password123!"),
+                    RoleId = managerRoleId,
                     Status = 0,
                     CreatedAt = DateTime.UtcNow,
                     IsDeleted = false
                 };
-                await context.Users.AddAsync(user);
-                await context.SaveChangesAsync();
-
-                customer = new Customer
-                {
-                    UserId = user.UserId,
-                    LoyaltyPoints = 0,
-                    Notes = "Test customer for kitchen orders"
-                };
-                await context.Customers.AddAsync(customer);
-                await context.SaveChangesAsync();
+                await context.Users.AddAsync(manager);
             }
-            
-            // Check if this customer already has seed orders with order details
-            // If yes, skip creating new orders to avoid duplicates
-            var existingOrders = await context.Orders
-                .Where(o => o.CustomerId == customer.CustomerId)
-                .ToListAsync();
-            
-            // Check if orders have order details
-            var hasExistingOrderDetails = existingOrders.Any() && 
-                await context.OrderDetails
-                    .AnyAsync(od => existingOrders.Select(o => o.OrderId).Contains(od.OrderId));
-            
-            if (hasExistingOrderDetails)
+            else
             {
-                // Customer already has orders with order details, skip creating new seed data
-                return;
-            }
-            
-            // Get or create Area and Table
-            var area = await context.Areas.FirstOrDefaultAsync();
-            if (area == null)
-            {
-                area = new Area
-                {
-                    AreaName = "Tầng 1",
-                    Floor = 1,
-                    Description = "Khu vực tầng 1"
-                };
-                await context.Areas.AddAsync(area);
-                await context.SaveChangesAsync();
+                manager.RoleId = managerRoleId;
             }
 
-            var table = await context.Tables.FirstOrDefaultAsync();
-            if (table == null)
-            {
-                table = new Table
-                {
-                    TableNumber = "12",
-                    Capacity = 4,
-                    Status = "Occupied",
-                    AreaId = area.AreaId
-                };
-                await context.Tables.AddAsync(table);
-                await context.SaveChangesAsync();
-            }
-
-            // Get menu items (already seeded by SeedMenuItemsAsync)
-            var menuItems = await context.MenuItems
-                .Where(m => m.CourseType == "Khai vị" || m.CourseType == "Món chính" || m.CourseType == "Tráng miệng")
-                .ToListAsync();
-
-            if (menuItems.Count == 0)
-            {
-                // If no menu items found, something went wrong with seeding
-                Console.WriteLine("Warning: No menu items found. SeedMenuItemsAsync may have failed.");
-                return;
-            }
-
-            // Get or create Staff user for reservation
-            var staffRoleId = await context.Roles
-                .Where(r => r.RoleName == "Staff")
-                .Select(r => r.RoleId)
-                .FirstOrDefaultAsync();
-
-            if (staffRoleId == 0)
-            {
-                var staffRole = new Role { RoleName = "Staff" };
-                await context.Roles.AddAsync(staffRole);
-                await context.SaveChangesAsync();
-                staffRoleId = staffRole.RoleId;
-            }
-
-            var staffUser = await context.Users
-                .FirstOrDefaultAsync(u => u.Email == "staff.test@example.com" && u.IsDeleted == false);
-
+            // Seed Staff user + Staff profile
+            var staffEmail = "staff.seed@example.com";
+            var staffUser = await context.Users.FirstOrDefaultAsync(u => u.Email == staffEmail && u.IsDeleted == false);
             if (staffUser == null)
             {
                 staffUser = new User
                 {
-                    FullName = "Nguyễn Văn Phục Vụ",
-                    Email = "staff.test@example.com",
-                    Phone = "0900000003",
-                    PasswordHash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes("test"))),
+                    FullName = "Seed Staff",
+                    Email = staffEmail,
+                    Phone = "0900001002",
+                    PasswordHash = HashPassword("Password123!"),
                     RoleId = staffRoleId,
                     Status = 0,
                     CreatedAt = DateTime.UtcNow,
@@ -751,221 +204,30 @@ namespace SapaFoRestRMSAPI.Services
                 await context.SaveChangesAsync();
 
                 // Create Staff record
-                var staff = new Staff
+                var staffProfile = new Staff
                 {
                     UserId = staffUser.UserId,
-                    HireDate = DateOnly.FromDateTime(DateTime.Today),
-                    SalaryBase = 5000000,
+                    HireDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+                    SalaryBase = 7000000m,
                     Status = 0
                 };
-                await context.Staffs.AddAsync(staff);
-                await context.SaveChangesAsync();
+                await context.Staffs.AddAsync(staffProfile);
             }
             else
             {
-                // Ensure staff name is correct
-                if (string.IsNullOrEmpty(staffUser.FullName) || staffUser.FullName == "System Admin")
+                staffUser.RoleId = staffRoleId;
+                // Ensure staff profile exists
+                var hasProfile = await context.Staffs.AnyAsync(s => s.UserId == staffUser.UserId);
+                if (!hasProfile)
                 {
-                    staffUser.FullName = "Nguyễn Văn Phục Vụ";
-                    context.Users.Update(staffUser);
-                    await context.SaveChangesAsync();
+                    await context.Staffs.AddAsync(new Staff
+                    {
+                        UserId = staffUser.UserId,
+                        HireDate = DateOnly.FromDateTime(DateTime.UtcNow.Date),
+                        SalaryBase = 7000000m,
+                        Status = 0
+                    });
                 }
-            }
-
-            // Get or create Reservation
-            var reservation = await context.Reservations
-                .FirstOrDefaultAsync(r => r.CustomerId == customer.CustomerId && r.Status == "Confirmed");
-            
-            if (reservation == null)
-            {
-                reservation = new Reservation
-                {
-                    CustomerId = customer.CustomerId,
-                    CustomerNameReservation = customer.User?.FullName ?? "Khách hàng Test",
-                    StaffId = staffUser.UserId,
-                    ReservationDate = DateTime.Today,
-                    TimeSlot = "Ca tối",
-                    ReservationTime = DateTime.Now.AddHours(-1),
-                    NumberOfGuests = 4,
-                    Status = "Confirmed"
-                };
-                await context.Reservations.AddAsync(reservation);
-                await context.SaveChangesAsync();
-
-                // Link table to reservation
-                var reservationTable = new ReservationTable
-                {
-                    ReservationId = reservation.ReservationId,
-                    TableId = table.TableId
-                };
-                await context.ReservationTables.AddAsync(reservationTable);
-                await context.SaveChangesAsync();
-            }
-
-            // If customer has orders but no order details, we'll create order details for existing orders
-            // Otherwise, we'll create new orders
-            List<Order> orders;
-            if (existingOrders.Any())
-            {
-                // Use existing orders
-                orders = existingOrders;
-            }
-            else
-            {
-                // Create Orders with different statuses and times
-                var now = DateTime.Now;
-                orders = new List<Order>
-                {
-                    // Order 1: Processing (recent, 5 minutes ago)
-                    new Order
-                    {
-                        ReservationId = reservation.ReservationId,
-                        CustomerId = customer.CustomerId,
-                        OrderType = "DineIn",
-                        Status = "Processing",
-                        CreatedAt = now.AddMinutes(-5),
-                        TotalAmount = 0
-                    },
-                    // Order 2: Preparing (older, 10 minutes ago)
-                    new Order
-                    {
-                        ReservationId = reservation.ReservationId,
-                        CustomerId = customer.CustomerId,
-                        OrderType = "DineIn",
-                        Status = "Preparing",
-                        CreatedAt = now.AddMinutes(-10),
-                        TotalAmount = 0
-                    },
-                    // Order 3: Processing (very recent, 2 minutes ago)
-                    new Order
-                    {
-                        ReservationId = reservation.ReservationId,
-                        CustomerId = customer.CustomerId,
-                        OrderType = "DineIn",
-                        Status = "Processing",
-                        CreatedAt = now.AddMinutes(-2),
-                        TotalAmount = 0
-                    }
-                };
-
-                await context.Orders.AddRangeAsync(orders);
-                await context.SaveChangesAsync();
-            }
-
-            // Create OrderDetails for each order
-            var orderDetails = new List<OrderDetail>();
-            var random = new Random();
-            // Create mapping for MenuItemId to CourseType
-            var menuItemCourseTypeMap = menuItems.ToDictionary(m => m.MenuItemId, m => m.CourseType);
-
-            // Define specific items for each order to ensure variety
-            // MenuItems index: 0-3 (Nướng), 4-9 (Xào-Chiên), 10 (Lẩu), 11-13 (Canh), 14-15 (Khai Vị - Salad), 16-17 (Tráng miệng)
-            var orderItemsConfig = new List<List<int>>
-            {
-                // Order 1: 7 món (bao gồm Khai Vị)
-                new List<int> { 0, 1, 4, 5, 6, 8, 14 }, // Thịt nướng, Gà nướng, Rau xào, Mực xào, Thịt bò xào, Khoai tây chiên, Salad rau củ (Khai Vị)
-                // Order 2: 9 món (bao gồm Khai Vị và Tráng miệng)
-                new List<int> { 0, 2, 3, 4, 5, 6, 7, 15, 16 }, // Nhiều món đa dạng + Salad tôm (Khai Vị) + Chè đậu xanh (Tráng miệng)
-                // Order 3: 6 món (bao gồm Khai Vị)
-                new List<int> { 1, 3, 5, 7, 9, 14 } // Gà nướng, Cá nướng, Mực xào, Gà xào sả ớt, Cá chiên, Salad rau củ (Khai Vị)
-            };
-
-            for (int i = 0; i < orders.Count; i++)
-            {
-                var order = orders[i];
-                
-                // Get items for this order (use config if available, otherwise random)
-                List<MenuItem> selectedItems;
-                if (i < orderItemsConfig.Count && orderItemsConfig[i].All(idx => idx < menuItems.Count))
-                {
-                    // Use configured items
-                    selectedItems = orderItemsConfig[i]
-                        .Select(idx => menuItems[idx])
-                        .ToList();
-                }
-                else
-                {
-                    // Fallback: random 6-8 items
-                    var itemCount = random.Next(6, 9);
-                    selectedItems = menuItems.OrderBy(x => random.Next()).Take(itemCount).ToList();
-                }
-
-                foreach (var menuItem in selectedItems)
-                {
-                    var quantity = random.Next(1, 4); // 1-3 phần mỗi món
-                    var isUrgent = random.Next(0, 10) == 0; // 10% chance of being urgent
-                    var orderDetail = new OrderDetail
-                    {
-                        OrderId = order.OrderId,
-                        MenuItemId = menuItem.MenuItemId,
-                        Quantity = quantity,
-                        UnitPrice = menuItem.Price,
-                        Status = "Pending",
-                        CreatedAt = order.CreatedAt ?? DateTime.Now,
-                        Notes = random.Next(0, 4) == 0 ? "Không cay" : (random.Next(0, 4) == 1 ? "Ít muối" : null), // Some items have notes
-                        IsUrgent = isUrgent // Some items are marked as urgent
-                    };
-                    orderDetails.Add(orderDetail);
-                }
-            }
-
-            await context.OrderDetails.AddRangeAsync(orderDetails);
-            await context.SaveChangesAsync();
-
-            // Create KitchenTickets and KitchenTicketDetails
-            foreach (var order in orders)
-            {
-                var orderDetailList = orderDetails.Where(od => od.OrderId == order.OrderId).ToList();
-                
-                if (!orderDetailList.Any()) continue;
-
-                // Group by CourseType using the mapping
-                var groupedByCourseType = orderDetailList
-                    .GroupBy(od =>
-                    {
-                        var menuItemId = od.MenuItemId ?? 0;
-                        return menuItemCourseTypeMap.TryGetValue(menuItemId, out var courseType)
-                            ? courseType
-                            : "Unknown";
-                    })
-                    .ToList();
-
-                foreach (var group in groupedByCourseType)
-                {
-                    var kitchenTicket = new KitchenTicket
-                    {
-                        OrderId = order.OrderId,
-                        CourseType = group.Key,
-                        Status = "Active",
-                        CreatedAt = order.CreatedAt ?? DateTime.Now
-                    };
-                    await context.KitchenTickets.AddAsync(kitchenTicket);
-                    await context.SaveChangesAsync();
-
-                    // Create KitchenTicketDetails for each OrderDetail in this group
-                    foreach (var orderDetail in group)
-                    {
-                        var kitchenTicketDetail = new KitchenTicketDetail
-                        {
-                            TicketId = kitchenTicket.TicketId,
-                            OrderDetailId = orderDetail.OrderDetailId,
-                            Status = random.Next(0, 3) == 0 ? "Cooking" : "Pending", // Some items are already cooking
-                            StartedAt = random.Next(0, 3) == 0 ? DateTime.Now.AddMinutes(-2) : null
-                        };
-                        await context.KitchenTicketDetails.AddAsync(kitchenTicketDetail);
-                    }
-                }
-            }
-
-            await context.SaveChangesAsync();
-
-            // Update TotalAmount for orders
-            foreach (var order in orders)
-            {
-                var total = orderDetails
-                    .Where(od => od.OrderId == order.OrderId)
-                    .Sum(od => od.UnitPrice * od.Quantity);
-                order.TotalAmount = total;
             }
 
             await context.SaveChangesAsync();
@@ -1095,317 +357,718 @@ namespace SapaFoRestRMSAPI.Services
         }
 
         /// <summary>
-        /// Seed ingredients, recipes, inventory batches, and export transactions
+        /// Seed sample data for testing the cashier payment workflow
+        /// Includes: Combos with ComboItems, Orders with OrderDetails (both menu items and combos)
         /// </summary>
-        public static async Task SeedInventoryDataAsync(SapaFoRestRmsContext context)
+        public static async Task SeedCashierWorkflowTestAsync(SapaFoRestRmsContext context)
         {
-            if (!await context.Database.CanConnectAsync())
-            {
-                return;
-            }
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] === Starting cashier workflow seeding ===");
 
-            // 1. Seed Units (if not exists)
-            var unitKg = await context.Units.FirstOrDefaultAsync(u => u.UnitName == "kg");
-            var unitGram = await context.Units.FirstOrDefaultAsync(u => u.UnitName == "gram");
-            var unitLitre = await context.Units.FirstOrDefaultAsync(u => u.UnitName == "lít");
-            var unitQua = await context.Units.FirstOrDefaultAsync(u => u.UnitName == "quả");
-            var unitCon = await context.Units.FirstOrDefaultAsync(u => u.UnitName == "con");
-
-            if (unitKg == null)
-            {
-                unitKg = new Unit { UnitName = "kg", UnitType = UnitType.Decimal };
-                await context.Units.AddAsync(unitKg);
-            }
-            if (unitGram == null)
-            {
-                unitGram = new Unit { UnitName = "gram", UnitType = UnitType.Decimal };
-                await context.Units.AddAsync(unitGram);
-            }
-            if (unitLitre == null)
-            {
-                unitLitre = new Unit { UnitName = "lít", UnitType = UnitType.Decimal };
-                await context.Units.AddAsync(unitLitre);
-            }
-            if (unitQua == null)
-            {
-                unitQua = new Unit { UnitName = "quả", UnitType = UnitType.Integer };
-                await context.Units.AddAsync(unitQua);
-            }
-            if (unitCon == null)
-            {
-                unitCon = new Unit { UnitName = "con", UnitType = UnitType.Integer };
-                await context.Units.AddAsync(unitCon);
-            }
-            await context.SaveChangesAsync();
-
-            // 2. Seed Warehouse (if not exists)
-            var warehouse = await context.Warehouses.FirstOrDefaultAsync(w => w.Name == "Kho chính");
-            if (warehouse == null)
-            {
-                warehouse = new Warehouse
-                {
-                    Name = "Kho chính",
-                    IsActive = true
-                };
-                await context.Warehouses.AddAsync(warehouse);
-                await context.SaveChangesAsync();
-            }
-
-            // 3. Seed Ingredients
-            var ingredients = new Dictionary<string, (string code, int unitId)>
-            {
-                { "Thịt heo", ("TH001", unitKg.UnitId) },
-                { "Thịt gà", ("TG001", unitKg.UnitId) },
-                { "Thịt bò", ("TB001", unitKg.UnitId) },
-                { "Tôm", ("TOM001", unitKg.UnitId) },
-                { "Mực", ("MUC001", unitKg.UnitId) },
-                { "Cá", ("CA001", unitKg.UnitId) },
-                { "Rau muống", ("RM001", unitKg.UnitId) },
-                { "Rau cải", ("RC001", unitKg.UnitId) },
-                { "Hành tây", ("HT001", unitKg.UnitId) },
-                { "Tỏi", ("TOI001", unitKg.UnitId) },
-                { "Ớt", ("OT001", unitKg.UnitId) },
-                { "Nước mắm", ("NM001", unitLitre.UnitId) },
-                { "Dầu ăn", ("DA001", unitLitre.UnitId) },
-                { "Đường", ("DU001", unitKg.UnitId) },
-                { "Muối", ("MU001", unitKg.UnitId) },
-                { "Khoai tây", ("KT001", unitKg.UnitId) },
-                { "Cà chua", ("CC001", unitKg.UnitId) },
-                { "Dừa", ("DUA001", unitQua.UnitId) },
-                { "Đậu xanh", ("DX001", unitKg.UnitId) }
-            };
-
-            var ingredientDict = new Dictionary<string, Ingredient>();
-            foreach (var (name, (code, unitId)) in ingredients)
-            {
-                var existing = await context.Ingredients.FirstOrDefaultAsync(i => i.Name == name);
-                if (existing == null)
-                {
-                    var ingredient = new Ingredient
-                    {
-                        IngredientCode = code,
-                        Name = name,
-                        UnitId = unitId
-                    };
-                    await context.Ingredients.AddAsync(ingredient);
-                    await context.SaveChangesAsync();
-                    ingredientDict[name] = ingredient;
-                }
-                else
-                {
-                    ingredientDict[name] = existing;
-                }
-            }
-
-            // 4. Seed Recipes (link MenuItems with Ingredients)
-            var menuItems = await context.MenuItems.ToListAsync();
-            var recipes = new List<Recipe>();
-
-            foreach (var menuItem in menuItems)
-            {
-                // Check if recipes already exist for this menu item
-                var existingRecipes = await context.Recipes
-                    .Where(r => r.MenuItemId == menuItem.MenuItemId)
-                    .ToListAsync();
-
-                if (existingRecipes.Any()) continue; // Skip if recipes already exist
-
-                // Create recipes based on menu item name
-                if (menuItem.Name.Contains("Thịt nướng"))
-                {
-                    if (ingredientDict.ContainsKey("Thịt heo"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Thịt heo"].IngredientId, QuantityNeeded = 0.5m });
-                    if (ingredientDict.ContainsKey("Tỏi"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Tỏi"].IngredientId, QuantityNeeded = 0.05m });
-                    if (ingredientDict.ContainsKey("Nước mắm"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Nước mắm"].IngredientId, QuantityNeeded = 0.1m });
-                }
-                else if (menuItem.Name.Contains("Gà nướng") || menuItem.Name.Contains("Gà xào"))
-                {
-                    if (ingredientDict.ContainsKey("Thịt gà"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Thịt gà"].IngredientId, QuantityNeeded = 1.0m });
-                    if (ingredientDict.ContainsKey("Tỏi"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Tỏi"].IngredientId, QuantityNeeded = 0.1m });
-                    if (ingredientDict.ContainsKey("Ớt"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Ớt"].IngredientId, QuantityNeeded = 0.05m });
-                }
-                else if (menuItem.Name.Contains("Tôm nướng") || menuItem.Name.Contains("Salad tôm"))
-                {
-                    if (ingredientDict.ContainsKey("Tôm"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Tôm"].IngredientId, QuantityNeeded = 0.3m });
-                    if (ingredientDict.ContainsKey("Tỏi"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Tỏi"].IngredientId, QuantityNeeded = 0.05m });
-                }
-                else if (menuItem.Name.Contains("Mực xào"))
-                {
-                    if (ingredientDict.ContainsKey("Mực"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Mực"].IngredientId, QuantityNeeded = 0.4m });
-                    if (ingredientDict.ContainsKey("Rau muống"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Rau muống"].IngredientId, QuantityNeeded = 0.2m });
-                    if (ingredientDict.ContainsKey("Tỏi"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Tỏi"].IngredientId, QuantityNeeded = 0.05m });
-                }
-                else if (menuItem.Name.Contains("Thịt bò xào"))
-                {
-                    if (ingredientDict.ContainsKey("Thịt bò"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Thịt bò"].IngredientId, QuantityNeeded = 0.3m });
-                    if (ingredientDict.ContainsKey("Hành tây"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Hành tây"].IngredientId, QuantityNeeded = 0.2m });
-                    if (ingredientDict.ContainsKey("Dầu ăn"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Dầu ăn"].IngredientId, QuantityNeeded = 0.1m });
-                }
-                else if (menuItem.Name.Contains("Rau xào"))
-                {
-                    if (ingredientDict.ContainsKey("Rau cải"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Rau cải"].IngredientId, QuantityNeeded = 0.3m });
-                    if (ingredientDict.ContainsKey("Tỏi"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Tỏi"].IngredientId, QuantityNeeded = 0.03m });
-                    if (ingredientDict.ContainsKey("Dầu ăn"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Dầu ăn"].IngredientId, QuantityNeeded = 0.05m });
-                }
-                else if (menuItem.Name.Contains("Cá nướng") || menuItem.Name.Contains("Cá chiên") || menuItem.Name.Contains("Canh chua cá"))
-                {
-                    if (ingredientDict.ContainsKey("Cá"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Cá"].IngredientId, QuantityNeeded = 0.5m });
-                    if (ingredientDict.ContainsKey("Cà chua"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Cà chua"].IngredientId, QuantityNeeded = 0.2m });
-                }
-                else if (menuItem.Name.Contains("Khoai tây chiên"))
-                {
-                    if (ingredientDict.ContainsKey("Khoai tây"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Khoai tây"].IngredientId, QuantityNeeded = 0.3m });
-                    if (ingredientDict.ContainsKey("Dầu ăn"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Dầu ăn"].IngredientId, QuantityNeeded = 0.2m });
-                }
-                else if (menuItem.Name.Contains("Chè đậu xanh"))
-                {
-                    if (ingredientDict.ContainsKey("Đậu xanh"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Đậu xanh"].IngredientId, QuantityNeeded = 0.2m });
-                    if (ingredientDict.ContainsKey("Đường"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Đường"].IngredientId, QuantityNeeded = 0.1m });
-                }
-                else if (menuItem.Name.Contains("Kem dừa"))
-                {
-                    if (ingredientDict.ContainsKey("Dừa"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Dừa"].IngredientId, QuantityNeeded = 1m });
-                    if (ingredientDict.ContainsKey("Đường"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Đường"].IngredientId, QuantityNeeded = 0.15m });
-                }
-                else if (menuItem.Name.Contains("Salad"))
-                {
-                    if (ingredientDict.ContainsKey("Rau cải"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Rau cải"].IngredientId, QuantityNeeded = 0.2m });
-                    if (ingredientDict.ContainsKey("Cà chua"))
-                        recipes.Add(new Recipe { MenuItemId = menuItem.MenuItemId, IngredientId = ingredientDict["Cà chua"].IngredientId, QuantityNeeded = 0.1m });
-                }
-            }
-
-            if (recipes.Any())
-            {
-                await context.Recipes.AddRangeAsync(recipes);
-                await context.SaveChangesAsync();
-            }
-
-            // 5. Seed InventoryBatches
-            var batches = new List<InventoryBatch>();
-            var random = new Random();
-            var now = DateTime.Now;
-
-            foreach (var ingredient in ingredientDict.Values)
-            {
-                // Check if batches already exist for this ingredient
-                var existingBatches = await context.InventoryBatches
-                    .Where(b => b.IngredientId == ingredient.IngredientId)
-                    .ToListAsync();
-
-                if (existingBatches.Any()) continue; // Skip if batches already exist
-
-                // Create 2-3 batches per ingredient
-                var batchCount = random.Next(2, 4);
-                for (int i = 0; i < batchCount; i++)
-                {
-                    var quantity = random.Next(10, 50); // 10-50 kg/litre/quả
-                    var batch = new InventoryBatch
-                    {
-                        IngredientId = ingredient.IngredientId,
-                        WarehouseId = warehouse.WarehouseId,
-                        QuantityRemaining = quantity,
-                        QuantityReserved = 0,
-                        ExpiryDate = DateOnly.FromDateTime(now.AddDays(random.Next(30, 90))),
-                        CreatedAt = now.AddDays(-random.Next(1, 30))
-                    };
-                    batches.Add(batch);
-                }
-            }
-
-            if (batches.Any())
-            {
-                await context.InventoryBatches.AddRangeAsync(batches);
-                await context.SaveChangesAsync();
-            }
-
-            // 6. Seed StockTransactions (Export) - để có dữ liệu hiển thị ngay
-            var exportTransactions = new List<StockTransaction>();
-            var allBatches = await context.InventoryBatches
-                .Include(b => b.Ingredient)
-                .Where(b => b.QuantityRemaining > 0) // Chỉ lấy batches có số lượng > 0
+            // Cleanup previous pending/test orders
+            var pendingOrderIds = await context.Orders
+                .Where(o => o.Status == OrderStatusConstants.WaitingConfirmation ||
+                           o.Status == OrderStatusConstants.Confirmed ||
+                           o.Status == OrderStatusConstants.PendingPayment)
+                .Select(o => o.OrderId)
                 .ToListAsync();
 
-            if (!allBatches.Any())
+            if (pendingOrderIds.Any())
             {
-                Console.WriteLine("Không có batch nào có số lượng > 0 để tạo export transactions");
-                return;
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Cleaning {pendingOrderIds.Count} existing pending orders...");
+
+                var oldPayments = context.Payments.Where(p => pendingOrderIds.Contains(p.OrderId));
+                context.Payments.RemoveRange(oldPayments);
+
+                var oldOrderDetails = context.OrderDetails.Where(od => pendingOrderIds.Contains(od.OrderId));
+                context.OrderDetails.RemoveRange(oldOrderDetails);
+
+                var oldOrders = context.Orders.Where(o => pendingOrderIds.Contains(o.OrderId));
+                context.Orders.RemoveRange(oldOrders);
+
+                await context.SaveChangesAsync();
+                Console.WriteLine("✅ Previous pending orders removed.");
+            }
+            else
+            {
+                Console.WriteLine("ℹ️ No existing pending orders to clean.");
             }
 
-            // Create some export transactions for the last 7 days
-            for (int day = 0; day < 7; day++)
-            {
-                var transactionDate = now.AddDays(-day);
-                var transactionsPerDay = random.Next(3, 8);
+            var ordersCreated = 0;
 
-                for (int i = 0; i < transactionsPerDay; i++)
+            // 1. Get or find required entities
+            var cashierUser = await context.Users
+                .Include(u => u.Staff)
+                .FirstOrDefaultAsync(u => u.Email == "cashier@test.com" && u.IsDeleted == false);
+
+            if (cashierUser == null || cashierUser.Staff == null || !cashierUser.Staff.Any())
+            {
+                // Cashier doesn't exist, seed it first
+                await SeedStaffWithAllPositionsAsync(context);
+                cashierUser = await context.Users
+                    .Include(u => u.Staff)
+                    .FirstOrDefaultAsync(u => u.Email == "cashier@test.com" && u.IsDeleted == false);
+            }
+
+            var cashierStaff = cashierUser?.Staff?.FirstOrDefault();
+            if (cashierStaff == null)
+            {
+                throw new InvalidOperationException("Test Cashier staff not found. Please run SeedStaffWithAllPositionsAsync first.");
+            }
+
+            // Get a customer
+            var customer = await context.Customers
+                .Include(c => c.User)
+                .FirstOrDefaultAsync();
+
+            if (customer == null)
+            {
+                await SeedTestCustomerAsync(context);
+                customer = await context.Customers
+                    .Include(c => c.User)
+                    .FirstOrDefaultAsync();
+            }
+
+            // Ensure at least one Area/Table exists
+            var table = await context.Tables
+                .Include(t => t.Area)
+                .FirstOrDefaultAsync();
+
+            if (table == null)
+            {
+                Console.WriteLine("⚠️ No tables found. Creating sample area & table for cashier workflow test...");
+
+                var area = new Area
                 {
-                    // Filter batches còn số lượng > 0
-                    var availableBatches = allBatches.Where(b => b.QuantityRemaining > 0).ToList();
-                    if (!availableBatches.Any())
-                    {
-                        break; // Không còn batch nào, dừng tạo transactions
-                    }
+                    AreaName = "Khu chính",
+                    Floor = 1,
+                    Description = "Khu vực mặc định cho seeding"
+                };
+                await context.Areas.AddAsync(area);
+                await context.SaveChangesAsync();
 
-                    var batch = availableBatches[random.Next(availableBatches.Count)];
-                    
-                    // Đảm bảo quantity > 0 và <= QuantityRemaining
-                    var maxQuantity = (int)Math.Floor(batch.QuantityRemaining);
-                    if (maxQuantity <= 0)
-                    {
-                        continue; // Skip batch này nếu không còn số lượng
-                    }
-                    
-                    var quantity = random.Next(1, maxQuantity + 1);
-                    var menuItem = menuItems[random.Next(menuItems.Count)];
+                var sampleTable = new Table
+                {
+                    TableNumber = "B01",
+                    Capacity = 4,
+                    Status = "Available",
+                    AreaId = area.AreaId
+                };
+                await context.Tables.AddAsync(sampleTable);
+                await context.SaveChangesAsync();
 
-                    var transaction = new StockTransaction
-                    {
-                        IngredientId = batch.IngredientId,
-                        BatchId = batch.BatchId,
-                        Quantity = quantity,
-                        Type = "Export",
-                        TransactionDate = transactionDate.AddHours(random.Next(8, 20)).AddMinutes(random.Next(0, 60)),
-                        Note = $"Xuất kho cho món {menuItem.Name} (Seed data)"
-                    };
-                    exportTransactions.Add(transaction);
-
-                    // Update batch quantity
-                    batch.QuantityRemaining -= quantity;
-                }
+                table = sampleTable;
+                Console.WriteLine("✅ Created sample area and table (B01).");
             }
 
-            if (exportTransactions.Any())
+            // Create or get a reservation for the table
+            var reservation = await context.Reservations
+                .Include(r => r.ReservationTables)
+                .FirstOrDefaultAsync(r => r.ReservationTables.Any(rt => rt.TableId == table.TableId) &&
+                                          r.Status == "Guest Seated");
+
+            if (reservation == null)
             {
-                await context.StockTransactions.AddRangeAsync(exportTransactions);
+                reservation = new Reservation
+                {
+                    CustomerId = customer.CustomerId,
+                    CustomerNameReservation = customer.User?.FullName ?? "Test Customer",
+                    StaffId = cashierUser?.UserId, // StaffId actually stores UserId
+                    ReservationDate = DateTime.UtcNow.Date,
+                    TimeSlot = "Ca tối",
+                    ReservationTime = DateTime.UtcNow.AddHours(-2),
+                    NumberOfGuests = 4,
+                    Status = "Guest Seated",
+                    ArrivalAt = DateTime.UtcNow.AddHours(-2)
+                };
+                await context.Reservations.AddAsync(reservation);
+                await context.SaveChangesAsync();
+
+                // Link table to reservation
+                var reservationTable = new ReservationTable
+                {
+                    ReservationId = reservation.ReservationId,
+                    TableId = table.TableId
+                };
+                await context.ReservationTables.AddAsync(reservationTable);
                 await context.SaveChangesAsync();
             }
+
+            // 2. Get or create MenuItems for combos
+            // Ensure there are enough available MenuItems
+            var menuItems = await context.MenuItems
+                .Where(m => m.IsAvailable == true)
+                .OrderBy(m => m.MenuItemId)
+                .Take(10)
+                .ToListAsync();
+
+            if (menuItems.Count < 5)
+            {
+                Console.WriteLine("⚠️ Not enough menu items. Creating sample menu items for cashier workflow...");
+
+                var sampleMenuItems = new List<MenuItem>
+                {
+                    new MenuItem { Name = "Steak Sapa Signature", Price = 245000m, Description = "Steak nhập khẩu", CourseType = "MainCourse", IsAvailable = true },
+                    new MenuItem { Name = "Trà sen Tuyết", Price = 45000m, Description = "Trà hoa sen đặc trưng", CourseType = "Beverage", IsAvailable = true },
+                    new MenuItem { Name = "Lẩu cá hồi Fansipan", Price = 320000m, Description = "Lẩu cá hồi đặc biệt", CourseType = "MainCourse", IsAvailable = true },
+                    new MenuItem { Name = "Rau tổng hợp", Price = 85000m, Description = "Set rau tươi sạch", CourseType = "SideDish", IsAvailable = true },
+                    new MenuItem { Name = "Trà đào cam sả", Price = 55000m, Description = "Đồ uống giải khát", CourseType = "Beverage", IsAvailable = true }
+                };
+
+                await context.MenuItems.AddRangeAsync(sampleMenuItems);
+                await context.SaveChangesAsync();
+
+                menuItems = await context.MenuItems
+                    .Where(m => m.IsAvailable == true)
+                    .OrderBy(m => m.MenuItemId)
+                    .Take(10)
+                    .ToListAsync();
+
+                Console.WriteLine("✅ Created sample menu items for cashier workflow.");
+            }
+
+            // 3. Seed Combos with ComboItems
+            var combo1 = await context.Combos
+                .FirstOrDefaultAsync(c => c.Name.Contains("Steak Dinner"));
+
+            if (combo1 == null)
+            {
+                combo1 = new Combo
+                {
+                    Name = "Steak Dinner",
+                    Description = "Combo bữa tối với steak và trà",
+                    Price = 290000m, // Discounted price
+                    IsAvailable = true,
+                    ImageUrl = null
+                };
+                await context.Combos.AddAsync(combo1);
+                await context.SaveChangesAsync();
+
+                // Add ComboItems
+                var steakItem = menuItems.FirstOrDefault(m => m.Name.Contains("Steak") || m.Name.Contains("Bò"));
+                var teaItem = menuItems.FirstOrDefault(m => m.Name.Contains("Trà") || m.Name.Contains("Tea"));
+
+                if (steakItem != null)
+                {
+                    await context.ComboItems.AddAsync(new ComboItem
+                    {
+                        ComboId = combo1.ComboId,
+                        MenuItemId = steakItem.MenuItemId,
+                        Quantity = 1
+                    });
+                }
+
+                if (teaItem != null)
+                {
+                    await context.ComboItems.AddAsync(new ComboItem
+                    {
+                        ComboId = combo1.ComboId,
+                        MenuItemId = teaItem.MenuItemId,
+                        Quantity = 1
+                    });
+                }
+
+                await context.SaveChangesAsync();
+            }
+
+            var combo2 = await context.Combos
+                .FirstOrDefaultAsync(c => c.Name.Contains("Family Hotpot"));
+
+            if (combo2 == null)
+            {
+                combo2 = new Combo
+                {
+                    Name = "Family Hotpot",
+                    Description = "Combo lẩu gia đình",
+                    Price = 450000m,
+                    IsAvailable = true,
+                    ImageUrl = null
+                };
+                await context.Combos.AddAsync(combo2);
+                await context.SaveChangesAsync();
+
+                // Add ComboItems
+                var hotpotItem = menuItems.FirstOrDefault(m => m.Name.Contains("Lẩu") || m.Name.Contains("Hotpot"));
+                var vegetableItem = menuItems.FirstOrDefault(m => m.Name.Contains("Rau") || m.Name.Contains("Vegetable"));
+                var drinkItem = menuItems.FirstOrDefault(m => m.Name.Contains("Trà") || m.Name.Contains("Nước"));
+
+                if (hotpotItem != null)
+                {
+                    await context.ComboItems.AddAsync(new ComboItem
+                    {
+                        ComboId = combo2.ComboId,
+                        MenuItemId = hotpotItem.MenuItemId,
+                        Quantity = 1
+                    });
+                }
+
+                if (vegetableItem != null)
+                {
+                    await context.ComboItems.AddAsync(new ComboItem
+                    {
+                        ComboId = combo2.ComboId,
+                        MenuItemId = vegetableItem.MenuItemId,
+                        Quantity = 1
+                    });
+                }
+
+                if (drinkItem != null)
+                {
+                    await context.ComboItems.AddAsync(new ComboItem
+                    {
+                        ComboId = combo2.ComboId,
+                        MenuItemId = drinkItem.MenuItemId,
+                        Quantity = 1
+                    });
+                }
+
+                await context.SaveChangesAsync();
+            }
+
+            // 4. Create Order 1: Only menu items (no combo)
+            // Status should be "waiting-confirmation" for cashier workflow testing
+            var order1 = new Order
+            {
+                ReservationId = reservation.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = OrderStatusConstants.WaitingConfirmation,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-30),
+                TotalAmount = 0m // Will be calculated later
+            };
+            await context.Orders.AddAsync(order1);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 1 (menu items only).");
+
+            // Add OrderDetails for Order 1
+            // Status should be "Pending" (not "Served") because order is waiting confirmation
+            var order1Details = new List<OrderDetail>();
+            var item1 = menuItems[0];
+            var item2 = menuItems[1];
+            var item3 = menuItems.Count > 2 ? menuItems[2] : menuItems[1];
+
+            order1Details.Add(new OrderDetail
+            {
+                OrderId = order1.OrderId,
+                MenuItemId = item1.MenuItemId,
+                ComboId = null,
+                Quantity = 2,
+                UnitPrice = item1.Price,
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-29)
+            });
+
+            order1Details.Add(new OrderDetail
+            {
+                OrderId = order1.OrderId,
+                MenuItemId = item2.MenuItemId,
+                ComboId = null,
+                Quantity = 1,
+                UnitPrice = item2.Price,
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-29)
+            });
+
+            order1Details.Add(new OrderDetail
+            {
+                OrderId = order1.OrderId,
+                MenuItemId = item3.MenuItemId,
+                ComboId = null,
+                Quantity = 1,
+                UnitPrice = item3.Price,
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-29)
+            });
+
+            await context.OrderDetails.AddRangeAsync(order1Details);
+            await context.SaveChangesAsync();
+
+            // Calculate totals for Order 1
+            var subtotal1 = order1Details.Sum(od => od.UnitPrice * od.Quantity);
+            var vat1 = subtotal1 * 0.1m;
+            var serviceFee1 = subtotal1 * 0.05m;
+            var total1 = subtotal1 + vat1 + serviceFee1;
+
+            order1.TotalAmount = total1;
+            context.Orders.Update(order1);
+            await context.SaveChangesAsync();
+
+            // 5. Create Order 2: Has combo + individual items
+            // This order is already confirmed by customer, ready for payment
+            var order2 = new Order
+            {
+                ReservationId = reservation.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = OrderStatusConstants.Confirmed,
+                ConfirmedAt = DateTime.UtcNow.AddMinutes(-5),
+                CreatedAt = DateTime.UtcNow.AddMinutes(-10),
+                TotalAmount = 0m // Will be calculated later
+            };
+            await context.Orders.AddAsync(order2);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 2 (combos + items).");
+
+            // Add OrderDetails for Order 2 (with combo)
+            // Order is confirmed, so items should be "Confirmed" status
+            var order2Details = new List<OrderDetail>();
+
+            // Add combo order details
+            order2Details.Add(new OrderDetail
+            {
+                OrderId = order2.OrderId,
+                MenuItemId = null,
+                ComboId = combo1.ComboId,
+                Quantity = 1,
+                UnitPrice = combo1.Price,
+                Status = "Confirmed",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
+            });
+
+            order2Details.Add(new OrderDetail
+            {
+                OrderId = order2.OrderId,
+                MenuItemId = null,
+                ComboId = combo2.ComboId,
+                Quantity = 1,
+                UnitPrice = combo2.Price,
+                Status = "Confirmed",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
+            });
+
+            // Add individual items (no combo)
+            var item4 = menuItems.Count > 3 ? menuItems[3] : menuItems[0];
+            var item5 = menuItems.Count > 4 ? menuItems[4] : menuItems[1];
+
+            order2Details.Add(new OrderDetail
+            {
+                OrderId = order2.OrderId,
+                MenuItemId = item4.MenuItemId,
+                ComboId = null,
+                Quantity = 1,
+                UnitPrice = item4.Price,
+                Status = "Confirmed",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
+            });
+
+            order2Details.Add(new OrderDetail
+            {
+                OrderId = order2.OrderId,
+                MenuItemId = item5.MenuItemId,
+                ComboId = null,
+                Quantity = 2,
+                UnitPrice = item5.Price,
+                Status = "Confirmed",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
+            });
+
+            await context.OrderDetails.AddRangeAsync(order2Details);
+            await context.SaveChangesAsync();
+
+            // Calculate totals for Order 2
+            var subtotal2 = order2Details.Sum(od => od.UnitPrice * od.Quantity);
+            var vat2 = subtotal2 * 0.1m;
+            var serviceFee2 = subtotal2 * 0.05m;
+            var total2 = subtotal2 + vat2 + serviceFee2;
+
+            order2.TotalAmount = total2;
+            context.Orders.Update(order2);
+            await context.SaveChangesAsync();
+
+            // 7. Create Order 3: Another waiting-confirmation order (different table)
+            var table2 = await context.Tables
+                .Where(t => t.TableId != table.TableId && t.Status == "Available")
+                .FirstOrDefaultAsync();
+
+            if (table2 == null)
+            {
+                table2 = new Table
+                {
+                    TableNumber = "B02",
+                    Capacity = 6,
+                    Status = "Available",
+                    AreaId = table.AreaId
+                };
+                await context.Tables.AddAsync(table2);
+                await context.SaveChangesAsync();
+                Console.WriteLine("✅ Created table B02 for Order 3.");
+            }
+
+            var reservation2 = new Reservation
+            {
+                CustomerId = customer.CustomerId,
+                CustomerNameReservation = customer.User?.FullName ?? "Test Customer",
+                StaffId = cashierUser?.UserId,
+                ReservationDate = DateTime.UtcNow.Date,
+                TimeSlot = "Ca trưa",
+                ReservationTime = DateTime.UtcNow.AddHours(-1),
+                NumberOfGuests = 2,
+                Status = "Guest Seated",
+                ArrivalAt = DateTime.UtcNow.AddHours(-1)
+            };
+            await context.Reservations.AddAsync(reservation2);
+            await context.SaveChangesAsync();
+
+            await context.ReservationTables.AddAsync(new ReservationTable
+            {
+                ReservationId = reservation2.ReservationId,
+                TableId = table2.TableId
+            });
+            await context.SaveChangesAsync();
+
+            var order3 = new Order
+            {
+                ReservationId = reservation2.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = OrderStatusConstants.WaitingConfirmation,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-20),
+                TotalAmount = 0m
+            };
+            await context.Orders.AddAsync(order3);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 3 (waiting-confirmation).");
+
+            // Add simple items for Order 3
+            var order3Details = new List<OrderDetail>
+            {
+                new OrderDetail
+                {
+                    OrderId = order3.OrderId,
+                    MenuItemId = menuItems[0].MenuItemId,
+                    Quantity = 1,
+                    UnitPrice = menuItems[0].Price,
+                    Status = "Pending",
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-19)
+                },
+                new OrderDetail
+                {
+                    OrderId = order3.OrderId,
+                    MenuItemId = menuItems[1].MenuItemId,
+                    Quantity = 2,
+                    UnitPrice = menuItems[1].Price,
+                    Status = "Pending",
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-19)
+                }
+            };
+            await context.OrderDetails.AddRangeAsync(order3Details);
+            await context.SaveChangesAsync();
+
+            var subtotal3 = order3Details.Sum(od => od.UnitPrice * od.Quantity);
+            order3.TotalAmount = subtotal3 + (subtotal3 * 0.15m); // VAT + Service
+            context.Orders.Update(order3);
+            await context.SaveChangesAsync();
+
+            // 8. Create Order 4: Confirmed order with combo (ready for payment)
+            var order4 = new Order
+            {
+                ReservationId = reservation.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = OrderStatusConstants.Confirmed,
+                ConfirmedAt = DateTime.UtcNow.AddMinutes(-3),
+                ConfirmedByStaffId = cashierStaff.StaffId,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-15),
+                TotalAmount = 0m
+            };
+            await context.Orders.AddAsync(order4);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 4 (confirmed with combo).");
+
+            var order4Details = new List<OrderDetail>
+            {
+                new OrderDetail
+                {
+                    OrderId = order4.OrderId,
+                    ComboId = combo1.ComboId,
+                    Quantity = 2,
+                    UnitPrice = combo1.Price,
+                    Status = "Confirmed",
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-14)
+                }
+            };
+            await context.OrderDetails.AddRangeAsync(order4Details);
+            await context.SaveChangesAsync();
+
+            var subtotal4 = order4Details.Sum(od => od.UnitPrice * od.Quantity);
+            order4.TotalAmount = subtotal4 + (subtotal4 * 0.15m);
+            context.Orders.Update(order4);
+            await context.SaveChangesAsync();
+
+            // 9. Create Order 5: Paid order (completed payment)
+            var order5 = new Order
+            {
+                ReservationId = reservation2.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = OrderStatusConstants.Paid,
+                ConfirmedAt = DateTime.UtcNow.AddHours(-1),
+                ConfirmedByStaffId = cashierStaff.StaffId,
+                CreatedAt = DateTime.UtcNow.AddHours(-2),
+                TotalAmount = 0m
+            };
+            await context.Orders.AddAsync(order5);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 5 (paid).");
+
+            var order5Details = new List<OrderDetail>
+            {
+                new OrderDetail
+                {
+                    OrderId = order5.OrderId,
+                    MenuItemId = menuItems.Count > 2 ? menuItems[2].MenuItemId : menuItems[0].MenuItemId,
+                    Quantity = 1,
+                    UnitPrice = menuItems.Count > 2 ? menuItems[2].Price : menuItems[0].Price,
+                    Status = "Served",
+                    CreatedAt = DateTime.UtcNow.AddHours(-2)
+                },
+                new OrderDetail
+                {
+                    OrderId = order5.OrderId,
+                    MenuItemId = menuItems.Count > 3 ? menuItems[3].MenuItemId : menuItems[1].MenuItemId,
+                    Quantity = 1,
+                    UnitPrice = menuItems.Count > 3 ? menuItems[3].Price : menuItems[1].Price,
+                    Status = "Served",
+                    CreatedAt = DateTime.UtcNow.AddHours(-2)
+                }
+            };
+            await context.OrderDetails.AddRangeAsync(order5Details);
+            await context.SaveChangesAsync();
+
+            var subtotal5 = order5Details.Sum(od => od.UnitPrice * od.Quantity);
+            order5.TotalAmount = subtotal5 + (subtotal5 * 0.15m);
+            context.Orders.Update(order5);
+            await context.SaveChangesAsync();
+
+            // Create payment record for Order 5 (already paid)
+            var payment5 = new Payment
+            {
+                OrderId = order5.OrderId,
+                PaymentMethod = "Cash",
+                Subtotal = subtotal5,
+                DiscountAmount = 0m,
+                Vatpercent = 10m,
+                Vatamount = subtotal5 * 0.1m,
+                FinalAmount = subtotal5 + (subtotal5 * 0.15m),
+                PaymentDate = DateTime.UtcNow.AddMinutes(-30)
+            };
+            await context.Payments.AddAsync(payment5);
+            await context.SaveChangesAsync();
+            Console.WriteLine("ℹ️ Payment record created for Order 5 (already paid).");
+
+            // 10. Create Order 6: Waiting-confirmation with many items (edge case)
+            var order6 = new Order
+            {
+                ReservationId = reservation.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = OrderStatusConstants.WaitingConfirmation,
+                CreatedAt = DateTime.UtcNow.AddMinutes(-5),
+                TotalAmount = 0m
+            };
+            await context.Orders.AddAsync(order6);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 6 (waiting-confirmation, many items).");
+
+            var order6Details = new List<OrderDetail>();
+            for (int i = 0; i < Math.Min(5, menuItems.Count); i++)
+            {
+                order6Details.Add(new OrderDetail
+                {
+                    OrderId = order6.OrderId,
+                    MenuItemId = menuItems[i].MenuItemId,
+                    Quantity = i + 1,
+                    UnitPrice = menuItems[i].Price,
+                    Status = "Pending",
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-4)
+                });
+            }
+            await context.OrderDetails.AddRangeAsync(order6Details);
+            await context.SaveChangesAsync();
+
+            var subtotal6 = order6Details.Sum(od => od.UnitPrice * od.Quantity);
+            order6.TotalAmount = subtotal6 + (subtotal6 * 0.15m);
+            context.Orders.Update(order6);
+            await context.SaveChangesAsync();
+
+            // 11. Create Order 7: Old paid order (for history/reporting)
+            var order7 = new Order
+            {
+                ReservationId = reservation.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = OrderStatusConstants.Paid,
+                ConfirmedAt = DateTime.UtcNow.AddDays(-1),
+                ConfirmedByStaffId = cashierStaff.StaffId,
+                CreatedAt = DateTime.UtcNow.AddDays(-1).AddHours(-1),
+                TotalAmount = 0m
+            };
+            await context.Orders.AddAsync(order7);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 7 (old paid order).");
+
+            var order7Details = new List<OrderDetail>
+            {
+                new OrderDetail
+                {
+                    OrderId = order7.OrderId,
+                    ComboId = combo2.ComboId,
+                    Quantity = 1,
+                    UnitPrice = combo2.Price,
+                    Status = "Served",
+                    CreatedAt = DateTime.UtcNow.AddDays(-1).AddHours(-1)
+                },
+                new OrderDetail
+                {
+                    OrderId = order7.OrderId,
+                    MenuItemId = menuItems[0].MenuItemId,
+                    Quantity = 3,
+                    UnitPrice = menuItems[0].Price,
+                    Status = "Served",
+                    CreatedAt = DateTime.UtcNow.AddDays(-1).AddHours(-1)
+                }
+            };
+            await context.OrderDetails.AddRangeAsync(order7Details);
+            await context.SaveChangesAsync();
+
+            var subtotal7 = order7Details.Sum(od => od.UnitPrice * od.Quantity);
+            order7.TotalAmount = subtotal7 + (subtotal7 * 0.15m);
+            context.Orders.Update(order7);
+            await context.SaveChangesAsync();
+
+            var payment7 = new Payment
+            {
+                OrderId = order7.OrderId,
+                PaymentMethod = "QR",
+                Subtotal = subtotal7,
+                DiscountAmount = 0m,
+                Vatpercent = 10m,
+                Vatamount = subtotal7 * 0.1m,
+                FinalAmount = subtotal7 + (subtotal7 * 0.15m),
+                PaymentDate = DateTime.UtcNow.AddDays(-1).AddMinutes(30)
+            };
+            await context.Payments.AddAsync(payment7);
+            await context.SaveChangesAsync();
+            Console.WriteLine("ℹ️ Payment record created for Order 7 (old paid order).");
+
+            // Note: Payment records should NOT be created for pending orders
+            // They will be created when cashier initiates payment via InitiatePaymentAsync()
+            // This ensures proper payment workflow: Order → Customer Confirm → Initiate Payment → Process Payment
+
+            Console.WriteLine($"🎯 Cashier workflow seeding finished. Orders created: {ordersCreated}.");
+            Console.WriteLine("📊 Order Status Summary:");
+            Console.WriteLine($"   - waiting-confirmation: Orders 1, 3, 6 (3 orders)");
+            Console.WriteLine($"   - confirmed: Orders 2, 4 (2 orders)");
+            Console.WriteLine($"   - paid: Orders 5, 7 (2 orders)");
+            Console.WriteLine($"   Total: {ordersCreated} orders created for comprehensive testing.");
         }
+
     }
 }
 

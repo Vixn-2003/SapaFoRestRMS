@@ -14,6 +14,7 @@ using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SapaFoRestRMSAPI.Services;
@@ -53,6 +54,18 @@ builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 //Show connection string in console
 Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));
 
+
+//check error sql
+builder.Logging.AddConsole();
+builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("MyDatabase"),
+        sqlOptions =>
+        {
+            sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        })
+           .EnableSensitiveDataLogging()
+           .LogTo(Console.WriteLine, LogLevel.Information));
 
 builder.Services.AddEndpointsApiExplorer();
 // Bật middleware Swagger
@@ -270,7 +283,18 @@ builder.Services.AddScoped<IReceiptService>(sp =>
 {
     var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
     var env = sp.GetRequiredService<IWebHostEnvironment>();
-    return new ReceiptService(unitOfWork, env.WebRootPath);
+    var logger = sp.GetRequiredService<ILogger<ReceiptService>>();
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var webRootPath = string.IsNullOrWhiteSpace(env.WebRootPath)
+        ? Path.Combine(env.ContentRootPath, "wwwroot")
+        : env.WebRootPath;
+
+    if (!Directory.Exists(webRootPath))
+    {
+        Directory.CreateDirectory(webRootPath);
+    }
+
+    return new ReceiptService(unitOfWork, webRootPath, logger, configuration);
 });
 
 // SalaryChangeRequest Service/Repository
@@ -378,6 +402,14 @@ app.MapHub<KitchenHub>("/kitchenHub");
 
 app.MapHub<ReservationHub>("/reservationHub");
 app.MapControllers();
+
+await app.EnsureSeededAsync();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+    await DataSeeder.SeedCashierWorkflowTestAsync(context);
+}
 
 // Upsert Admin from configuration (Development)
 using (var scope = app.Services.CreateScope())
