@@ -442,6 +442,15 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("QuantityRemaining")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<decimal>("QuantityReserved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18, 2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("Available")
+                        .HasColumnType("decimal(18, 2)")
+                        .HasComputedColumnSql("([QuantityRemaining] - [QuantityReserved])", stored: true);
+
                     b.Property<int>("WarehouseId")
                         .HasColumnType("int");
 
@@ -500,14 +509,32 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TicketDetailId"));
 
+                    b.Property<int?>("AssignedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime");
+
                     b.Property<int>("OrderDetailId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
 
                     b.Property<int>("TicketId")
                         .HasColumnType("int");
 
                     b.HasKey("TicketDetailId")
                         .HasName("PK__KitchenT__39BFBDE6C33E07F4");
+
+                    b.HasIndex("AssignedUserId");
 
                     b.HasIndex("OrderDetailId");
 
@@ -645,6 +672,14 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<int?>("TimeCook")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BatchSize")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.HasKey("MenuItemId")
                         .HasName("PK__MenuItem__8943F72267633489");
 
@@ -718,19 +753,33 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<bool>("IsUrgent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<int?>("MenuItemId")
                         .HasColumnType("int");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReadyAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Status")
                         .ValueGeneratedOnAdd()
@@ -2287,6 +2336,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.KitchenTicketDetail", b =>
                 {
+                    b.HasOne("DomainAccessLayer.Models.User", "AssignedUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("DomainAccessLayer.Models.OrderDetail", "OrderDetail")
                         .WithMany("KitchenTicketDetails")
                         .HasForeignKey("OrderDetailId")
@@ -2299,6 +2353,8 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK__KitchenTi__Ticke__29221CFB");
+
+                    b.Navigation("AssignedUser");
 
                     b.Navigation("OrderDetail");
 

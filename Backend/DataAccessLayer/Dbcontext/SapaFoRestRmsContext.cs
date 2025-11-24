@@ -321,6 +321,12 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.TicketDetailId).HasName("PK__KitchenT__39BFBDE6C33E07F4");
 
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            entity.Property(e => e.StartedAt).HasColumnType("datetime");
+            entity.Property(e => e.CompletedAt).HasColumnType("datetime");
+
             entity.HasOne(d => d.OrderDetail).WithMany(p => p.KitchenTicketDetails)
                 .HasForeignKey(d => d.OrderDetailId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -329,6 +335,10 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasOne(d => d.Ticket).WithMany(p => p.KitchenTicketDetails)
                 .HasForeignKey(d => d.TicketId)
                 .HasConstraintName("FK__KitchenTi__Ticke__29221CFB");
+
+            entity.HasOne(d => d.AssignedUser).WithMany()
+                .HasForeignKey(d => d.AssignedUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<MarketingCampaign>(entity =>
@@ -378,6 +388,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.TimeCook).HasColumnType("int");
             entity.Property(e => e.BatchSize).HasColumnType("int").HasDefaultValue(1);
             entity.HasOne(d => d.Category).WithMany(p => p.MenuItems)
                 .HasForeignKey(d => d.CategoryId)
@@ -445,6 +456,13 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasMaxLength(20)
                 .HasDefaultValue("Pending");
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.IsUrgent).HasDefaultValue(false);
+            entity.Property(e => e.ReadyAt).HasColumnType("datetime");
+            entity.Property(e => e.StartedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.MenuItem).WithMany(p => p.OrderDetails)
                 .HasForeignKey(d => d.MenuItemId)
