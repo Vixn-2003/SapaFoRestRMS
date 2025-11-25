@@ -32,8 +32,10 @@ namespace DataAccessLayer.UnitOfWork
         private IStockTransactionRepository _stockTransactionRepository;
         private IUnitRepository _unitRepository;
 
+        private IAuditRepository _auditRepository;
 
         public IUnitRepository UnitRepository => _unitRepository ??= new UnitRepository(_context);
+        public IAuditRepository AuditRepository => _auditRepository ??= new AuditRepository(_context);
         public IStockTransactionRepository StockTransaction => _stockTransactionRepository ??= new StockTransactionRepository(_context);
         public IPurchaseOrderDetailRepository PurchaseOrderDetail => _purchaseOrderDetailRepository ??= new PurchaseOrderDetailRepository(_context);
 

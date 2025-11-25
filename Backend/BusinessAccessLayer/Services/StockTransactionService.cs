@@ -27,5 +27,11 @@ namespace BusinessAccessLayer.Services
             var purchaseOrder = await _unitOfWork.StockTransaction.AddNewStockTransaction(stock);
             return purchaseOrder;
         }
+
+        public async Task<IEnumerable<StockTransactionInventoryDTO>> GetAllStockExport()
+        {
+            var export = await _unitOfWork.StockTransaction.GetAllExport();
+            return _mapper.Map<IEnumerable<StockTransactionInventoryDTO>>(export);
+        }
     }
 }

@@ -18,6 +18,7 @@ public partial class InventoryBatch
     public DateOnly? ExpiryDate { get; set; }
 
     public DateTime? CreatedAt { get; set; }
+    public bool IsActive { get; set; }
 
     public virtual Ingredient Ingredient { get; set; } = null!;
 

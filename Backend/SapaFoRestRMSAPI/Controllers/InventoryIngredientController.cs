@@ -6,6 +6,7 @@ using DomainAccessLayer.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using Microsoft.EntityFrameworkCore;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -16,11 +17,15 @@ namespace SapaFoRestRMSAPI.Controllers
 
         private readonly IInventoryIngredientService _inventoryIngredientService;
         private readonly IWarehouseService _warehouseService;
+        private readonly IAuditService _auditService;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        public InventoryIngredientController(IInventoryIngredientService inventoryIngredientService, IWarehouseService warehouseService)
+        public InventoryIngredientController(IInventoryIngredientService inventoryIngredientService, IWarehouseService warehouseService, IAuditService auditService, ICloudinaryService cloudinaryService)
         {
             _inventoryIngredientService = inventoryIngredientService;
             _warehouseService = warehouseService;
+            _auditService = auditService;
+            _cloudinaryService = cloudinaryService;
         }
 
         [HttpGet]
@@ -71,7 +76,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 var search = request?.SearchIngredent;
                 IEnumerable<InventoryIngredientDTO> ingredients;
                 if (string.IsNullOrEmpty(search))
-                {                   
+                {
                     ingredients = await _inventoryIngredientService.GetAllIngredient();
                 }
                 else
@@ -147,7 +152,7 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             try
             {
-               // _logger.LogInformation($"Nhận request cập nhật kho: BatchId={request.BatchId}, WarehouseId={request.WarehouseId}");
+                // _logger.LogInformation($"Nhận request cập nhật kho: BatchId={request.BatchId}, WarehouseId={request.WarehouseId}");
 
                 // Validate request
                 if (request.BatchId <= 0)
@@ -180,11 +185,11 @@ namespace SapaFoRestRMSAPI.Controllers
                 }
 
                 // Cập nhật warehouse cho batch
-                var result = await _inventoryIngredientService.UpdateBatchWarehouse(request.BatchId, request.WarehouseId);
+                var result = await _inventoryIngredientService.UpdateBatchWarehouse(request.BatchId, request.WarehouseId, request.IsActive);
 
                 if (result)
                 {
-                   // _logger.LogInformation($"Cập nhật kho thành công: BatchId={request.BatchId}, WarehouseId={request.WarehouseId}");
+                    // _logger.LogInformation($"Cập nhật kho thành công: BatchId={request.BatchId}, WarehouseId={request.WarehouseId}");
 
                     return Ok(new
                     {
@@ -208,7 +213,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
-               // _logger.LogError(ex, $"Lỗi khi cập nhật kho cho batch {request.BatchId}");
+                // _logger.LogError(ex, $"Lỗi khi cập nhật kho cho batch {request.BatchId}");
 
                 return StatusCode(500, new
                 {
@@ -223,6 +228,8 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             public int BatchId { get; set; }
             public int WarehouseId { get; set; }
+
+            public bool IsActive { get; set; }
         }
 
         [HttpPut("UpdateIngredient")]
@@ -291,6 +298,173 @@ namespace SapaFoRestRMSAPI.Controllers
                 });
             }
         }
-    }
 
+
+        // API riêng để kiểm tra TRƯỚC
+        [HttpGet]
+        [Route("api/Audit/CheckStatus/{batchId}")]
+        public async Task<IActionResult> CheckAuditStatus(int batchId)
+        {
+            var auditId = await _auditService.CheckExitsAuditStatus(batchId);
+
+            return Ok(new
+            {
+                success = true,
+                hasUnprocessedAudit = !string.IsNullOrEmpty(auditId),
+                auditId = auditId
+            });
+        }
+
+
+        [HttpPost("Audit/Create")]
+        public async Task<IActionResult> Create([FromForm] AuditInventoryRequestDTO model)
+        {
+            try
+            {
+                // ✅ 1. VALIDATE INPUT CƠ BẢN
+                if (string.IsNullOrWhiteSpace(model.PurchaseOrderId))
+                    return BadRequest(new { success = false, message = "Thiếu mã lô (PO)" });
+
+                if (string.IsNullOrWhiteSpace(model.IngredientCode))
+                    return BadRequest(new { success = false, message = "Thiếu mã nguyên liệu" });
+
+                if (model.CreatorId <= 0)
+                    return BadRequest(new { success = false, message = "Thiếu thông tin người tạo đơn" });
+
+                if (string.IsNullOrWhiteSpace(model.Reason))
+                    return BadRequest(new { success = false, message = "Vui lòng nhập lý do kiểm kê" });
+
+                if (model.AdjustmentQuantity <= 0)
+                    return BadRequest(new { success = false, message = "Số lượng điều chỉnh phải lớn hơn 0" });
+
+                if (string.IsNullOrWhiteSpace(model.CreatorName) ||
+                    string.IsNullOrWhiteSpace(model.CreatorPosition) ||
+                    string.IsNullOrWhiteSpace(model.CreatorPhone))
+                    return BadRequest(new { success = false, message = "Thông tin người tạo đơn không đầy đủ" });
+
+                // ✅ 2. XỬ LÝ FILE ẢNH
+                string? imagePath = null;
+                if (model.ImageFile is { Length: > 0 })
+                {
+                    imagePath = await _cloudinaryService.UploadImageAsync(model.ImageFile, "audit_proofs");
+                }
+
+                var resultCheck = await _auditService.CheckExitsAuditStatus(model.BatchId);
+
+                if (resultCheck == null)
+                {
+                    // ✅ 3. TẠO AUDIT ID (theo format tùy chọn)
+
+                    string auditId = await GenerateAuditId();
+
+
+                    // ✅ 4. TẠO ĐỐI TƯỢNG
+                    var auditRecord = new AuditInventory
+                    {
+                        AuditId = auditId,  // ✅ GÁN AuditId đã tạo
+                        BatchId = model.BatchId,
+                        PurchaseOrderId = model.PurchaseOrderId.Trim(),
+                        IngredientCode = model.IngredientCode.Trim(),
+                        OriginalQuantity = model.OriginalQuantity,
+                        ingredientName = model.IngredientName.Trim(),
+                        unit = model.Unit,
+                        ExpiryDate = model.ExpiryDate,
+
+                        // Thông tin người tạo
+                        CreatorId = model.CreatorId,
+                        CreatedAt = model.CreatedAt != default ? model.CreatedAt : DateTime.Now,
+                        CreatorName = model.CreatorName.Trim(),
+                        CreatorPosition = model.CreatorPosition.Trim(),
+                        CreatorPhone = model.CreatorPhone.Trim(),
+
+                        // Thông tin kiểm kê
+                        Reason = model.Reason.Trim(),
+                        AdjustmentQuantity = model.AdjustmentQuantity,
+                        IsAddition = model.IsAddition,
+                        IngredientStatus = model.IngredientStatus?.Trim() ?? "Normal",
+                        AuditStatus = "processing",
+                        ImagePath = imagePath,
+
+                        // Người xác nhận
+                        ConfirmerId = null,
+                        ConfirmedAt = null,
+                        ConfirmerName = null,
+                        ConfirmerPosition = null,
+                        ConfirmerPhone = null
+                    };
+
+                    // ✅ 5. LƯU VÀO DATABASE
+                    var result = await _auditService.CreateAuditAsync(auditRecord);
+
+                    if (!result)
+                    {
+                        return StatusCode(500, new
+                        {
+                            success = false,
+                            message = "Không thể lưu đơn kiểm kê. Vui lòng thử lại."
+                        });
+                    }
+
+                    // ✅ 6. TRẢ VỀ KẾT QUẢ
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Tạo đơn kiểm kê thành công!",
+                        data = new
+                        {
+                            AuditId = auditRecord.AuditId,  // ✅ Trả về AuditId dạng string
+                            PurchaseOrderId = auditRecord.PurchaseOrderId,
+                            IngredientCode = auditRecord.IngredientCode,
+                            ingredientName = auditRecord.ingredientName,
+                            unit = auditRecord.unit,
+                            OriginalQuantity = auditRecord.OriginalQuantity,
+                            AdjustmentQuantity = auditRecord.AdjustmentQuantity,
+                            IsAddition = auditRecord.IsAddition,
+                            AuditStatus = auditRecord.AuditStatus,
+                            CreatedAt = auditRecord.CreatedAt,
+                            CreatorName = auditRecord.CreatorName,
+                            ImagePath = imagePath
+                        }
+                    });
+                }
+                else
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        message = "Tạo đơn không thành công, lô hàng này đang có đơn xử lý!",
+                        data = new
+                        {
+                            resultCheck = resultCheck
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Exception: {ex.Message}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Đã xảy ra lỗi trong quá trình xử lý đơn kiểm kê.",
+                    error = ex.Message
+                });
+            }
+        }
+
+        private async Task<string> GenerateAuditId()
+        {
+            // Format: AUD-YYYYMMDD-XXXX
+            var today = DateTime.Now.ToString("yyyyMMdd");
+            var prefix = $"AUD-{today}-";
+
+            // Đếm số đơn trong ngày
+            var count = await _auditService.CountAuditAsync(string.Format(prefix, today));
+
+            var sequence = (count + 1).ToString().PadLeft(4, '0');
+
+            return $"{prefix}{sequence}";
+            // Ví dụ: AUD-20241123-0001
+        }
+    }
 }

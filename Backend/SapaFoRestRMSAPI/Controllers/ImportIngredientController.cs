@@ -117,6 +117,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
                     WarehouseName = item.WarehouseName,
+                    ExpiryDate = item.ExpiryDate,
                     TotalPrice = item.TotalPrice
                 }).ToList();
 
