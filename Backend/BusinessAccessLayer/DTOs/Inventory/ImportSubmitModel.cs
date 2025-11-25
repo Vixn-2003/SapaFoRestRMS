@@ -24,8 +24,6 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string Name { get; set; } = string.Empty;
         public string Unit { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
-
-        public DateOnly? ExpiryDate { get; set; }
         public decimal UnitPrice { get; set; }
     }
 }

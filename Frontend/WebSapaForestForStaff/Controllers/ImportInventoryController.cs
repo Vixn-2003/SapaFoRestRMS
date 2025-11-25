@@ -88,8 +88,6 @@ namespace WebSapaForestForStaff.Controllers
             return View("~/Views/Menu/ImportInventory.cshtml", importIngredient);
         }
 
-
-
         [HttpPost]
         public async Task<IActionResult> SubmitImport([FromForm] ImportSubmitModel model)
         {
@@ -151,7 +149,6 @@ namespace WebSapaForestForStaff.Controllers
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
                     WarehouseName = item.WarehouseName,
-                    ExpiryDate = item.ExpiryDate,
                     TotalPrice = item.Quantity * item.UnitPrice
                 }));
 

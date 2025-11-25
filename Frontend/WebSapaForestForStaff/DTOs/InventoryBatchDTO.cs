@@ -13,8 +13,6 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public DateOnly? ExpiryDate { get; set; }
         public DateTime? CreatedAt { get; set; }
 
-        public bool IsActive { get; set; }
-
         public List<StockTransactionDTO> StockTransactions { get; set; } = new();
 
     }

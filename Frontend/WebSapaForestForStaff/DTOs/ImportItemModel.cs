@@ -8,7 +8,6 @@
         public string Unit { get; set; } = null!;
         public decimal Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public DateOnly? ExpiryDate { get; set; }
         public string WarehouseName { get; set; }
     }
 }

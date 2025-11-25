@@ -16,7 +16,7 @@ namespace WebSapaForestForStaff.Controllers
         // GET: ComboController
         public ActionResult Index()
         {
-            return View("~/Views/Menu/ListCombo.cshtml");
+            return View();
         }
 
         // GET: ComboController/Details/5

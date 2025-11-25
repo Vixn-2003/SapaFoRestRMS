@@ -1872,7 +1872,6 @@
                                 <th>Mã nguyên liệu</th>
                                 <th>Tên nguyên liệu</th>
                                 <th>Kho lưu trữ</th>
-                                <th>Hạn sử dụng</th>
                                 <th class="text-center">Số lượng</th>
                                 <th class="text-center">Đơn vị</th>
                                 <th class="text-right">Đơn giá</th>
@@ -1890,11 +1889,6 @@
                                         <td class="font-medium">@item.IngredientCode</td>
                                         <td>@item.IngredientName</td>
                                         <td>@item.WarehouseName</td>
-                                        <td>
-                                            @(item.ExpiryDate != null
-                                                ? item.ExpiryDate.Value.ToString("dd/MM/yyyy")
-                                                : "—")
-                                        </td>
                                         <td class="text-center font-semibold">@item.Quantity</td>
                                         <td class="text-center">@item.Unit</td>
                                         <td class="text-right">@string.Format("{0:N0}₫", item.UnitPrice)</td>
@@ -2111,7 +2105,9 @@
         }
 
         function goBack() {
-            window.history.back();
+            if (confirm('Bạn có chắc chắn muốn quay lại?')) {
+                window.history.back();
+            }
         }
 
 
@@ -2133,7 +2129,9 @@
 
         // ===== PRINT ORDER FUNCTION =====
         function printOrder() {
+            if (confirm('Bạn có muốn in phiếu nhập hàng này?')) {
                 window.print();
+            }
         }
 
         // ===== TOAST NOTIFICATION SYSTEM =====
