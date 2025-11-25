@@ -332,8 +332,8 @@ namespace SapaFoRestRMSAPI.Controllers
                     error = ex.Message
                 });
             }
-        }
-    }
+        
+    
         }
 
 
