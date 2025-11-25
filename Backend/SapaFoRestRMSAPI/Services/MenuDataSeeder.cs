@@ -1185,25 +1185,51 @@ namespace SapaFoRestRMSAPI.Services
                 await context.SaveChangesAsync();
             }
 
-            // 5. Seed InventoryBatches
+            // 5. Seed InventoryBatches - Xóa batches cũ và tạo lại với số lượng đủ
             var batches = new List<InventoryBatch>();
             var random = new Random();
             var now = DateTime.Now;
 
             foreach (var ingredient in ingredientDict.Values)
             {
-                // Check if batches already exist for this ingredient
+                // Xóa các batches cũ của nguyên liệu này để seed lại
                 var existingBatches = await context.InventoryBatches
                     .Where(b => b.IngredientId == ingredient.IngredientId)
                     .ToListAsync();
 
-                if (existingBatches.Any()) continue; // Skip if batches already exist
+                if (existingBatches.Any())
+                {
+                    // Xóa các StockTransactions liên quan trước
+                    var batchIds = existingBatches.Select(b => b.BatchId).ToList();
+                    var relatedTransactions = await context.StockTransactions
+                        .Where(t => t.BatchId.HasValue && batchIds.Contains(t.BatchId.Value))
+                        .ToListAsync();
+                    
+                    if (relatedTransactions.Any())
+                    {
+                        context.StockTransactions.RemoveRange(relatedTransactions);
+                        await context.SaveChangesAsync();
+                    }
+                    
+                    // Xóa batches cũ
+                    context.InventoryBatches.RemoveRange(existingBatches);
+                    await context.SaveChangesAsync();
+                }
 
-                // Create 2-3 batches per ingredient
-                var batchCount = random.Next(2, 4);
+                // Tạo lại batches với số lượng đủ (200-500 kg/litre/quả)
+                // Tạo 3-5 batches per ingredient để có đủ số lượng
+                var batchCount = random.Next(3, 6);
                 for (int i = 0; i < batchCount; i++)
                 {
-                    var quantity = random.Next(10, 50); // 10-50 kg/litre/quả
+                    // Số lượng lớn hơn: 200-500 cho các nguyên liệu chính, 100-300 cho nguyên liệu phụ
+                    var isMainIngredient = ingredient.Name.Contains("Thịt") || 
+                                          ingredient.Name.Contains("Tôm") || 
+                                          ingredient.Name.Contains("Mực") || 
+                                          ingredient.Name.Contains("Cá");
+                    var quantity = isMainIngredient 
+                        ? random.Next(200, 501) // 200-500 cho nguyên liệu chính
+                        : random.Next(100, 301); // 100-300 cho nguyên liệu phụ
+                    
                     var batch = new InventoryBatch
                     {
                         IngredientId = ingredient.IngredientId,
@@ -1223,7 +1249,8 @@ namespace SapaFoRestRMSAPI.Services
                 await context.SaveChangesAsync();
             }
 
-            // 6. Seed StockTransactions (Export) - để có dữ liệu hiển thị ngay
+            // 6. Seed StockTransactions (Export) - Tạo ít transactions để giữ số lượng đủ
+            // Chỉ tạo một số transactions nhỏ để có dữ liệu hiển thị, không làm giảm số lượng quá nhiều
             var exportTransactions = new List<StockTransaction>();
             var allBatches = await context.InventoryBatches
                 .Include(b => b.Ingredient)
@@ -1236,11 +1263,12 @@ namespace SapaFoRestRMSAPI.Services
                 return;
             }
 
-            // Create some export transactions for the last 7 days
-            for (int day = 0; day < 7; day++)
+            // Chỉ tạo một số transactions nhỏ (1-2 transactions mỗi ngày trong 3 ngày gần nhất)
+            // Và chỉ xuất số lượng nhỏ để không làm giảm số lượng quá nhiều
+            for (int day = 0; day < 3; day++)
             {
                 var transactionDate = now.AddDays(-day);
-                var transactionsPerDay = random.Next(3, 8);
+                var transactionsPerDay = random.Next(1, 3); // Chỉ 1-2 transactions mỗi ngày
 
                 for (int i = 0; i < transactionsPerDay; i++)
                 {
@@ -1254,7 +1282,8 @@ namespace SapaFoRestRMSAPI.Services
                     var batch = availableBatches[random.Next(availableBatches.Count)];
                     
                     // Đảm bảo quantity > 0 và <= QuantityRemaining
-                    var maxQuantity = (int)Math.Floor(batch.QuantityRemaining);
+                    // Chỉ xuất số lượng nhỏ (1-5) để không làm giảm số lượng quá nhiều
+                    var maxQuantity = Math.Min(5, (int)Math.Floor(batch.QuantityRemaining));
                     if (maxQuantity <= 0)
                     {
                         continue; // Skip batch này nếu không còn số lượng

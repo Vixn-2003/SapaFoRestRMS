@@ -408,7 +408,7 @@ await app.EnsureSeededAsync();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-    await DataSeeder.SeedCashierWorkflowTestAsync(context);
+    
 }
 
 // Upsert Admin from configuration (Development)

@@ -12,8 +12,6 @@ let currentStatusFilter = 'all'; // 'all', 'Pending', 'Cooking', 'Late', 'Ready'
 (function () {
     function initKDS() {
         try {
-            console.log('=== KDS JavaScript Loaded ===');
-
             // Create modal BEFORE any other initialization
             createModalIfNotExists();
 
@@ -74,7 +72,6 @@ function initializeSignalR() {
             .build();
 
         signalRConnection.on('ItemStatusChanged', function (notification) {
-            console.log('Item status changed:', notification);
             if (currentViewMode === 'theo-tung-mon') {
                 loadGroupedItems();
             } else {
@@ -83,30 +80,28 @@ function initializeSignalR() {
         });
 
         signalRConnection.on('NewOrderReceived', function (order) {
-            console.log('New order received:', order);
             addNewOrder(order);
         });
 
         signalRConnection.on('OrderCompleted', function (orderId) {
-            console.log('Order completed:', orderId);
             removeOrder(orderId);
         });
 
         signalRConnection.onreconnecting(() => {
-            console.log('SignalR reconnecting...');
+            // Reconnecting...
         });
 
         signalRConnection.onreconnected(() => {
-            console.log('SignalR reconnected');
+            // Reconnected
         });
 
         signalRConnection.onclose(() => {
-            console.log('SignalR connection closed');
+            // Connection closed
         });
 
         signalRConnection.start()
             .then(() => {
-                console.log('SignalR connected successfully');
+                // Connected successfully
             })
             .catch(err => {
                 console.error('SignalR connection error:', err);
@@ -155,7 +150,6 @@ function renderOrders(orders) {
         return;
     }
 
-    console.log('Rendering', orders.length, 'orders');
     const renderedCards = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '').join('');
     
     if (renderedCards.trim() === '') {
@@ -173,7 +167,6 @@ function renderOrders(orders) {
     // Attach click handlers - SIMPLIFIED VERSION
     setTimeout(() => {
         const cards = grid.querySelectorAll('.order-card');
-        console.log('Found', cards.length, 'order cards');
 
         cards.forEach(card => {
             card.addEventListener('click', function (e) {
@@ -183,7 +176,6 @@ function renderOrders(orders) {
                 }
 
                 const orderId = parseInt(this.getAttribute('data-order-id'));
-                console.log('Card clicked, orderId:', orderId);
 
                 if (orderId && !isNaN(orderId)) {
                     openOrderModal(orderId);
@@ -701,7 +693,6 @@ async function loadGroupedItems() {
     if (!grid) return;
 
     try {
-        console.log('[loadGroupedItems] Fetching from:', `${API_BASE}/KitchenDisplay/grouped-by-item`);
         // Create abort controller for timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -722,16 +713,6 @@ async function loadGroupedItems() {
         }
         
         const result = await response.json();
-        console.log('[loadGroupedItems] API Response:', result);
-        
-        // Debug: Check if timeCook is in the data
-        if (result.success && result.data && result.data.length > 0) {
-            console.log('[loadGroupedItems] First item sample:', {
-                menuItemName: result.data[0].menuItemName,
-                timeCook: result.data[0].timeCook,
-                timeCookType: typeof result.data[0].timeCook
-            });
-        }
 
         if (result.success && result.data) {
             currentGroupedItems = result.data;
@@ -829,11 +810,29 @@ function renderGroupedItems(groupedItems) {
     // Attach click handlers for "Bắt đầu nấu" buttons
     setTimeout(() => {
         const startCookButtons = grid.querySelectorAll('.btn-start-cook');
-        startCookButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const orderDetailIds = JSON.parse(this.getAttribute('data-order-detail-ids') || '[]');
-                if (orderDetailIds.length > 0) {
-                    startCookingForItem(orderDetailIds);
+        startCookButtons.forEach((button, index) => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const itemDataJson = this.getAttribute('data-item-data');
+                if (itemDataJson) {
+                    try {
+                        const itemData = JSON.parse(decodeURIComponent(itemDataJson));
+                        startCookingForItem(itemData);
+                    } catch (e) {
+                        console.error('[Button Click] Error parsing item data:', e);
+                        // Fallback to old method
+                        const orderDetailIds = JSON.parse(this.getAttribute('data-order-detail-ids') || '[]');
+                        if (orderDetailIds.length > 0) {
+                            startCookingForItem({ itemDetails: orderDetailIds.map(id => ({ orderDetailId: id })) });
+                        }
+                    }
+                } else {
+                    // Fallback to old method
+                    const orderDetailIds = JSON.parse(this.getAttribute('data-order-detail-ids') || '[]');
+                    if (orderDetailIds.length > 0) {
+                        startCookingForItem({ itemDetails: orderDetailIds.map(id => ({ orderDetailId: id })) });
+                    }
                 }
             });
         });
@@ -906,6 +905,10 @@ function createItemCard(item) {
         .filter(detail => detail.status === 'Pending' || !detail.status)
         .map(detail => detail.orderDetailId);
 
+    // Get pending item details for batch selection
+    const pendingItemDetails = item.itemDetails
+        .filter(detail => detail.status === 'Pending' || !detail.status);
+
     // Format timeCook display
     // Check if timeCook exists and is a valid number
     const hasTimeCook = item.timeCook !== null && 
@@ -917,6 +920,23 @@ function createItemCard(item) {
     const timeCookDisplay = hasTimeCook
         ? `<span style="color: #ff9800; font-weight: 600;">${item.timeCook}p</span>`
         : '<span style="color: #9e9e9e;">Không xác định</span>';
+
+    // Store item data for batch selection popup
+    // Convert batchSize to number, use null if not available
+    let batchSizeValue = null;
+    if (item.batchSize !== null && item.batchSize !== undefined && item.batchSize !== '') {
+        const numValue = Number(item.batchSize);
+        if (!isNaN(numValue) && numValue > 0) {
+            batchSizeValue = numValue;
+        }
+    }
+    
+    const itemData = {
+        menuItemId: item.menuItemId,
+        menuItemName: item.menuItemName,
+        batchSize: batchSizeValue,
+        itemDetails: pendingItemDetails
+    };
 
     return `
         <div class="item-card" data-menu-item-id="${item.menuItemId}">
@@ -933,6 +953,8 @@ function createItemCard(item) {
                 <button class="btn btn-primary btn-start-cook" 
                         data-menu-item-id="${item.menuItemId}"
                         data-order-detail-ids="${JSON.stringify(pendingOrderDetailIds)}"
+                        data-item-data="${encodeURIComponent(JSON.stringify(itemData))}"
+                        data-batch-size="${itemData.batchSize || ''}"
                         ${pendingOrderDetailIds.length === 0 ? 'disabled' : ''}
                         style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 8px; width: 100%;">
                     <i class="mdi mdi-chef-hat"></i> Bắt đầu nấu
@@ -1045,7 +1067,6 @@ function createModalIfNotExists() {
     let modalOverlay = document.getElementById('orderModalOverlay');
 
     if (!modalOverlay) {
-        console.log('Creating modal...');
         modalOverlay = document.createElement('div');
         modalOverlay.id = 'orderModalOverlay';
         modalOverlay.className = 'order-modal-overlay';
@@ -1088,15 +1109,11 @@ function createModalIfNotExists() {
                 closeOrderModal();
             }
         });
-
-        console.log('✓ Modal created successfully');
     }
 }
 
 // Open order modal - FIXED VERSION
 function openOrderModal(orderId) {
-    console.log('=== Opening modal for order:', orderId, '===');
-
     orderId = parseInt(orderId);
     if (isNaN(orderId)) {
         console.error('Invalid orderId');
@@ -1134,9 +1151,6 @@ function openOrderModal(orderId) {
     if (modalOverlay) {
         modalOverlay.classList.add('show');
         document.body.style.overflow = 'hidden';
-        console.log('✓ Modal shown');
-    } else {
-        console.error('Modal not found!');
     }
 }
 
@@ -1266,28 +1280,266 @@ async function fireSelectedItems() {
 }
 
 // Start cooking for all items in a grouped item card
-async function startCookingForItem(orderDetailIds) {
-    if (!orderDetailIds || orderDetailIds.length === 0) {
+async function startCookingForItem(itemData) {
+    if (!itemData || !itemData.itemDetails || itemData.itemDetails.length === 0) {
         showError('Không có món nào để bắt đầu nấu');
         return;
     }
 
-    const confirmed = await showConfirmPopup(`Bắt đầu nấu ${orderDetailIds.length} món này?`);
-    if (!confirmed) {
+    // Show batch selection popup if batchSize is defined and > 0
+    // Check for null, undefined, or 0
+    const hasBatchSize = itemData.batchSize !== null && 
+                         itemData.batchSize !== undefined && 
+                         !isNaN(Number(itemData.batchSize)) && 
+                         Number(itemData.batchSize) > 0;
+
+    if (hasBatchSize) {
+        const selectedOrderDetailIds = await showBatchSelectionPopup(itemData);
+        if (!selectedOrderDetailIds || selectedOrderDetailIds.length === 0) {
+            return; // User cancelled or didn't select any items
+        }
+
+        try {
+            const promises = selectedOrderDetailIds.map(orderDetailId =>
+                updateItemStatusAPI(orderDetailId, 'Cooking')
+            );
+
+            await Promise.all(promises);
+            showSuccess(`Đã bắt đầu nấu ${selectedOrderDetailIds.length} món`);
+            reloadCurrentView();
+        } catch (error) {
+            console.error('Error starting cooking:', error);
+            showError('Không thể bắt đầu nấu: ' + error.message);
+        }
+    } else {
+        // No batch size, use simple confirmation
+        const orderDetailIds = itemData.itemDetails.map(d => d.orderDetailId);
+        const confirmed = await showConfirmPopup(`Bắt đầu nấu ${orderDetailIds.length} món này?`);
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const promises = orderDetailIds.map(orderDetailId =>
+                updateItemStatusAPI(orderDetailId, 'Cooking')
+            );
+
+            await Promise.all(promises);
+            showSuccess(`Đã bắt đầu nấu ${orderDetailIds.length} món`);
+            reloadCurrentView();
+        } catch (error) {
+            console.error('Error starting cooking:', error);
+            showError('Không thể bắt đầu nấu: ' + error.message);
+        }
+    }
+}
+
+// Show batch selection popup
+function showBatchSelectionPopup(itemData) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-popup-overlay';
+        
+        const batchSize = itemData.batchSize || 1;
+        const menuItemName = itemData.menuItemName || 'Món ăn';
+        const itemDetails = itemData.itemDetails || [];
+        
+        // Initialize selected items - try to fill batch automatically
+        const selectedOrderDetailIds = new Set();
+        let currentBatchQuantity = 0;
+        
+        // Auto-select items to fill batch
+        for (const detail of itemDetails) {
+            if (currentBatchQuantity + detail.quantity <= batchSize) {
+                selectedOrderDetailIds.add(detail.orderDetailId);
+                currentBatchQuantity += detail.quantity;
+            }
+            if (currentBatchQuantity >= batchSize) {
+                break;
+            }
+        }
+        
+        // If batch not filled, select first item at least
+        if (selectedOrderDetailIds.size === 0 && itemDetails.length > 0) {
+            selectedOrderDetailIds.add(itemDetails[0].orderDetailId);
+            currentBatchQuantity = itemDetails[0].quantity;
+        }
+        
+        const updateSelectedQuantity = () => {
+            let total = 0;
+            selectedOrderDetailIds.forEach(id => {
+                const detail = itemDetails.find(d => d.orderDetailId === id);
+                if (detail) {
+                    total += detail.quantity;
+                }
+            });
+            return total;
+        };
+        
+        const renderPopup = () => {
+            const selectedQuantity = updateSelectedQuantity();
+            const isBatchFull = selectedQuantity >= batchSize;
+            const batchStatusClass = isBatchFull ? 'batch-full' : 'batch-incomplete';
+            const batchStatusText = isBatchFull 
+                ? `✓ Đủ mẻ (${selectedQuantity}/${batchSize})` 
+                : `Chưa đủ mẻ (${selectedQuantity}/${batchSize})`;
+            
+            overlay.innerHTML = `
+                <div class="confirm-popup batch-selection-popup" onclick="event.stopPropagation()">
+                    <div class="confirm-popup-header">
+                        <div class="confirm-popup-icon">
+                            <i class="mdi mdi-chef-hat"></i>
+                        </div>
+                        <h3 class="confirm-popup-title">Bắt đầu nấu: ${menuItemName}</h3>
+                    </div>
+                    <div class="confirm-popup-body" style="max-height: 60vh; overflow-y: auto;">
+                        <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <strong style="font-size: 16px;">Số lượng mỗi mẻ:</strong>
+                                <span style="font-size: 18px; font-weight: 600; color: #2196F3;">${batchSize}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong>Đã chọn:</strong>
+                                <span class="batch-status ${batchStatusClass}" style="font-weight: 600; font-size: 16px;">
+                                    ${batchStatusText}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <strong style="display: block; margin-bottom: 10px; color: #333;">Chọn các đơn để gộp vào mẻ:</strong>
+                            <div class="batch-items-list" style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                                ${itemDetails.map((detail, index) => {
+                                    const isSelected = selectedOrderDetailIds.has(detail.orderDetailId);
+                                    return `
+                                        <div class="batch-item-row ${isSelected ? 'selected' : ''}" 
+                                             style="padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;"
+                                             onclick="toggleBatchItem(${detail.orderDetailId}, event)">
+                                            <div style="display: flex; align-items: center; gap: 12px;">
+                                                <input type="checkbox" 
+                                                       class="batch-item-checkbox" 
+                                                       data-order-detail-id="${detail.orderDetailId}"
+                                                       ${isSelected ? 'checked' : ''}
+                                                       onchange="toggleBatchItem(${detail.orderDetailId}, event)"
+                                                       onclick="event.stopPropagation()">
+                                                <div style="flex: 1;">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                                        <strong style="color: #2196F3;">Đơn ${detail.orderNumber || detail.orderId}</strong>
+                                                        <span style="color: #666; font-size: 14px;">Bàn ${detail.tableNumber || 'N/A'}</span>
+                                                    </div>
+                                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                        <span style="color: #666;">Số lượng: <strong>${detail.quantity}</strong></span>
+                                                        ${detail.notes ? `<span style="color: #ff9800; font-size: 13px;"><i class="mdi mdi-note-text"></i> ${detail.notes}</span>` : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="confirm-popup-footer">
+                        <button class="confirm-popup-btn confirm-popup-btn-cancel">Hủy</button>
+                        <button class="confirm-popup-btn confirm-popup-btn-confirm ${isBatchFull ? '' : 'btn-warning'}" 
+                                ${!isBatchFull ? 'title="Mẻ chưa đủ, bạn có muốn tiếp tục?"' : ''}>
+                            ${isBatchFull ? 'Xác nhận bắt đầu nấu' : 'Bắt đầu nấu (chưa đủ mẻ)'}
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Attach event listeners
+            const confirmBtn = overlay.querySelector('.confirm-popup-btn-confirm');
+            const cancelBtn = overlay.querySelector('.confirm-popup-btn-cancel');
+            
+            const close = (result) => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    if (document.body.contains(overlay)) {
+                        document.body.removeChild(overlay);
+                    }
+                    resolve(result);
+                }, 200);
+            };
+            
+            confirmBtn.addEventListener('click', () => {
+                const selectedIds = Array.from(selectedOrderDetailIds);
+                close(selectedIds.length > 0 ? selectedIds : null);
+            });
+            
+            cancelBtn.addEventListener('click', () => close(null));
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    close(null);
+                }
+            });
+            
+            // Store overlay reference for toggleBatchItem
+            window.currentBatchOverlay = overlay;
+            window.currentBatchSelectedIds = selectedOrderDetailIds;
+            window.currentBatchItemDetails = itemDetails;
+            window.currentBatchSize = batchSize;
+            window.currentBatchRender = renderPopup;
+        };
+        
+        renderPopup();
+        document.body.appendChild(overlay);
+        
+        // Add CSS if not already added
+        if (!document.getElementById('batch-selection-styles')) {
+            const style = document.createElement('style');
+            style.id = 'batch-selection-styles';
+            style.textContent = `
+                .batch-selection-popup {
+                    max-width: 600px;
+                    width: 90%;
+                }
+                .batch-item-row {
+                    background: #fff;
+                }
+                .batch-item-row:hover {
+                    background: #f9f9f9;
+                }
+                .batch-item-row.selected {
+                    background: #e3f2fd;
+                }
+                .batch-status.batch-full {
+                    color: #4caf50;
+                }
+                .batch-status.batch-incomplete {
+                    color: #ff9800;
+                }
+                .batch-items-list {
+                    max-height: 400px;
+                    overflow-y: auto;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    });
+}
+
+// Toggle batch item selection
+function toggleBatchItem(orderDetailId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    if (!window.currentBatchSelectedIds || !window.currentBatchItemDetails) {
         return;
     }
-
-    try {
-        const promises = orderDetailIds.map(orderDetailId =>
-            updateItemStatusAPI(orderDetailId, 'Cooking')
-        );
-
-        await Promise.all(promises);
-        showSuccess(`Đã bắt đầu nấu ${orderDetailIds.length} món`);
-        reloadCurrentView();
-    } catch (error) {
-        console.error('Error starting cooking:', error);
-        showError('Không thể bắt đầu nấu: ' + error.message);
+    
+    if (window.currentBatchSelectedIds.has(orderDetailId)) {
+        window.currentBatchSelectedIds.delete(orderDetailId);
+    } else {
+        window.currentBatchSelectedIds.add(orderDetailId);
+    }
+    
+    // Re-render popup to update UI
+    if (window.currentBatchRender) {
+        window.currentBatchRender();
     }
 }
 
@@ -1330,67 +1582,47 @@ async function unfulfillSelectedItems() {
 // ===========================
 
 async function fulfillSelectedItems() {
-    console.log('═══════════════════════════════════════════');
-    console.log('🔵 [fulfillSelectedItems] STARTED');
-    console.log('═══════════════════════════════════════════');
-
-    console.log('🔵 selectedModalItems:', Array.from(selectedModalItems));
-
     if (selectedModalItems.size === 0) {
-        console.log('🔴 No items selected');
         showError('Vui lòng chọn ít nhất một món');
         return;
     }
 
     if (!currentModalOrder) {
-        console.error('🔴 currentModalOrder is null');
+        console.error('currentModalOrder is null');
         showError('Không tìm thấy thông tin đơn hàng');
         return;
     }
-
-    console.log('🔵 currentModalOrder.items:', currentModalOrder.items);
 
     const pendingItems = [];
     const cookingItems = [];
     const doneItems = [];
 
     selectedModalItems.forEach(orderDetailId => {
-        console.log(`\n🔵 Processing orderDetailId: ${orderDetailId}`);
-
         const item = currentModalOrder.items.find(i => i.orderDetailId === orderDetailId);
 
         if (!item) {
-            console.error(`🔴 Item ${orderDetailId} NOT FOUND`);
             return;
         }
-
-        console.log(`🔵 Found item:`, item);
 
         const rawStatus = item.status;
         const status = (rawStatus || 'Pending').trim();
 
-        console.log(`🔵 Status: "${status}"`);
-
         // So sánh chính xác với backend format
         if (status === 'Pending' || status === 'Chờ') {
-            console.log(`🔴 Item ${orderDetailId} is PENDING`);
             pendingItems.push({
                 orderDetailId: orderDetailId,
                 name: item.menuItemName || `Món ${orderDetailId}`,
                 status: status
             });
         } else if (status === 'Cooking' || status === 'Đang nấu') {
-            console.log(`🟢 Item ${orderDetailId} is COOKING`);
             cookingItems.push(orderDetailId);
         } else if (status === 'Done' || status === 'Hoàn thành' || status === 'Xong') {
-            console.log(`🟡 Item ${orderDetailId} is DONE`);
             doneItems.push({
                 orderDetailId: orderDetailId,
                 name: item.menuItemName || `Món ${orderDetailId}`,
                 status: status
             });
         } else {
-            console.warn(`⚠️ Unknown status "${status}", treating as Pending`);
             pendingItems.push({
                 orderDetailId: orderDetailId,
                 name: item.menuItemName || `Món ${orderDetailId}`,
@@ -1399,24 +1631,14 @@ async function fulfillSelectedItems() {
         }
     });
 
-    console.log('\n═══════════════════════════════════════════');
-    console.log('🔵 SUMMARY:');
-    console.log('   - Pending items:', pendingItems.length, pendingItems);
-    console.log('   - Cooking items:', cookingItems.length, cookingItems);
-    console.log('   - Done items:', doneItems.length, doneItems);
-    console.log('═══════════════════════════════════════════\n');
-
     // CRITICAL CHECK - Phải return nếu có pending
     if (pendingItems.length > 0) {
-        console.log('🔴 🔴 🔴 BLOCKED - Found pending items 🔴 🔴 🔴');
         const itemNames = pendingItems.map(i => i.name).join(', ');
         showError(`Các món sau chưa nấu: ${itemNames}. Vui lòng bắt đầu nấu trước!`);
-        console.log('🔴 RETURNING - NOT fulfilling anything');
         return; // ❌ DỪNG NGAY
     }
 
     if (cookingItems.length === 0) {
-        console.log('🔴 BLOCKED - No cooking items found');
         if (doneItems.length > 0) {
             showError('Các món đã chọn đã hoàn thành rồi');
         } else {
@@ -1425,17 +1647,12 @@ async function fulfillSelectedItems() {
         return;
     }
 
-    console.log(`🟢 PROCEEDING - Will fulfill ${cookingItems.length} cooking items`);
-
     const promises = cookingItems.map(orderDetailId => {
-        console.log(`🟢 Calling updateItemStatusAPI(${orderDetailId}, "Done")`);
         return updateItemStatusAPI(orderDetailId, 'Done');
     });
 
     try {
-        console.log('🟢 Executing Promise.all...');
         await Promise.all(promises);
-        console.log('✅ All promises resolved successfully');
 
         // Cập nhật trạng thái local cho các món vừa hoàn thành
         cookingItems.forEach(orderDetailId => {
@@ -1477,12 +1694,6 @@ async function updateItemStatusAPI(orderDetailId, newStatus) {
             userId: 1
         };
 
-        console.log('══════════════════════════════════════');
-        console.log('UPDATE ITEM STATUS');
-        console.log('══════════════════════════════════════');
-        console.log('Payload:', JSON.stringify(payload, null, 2));
-        console.log('API:', `${API_BASE}/KitchenDisplay/update-item-status`);
-
         const response = await fetch(`${API_BASE}/KitchenDisplay/update-item-status`, {
             method: 'POST',
             headers: {
@@ -1491,13 +1702,9 @@ async function updateItemStatusAPI(orderDetailId, newStatus) {
             body: JSON.stringify(payload)
         });
 
-        console.log('Response Status:', response.status);
-
         const responseText = await response.text();
-        console.log('Response Body:', responseText);
 
         if (!response.ok) {
-            console.error('❌ REQUEST FAILED');
 
             // Parse error message từ backend
             try {
@@ -1510,7 +1717,6 @@ async function updateItemStatusAPI(orderDetailId, newStatus) {
         }
 
         const result = JSON.parse(responseText);
-        console.log('✅ SUCCESS:', result);
 
         if (result.success === false) {
             throw new Error(result.message || 'Update failed');
@@ -1580,7 +1786,6 @@ function printFulfilledItems(order, fulfilledItemIds) {
     });
 
     if (fulfilledItems.length === 0) {
-        console.log('[printFulfilledItems] No items found to print.');
         return;
     }
 
@@ -1678,8 +1883,6 @@ function showConfirmPopup(message, title = 'Xác nhận') {
 function showSuccess(message) {
     if (typeof toastr !== 'undefined') {
         toastr.success(message);
-    } else {
-        console.log('SUCCESS:', message);
     }
 }
 
@@ -1742,7 +1945,6 @@ async function loadRecentlyFulfilledOrders() {
     }
 
     try {
-        console.log('[loadRecentlyFulfilledOrders] Loading recently fulfilled orders...');
         gridContainer.innerHTML = `
             <div class="text-center text-muted py-3">
                 <i class="mdi mdi-loading mdi-spin" style="font-size: 24px;"></i>
@@ -1751,7 +1953,6 @@ async function loadRecentlyFulfilledOrders() {
         `;
 
         const url = `${API_BASE}/KitchenDisplay/recently-fulfilled-orders?minutesAgo=10`;
-        console.log('[loadRecentlyFulfilledOrders] Fetching:', url);
         
         const response = await fetch(url);
         
@@ -1762,8 +1963,6 @@ async function loadRecentlyFulfilledOrders() {
         }
 
         const result = await response.json();
-        console.log('[loadRecentlyFulfilledOrders] API Response:', result);
-        console.log('[loadRecentlyFulfilledOrders] Orders count:', result.data?.length || 0);
 
         if (result.success && result.data) {
             renderRecentlyFulfilledOrders(result.data);
@@ -1795,10 +1994,7 @@ function renderRecentlyFulfilledOrders(orders) {
         return;
     }
 
-    console.log('[renderRecentlyFulfilledOrders] Rendering orders:', orders?.length || 0);
-
     if (!orders || orders.length === 0) {
-        console.log('[renderRecentlyFulfilledOrders] No orders to display');
         gridContainer.innerHTML = `
             <div class="text-center text-muted py-5">
                 <i class="mdi mdi-check-circle" style="font-size: 48px; color: #28a745;"></i>
@@ -1812,7 +2008,6 @@ function renderRecentlyFulfilledOrders(orders) {
     // Update count
     if (countBadge) {
         countBadge.textContent = orders.length.toString();
-        console.log('[renderRecentlyFulfilledOrders] Updated count badge:', orders.length);
     }
 
     let html = '';
@@ -1823,7 +2018,6 @@ function renderRecentlyFulfilledOrders(orders) {
         
         // Bỏ qua order không có items
         if (!items || items.length === 0) {
-            console.warn('Order without items:', order);
             return;
         }
         
