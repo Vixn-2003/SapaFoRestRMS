@@ -32,5 +32,7 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string? SupplierName { get; set; }
         public string? SupplierCode { get; set; }
         public string? SupplierPhone { get; set; }
+
+        public bool IsActive { get; set; }
     }
 }
