@@ -37,9 +37,6 @@ namespace SapaFoRestRMSAPI.Controllers
                 proofImageUrl = await _cloudinaryService.UploadImageAsync(model.ProofFile, "import_proofs");
             }
 
-
-            // Xử lý dữ liệu JSON của ImportList
-            // (nếu bạn dùng FromForm, ImportList có thể đến dạng string => cần parse)
             if (model.ImportList == null || !model.ImportList.Any())
                 return BadRequest("Thiếu danh sách nguyên liệu.");
 
@@ -52,7 +49,6 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             try
             {
-                //  1. VALIDATE INPUT CƠ BẢN
                 if (string.IsNullOrWhiteSpace(request.ImportCode))
                     return BadRequest(new { success = false, message = "Thiếu mã đơn nhập" });
 
