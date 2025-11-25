@@ -11,6 +11,7 @@ namespace BusinessAccessLayer.Services.Interfaces
     public interface IStockTransactionService
     {
         Task<bool> AddIdNewStock(StockTransactionDTO stockTransaction);
+        Task<IEnumerable<StockTransactionDTO>> GetExportTransactionsAsync();
         Task<IEnumerable<StockTransactionInventoryDTO>> GetAllStockExport();
     }
 }

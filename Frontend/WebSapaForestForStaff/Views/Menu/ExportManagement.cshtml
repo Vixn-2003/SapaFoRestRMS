@@ -411,7 +411,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Thống kê -->
             <div class="export-stats-sidebar">
                 <div class="export-table-header">
@@ -530,7 +529,9 @@
     }
 
     function render() {
+        console.log('[ExportManagement] render() - Số lượng transactions:', transactions.length);
         const filtered = filterAndSort();
+        console.log('[ExportManagement] render() - Số lượng sau filter:', filtered.length);
         const stats = calculateStats(filtered);
         const totalQuantity = filtered.reduce((sum, item) => sum + item.quantity, 0);
 

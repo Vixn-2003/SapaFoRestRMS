@@ -1,4 +1,5 @@
-﻿using WebSapaForestForStaff.Services;
+﻿using Microsoft.AspNetCore.Authentication;
+using WebSapaForestForStaff.Services;
 using WebSapaForestForStaff.Services.Api;
 using WebSapaForestForStaff.Services.Api.Interfaces;
 
@@ -8,6 +9,21 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("API", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7096/");
+}).ConfigurePrimaryHttpMessageHandler(() =>
+{
+    return new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+    };
+});
+// HttpClient is created directly in controllers following ManagerMenuController pattern
+builder.Services.AddHttpClient<ApiService>(); // để inject HttpClient
+builder.Services.AddScoped<ApiService>();     // để inject ApiService
+builder.Services.AddHttpClient<KitchenDisplayService>(); // để inject HttpClient cho KitchenDisplayService
+builder.Services.AddScoped<KitchenDisplayService>();     // để inject KitchenDisplayService
 builder.Services.AddHttpContextAccessor();    // để dùng Session trong ApiService
 builder.Services.AddSession();
 
@@ -16,6 +32,7 @@ builder.Services.AddHttpClient<IAuthApiService, AuthApiService>();
 builder.Services.AddHttpClient<IUserApiService, UserApiService>();
 builder.Services.AddHttpClient<IProfileApiService, ProfileApiService>();
 builder.Services.AddHttpClient<IPositionApiService, PositionApiService>();
+builder.Services.AddHttpClient<IPaymentApiService, PaymentApiService>();
 
 // Keep backward compatibility with old ApiService (can be removed after migration)
 builder.Services.AddHttpClient<ApiService>();
@@ -47,6 +64,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 
+
 var app = builder.Build();
 app.UseSession();
 app.UseCors("AllowAll");
@@ -63,6 +81,30 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseAuthentication();
+
+app.Use(async (context, next) =>
+{
+    if (context.User?.Identity?.IsAuthenticated == true)
+    {
+        var token = context.Session.GetString("Token");
+        var refreshToken = context.Session.GetString("RefreshToken");
+
+        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(refreshToken))
+        {
+            await context.SignOutAsync("Cookies");
+            context.Session.Clear();
+
+            if (!context.Response.HasStarted)
+            {
+                context.Response.Redirect("/Auth/Login");
+            }
+            return;
+        }
+    }
+
+    await next();
+});
+
 app.UseAuthorization();
 
 app.MapControllerRoute(

@@ -231,6 +231,47 @@ namespace DataAccessLayer.Repositories
             }
         }
 
+        public async Task<InventoryBatch?> GetBatchByIdAsync(int batchId)
+        {
+            return await _context.InventoryBatches
+                .FirstOrDefaultAsync(b => b.BatchId == batchId);
+        }
+
+        public async Task<bool> UpdateBatchAsync(InventoryBatch batch)
+        {
+            try
+            {
+                _context.InventoryBatches.Update(batch);
+                // Don't save changes here - let the caller save all changes at once
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating batch: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<List<InventoryBatch>> GetAvailableBatchesByIngredientAsync(int ingredientId)
+        {
+            return await _context.InventoryBatches
+                .Where(b => b.IngredientId == ingredientId 
+                    && b.QuantityRemaining > b.QuantityReserved) // Chỉ lấy batch còn khả dụng
+                .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
+                .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
+                .ToListAsync();
+        }
+
+        public async Task<List<InventoryBatch>> GetReservedBatchesByIngredientAsync(int ingredientId)
+        {
+            return await _context.InventoryBatches
+                .Where(b => b.IngredientId == ingredientId 
+                    && b.QuantityReserved > 0) // Chỉ lấy batch đã được reserve
+                .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
+                .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
+                .ToListAsync();
+        }
+
         public async Task<InventoryBatch> getBatchByBatchId(int id)
         {
             var batch = await _context.InventoryBatches

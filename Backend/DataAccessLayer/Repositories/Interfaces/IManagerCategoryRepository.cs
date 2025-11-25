@@ -11,5 +11,6 @@ namespace DataAccessLayer.Repositories.Interfaces
     public interface IManagerCategoryRepository : IRepository<MenuCategory>
     {
         Task<IEnumerable<MenuCategory>> GetManagerAllCategory();
+        Task<List<string>> GetCategoryNamesAsync();
     }
 }

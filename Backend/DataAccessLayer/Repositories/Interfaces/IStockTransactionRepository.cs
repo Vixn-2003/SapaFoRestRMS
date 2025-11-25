@@ -10,6 +10,7 @@ namespace DataAccessLayer.Repositories.Interfaces
      public interface IStockTransactionRepository
     {
         Task<bool> AddNewStockTransaction(StockTransaction stockTransaction);
+        Task<IEnumerable<StockTransaction>> GetExportTransactionsAsync();
         Task<IEnumerable<StockTransaction>> GetAllExport();
     }
 }

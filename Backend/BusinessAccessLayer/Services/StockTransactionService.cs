@@ -28,6 +28,24 @@ namespace BusinessAccessLayer.Services
             return purchaseOrder;
         }
 
+        public async Task<IEnumerable<StockTransactionDTO>> GetExportTransactionsAsync()
+        {
+            var transactions = await _unitOfWork.StockTransaction.GetExportTransactionsAsync();
+            var dtos = transactions.Select(t => new StockTransactionDTO
+            {
+                TransactionId = t.TransactionId,
+                IngredientId = t.IngredientId,
+                IngredientName = t.Ingredient?.Name,
+                Type = t.Type,
+                Quantity = t.Quantity,
+                TransactionDate = t.TransactionDate,
+                Note = t.Note,
+                BatchId = t.BatchId,
+                BatchName = t.BatchId.HasValue ? $"Lô {t.BatchId}" : null
+            }).ToList();
+            return dtos;
+        }
+
         public async Task<IEnumerable<StockTransactionInventoryDTO>> GetAllStockExport()
         {
             var export = await _unitOfWork.StockTransaction.GetAllExport();
