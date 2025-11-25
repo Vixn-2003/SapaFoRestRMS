@@ -1464,7 +1464,6 @@ body.sidebar-open .container {
                                 <th>Mã nguyên liệu</th>
                                 <th>Tên nguyên liệu</th>
                                 <th>Kho lưu trữ</th>
-                                <th>Hạn sử dụng</th>
                                 <th class="text-center">Số lượng</th>
                                 <th class="text-center">Đơn vị</th>
                                 <th class="text-right">Đơn giá</th>
@@ -1482,24 +1481,6 @@ body.sidebar-open .container {
                                         <td class="font-medium">@item.IngredientCode</td>
                                         <td>@item.IngredientName</td>
                                         <td>@item.WarehouseName</td>
-                                        <td>
-                                            @{
-                                                if (item.ExpiryDate != null)
-                                                {
-                                                    var expiry = item.ExpiryDate.Value;
-                                                    var daysLeft = (expiry.ToDateTime(TimeOnly.MinValue) - DateTime.Now).Days;
-                                                    string text = $"{expiry:dd/MM/yyyy} (còn {daysLeft} ngày)";
-                                                    @text
-                                                    ;
-                                                }
-                                                else
-                                                {
-                                                    @("Không có")
-                                                    ;
-                                                }
-                                            }
-                                        </td>
-
                                         <td class="text-center font-semibold">@item.Quantity</td>
                                         <td class="text-center">@item.Unit</td>
                                         <td class="text-right">@string.Format("{0:N0}₫", item.UnitPrice)</td>

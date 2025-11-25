@@ -411,6 +411,7 @@
                     </div>
                 </div>
             </div>
+
             <!-- Thống kê -->
             <div class="export-stats-sidebar">
                 <div class="export-table-header">
@@ -425,53 +426,273 @@
 </div>
 
 <script>
+    // ============================================
+    // LẤY DỮ LIỆU TỪ API
+    // ============================================
+    // Get API base URL from ViewBag or use default
+    const API_BASE_URL = '@(ViewBag.ApiBaseUrl ?? "https://localhost:7096/api")';
+    console.log('[ExportManagement] API Base URL:', API_BASE_URL);
+    
     let transactions = [];
     
-    try {
-        const apiData = @Html.Raw(Json.Serialize(ViewBag.ExportData ?? new List<object>()));
-        
-        console.log('📥 Raw API Data:', apiData);
-        
-        // Kiểm tra apiData có phải là array không
-        if (!Array.isArray(apiData)) {
-            console.error('❌ API data không phải array:', apiData);
-            transactions = [];
-        } else {
-            transactions = apiData.map(item => {
-                // Log từng item để debug
-                console.log('Processing item:', item);
-                
-                return {
-                    id: item.transactionId || 0,
-                    ingredientId: item.ingredientId || 0,
-                    ingredientName: item.ingredientName || 'N/A',
-                    type: item.type || 'Export',
-                    quantity: parseFloat(item.quantity) || 0,
-                    date: item.transactionDate || new Date().toISOString(),
-                    note: item.note || 'Không có ghi chú',
-                    batchId: item.batchId || 0,
-                    batchName: item.purchaseOrderId ? `${item.purchaseOrderId}` : 'N/A',
-                    unitName: item.unitName || '',
-                    warehouseName: item.warehouseName || '',
-                    supplierName: item.supplierName || '',
-                    expiryDate: item.expiryDate || null,
-                    quantityRemaining: parseFloat(item.quantityRemaining) || 0,
-                    purchaseOrderId: item.purchaseOrderId || null,
-                    purchaseOrderStatus: item.purchaseOrderStatus || null
-                };
-            });
+    // Hàm load dữ liệu từ API
+    async function loadTransactions() {
+        try {
+            console.log('[ExportManagement] Đang fetch dữ liệu từ API...');
+            const apiUrl = `${API_BASE_URL}/InventoryIngredient/ExportTransactions`;
+            console.log('[ExportManagement] Full API URL:', apiUrl);
+            const response = await fetch(apiUrl);
+            console.log('[ExportManagement] Response status:', response.status);
             
-            console.log('✅ Mapped transactions:', transactions);
-            console.log('📊 Total:', transactions.length, 'items');
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[ExportManagement] Response error:', errorText);
+                throw new Error(`Không thể tải dữ liệu: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            console.log('[ExportManagement] Dữ liệu nhận được:', data);
+            console.log('[ExportManagement] Số lượng transactions:', data?.length || 0);
+            
+            transactions = data || [];
+            
+            if (transactions.length === 0) {
+                console.warn('[ExportManagement] Không có dữ liệu transactions nào!');
+            }
+            
+            render();
+        } catch (error) {
+            console.error('[ExportManagement] Lỗi khi tải dữ liệu:', error);
+            transactions = [];
+            render();
         }
-    } catch (error) {
-        console.error('❌ Error parsing data:', error);
-        console.error('Stack:', error.stack);
-        transactions = [];
     }
+    
+    // Dữ liệu mẫu (fallback nếu API lỗi)
+    const sampleTransactions = [
+        {
+            id: 1,
+            ingredientId: 1,
+            ingredientName: "Bột mì",
+            type: "Export",
+            quantity: 10.00,
+            date: "2025-01-15T14:45:00",
+            note: "Dùng bột mì làm bánh pizza",
+            batchId: 1,
+            batchName: "Lô 01/2025"
+        },
+        {
+            id: 2,
+            ingredientId: 2,
+            ingredientName: "Đường trắng",
+            type: "Export",
+            quantity: 5.00,
+            date: "2025-01-16T15:10:00",
+            note: "Dùng đường cho món tráng miệng",
+            batchId: 2,
+            batchName: "Lô NCC A"
+        },
+        {
+            id: 3,
+            ingredientId: 4,
+            ingredientName: "Trứng gà",
+            type: "Export",
+            quantity: 50.00,
+            date: "2025-01-18T09:00:00",
+            note: "Dùng trứng gà làm bánh ngọt",
+            batchId: 3,
+            batchName: "Lô Trai B"
+        },
+        {
+            id: 4,
+            ingredientId: 7,
+            ingredientName: "Dầu ăn",
+            type: "Export",
+            quantity: 8.00,
+            date: "2025-02-05T11:30:00",
+            note: "Dùng dầu ăn cho chiên rán",
+            batchId: 6,
+            batchName: "Lô 02/2025"
+        },
+        {
+            id: 5,
+            ingredientId: 13,
+            ingredientName: "Thịt gà",
+            type: "Export",
+            quantity: 5.00,
+            date: "2025-03-21T14:00:00",
+            note: "Xuất thịt gà cho món chính",
+            batchId: 11,
+            batchName: "Lô 03/2025"
+        },
+        {
+            id: 6,
+            ingredientId: 11,
+            ingredientName: "Cá chua",
+            type: "Export",
+            quantity: 3.00,
+            date: "2025-03-22T10:00:00",
+            note: "Xuất cá chua cho salad",
+            batchId: 10,
+            batchName: "Lô 03/2025"
+        },
+        {
+            id: 7,
+            ingredientId: 28,
+            ingredientName: "Rau xà lách",
+            type: "Export",
+            quantity: 5.00,
+            date: "2025-03-22T12:00:00",
+            note: "Xuất rau xà lách cho salad",
+            batchId: 19,
+            batchName: "Lô 03/2025"
+        },
+        {
+            id: 8,
+            ingredientId: 1,
+            ingredientName: "Bột mì",
+            type: "Export",
+            quantity: 15.50,
+            date: "2025-11-10T08:30:00",
+            note: "Dùng bột mì làm bánh mì",
+            batchId: 25,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 9,
+            ingredientId: 2,
+            ingredientName: "Đường trắng",
+            type: "Export",
+            quantity: 3.20,
+            date: "2025-11-12T09:15:00",
+            note: "Dùng đường pha chế đồ uống",
+            batchId: 26,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 10,
+            ingredientId: 5,
+            ingredientName: "Muối",
+            type: "Export",
+            quantity: 2.00,
+            date: "2025-11-13T10:20:00",
+            note: "Xuất muối cho bếp chính",
+            batchId: 27,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 11,
+            ingredientId: 7,
+            ingredientName: "Dầu ăn",
+            type: "Export",
+            quantity: 12.00,
+            date: "2025-11-14T11:00:00",
+            note: "Dùng dầu ăn cho món chiên",
+            batchId: 28,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 12,
+            ingredientId: 13,
+            ingredientName: "Thịt gà",
+            type: "Export",
+            quantity: 8.50,
+            date: "2025-11-15T13:30:00",
+            note: "Xuất thịt gà làm món gà rán",
+            batchId: 29,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 13,
+            ingredientId: 14,
+            ingredientName: "Thịt heo",
+            type: "Export",
+            quantity: 10.00,
+            date: "2025-11-15T14:00:00",
+            note: "Xuất thịt heo cho món nướng",
+            batchId: 30,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 14,
+            ingredientId: 20,
+            ingredientName: "Cà chua",
+            type: "Export",
+            quantity: 4.50,
+            date: "2025-11-16T08:00:00",
+            note: "Xuất cà chua làm salad",
+            batchId: 31,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 15,
+            ingredientId: 21,
+            ingredientName: "Hành tây",
+            type: "Export",
+            quantity: 3.00,
+            date: "2025-11-16T09:30:00",
+            note: "Xuất hành tây cho món xào",
+            batchId: 32,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 16,
+            ingredientId: 28,
+            ingredientName: "Rau xà lách",
+            type: "Export",
+            quantity: 2.50,
+            date: "2025-11-17T07:45:00",
+            note: "Xuất rau xà lách làm salad",
+            batchId: 33,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 17,
+            ingredientId: 30,
+            ingredientName: "Khoai tây",
+            type: "Export",
+            quantity: 20.00,
+            date: "2025-11-17T10:00:00",
+            note: "Xuất khoai tây làm khoai tây chiên",
+            batchId: 34,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 18,
+            ingredientId: 1,
+            ingredientName: "Bột mì",
+            type: "Export",
+            quantity: 8.00,
+            date: "2025-11-18T08:00:00",
+            note: "Dùng bột mì làm bánh croissant",
+            batchId: 35,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 19,
+            ingredientId: 4,
+            ingredientName: "Trứng gà",
+            type: "Export",
+            quantity: 30.00,
+            date: "2025-11-18T09:00:00",
+            note: "Xuất trứng gà làm món tráng miệng",
+            batchId: 36,
+            batchName: "Lô 11/2025"
+        },
+        {
+            id: 20,
+            ingredientId: 6,
+            ingredientName: "Nước mắm",
+            type: "Export",
+            quantity: 1.50,
+            date: "2025-11-18T10:30:00",
+            note: "Xuất nước mắm pha nước chấm",
+            batchId: 37,
+            batchName: "Lô 11/2025"
+        }
+    ];
     // ============================================
-    // CÁC HÀM XỬ LÝ (giữ nguyên)
-    // ============================================
+
     let searchTerm = '';
     let dateRange = 'all';
     let expandedRow = null;
@@ -512,7 +733,6 @@
     }
 
     function formatDate(dateString) {
-        if (!dateString) return 'N/A';
         const date = new Date(dateString);
         return date.toLocaleDateString('vi-VN', {
             day: '2-digit',
@@ -549,20 +769,12 @@
             noData.style.display = 'none';
             tbody.innerHTML = filtered.map(item => `
                 <tr>
-                     <td><strong>#${item.id || 'N/A'}</strong></td>
-        <td>
-            <strong>${item.ingredientName}</strong>
-            ${item.warehouseName ? `<br><small style="color: #6b7280;">📦 ${item.warehouseName}</small>` : ''}
-        </td>
-        <td><span class="export-badge">${item.batchName || 'N/A'}</span></td>
-        <td>
-            <span class="export-quantity">-${(item.quantity || 0).toFixed(2)}</span>
-            ${item.unitName ? `<small style="color: #6b7280;"> ${item.unitName}</small>` : ''}
-        </td>
-        <td>${formatDate(item.date)}</td>
-        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${item.note || 'Không có ghi chú'}
-        </td>
+                    <td><strong>#${item.id}</strong></td>
+                    <td><strong>${item.ingredientName}</strong></td>
+                    <td><span class="export-badge">${item.batchName}</span></td>
+                    <td><span class="export-quantity">-${item.quantity.toFixed(2)}</span></td>
+                    <td>${formatDate(item.date)}</td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.note}</td>
                     <td style="text-align: center;">
                         <button onclick="toggleRow(${item.id})" class="export-expand-btn">
                             <svg style="width: 1.25rem; height: 1.25rem;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -579,22 +791,14 @@
                         <td colspan="7">
                             <div class="export-detail-grid">
                                 <div>
-                                    <p class="export-detail-label">📋 Thông tin giao dịch:</p>
-                                    <p class="export-detail-value">• Mã giao dịch: <strong>#${item.id}</strong></p>
-                                    <p class="export-detail-value">• Mã nguyên liệu: <strong>${item.ingredientId}</strong></p>
-                                    <p class="export-detail-value">• Mã lô hàng: <strong>#${item.batchId}</strong></p>
-                                    <p class="export-detail-value">• Số lượng còn lại: <strong>${item.quantityRemaining ? item.quantityRemaining.toFixed(2) : 'N/A'} ${item.unitName || ''}</strong></p>
-                                    ${item.purchaseOrderId ? `<p class="export-detail-value">• Mã đơn nhập: <strong>${item.purchaseOrderId}</strong></p>` : ''}
-                                    ${item.purchaseOrderStatus ? `<p class="export-detail-value">• Trạng thái đơn: <span class="export-status-badge">${item.purchaseOrderStatus}</span></p>` : ''}
+                                    <p class="export-detail-label">Thông tin chi tiết:</p>
+                                    <p class="export-detail-value">• ID Nguyên liệu: <strong>${item.ingredientId}</strong></p>
+                                    <p class="export-detail-value">• ID Lô hàng: <strong>${item.batchId}</strong></p>
+                                    <p class="export-detail-value">• Trạng thái: <span class="export-status-badge">Đã xuất kho</span></p>
                                 </div>
                                 <div>
-                                    <p class="export-detail-label">🏢 Thông tin bổ sung:</p>
-                                    ${item.supplierName ? `<p class="export-detail-value">• Nhà cung cấp: <strong>${item.supplierName}</strong></p>` : ''}
-                                    ${item.warehouseName ? `<p class="export-detail-value">• Kho xuất: <strong>${item.warehouseName}</strong></p>` : ''}
-                                    ${item.expiryDate ? `<p class="export-detail-value">• Hạn sử dụng: <strong>${formatDate(item.expiryDate)}</strong></p>` : ''}
-                                    <p class="export-detail-label" style="margin-top: 10px;">📝 Ghi chú:</p>
-                                    <p class="export-detail-value" style="font-style: italic;">"${item.note}"</p>
-                                    <p class="export-detail-value">• Trạng thái: <span class="export-status-badge">✅ Đã xuất kho</span></p>
+                                    <p class="export-detail-label">Ghi chú đầy đủ:</p>
+                                    <p class="export-detail-value" style="font-style: italic;">${item.note}</p>
                                 </div>
                             </div>
                         </td>
@@ -617,7 +821,7 @@
                     </div>
                     <div>
                         <span class="export-stat-card-amount">${qty.toFixed(2)}</span>
-                        <span class="export-stat-card-unit">units</span>
+                        <span class="export-stat-card-unit">kg</span>
                     </div>
                 </div>
             `).join('');
@@ -634,19 +838,9 @@
         render();
     });
 
-    // Hiển thị lỗi nếu có
-    @if (ViewBag.ErrorMessage != null)
-    {
-        <text>
-        console.error('⚠️ API Error:', '@ViewBag.ErrorMessage');
-        alert('⚠️ Lỗi tải dữ liệu:\n@ViewBag.ErrorMessage');
-        </text>
-    }
-
-    // Khởi động
-    render();
-    console.log('📊 Thống kê:', {
-        'Tổng đơn': transactions.length,
-        'Dữ liệu mẫu': transactions.slice(0, 2)
-    });
+    // Load dữ liệu khi trang được tải
+    loadTransactions();
+    
+    // Reload dữ liệu mỗi 30 giây
+    setInterval(loadTransactions, 30000);
 </script>

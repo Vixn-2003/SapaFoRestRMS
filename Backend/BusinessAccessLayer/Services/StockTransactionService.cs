@@ -45,11 +45,5 @@ namespace BusinessAccessLayer.Services
             }).ToList();
             return dtos;
         }
-
-        public async Task<IEnumerable<StockTransactionInventoryDTO>> GetAllStockExport()
-        {
-            var export = await _unitOfWork.StockTransaction.GetAllExport();
-            return _mapper.Map<IEnumerable<StockTransactionInventoryDTO>>(export);
-        }
     }
 }
