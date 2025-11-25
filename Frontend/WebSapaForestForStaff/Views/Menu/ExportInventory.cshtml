@@ -729,91 +729,155 @@
     </div>
 </div>
 
-<script>
-    let materialCount = 5;
-
-    function addMaterial() {
-        materialCount++;
-        const table = document.getElementById('materialsTable');
-        const row = table.insertRow();
-        row.innerHTML = `
-                <td>${materialCount}</td>
-                <td><input type="text" placeholder="Mã NL"></td>
-                <td><input type="text" placeholder="Tên nguyên liệu"></td>
-                <td><input type="number" value="0" onchange="calculateTotal()"></td>
-                <td><input type="text" placeholder="Đơn vị"></td>
-                <td><input type="text" placeholder="Đơn giá"></td>
-                <td class="price-cell">0đ</td>
-                <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
-            `;
-    }
-
-    function deleteRow(btn) {
-        const row = btn.closest('tr');
-        row.remove();
-        updateRowNumbers();
-        calculateTotal();
-    }
-
-    function updateRowNumbers() {
-        const rows = document.querySelectorAll('#materialsTable tr');
-        rows.forEach((row, index) => {
-            row.cells[0].textContent = index + 1;
-        });
-        materialCount = rows.length;
-    }
-
-    function calculateTotal() {
-        let total = 0;
-        const rows = document.querySelectorAll('#materialsTable tr');
-
-        rows.forEach(row => {
-            const qtyInput = row.querySelector('input[type="number"]');
-            if (qtyInput) {
-                const qty = parseFloat(qtyInput.value) || 0;
-                const priceText = row.cells[5].textContent.replace(/[^\d]/g, '');
-                const price = parseFloat(priceText) || 0;
-                const lineTotal = qty * price;
-
-                row.cells[6].textContent = lineTotal.toLocaleString('vi-VN') + 'đ';
-                total += lineTotal;
-            }
-        });
-
-        document.getElementById('totalValue').textContent = total.toLocaleString('vi-VN') + 'đ';
-    }
-
-    function goBack() {
-        if (confirm('Bạn có chắc muốn quay lại? Dữ liệu chưa lưu sẽ bị mất.')) {
-            window.location.href = '/XuatKho';
-        }
-    }
-
-    function saveDraft() {
-        alert('Đã lưu nháp thành công!');
-    }
-
-    function confirmExport() {
-        if (confirm('Xác nhận xuất kho? Hành động này không thể hoàn tác.')) {
-            alert('Đơn xuất kho đã được xác nhận thành công!');
-            // Redirect or reload
-        }
-    }
-
-    function printExport() {
-        alert('Đang tạo phiếu xuất kho...');
-        // window.print() or generate PDF
-    }
-
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function () {
-        calculateTotal();
-    });
-</script>
-
-@section Scripts {
     <script>
-        // Additional page-specific scripts
+        // Lấy dữ liệu từ ViewBag
+        const exportData = @Html.Raw(Json.Serialize(ViewBag.ExportData ?? new List<object>()));
+
+        let materialCount = 0;
+
+        // Load dữ liệu khi trang được tải
+        document.addEventListener('DOMContentLoaded', function () {
+            loadExportData();
+            calculateTotal();
+        });
+
+        function loadExportData() {
+            const table = document.getElementById('materialsTable');
+            table.innerHTML = ''; // Clear existing rows
+
+            if (exportData && exportData.length > 0) {
+                exportData.forEach((item, index) => {
+                    materialCount++;
+                    const row = table.insertRow();
+
+                    // Tính đơn giá (giả sử, vì API không có giá)
+                    const unitPrice = 25000 + (index * 5000); // Mock price
+                    const totalPrice = item.quantity * unitPrice;
+
+                    row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${item.ingredientCode || 'N/A'}</td>
+                            <td>${item.ingredientName}</td>
+                            <td><input type="number" value="${item.quantity}" onchange="calculateTotal()"></td>
+                            <td>${item.unitName}</td>
+                            <td>${unitPrice.toLocaleString('vi-VN')}đ</td>
+                            <td class="price-cell">${totalPrice.toLocaleString('vi-VN')}đ</td>
+                            <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+                        `;
+                });
+
+                // Load export orders vào sidebar
+                loadExportOrders();
+            }
+
+            calculateTotal();
+        }
+
+        function loadExportOrders() {
+            const exportList = document.querySelector('.export-list');
+            exportList.innerHTML = '';
+
+            // Nhóm theo ngày và tạo cards
+            const groupedData = {};
+            exportData.forEach(item => {
+                const date = new Date(item.transactionDate).toLocaleDateString('vi-VN');
+                if (!groupedData[date]) {
+                    groupedData[date] = [];
+                }
+                groupedData[date].push(item);
+            });
+
+            let orderIndex = 1;
+            Object.keys(groupedData).slice(0, 3).forEach(date => {
+                const items = groupedData[date];
+                const totalValue = items.reduce((sum, item) => sum + (item.quantity * 25000), 0);
+
+                const card = document.createElement('div');
+                card.className = 'export-card';
+                card.innerHTML = `
+                        <div class="export-header">
+                            <span class="export-code">XK-2025-00${30 + orderIndex}</span>
+                            <span class="export-status">Đang xử lý</span>
+                        </div>
+                        <div class="export-detail">Nơi nhận: ${items[0].warehouseName}</div>
+                        <div class="export-detail">Ngày: ${date}</div>
+                        <div class="export-value">${totalValue.toLocaleString('vi-VN')}đ</div>
+                    `;
+                exportList.appendChild(card);
+                orderIndex++;
+            });
+        }
+
+        function addMaterial() {
+            materialCount++;
+            const table = document.getElementById('materialsTable');
+            const row = table.insertRow();
+            row.innerHTML = `
+                    <td>${materialCount}</td>
+                    <td><input type="text" placeholder="Mã NL"></td>
+                    <td><input type="text" placeholder="Tên nguyên liệu"></td>
+                    <td><input type="number" value="0" onchange="calculateTotal()"></td>
+                    <td><input type="text" placeholder="Đơn vị"></td>
+                    <td><input type="text" placeholder="Đơn giá"></td>
+                    <td class="price-cell">0đ</td>
+                    <td><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+                `;
+        }
+
+        function deleteRow(btn) {
+            const row = btn.closest('tr');
+            row.remove();
+            updateRowNumbers();
+            calculateTotal();
+        }
+
+        function updateRowNumbers() {
+            const rows = document.querySelectorAll('#materialsTable tr');
+            rows.forEach((row, index) => {
+                row.cells[0].textContent = index + 1;
+            });
+            materialCount = rows.length;
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const rows = document.querySelectorAll('#materialsTable tr');
+
+            rows.forEach(row => {
+                const qtyInput = row.querySelector('input[type="number"]');
+                if (qtyInput) {
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const priceText = row.cells[5].textContent.replace(/[^\d]/g, '');
+                    const price = parseFloat(priceText) || 0;
+                    const lineTotal = qty * price;
+
+                    row.cells[6].textContent = lineTotal.toLocaleString('vi-VN') + 'đ';
+                    total += lineTotal;
+                }
+            });
+
+            document.getElementById('totalValue').textContent = total.toLocaleString('vi-VN') + 'đ';
+        }
+
+        function goBack() {
+            if (confirm('Bạn có chắc muốn quay lại? Dữ liệu chưa lưu sẽ bị mất.')) {
+                window.location.href = '/ExportInventory';
+            }
+        }
+
+        function saveDraft() {
+            alert('Đã lưu nháp thành công!');
+        }
+
+        function confirmExport() {
+            if (confirm('Xác nhận xuất kho? Hành động này không thể hoàn tác.')) {
+                alert('Đơn xuất kho đã được xác nhận thành công!');
+            }
+        }
+
+        function printExport() {
+            alert('Đang tạo phiếu xuất kho...');
+            window.print();
+        }
     </script>
-}
 </body>

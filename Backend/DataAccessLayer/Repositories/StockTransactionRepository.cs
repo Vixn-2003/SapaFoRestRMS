@@ -40,5 +40,21 @@ namespace DataAccessLayer.Repositories
                 .OrderByDescending(st => st.TransactionDate)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<StockTransaction>> GetAllExport()
+        {
+            return await _context.StockTransactions
+                .Where(p => p.Type == "Export")
+                .Include(t => t.Batch)
+                    .ThenInclude(b => b.Ingredient)
+                        .ThenInclude(i => i.Unit)
+                .Include(t => t.Batch.Warehouse)
+                .Include(t => t.Batch.PurchaseOrderDetail)
+                    .ThenInclude(pod => pod.PurchaseOrder)
+                        .ThenInclude(po => po.Supplier)
+                .ToListAsync();
+        }
+
+
     }
 }
