@@ -32,5 +32,12 @@ namespace WebSapaForestForStaff.DTOs
 
         [JsonPropertyName("guestSeatedTime")]
         public DateTime? GuestSeatedTime { get; set; } // Cần '?' vì nó có thể là null
+
+        // ✨ THÊM 2 TRƯỜNG NÀY ✨
+        public string? CustomerName { get; set; }
+        public string? CustomerPhone { get; set; }
+
+        public decimal TotalAmount { get; set; }
+
     }
 }

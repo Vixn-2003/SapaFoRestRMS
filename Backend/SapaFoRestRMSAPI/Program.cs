@@ -14,6 +14,7 @@ using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SapaFoRestRMSAPI.Services;
@@ -365,6 +366,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHub<ReservationHub>("/reservationHub");
+app.MapHub<RestaurantHub>("/restaurantHub");
 app.MapControllers();
 
 // Upsert Admin from configuration (Development)

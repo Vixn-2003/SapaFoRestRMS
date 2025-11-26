@@ -47,6 +47,13 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<Combo> GetComboWithDetailsAsync(int comboId);
 
         Task<MenuItem> GetMenuItemWithDetailsAsync(int menuItemId);
+
+        // [CHO NHÂN VIÊN]
+        // 1. Lấy danh sách yêu cầu cần hỗ trợ (Pending)
+        Task<(IEnumerable<AssistanceRequest> Items, int TotalCount)> GetPendingRequestsForStaffAsync(int? areaId, int pageIndex, int pageSize);
+
+        // 2. Lấy chi tiết 1 yêu cầu theo ID (để xử lý)
+        Task<AssistanceRequest> GetRequestByIdAsync(int requestId);
     }
 
 

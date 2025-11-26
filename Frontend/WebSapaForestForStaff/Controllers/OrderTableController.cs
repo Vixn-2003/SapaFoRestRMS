@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WebSapaFoRestForStaff.DTOs.OrderTable;
-using System.Text; // <-- THÊM
-using System.Net; // <-- THÊM
 using Microsoft.AspNetCore.Mvc.Rendering; // <-- THÊM
+using System.Net; // <-- THÊM
+using System.Text; // <-- THÊM
+using System.Text.Json;
+using WebSapaForestForStaff.DTOs;
+using WebSapaForestForStaff.DTOs.OrderAssitance;
+using WebSapaFoRestForStaff.DTOs.OrderTable;
 
 namespace WebSapaFoRestForStaff.Controllers
 {
@@ -21,7 +24,6 @@ namespace WebSapaFoRestForStaff.Controllers
             // Sửa logic này để lấy đúng BaseUrl (ví dụ: http://192.168.1.47:5180)
             _apiBaseUrl = apiConfig.GetValue<string>("BaseUrl").Replace("/api", "");
         }
-
         // === THAY THẾ TOÀN BỘ HÀM INDEX CŨ BẰNG HÀM NÀY ===
         public async Task<IActionResult> Index(string? searchString, string? areaName, int? floor, int page = 1)
         {
@@ -90,5 +92,64 @@ namespace WebSapaFoRestForStaff.Controllers
             // 7. Trả về View với ViewModel mới (thay vì List cũ)
             return View(viewModel);
         }
+
+        // === THAY THẾ TOÀN BỘ HÀM INDEX CŨ BẰNG HÀM NÀY ===
+        public async Task<IActionResult> AssistanceList(int? areaId, int page = 1)
+        {
+            var httpClient = _httpClientFactory.CreateClient("BackendApi");
+            int pageSize = 10;
+
+            // --- Build query string cho API Pending ---
+            var queryParams = new Dictionary<string, string>
+            {
+                ["page"] = page.ToString(),
+                ["pageSize"] = pageSize.ToString()
+            };
+
+            if (areaId.HasValue)
+                queryParams.Add("areaId", areaId.Value.ToString());
+
+            var queryString = string.Join("&", queryParams.Select(kv => $"{kv.Key}={kv.Value}"));
+
+            // --- SỬ DỤNG _apiBaseUrl để đảm bảo có /api ---
+            var apiUrl = $"{_apiBaseUrl}/api/OrderTable/Pending?{queryString}";
+
+            // --- Chuẩn bị model mặc định ---
+            var resultModel = new WebSapaForestForStaff.DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>
+            {
+                Page = page,
+                PageSize = pageSize,
+                Items = new List<AssistanceResponseDto>()
+            };
+
+            try
+            {
+                // --- Gọi API Pending ---
+                var response = await httpClient.GetAsync(apiUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    resultModel = await response.Content.ReadFromJsonAsync<
+                        WebSapaForestForStaff.DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>>(options);
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = $"Không tải được dữ liệu từ API. StatusCode: {response.StatusCode}";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Lỗi kết nối: " + ex.Message;
+            }
+
+            ViewData["CurrentAreaId"] = areaId;
+            return View(resultModel);
+        }
+
+
     }
 }

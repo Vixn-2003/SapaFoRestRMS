@@ -1,8 +1,10 @@
-﻿using BusinessAccessLayer.Services;
+﻿using BusinessAccessLayer.DTOs.OrderGuest;
+using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using static BusinessAccessLayer.Services.Interfaces.IDashboardTableService;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -71,13 +73,25 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         // (3) API Đổi trạng thái 
-        [HttpPut("{id:int}/seat")] // Thêm ràng buộc :int
+        [HttpPut("{id:int}/seat")]
         public async Task<IActionResult> SeatGuest(int id)
         {
             try
             {
-                await _dashboardTableService.SeatGuestAsync(id);
-                return NoContent();
+                // Gọi service và nhận lại kết quả
+                var result = await _dashboardTableService.SeatGuestAsync(id);
+
+                // Lấy ra TableId (Vì 1 đơn có thể gộp nhiều bàn, ta lấy bàn đầu tiên hoặc xử lý logic tùy ý)
+                var mainTableId = result.ReservationTables?.FirstOrDefault()?.TableId;
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Xác nhận khách ngồi thành công!",
+                    // Trả về dữ liệu cho Ajax cập nhật UI
+                    tableId = mainTableId,
+                    guestSeatedTime = result.ArrivalAt
+                });
             }
             catch (Exception ex)
             {
@@ -115,6 +129,28 @@ namespace SapaFoRestRMSAPI.Controllers
                 return BadRequest(ex.Message);
             }
         }
-    }
 
+
+        // Xem các món đã gọi
+        [HttpPost("SaveChanges")]
+        public async Task<IActionResult> SaveChanges([FromBody] SaveOrderRequest request)
+        {
+            if (request == null || request.Items == null || !request.Items.Any())
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+
+            try
+            {
+                await _dashboardTableService.SaveOrderChangesAsync(request);
+                return Ok(new { success = true, message = "Lưu thành công!" });
+            }
+            catch (Exception ex)
+            {
+                // In lỗi chi tiết ra nếu có InnerException (quan trọng để debug lỗi SQL)
+                var msg = ex.InnerException?.Message ?? ex.Message;
+                return BadRequest(new { success = false, message = msg });
+            }
+        }
+
+
+    }
 }

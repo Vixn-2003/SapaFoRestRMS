@@ -1,0 +1,675 @@
+﻿@model WebSapaForestForStaff.DTOs.OrderAssitance.PagedResult<WebSapaForestForStaff.DTOs.AssistanceResponseDto>
+
+@{
+    ViewData["Title"] = "Yêu cầu Hỗ trợ";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+
+    // Lấy giá trị filter
+    int? currentAreaId = ViewData["CurrentAreaId"] as int?;
+    int currentPage = Model.Page;
+    int totalPages = Model.TotalPages;
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* --- GIỮ NGUYÊN CSS CỦA BẠN ĐỂ GIAO DIỆN GIỐNG HỆT --- */
+    :root {
+        --primary-orange: #ff7b00;
+        --primary-orange-hover: #e67e22;
+        --active-purple: #594a87;
+        --bg-light: #f5f7fa;
+        --text-dark: #333;
+        --card-radius: 16px;
+    }
+
+    body {
+        background-color: var(--bg-light);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text-dark);
+    }
+
+    .page-header-container {
+        background: white;
+        padding: 15px 25px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .page-title {
+        font-weight: 700;
+        color: var(--active-purple);
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .filter-card {
+        background: white;
+        border-radius: var(--card-radius);
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: none;
+    }
+
+    .search-box-wrapper {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 8px 15px;
+        display: flex;
+        align-items: center;
+        transition: 0.2s;
+    }
+
+        .search-box-wrapper:focus-within {
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 3px rgba(255, 123, 0, 0.1);
+        }
+
+        .search-box-wrapper input, .search-box-wrapper select {
+            border: none;
+            outline: none;
+            width: 100%;
+            margin-left: 10px;
+            font-size: 14px;
+            background: transparent;
+        }
+
+    .table-card {
+        background: white;
+        border-radius: var(--card-radius);
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: none;
+    }
+
+    .custom-table {
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+        .custom-table thead th {
+            background-color: #f8f9fa;
+            color: var(--active-purple);
+            font-weight: 700;
+            border-bottom: 2px solid #eee;
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        .custom-table tbody td {
+            padding: 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .custom-table tbody tr:hover {
+            background-color: #fffcf5;
+        }
+
+    /* BADGES CHO ASSISTANCE */
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    .status-pending {
+        background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
+        animation: pulse 2s infinite;
+    }
+
+    .status-completed {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
+
+    @@keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        }
+    }
+
+    .btn-pos-primary {
+        background-color: var(--primary-orange);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 8px 20px;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+
+        .btn-pos-primary:hover {
+            background-color: var(--primary-orange-hover);
+            color: white;
+        }
+
+    .btn-detail-view {
+        background-color: #f0f2f5;
+        color: var(--active-purple);
+        border: none;
+        width: 35px;
+        height: 35px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+    }
+
+        .btn-detail-view:hover {
+            background-color: var(--active-purple);
+            color: white;
+        }
+
+    /* PAGINATION & MODAL STYLES (Keep exactly same) */
+    .pagination-container {
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        border-top: 1px solid #eee;
+    }
+
+    .page-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid #eee;
+        color: var(--text-dark);
+        background: white;
+        text-decoration: none;
+        margin: 0 3px;
+        transition: 0.2s;
+    }
+
+        .page-btn:hover {
+            border-color: var(--primary-orange);
+            color: var(--primary-orange);
+        }
+
+        .page-btn.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            background: #f5f5f5;
+        }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(3px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+        .modal-overlay.show {
+            opacity: 1;
+        }
+
+    .modal-popup {
+        background: white;
+        width: 600px;
+        max-width: 90%;
+        border-radius: var(--card-radius);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        overflow: hidden;
+        transform: translateY(20px);
+        transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.show .modal-popup {
+        transform: translateY(0);
+    }
+
+    .modal-header-custom {
+        background: var(--active-purple);
+        color: white;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+        .modal-header-custom h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+    .modal-close {
+        cursor: pointer;
+        font-size: 20px;
+        color: rgba(255,255,255,0.8);
+    }
+
+        .modal-close:hover {
+            color: white;
+        }
+
+    .modal-body-custom {
+        padding: 25px;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .detail-section h3 {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--primary-orange);
+        text-transform: uppercase;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .detail-item strong {
+        color: #666;
+        font-size: 13px;
+        display: block;
+    }
+
+    .detail-item span {
+        color: #333;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .detail-item.full-width {
+        grid-column: span 2;
+    }
+
+    .modal-footer-custom {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    /* TOAST */
+    .toast.bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .toast.bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .toast.show {
+        animation: slideInRight 0.3s ease-out forwards;
+    }
+
+    @@keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+
+<div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+
+<div class="page-header-container">
+    <h1 class="page-title"><i class="fa-solid fa-bell-concierge me-2"></i>Yêu cầu Hỗ trợ</h1>
+    <div class="text-muted small">
+        @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+    </div>
+</div>
+
+<div class="container-fluid px-4">
+
+    <div class="filter-card">
+        <form asp-action="AssistanceList" method="get" class="row g-3 align-items-center">
+
+            
+
+            <div class="col-md-6">
+                <div class="search-box-wrapper">
+                    <i class="fa-solid fa-magnifying-glass text-secondary"></i>
+                    <input type="text" placeholder="Tìm theo tên bàn..."  style="cursor: not-allowed; opacity: 0.6;" title="Tính năng đang phát triển" />
+                </div>
+            </div>
+
+            <div class="col-md-2 text-end">
+                <a href="@Url.Action("AssistanceList")" class="btn-pos-primary w-100 text-decoration-none text-center d-block">
+                    <i class="fas fa-sync-alt me-2"></i> Làm mới
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table custom-table">
+                <thead>
+                    <tr>
+                        <th>Bàn</th>
+                        <th>Khu vực</th>
+                        <th>Nội dung yêu cầu</th>
+                        <th>Thời gian</th>
+                        <th>Cách đây</th>
+                        <th>Trạng thái</th>
+                        <th class="text-center">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="assistanceTableBody">
+                    @if (!Model.Items.Any())
+                    {
+                        <tr id="no-data-row">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-check-circle fs-1 mb-3 opacity-25 text-success"></i>
+                                <p>Hiện không có yêu cầu nào cần xử lý.</p>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr data-id="@item.RequestId" id="req-row-@item.RequestId">
+                            <td><div class="fw-bold fs-5">@item.TableName</div></td>
+                            <td>@item.AreaName</td>
+                            <td>
+                                <span class="fw-bold text-dark">@item.Note</span>
+                            </td>
+                            <td>
+                                <i class="fa-regular fa-clock text-muted me-1"></i>
+                                @item.RequestTime.ToLocalTime().ToString("HH:mm")
+                            </td>
+                            <td class="text-muted small">@item.TimeAgo</td>
+                            <td class="status-cell">
+                                <span class="status-badge status-pending">
+                                    <i class="fas fa-spinner fa-spin me-1"></i> Chờ xử lý
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn-detail-view btn-open-modal mx-auto"
+                                        data-id="@item.RequestId"
+                                        data-table="@item.TableName"
+                                        data-area="@item.AreaName"
+                                        data-note="@item.Note"
+                                        data-time="@item.RequestTime.ToLocalTime().ToString("HH:mm")"
+                                        title="Xem & Xử lý">
+                                    <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-container">
+            <div class="text-muted small">
+                Hiển thị trang <strong>@Model.Page</strong> / <strong>@Model.TotalPages</strong>
+                (Tổng <strong>@Model.TotalCount</strong> yêu cầu)
+            </div>
+            <div class="d-flex">
+                @if (currentPage > 1)
+                {
+                    <a href="@Url.Action("AssistanceList", new { areaId = currentAreaId, page = currentPage - 1 })" class="page-btn"><i class="fas fa-chevron-left"></i></a>
+                }
+                else
+                {
+                    <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+                }
+
+                <span class="page-btn" style="background: var(--primary-orange); color: white; border-color: var(--primary-orange);">@currentPage</span>
+
+                @if (currentPage < totalPages)
+                {
+                    <a href="@Url.Action("AssistanceList", new { areaId = currentAreaId, page = currentPage + 1 })" class="page-btn"><i class="fas fa-chevron-right"></i></a>
+                }
+                else
+                {
+                    <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-popup">
+        <div class="modal-header-custom">
+            <h2><i class="fa-solid fa-headset me-2"></i>Xử lý Yêu cầu</h2>
+            <i class="fas fa-times modal-close" id="closeModal"></i>
+        </div>
+
+        <div class="modal-body-custom">
+            <div class="detail-section">
+                <h3>Thông tin Vị trí</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><strong>Bàn số</strong><span id="modalTableName" class="fs-4 text-primary">...</span></div>
+                    <div class="detail-item"><strong>Khu vực</strong><span id="modalAreaName">...</span></div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Chi tiết Yêu cầu</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><strong>Thời gian gọi</strong><span id="modalRequestTime">...</span></div>
+                    <div class="detail-item"><strong>Trạng thái</strong><span class="text-danger fw-bold">Đang chờ (Pending)</span></div>
+                </div>
+            </div>
+
+            <div class="detail-section border-bottom-0">
+                <h3>Nội dung khách cần</h3>
+                <div class="p-4 bg-warning bg-opacity-10 border border-warning rounded text-dark fw-bold fs-5" id="modalNote">
+                    ...
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer-custom">
+            <input type="hidden" id="modalRequestId" />
+            <button class="btn btn-light border" id="closeModalFooter">Đóng</button>
+            <button class="btn-pos-primary" id="btnCompleteRequest">
+                <i class="fas fa-check-circle me-2"></i> Xác nhận Đã xử lý
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Cấu hình URL API và Hub
+    const apiBaseUrl = "https://localhost:7096/api/OrderTable";       
+    const signalRHubUrl = "https://localhost:7096/restaurantHub"; // Hub đã config ở backend
+
+        const modal = $('#detailModal');
+        const tableBody = $('#assistanceTableBody');
+
+        // --- 1. HÀM HIỂN THỊ TOAST (Giống hệt mẫu) ---
+        function showToast(message, type = 'success') {
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+
+            $('#toast-container').append(toastHtml);
+            setTimeout(() => { $('#toast-container .toast').first().remove(); }, 4000);
+        }
+
+        // --- 2. MODAL UI ---
+        function showModalUI() {
+            modal.css('display', 'flex');
+            setTimeout(() => modal.addClass('show'), 10);
+        }
+        function hideModalUI() {
+            modal.removeClass('show');
+            setTimeout(() => modal.css('display', 'none'), 300);
+        }
+
+        // --- 3. MỞ MODAL & FILL DATA (Dùng Data Attributes từ Row) ---
+        function openDetailModal(btn) {
+            const id = btn.data('id');
+            const tableName = btn.data('table');
+            const areaName = btn.data('area');
+            const note = btn.data('note');
+            const time = btn.data('time');
+
+            $('#modalRequestId').val(id);
+            $('#modalTableName').text(tableName);
+            $('#modalAreaName').text(areaName);
+            $('#modalRequestTime').text(time);
+            $('#modalNote').text(note || "Khách cần hỗ trợ chung");
+
+            showModalUI();
+        }
+
+        // --- 4. XỬ LÝ YÊU CẦU (GỌI API COMPLETE) ---
+        function completeRequest() {
+            const id = $('#modalRequestId').val();
+            if (!id) return;
+
+            const btn = $('#btnCompleteRequest');
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Đang xử lý...');
+
+            $.ajax({
+                // URL sẽ ghép thành: https://localhost:7096/api/OrderTable/3/Complete
+                url: `${apiBaseUrl}/${id}/Complete`, // <-- ĐÚNG NHƯ LINK BẠN GỬI
+                method: 'PUT', // Hoặc 'POST' tùy vào Backend bạn viết [HttpPut] hay [HttpPost]
+
+                success: function() {
+                    hideModalUI();
+                    showToast('Đã xử lý xong yêu cầu!', 'success');
+                    $(`#req-row-${id}`).fadeOut(300, function() { $(this).remove(); });
+                },
+                error: function(xhr) {
+                    console.error("Lỗi API:", xhr.status, xhr.responseText);
+                    let msg = 'Không thể cập nhật.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    showToast('Lỗi: ' + msg, 'error');
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html('<i class="fas fa-check-circle me-2"></i> Xác nhận Đã xử lý');
+                }
+            });
+        }
+
+        // --- EVENTS ---
+        tableBody.on('click', '.btn-open-modal', function() { openDetailModal($(this)); });
+        $('#closeModal, #closeModalFooter').on('click', function() { hideModalUI(); });
+        $(window).on('click', function(e) { if ($(e.target).is('#detailModal')) hideModalUI(); });
+        $('#btnCompleteRequest').on('click', completeRequest);
+
+        // --- 5. SIGNALR (REALTIME) ---
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(signalRHubUrl)
+            .withAutomaticReconnect()
+            .build();
+
+        // A. NHẬN YÊU CẦU MỚI (ReceiveNewRequest)
+        connection.on("ReceiveNewRequest", function (data) {
+            // Xóa dòng "Không có dữ liệu" nếu có
+            $('#no-data-row').remove();
+
+            // Tạo dòng HTML mới
+            const newRow = `
+                <tr data-id="${data.requestId}" id="req-row-${data.requestId}" style="background-color: #fff3cd;">
+                    <td><div class="fw-bold fs-5">${data.tableName}</div></td>
+                    <td>${data.areaName || 'N/A'}</td>
+                    <td><span class="fw-bold text-dark">${data.note}</span></td>
+                    <td><i class="fa-regular fa-clock text-muted me-1"></i> ${data.time}</td>
+                    <td class="text-muted small">Vừa xong</td>
+                    <td class="status-cell">
+                        <span class="status-badge status-pending"><i class="fas fa-spinner fa-spin me-1"></i> Chờ xử lý</span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn-detail-view btn-open-modal mx-auto"
+                                data-id="${data.requestId}"
+                                data-table="${data.tableName}"
+                                data-area="${data.areaName}"
+                                data-note="${data.note}"
+                                data-time="${data.time}" title="Xem & Xử lý">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </td>
+                </tr>`;
+
+            // Thêm vào đầu bảng
+            tableBody.prepend(newRow);
+
+            // Hiệu ứng Toast báo tin
+            showToast(`Yêu cầu mới từ ${data.tableName}: ${data.note}`, 'danger');
+        });
+
+        // B. NHẬN SỰ KIỆN ĐÃ XỬ LÝ (RequestCompleted) - Từ nhân viên khác
+        connection.on("RequestCompleted", function (requestId) {
+            const row = $(`#req-row-${requestId}`);
+            if (row.length) {
+                row.css('background-color', '#d1e7dd'); // Chuyển màu xanh nhẹ
+                row.fadeOut(500, function() { $(this).remove(); }); // Biến mất
+            }
+        });
+
+        // Start Connection & Join Group
+        async function startSignalR() {
+            try {
+                await connection.start();
+                console.log("SignalR Connected.");
+                // Tham gia nhóm nhân viên để nhận thông báo
+                await connection.invoke("JoinGroup", "Employees");
+            } catch (err) {
+                console.error("SignalR Error:", err);
+                setTimeout(startSignalR, 5000);
+            }
+        }
+        startSignalR();
+    });
+</script>

@@ -203,5 +203,42 @@ namespace DataAccessLayer.Repositories
                 .AsNoTracking() // Dùng AsNoTracking vì đây là thao tác đọc
                 .FirstOrDefaultAsync(m => m.MenuItemId == menuItemId);
         }
+
+        // [CHO NHÂN VIÊN] Lấy danh sách
+        public async Task<(IEnumerable<AssistanceRequest> Items, int TotalCount)> GetPendingRequestsForStaffAsync(int? areaId, int pageIndex, int pageSize)
+        {
+            var query = _context.AssistanceRequests
+                .Include(r => r.Table)
+                    .ThenInclude(t => t.Area) // Include để lấy tên Bàn và Khu vực
+                .Where(r => r.Status == "Pending") // Chỉ lấy cái chưa xử lý
+                .AsNoTracking();
+
+            // Lọc theo khu vực (nếu nhân viên chọn)
+            if (areaId.HasValue)
+            {
+                query = query.Where(r => r.Table.AreaId == areaId.Value);
+            }
+
+            // Sắp xếp: Mới nhất lên đầu (theo yêu cầu của bạn)
+            query = query.OrderByDescending(r => r.RequestTime);
+
+            int totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        // [CHO NHÂN VIÊN] Lấy chi tiết
+        public async Task<AssistanceRequest> GetRequestByIdAsync(int requestId)
+        {
+            return await _context.AssistanceRequests
+                .Include(r => r.Table) // Include để lấy TableId khi bắn SignalR
+                .FirstOrDefaultAsync(r => r.RequestId == requestId);
+        }
+
     }
 }

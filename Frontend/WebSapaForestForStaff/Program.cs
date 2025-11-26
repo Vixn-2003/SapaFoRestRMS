@@ -1,4 +1,5 @@
-﻿using WebSapaForestForStaff.Services;
+﻿using WebSapaForestForStaff.Hubs;
+using WebSapaForestForStaff.Services;
 using WebSapaForestForStaff.Services.Api;
 using WebSapaForestForStaff.Services.Api.Interfaces;
 
@@ -59,6 +60,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Customer", p => p.RequireRole("Customer"));
 });
 
+builder.Services.AddSignalR();
 
 
 var app = builder.Build();
@@ -66,6 +68,8 @@ app.UseSession();
 app.UseCors("AllowAll");
 
 
+app.MapHub<ReservationHub>("/reservationHub");
+app.MapHub<RestaurantHub>("/restaurantHub");
 
 
 // Configure the HTTP request pipeline.
