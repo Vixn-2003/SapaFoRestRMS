@@ -22,15 +22,16 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         /// <summary>
-        /// GET: api/KitchenDisplay/active-orders
+        /// GET: api/KitchenDisplay/active-orders?statusFilter=Pending
         /// Get all active orders for Sous Chef screen
         /// </summary>
+        /// <param name="statusFilter">Optional: Filter by item status (Pending, Cooking, Late, Ready). Null or empty = all</param>
         [HttpGet("active-orders")]
-        public async Task<IActionResult> GetActiveOrders()
+        public async Task<IActionResult> GetActiveOrders([FromQuery] string? statusFilter = null)
         {
             try
             {
-                var orders = await _kitchenService.GetActiveOrdersAsync();
+                var orders = await _kitchenService.GetActiveOrdersAsync(statusFilter);
                 return Ok(new { success = true, data = orders });
             }
             catch (Exception ex)
@@ -97,6 +98,40 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         /// <summary>
+        /// POST: api/KitchenDisplay/start-cooking-with-quantity
+        /// Start cooking with specific quantity (split order detail if quantity < total)
+        /// </summary>
+        [HttpPost("start-cooking-with-quantity")]
+        public async Task<IActionResult> StartCookingWithQuantity([FromBody] StartCookingWithQuantityRequest request)
+        {
+            try
+            {
+                var response = await _kitchenService.StartCookingWithQuantityAsync(request);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                // Broadcast real-time update via SignalR
+                await _hubContext.Clients.All.SendAsync("ItemStatusChanged", new KitchenStatusChangeNotification
+                {
+                    OrderId = 0,
+                    OrderDetailId = response.UpdatedItem?.OrderDetailId ?? request.OrderDetailId,
+                    NewStatus = "Cooking",
+                    Timestamp = DateTime.Now,
+                    ChangedBy = $"User {request.UserId}"
+                });
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// POST: api/KitchenDisplay/complete-order
         /// Mark entire order as completed (from Sous Chef screen)
         /// </summary>
@@ -142,15 +177,16 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         /// <summary>
-        /// GET: api/KitchenDisplay/grouped-by-item
+        /// GET: api/KitchenDisplay/grouped-by-item?statusFilter=Pending
         /// Get items grouped by menu item (theo từng món)
         /// </summary>
+        /// <param name="statusFilter">Optional: Filter by item status (Pending, Cooking, Late, Ready). Null or empty = all</param>
         [HttpGet("grouped-by-item")]
-        public async Task<IActionResult> GetGroupedItemsByMenuItem()
+        public async Task<IActionResult> GetGroupedItemsByMenuItem([FromQuery] string? statusFilter = null)
         {
             try
             {
-                var groupedItems = await _kitchenService.GetGroupedItemsByMenuItemAsync();
+                var groupedItems = await _kitchenService.GetGroupedItemsByMenuItemAsync(statusFilter);
                 return Ok(new { success = true, data = groupedItems });
             }
             catch (Exception ex)
@@ -243,6 +279,28 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 var orders = await _kitchenService.GetRecentlyFulfilledOrdersAsync(minutesAgo);
                 return Ok(new { success = true, data = orders });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET: api/KitchenDisplay/order-details/{orderId}
+        /// Get order details with all items including Done status (for modal display)
+        /// </summary>
+        [HttpGet("order-details/{orderId}")]
+        public async Task<IActionResult> GetOrderDetailsWithAllItems(int orderId)
+        {
+            try
+            {
+                var order = await _kitchenService.GetOrderDetailsWithAllItemsAsync(orderId);
+                if (order == null)
+                {
+                    return NotFound(new { success = false, message = "Order not found" });
+                }
+                return Ok(new { success = true, data = order });
             }
             catch (Exception ex)
             {

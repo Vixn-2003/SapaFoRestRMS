@@ -11,7 +11,7 @@ namespace BusinessAccessLayer.DTOs.Kitchen
         public int OrderId { get; set; }
         public string OrderNumber { get; set; } // "A01", "A02"...
         public string TableNumber { get; set; } // Tên nhân viên hoặc số bàn
-        public string StaffName { get; set; } // Tên nhân viên đã order (mới thêm)
+        public int NumberOfGuests { get; set; } // Số lượng người của bàn
         public DateTime CreatedAt { get; set; }
         public int WaitingMinutes { get; set; } // Calculated: now - CreatedAt
         public string PriorityLevel { get; set; } // "Normal", "Warning", "Critical"
@@ -49,6 +49,16 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     {
         public int OrderDetailId { get; set; }
         public string NewStatus { get; set; } = string.Empty; // "Cooking", "Ready", "Done"
+        public int UserId { get; set; } // Who pressed the button
+    }
+
+    /// <summary>
+    /// Request to start cooking with specific quantity (for batch cooking with partial quantity)
+    /// </summary>
+    public class StartCookingWithQuantityRequest
+    {
+        public int OrderDetailId { get; set; }
+        public int Quantity { get; set; } // Số lượng muốn nấu (có thể < tổng số lượng)
         public int UserId { get; set; } // Who pressed the button
     }
 

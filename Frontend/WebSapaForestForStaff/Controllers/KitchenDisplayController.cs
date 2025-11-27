@@ -22,20 +22,18 @@ namespace WebSapaFoRestForStaff.Controllers
         /// Main KDS screen for Sous Chef
         /// GET: /KitchenDisplay
         /// </summary>
-        public async Task<IActionResult> Index()
+        public IActionResult Index()
         {
             var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
             var apiBase = apiBaseUrl.Replace("/api", "");
             var signalRHubUrl = $"{apiBase}/kitchenHub";
 
-            // Load initial data from Service
-            var activeOrders = await _kitchenDisplayService.GetActiveOrdersAsync() ?? new();
-            var courseTypes = await _kitchenDisplayService.GetCourseTypesAsync() ?? new();
-
+            // OPTIMIZED: Không load data ở server-side, để client-side load để tránh double loading
+            // Chỉ truyền config cần thiết
             var viewModel = new KitchenDisplayViewModel
             {
-                ActiveOrders = activeOrders,
-                CourseTypes = courseTypes,
+                ActiveOrders = new(), // Empty list - sẽ load từ client
+                CourseTypes = new(), // Empty list - sẽ load từ client nếu cần
                 ApiBaseUrl = apiBaseUrl,
                 SignalRHubUrl = signalRHubUrl
             };
@@ -47,7 +45,7 @@ namespace WebSapaFoRestForStaff.Controllers
         /// Station screen (filtered by category name)
         /// GET: /KitchenDisplay/Station?categoryName=Xào
         /// </summary>
-        public async Task<IActionResult> Station(string categoryName)
+        public IActionResult Station(string categoryName)
         {
             var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
             var apiBase = apiBaseUrl.Replace("/api", "");
@@ -58,13 +56,11 @@ namespace WebSapaFoRestForStaff.Controllers
             ViewBag.ApiBaseUrl = apiBaseUrl;
             ViewBag.SignalRHubUrl = signalRHubUrl;
 
-            // Load station items from Service
-            var stationItems = await _kitchenDisplayService.GetStationItemsByCategoryAsync(categoryName ?? "");
-
+            // OPTIMIZED: Không load data ở server-side, để client-side load
             var viewModel = new KitchenStationViewModel
             {
                 CategoryName = categoryName ?? "",
-                StationItems = stationItems,
+                StationItems = null, // Sẽ load từ client
                 ApiBaseUrl = apiBaseUrl,
                 SignalRHubUrl = signalRHubUrl
             };

@@ -2,27 +2,91 @@
 // File: wwwroot/js/kitchenStation.js
 // Trạm CHỈ XEM và HOÀN THÀNH món, KHÔNG được tự fire
 
-const API_BASE = window.API_BASE_URL || 'https://localhost:7096/api';
+// OPTIMIZED: Auto-detect API base URL từ current location
+function getApiBaseUrl() {
+    // Ưu tiên: window.API_BASE_URL từ server config
+    if (window.API_BASE_URL) {
+        console.log('[getApiBaseUrl] Using server config:', window.API_BASE_URL);
+        return window.API_BASE_URL;
+    }
+    
+    // Fallback: Tự động detect từ current location
+    const currentHost = window.location.hostname;
+    const currentProtocol = window.location.protocol;
+    
+    // Nếu đang chạy trên localhost, dùng HTTPS localhost:7096
+    if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+        return 'https://localhost:7096/api';
+    }
+    
+    // Nếu đang chạy trên IP (192.168.x.x), thử HTTPS trước, nếu fail thì HTTP
+    if (currentHost.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+        // Ưu tiên HTTPS (vì backend thường chạy HTTPS)
+        return `https://${currentHost}:7096/api`;
+    }
+    
+    // Default fallback - dùng HTTPS localhost:7096
+    return 'https://localhost:7096/api';
+}
+
+const API_BASE = getApiBaseUrl();
 let signalRConnection = null;
 let currentCategoryName = '';
 let currentData = null;
 let selectedCookingItems = new Set(); // Chỉ select items đang cooking để hoàn thành
+let retryCount = 0;
+const MAX_RETRIES = 3;
 
-// Initialize station
+// Initialize station - OPTIMIZED
 function initializeStation(categoryName) {
     currentCategoryName = categoryName;
-    initializeSignalR();
-    loadStationItems();
+    retryCount = 0; // Reset retry count
+    
+    // Log API URL để debug
+    console.log('[initializeStation] API Base URL:', API_BASE);
+    console.log('[initializeStation] Category:', categoryName);
+    
+    // OPTIMIZED: Hiển thị loading indicator
+    const allItemsList = document.getElementById('allItemsList');
+    const urgentItemsTable = document.getElementById('urgentItemsTable');
+    if (allItemsList) {
+        allItemsList.innerHTML = '<div class="text-center py-5"><i class="mdi mdi-loading mdi-spin" style="font-size: 48px;"></i><p class="mt-3">Đang tải dữ liệu...</p></div>';
+    }
+    if (urgentItemsTable) {
+        urgentItemsTable.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="mdi mdi-loading mdi-spin" style="font-size: 24px;"></i> Đang tải...</td></tr>';
+    }
+    
+    // Load data trước, SignalR sau (lazy load)
+    loadStationItems().then(() => {
+        retryCount = 0; // Reset on success
+        // Sau khi data đã load xong, mới kết nối SignalR
+        setTimeout(() => {
+            initializeSignalR();
+        }, 500);
+    }).catch(error => {
+        console.error('Error loading initial station data:', error);
+        // Hiển thị error message với retry button
+        showErrorWithRetry(error);
+        // Vẫn thử kết nối SignalR dù có lỗi
+        setTimeout(() => {
+            initializeSignalR();
+        }, 500);
+    });
 
     // Auto-refresh every 30 seconds
     setInterval(loadStationItems, 30000);
 
-    // Update timers every minute
-    setInterval(updateTimers, 60000);
+    // Update countdown timers every second
+    setInterval(updateTimers, 1000);
 }
 
-// SignalR Setup
+// SignalR Setup - OPTIMIZED (lazy load, không block UI)
 function initializeSignalR() {
+    // Nếu đã có connection, không tạo lại
+    if (signalRConnection && signalRConnection.state !== signalR.HubConnectionState.Disconnected) {
+        return;
+    }
+
     const hubUrl = window.SIGNALR_HUB_URL || (API_BASE.replace('/api', '') + '/kitchenHub');
     console.log('[initializeSignalR] Hub URL:', hubUrl);
 
@@ -47,33 +111,141 @@ function initializeSignalR() {
         loadStationItems();
     });
 
+    // OPTIMIZED: Start connection trong background, không block
     signalRConnection.start()
         .then(() => console.log('SignalR connected to kitchen hub'))
-        .catch(err => console.error('SignalR connection error:', err));
+        .catch(err => {
+            console.error('SignalR connection error:', err);
+            // Retry sau 5 giây
+            setTimeout(() => {
+                if (signalRConnection && signalRConnection.state === signalR.HubConnectionState.Disconnected) {
+                    initializeSignalR();
+                }
+            }, 5000);
+        });
 }
 
-// Load station items from API
+// Load station items from API - OPTIMIZED với timeout, retry và error handling
 async function loadStationItems() {
+    const allItemsList = document.getElementById('allItemsList');
+    const urgentItemsTable = document.getElementById('urgentItemsTable');
+    
     try {
         if (!currentCategoryName || currentCategoryName.trim() === '') {
             console.error('Category name is empty!');
             showError('Tên trạm không hợp lệ');
-            return;
+            if (allItemsList) {
+                allItemsList.innerHTML = '<div class="empty-state" style="color: #dc3545;">Tên trạm không hợp lệ</div>';
+            }
+            return Promise.resolve();
         }
 
         console.log('[loadStationItems] Loading for category:', currentCategoryName);
+        console.log('[loadStationItems] API Base URL:', API_BASE);
+        console.log('[loadStationItems] Current location:', window.location.href);
         const url = `${API_BASE}/KitchenDisplay/station-items?categoryName=${encodeURIComponent(currentCategoryName)}`;
+        console.log('[loadStationItems] Full URL:', url);
+        
+        // Test connection trước khi fetch - thử ping API root
+        try {
+            const testUrl = API_BASE.replace('/api', '') + '/swagger/index.html';
+            console.log('[loadStationItems] Testing backend connection at:', testUrl);
+        } catch (e) {
+            console.warn('[loadStationItems] Could not test connection:', e);
+        }
 
-        const response = await fetch(url);
+        // OPTIMIZED: Thêm timeout cho fetch (10 giây - giảm từ 15s)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        let response;
+        try {
+            // Thử với mode 'cors' và credentials
+            // Nếu URL là HTTPS nhưng fail, thử HTTP
+            response = await fetch(url, {
+                signal: controller.signal,
+                method: 'GET',
+                mode: 'cors', // Explicit CORS mode
+                credentials: 'omit', // Không dùng credentials để tránh CORS issue
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            clearTimeout(timeoutId);
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            
+            // Nếu lỗi và URL là HTTPS, thử HTTP
+            if (url.startsWith('https://') && 
+                (fetchError.message?.includes('Failed to fetch') || 
+                 fetchError.message?.includes('ERR_CONNECTION_REFUSED') ||
+                 fetchError.message?.includes('ERR_SSL'))) {
+                console.log('[loadStationItems] HTTPS failed, trying HTTP...');
+                const httpUrl = url.replace('https://', 'http://');
+                try {
+                    response = await fetch(httpUrl, {
+                        signal: controller.signal,
+                        method: 'GET',
+                        mode: 'cors',
+                        credentials: 'omit',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    clearTimeout(timeoutId);
+                    console.log('[loadStationItems] HTTP connection successful!');
+                } catch (httpError) {
+                    console.error('[loadStationItems] HTTP also failed:', httpError);
+                    // Fall through to retry logic
+                }
+            }
+            
+            // Retry logic với exponential backoff
+            if (!response && retryCount < MAX_RETRIES && 
+                (fetchError.name === 'AbortError' || 
+                 fetchError.message?.includes('Failed to fetch') || 
+                 fetchError.message?.includes('ERR_CONNECTION_TIMED_OUT'))) {
+                retryCount++;
+                const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000); // 1s, 2s, 4s
+                console.log(`[loadStationItems] Retry ${retryCount}/${MAX_RETRIES} after ${delay}ms...`);
+                
+                // Update UI với retry message
+                if (allItemsList) {
+                    allItemsList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="mdi mdi-loading mdi-spin" style="font-size: 48px;"></i>
+                            <p class="mt-3">Đang thử lại lần ${retryCount}/${MAX_RETRIES}...</p>
+                        </div>
+                    `;
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return loadStationItems(); // Retry
+            }
+            
+            // Không retry được nữa, throw error
+            if (!response) {
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('Kết nối quá lâu. Vui lòng kiểm tra lại server hoặc kết nối mạng.');
+                } else if (fetchError.message && (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('ERR_CONNECTION_TIMED_OUT'))) {
+                    throw new Error(`Không thể kết nối đến API server tại ${API_BASE}. Vui lòng đảm bảo backend đang chạy tại https://localhost:7096.`);
+                }
+                throw fetchError;
+            }
+        }
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text().catch(() => 'Unknown error');
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
         const result = await response.json();
         console.log('[loadStationItems] API Response:', result);
 
         if (result.success) {
+            retryCount = 0; // Reset retry count on success
             currentData = result.data;
             console.log('[loadStationItems] Total items:', currentData.allItems?.length || 0);
 
@@ -85,12 +257,68 @@ async function loadStationItems() {
             updateCounts(currentData);
         } else {
             console.error('API returned error:', result.message);
-            showError(result.message || 'Không thể tải dữ liệu trạm');
+            const errorMsg = result.message || 'Không thể tải dữ liệu trạm';
+            showError(errorMsg);
+            if (allItemsList) {
+                allItemsList.innerHTML = `<div class="empty-state" style="color: #dc3545;"><i class="mdi mdi-alert-circle"></i> ${errorMsg}</div>`;
+            }
+            if (urgentItemsTable) {
+                urgentItemsTable.innerHTML = '<tr><td colspan="5" class="empty-state" style="color: #dc3545;">Lỗi tải dữ liệu</td></tr>';
+            }
         }
     } catch (error) {
         console.error('[loadStationItems] Error:', error);
-        showError('Lỗi kết nối API: ' + error.message);
+        const errorMessage = error.message || 'Lỗi kết nối API';
+        showError(errorMessage);
+        
+        // Hiển thị error message trong UI với retry button
+        showErrorWithRetry(error);
     }
+}
+
+// Show error với retry button
+function showErrorWithRetry(error) {
+    const allItemsList = document.getElementById('allItemsList');
+    const urgentItemsTable = document.getElementById('urgentItemsTable');
+    const errorMessage = error.message || 'Lỗi kết nối API';
+    
+    if (allItemsList) {
+        allItemsList.innerHTML = `
+            <div class="empty-state" style="color: #dc3545;">
+                <i class="mdi mdi-server-network-off" style="font-size: 48px;"></i>
+                <p class="mt-3" style="font-weight: bold;">${errorMessage}</p>
+                <p class="mt-2" style="font-size: 14px; color: #666;">API URL: ${API_BASE}</p>
+                <p class="mt-2" style="font-size: 14px; color: #666;">Vui lòng kiểm tra:</p>
+                <ul style="text-align: left; display: inline-block; margin-top: 10px; color: #666;">
+                    <li>Backend API server đang chạy tại ${API_BASE}</li>
+                    <li>Kết nối mạng ổn định</li>
+                    <li>Firewall không chặn kết nối</li>
+                </ul>
+                <button class="btn btn-primary mt-3" onclick="retryLoadStationItems()" style="padding: 10px 20px;">
+                    <i class="mdi mdi-refresh"></i> Thử lại
+                </button>
+            </div>
+        `;
+    }
+    if (urgentItemsTable) {
+        urgentItemsTable.innerHTML = `<tr><td colspan="5" class="empty-state" style="color: #dc3545;">${errorMessage}</td></tr>`;
+    }
+}
+
+// Retry load function
+function retryLoadStationItems() {
+    retryCount = 0; // Reset retry count
+    const allItemsList = document.getElementById('allItemsList');
+    const urgentItemsTable = document.getElementById('urgentItemsTable');
+    
+    if (allItemsList) {
+        allItemsList.innerHTML = '<div class="text-center py-5"><i class="mdi mdi-loading mdi-spin" style="font-size: 48px;"></i><p class="mt-3">Đang tải lại...</p></div>';
+    }
+    if (urgentItemsTable) {
+        urgentItemsTable.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="mdi mdi-loading mdi-spin" style="font-size: 24px;"></i> Đang tải...</td></tr>';
+    }
+    
+    loadStationItems();
 }
 
 // Render station items - BÊN TRÁI: Tất cả món trong trạm | BÊN PHẢI: Món được fire (Cooking)
@@ -214,18 +442,22 @@ function createAllItemsCard(group) {
 
 // Create cooking table row (bên phải) - VỚI CHECKBOX ĐỂ HOÀN THÀNH
 function createCookingTableRow(item) {
-    const fireTime = item.fireTime || item.createdAtTime || '-';
     const rowClass = item.isUrgent ? 'urgent-row' : '';
     const isChecked = selectedCookingItems.has(item.orderDetailId);
+    
+    // Tính thời gian nấu còn lại (đếm ngược)
+    const timeCook = item.timeCook || 0; // Thời gian nấu (phút)
+    const startedAt = item.startedAt ? new Date(item.startedAt) : null;
+    const countdownHtml = getCookingCountdown(startedAt, timeCook, item.orderDetailId);
 
     return `
-        <tr class="${rowClass}" data-order-detail-id="${item.orderDetailId}">
+        <tr class="${rowClass}" data-order-detail-id="${item.orderDetailId}" data-time-cook="${timeCook}" data-started-at="${startedAt ? startedAt.toISOString() : ''}">
             <td style="width: 50px;">
                 <input type="checkbox" 
                        ${isChecked ? 'checked' : ''} 
                        onchange="toggleCookingItemSelection(${item.orderDetailId})">
             </td>
-            <td class="time-cell">${fireTime}</td>
+            <td class="time-cell countdown-cell" data-order-detail-id="${item.orderDetailId}">${countdownHtml}</td>
             <td>${item.tableNumber}</td>
             <td>
                 <strong>${item.menuItemName}</strong> x${item.quantity}
@@ -234,6 +466,30 @@ function createCookingTableRow(item) {
             <td class="notes-text">${item.notes || '-'}</td>
         </tr>
     `;
+}
+
+// Tính thời gian nấu còn lại (đếm ngược)
+function getCookingCountdown(startedAt, timeCook, orderDetailId) {
+    if (!startedAt || !timeCook || timeCook <= 0) {
+        return `<span class="text-muted">-</span>`;
+    }
+    
+    const now = new Date();
+    const elapsedSeconds = Math.floor((now - startedAt) / 1000);
+    const totalSeconds = timeCook * 60;
+    const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+    
+    if (remainingSeconds <= 0) {
+        return `<span class="text-danger fw-bold">Hết giờ</span>`;
+    }
+    
+    const minutes = Math.floor(remainingSeconds / 60);
+    const seconds = remainingSeconds % 60;
+    const isUrgent = remainingSeconds <= 60; // Cảnh báo khi còn < 1 phút
+    
+    const timeClass = isUrgent ? 'text-danger fw-bold' : (remainingSeconds <= 300 ? 'text-warning' : 'text-success');
+    
+    return `<span class="${timeClass}" id="countdown-${orderDetailId}">${minutes}:${seconds.toString().padStart(2, '0')}</span>`;
 }
 
 // Toggle cooking item selection
@@ -263,23 +519,54 @@ function selectAllCookingItems(checkbox) {
     console.log('[selectAllCookingItems] Selected:', Array.from(selectedCookingItems));
 }
 
-// Update counts
+// Update counts - OPTIMIZED với null check
 function updateCounts(data) {
     if (!data || !data.allItems) return;
 
     const groupedCount = groupItemsByDish(data.allItems).length;
     const cookingCount = data.allItems.filter(item => {
         const status = (item.status || '').toLowerCase();
-        return status === 'cooking';
+        return status === 'cooking' || status === 'đang chế biến';
     }).length;
 
-    document.getElementById('allCount').textContent = groupedCount;
-    document.getElementById('cookingCount').textContent = cookingCount;
+    const allCountEl = document.getElementById('allCount');
+    const cookingCountEl = document.getElementById('cookingCount');
+    const urgentCountEl = document.getElementById('urgentCount');
+    
+    if (allCountEl) {
+        allCountEl.textContent = groupedCount;
+    }
+    if (cookingCountEl) {
+        cookingCountEl.textContent = cookingCount;
+    }
+    if (urgentCountEl) {
+        urgentCountEl.textContent = cookingCount;
+    }
 }
 
-// Update timers
+// Update timers - Cập nhật đếm ngược thời gian nấu
 function updateTimers() {
-    loadStationItems();
+    const countdownCells = document.querySelectorAll('.countdown-cell');
+    
+    countdownCells.forEach(cell => {
+        const orderDetailId = cell.getAttribute('data-order-detail-id');
+        const row = cell.closest('tr');
+        if (!row) return;
+        
+        const timeCook = parseInt(row.getAttribute('data-time-cook')) || 0;
+        const startedAtStr = row.getAttribute('data-started-at');
+        
+        if (!startedAtStr || !timeCook || timeCook <= 0) {
+            cell.innerHTML = '<span class="text-muted">-</span>';
+            return;
+        }
+        
+        const startedAt = new Date(startedAtStr);
+        const countdownHtml = getCookingCountdown(startedAt, timeCook, orderDetailId);
+        cell.innerHTML = countdownHtml;
+    });
+    
+    // Reload data mỗi 30 giây để đảm bảo đồng bộ (đã có setInterval riêng)
 }
 
 // Complete selected items - CHỈ HOÀN THÀNH ITEMS ĐANG COOKING

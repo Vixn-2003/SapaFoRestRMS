@@ -178,6 +178,11 @@
             transition: transform 0.2s;
         }
 
+        .order-card.has-urgent {
+            border: 2px solid #ef4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
         .order-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
@@ -268,7 +273,9 @@
 
         .status-pending { background: #e3f2fd; color: #1976d2; }
         .status-cooking { background: #fff3e0; color: #f57c00; }
-        .status-done { background: #e8f5e9; color: #2e7d32; }
+        .status-late { background: #ffebee; color: #c62828; }
+        .status-ready { background: #e8f5e9; color: #2e7d32; }
+        .status-done { background: #c8e6c9; color: #1b5e20; font-weight: 700; } /* ✅ Màu xanh đậm cho Hoàn thành */
 
         /* Special Instructions */
         .special-instructions {
@@ -673,7 +680,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 10000;
+            z-index: 100000;
             animation: fadeIn 0.2s;
         }
 
@@ -818,7 +825,7 @@
                 <button class="btn btn-sm btn-outline-success" id="filter-status-ready" onclick="filterByItemStatus('Ready')">
                     Sẵn sàng
                 </button>
-                <button class="btn btn-sm btn-outline-dark" id="filter-status-done" onclick="filterByItemStatus('Done')">
+                <button class="btn btn-sm btn-outline-success" id="filter-status-done" onclick="filterByItemStatus('Done')" style="background-color: #4caf50; color: white; border-color: #4caf50;">
                     Hoàn thành
                 </button>
             </div>
