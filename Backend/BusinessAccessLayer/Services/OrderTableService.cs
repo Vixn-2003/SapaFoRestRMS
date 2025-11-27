@@ -424,7 +424,7 @@ namespace BusinessAccessLayer.Services
                 // Vì CustomerId là 'int', chúng ta gán thẳng
                 CustomerId = reservation.CustomerId,
 
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 OrderType = "Tại bàn",
                 Status = "Pending",
                 TotalAmount = 0,
@@ -443,7 +443,7 @@ namespace BusinessAccessLayer.Services
                         Quantity = cartItem.Quantity,
                         UnitPrice = price,
                         Status = "Đã gửi",
-                        CreatedAt = DateTime.UtcNow,
+                        CreatedAt = DateTime.Now,
                         Notes = cartItem.Notes,
                     });
                     newOrder.TotalAmount += (price * cartItem.Quantity);
