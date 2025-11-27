@@ -101,9 +101,9 @@ namespace SapaFoRestRMSAPI.Controllers
 
         [HttpGet("MenuOrder/{tableId}")]
         public async Task<IActionResult> GetMenuOrder(
-     int tableId,
-     [FromQuery] int? categoryId,
-     [FromQuery] string? searchString)
+         int tableId,
+         [FromQuery] int? categoryId,
+         [FromQuery] string? searchString)
         {
             try
             {

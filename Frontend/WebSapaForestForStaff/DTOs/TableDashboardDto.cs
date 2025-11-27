@@ -39,5 +39,8 @@ namespace WebSapaForestForStaff.DTOs
 
         public decimal TotalAmount { get; set; }
 
+        public decimal GrandTotal { get; set; }
+
+
     }
 }

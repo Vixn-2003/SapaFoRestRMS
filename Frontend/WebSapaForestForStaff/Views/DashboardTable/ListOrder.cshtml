@@ -1,5 +1,4 @@
-﻿@* ⭐️ Dùng @model để nhận dữ liệu từ Controller *@
-@model WebSapaForestForStaff.DTOs.OrderGuest.ListOrder.ReservationListViewModel
+﻿@model WebSapaForestForStaff.DTOs.OrderGuest.ListOrder.ReservationListViewModel
 
 @{
     ViewData["Title"] = "Danh sách Đặt bàn";
@@ -9,8 +8,8 @@
     string currentStatus = ViewData["CurrentStatus"] as string ?? "all";
     int currentPage = Model.Pagination.PageNumber;
     int totalPages = (int)Math.Ceiling((double)Model.Pagination.TotalCount / Model.Pagination.PageSize);
-    var currentDate = ViewData["CurrentDate"] as string; // ✨
-    var currentSlot = ViewData["CurrentSlot"] as string; // ✨
+    var currentDate = ViewData["CurrentDate"] as string; 
+    var currentSlot = ViewData["CurrentSlot"] as string; 
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
@@ -380,8 +379,8 @@
                     <i class="fa-solid fa-filter text-secondary"></i>
                     <select name="status">
                         <option value="all" selected="@(currentStatus == "all")">Tất cả Trạng thái</option>
-                        <option value="Confirmed" selected="@(currentStatus == "Confirmed")">Chờ khách (Confirmed)</option>
-                        <option value="Guest Seated" selected="@(currentStatus == "Guest Seated")">Đang ngồi (Guest Seated)</option>
+                        <option value="Confirmed" selected="@(currentStatus == "Confirmed")">Chờ khách </option>
+                        <option value="Guest Seated" selected="@(currentStatus == "Guest Seated")">Đang ngồi </option>
                     </select>
                 </div>
             </div>
@@ -398,10 +397,10 @@
                     <i class="fa-regular fa-clock text-secondary"></i>
                     <select name="filterSlot">
                         <option value="" selected="@(string.IsNullOrEmpty(currentSlot))">Tất cả Ca</option>
-                        <option value="Sáng" selected="@(currentSlot == "Sáng")">Sáng</option>
-                        <option value="Trưa" selected="@(currentSlot == "Trưa")">Trưa</option>
-                        <option value="Chiều" selected="@(currentSlot == "Chiều")">Chiều</option>
-                        <option value="Tối" selected="@(currentSlot == "Tối")">Tối</option>
+                        <option value="Ca sáng" selected="@(currentSlot == "Ca sáng")">Ca sáng</option>
+                        <option value="Ca trưa" selected="@(currentSlot == "Ca trưa")">Ca trưa</option>
+                        <option value="Ca chiều" selected="@(currentSlot == "Ca chiều")">Ca chiều</option>
+                        <option value="Ca tối" selected="@(currentSlot == "Ca tối")">Ca tối</option>
                     </select>
                 </div>
             </div>

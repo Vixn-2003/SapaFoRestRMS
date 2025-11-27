@@ -503,13 +503,40 @@
                                     } *@
                                     <div class="info-item">
                                         <i class="fas fa-users"></i>
-                                        <span>@table.GuestCount / @table.Capacity khách</span>
+
+                                        @if (isActive)
+                                        {
+                                            if (table.GuestCount > table.Capacity)
+                                            {
+                                                <span class="text-danger fw-bold"
+                                                      data-bs-toggle="tooltip"
+                                                      data-bs-placement="top"
+                                                      title="Số khách vượt quá sức chứa. Đây là bàn ghép.">
+
+                                                    @table.GuestCount / @table.Capacity khách
+                                                    <i class="fa-solid fa-people-group ms-1"></i>
+                                                    (Ghép bàn)
+
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span>@table.GuestCount / @table.Capacity khách</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">---</span>
+                                        }
                                     </div>
+
+
 
                                     <div class="info-item">
                                         <i class="fas fa-money-bill-wave"></i>
-                                        <span>@table.TotalAmount.ToString("N0") đ</span>
+                                        <span>@table.GrandTotal.ToString("N0") đ</span>
                                     </div>
+
 
                                 </div>
 

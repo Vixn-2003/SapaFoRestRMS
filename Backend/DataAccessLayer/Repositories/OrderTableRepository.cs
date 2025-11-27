@@ -205,25 +205,33 @@ namespace DataAccessLayer.Repositories
         }
 
         // [CHO NHÂN VIÊN] Lấy danh sách
-        public async Task<(IEnumerable<AssistanceRequest> Items, int TotalCount)> GetPendingRequestsForStaffAsync(int? areaId, int pageIndex, int pageSize)
+        public async Task<(IEnumerable<AssistanceRequest> Items, int TotalCount)>
+    GetPendingRequestsForStaffAsync(string? sort, int pageIndex, int pageSize)
         {
+            DateTime today = DateTime.Today;
+            DateTime tomorrow = today.AddDays(1);
+
             var query = _context.AssistanceRequests
                 .Include(r => r.Table)
-                    .ThenInclude(t => t.Area) // Include để lấy tên Bàn và Khu vực
-                .Where(r => r.Status == "Pending") // Chỉ lấy cái chưa xử lý
+                    .ThenInclude(t => t.Area) // để staff xem "Bàn A1-05 - Khu A1"
+                .Where(r => r.Status == "Pending"
+                         && r.RequestTime >= today
+                         && r.RequestTime < tomorrow)
                 .AsNoTracking();
 
-            // Lọc theo khu vực (nếu nhân viên chọn)
-            if (areaId.HasValue)
+            // ⭐ Sắp xếp theo yêu cầu
+            sort = sort?.ToLower();
+
+            query = sort switch
             {
-                query = query.Where(r => r.Table.AreaId == areaId.Value);
-            }
+                "oldest" => query.OrderBy(r => r.RequestTime),
+                _ => query.OrderByDescending(r => r.RequestTime) // default = newest
+            };
 
-            // Sắp xếp: Mới nhất lên đầu (theo yêu cầu của bạn)
-            query = query.OrderByDescending(r => r.RequestTime);
-
+            // ⭐ Tổng số dòng
             int totalCount = await query.CountAsync();
 
+            // ⭐ Phân trang
             var items = await query
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)
@@ -231,6 +239,7 @@ namespace DataAccessLayer.Repositories
 
             return (items, totalCount);
         }
+
 
         // [CHO NHÂN VIÊN] Lấy chi tiết
         public async Task<AssistanceRequest> GetRequestByIdAsync(int requestId)

@@ -22,13 +22,26 @@ namespace DataAccessLayer.Repositories
         public async Task<List<(Table Table, Reservation ActiveReservation)>> GetFilteredTablesWithStatusAsync(string? areaName, int? floor, string? searchString)
         {
             // 1. Khởi tạo Query, Include thêm thông tin Khách hàng (Customer -> User) để tìm kiếm
+            //var query = _context.Tables
+            //    .Include(t => t.Area)
+            //    .Include(t => t.ReservationTables)
+            //        .ThenInclude(rt => rt.Reservation)
+            //            .ThenInclude(r => r.Customer) // Include thêm Customer
+            //                .ThenInclude(c => c.User) // Include thêm User để lấy FullName/Phone
+            //    .AsQueryable();
+
             var query = _context.Tables
-                .Include(t => t.Area)
-                .Include(t => t.ReservationTables)
-                    .ThenInclude(rt => rt.Reservation)
-                        .ThenInclude(r => r.Customer) // Include thêm Customer
-                            .ThenInclude(c => c.User) // Include thêm User để lấy FullName/Phone
-                .AsQueryable();
+    .Include(t => t.Area)
+    .Include(t => t.ReservationTables)
+        .ThenInclude(rt => rt.Reservation)
+            .ThenInclude(r => r.Customer)
+                .ThenInclude(c => c.User)
+    .Include(t => t.ReservationTables)
+        .ThenInclude(rt => rt.Reservation)
+            .ThenInclude(r => r.Orders)                  // ⭐ THÊM
+                .ThenInclude(o => o.OrderDetails)        // ⭐ THÊM
+    .AsQueryable();
+
 
             // 2. Lọc theo Tầng & Khu vực (Giữ nguyên)
             if (floor.HasValue)
@@ -114,7 +127,8 @@ namespace DataAccessLayer.Repositories
                 var filterDate = parameters.ReservationDate.Value.Date;
                 query = query.Where(r => r.ReservationDate.Date == filterDate);
             }
-
+            var today = DateTime.Today;
+            query = query.Where(r => r.ReservationDate.Date <= today);
             // 2. Lọc theo TimeSlot (Nếu có chọn ca)
             if (!string.IsNullOrEmpty(parameters.TimeSlot))
             {
@@ -126,7 +140,7 @@ namespace DataAccessLayer.Repositories
 
             if (isFilteringAll)
             {
-                query = query.Where(r => r.Status != "Pending");
+                query = query.Where(r => r.Status != "Pending" && r.Status != "Success");
             }
             else
             {

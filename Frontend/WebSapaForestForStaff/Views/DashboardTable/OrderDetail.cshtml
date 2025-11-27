@@ -487,11 +487,10 @@
                 <header class="top-header d-flex justify-content-between align-items-center px-3 py-2">
     <div class="d-flex align-items-center gap-3 flex-grow-1">
 
-        <!-- Nút quay lại -->
-        <a href="javascript:history.back()" class="back-btn d-flex align-items-center">
-            <i class="fa-solid fa-arrow-left me-1"></i>
-            <span>Quay lại</span>
-        </a>
+      <a href="/DashboardTable/Index" class="back-btn d-flex align-items-center" id="backButton">
+    <i class="fa-solid fa-arrow-left me-1"></i>
+    <span>Quay lại</span>
+</a>
 
         <!-- Ô tìm kiếm -->
         <form method="get" action="@Url.Action("OrderDetail", new { id = tableId })"
@@ -746,6 +745,8 @@
     })))');
 
     window.__TABLE_ID__ = '@(ViewData["TableId"] ?? Model.TableId)';
+
+    
 </script>
 
 @* Gọi file JS riêng *@

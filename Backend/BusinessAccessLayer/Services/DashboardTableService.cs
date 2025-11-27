@@ -1,6 +1,6 @@
 ﻿using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.DTOs.OrderGuest;
-using BusinessAccessLayer.DTOs.OrderGuest.ListOrder; 
+using BusinessAccessLayer.DTOs.OrderGuest.ListOrder;
 using BusinessAccessLayer.Hubs;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Common;
@@ -21,7 +21,7 @@ namespace BusinessAccessLayer.Services
     {
         private readonly IDashboardTableRepository _dashboardRepo;
         private readonly IOrderTableRepository _orderTableRepo;
-        private readonly IUnitOfWork _unitOfWork; 
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IHubContext<ReservationHub> _hubContext;
         private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
 
@@ -74,9 +74,13 @@ namespace BusinessAccessLayer.Services
             ? (data.ActiveReservation.Customer?.User?.FullName ?? data.ActiveReservation.CustomerNameReservation)
             : null,
 
-                CustomerPhone = data.ActiveReservation != null
-            ? (data.ActiveReservation.Customer?.User?.Phone ?? data.ActiveReservation.Customer.User.Phone)
-            : null,
+                CustomerPhone = data.ActiveReservation?.Customer?.User?.Phone ?? null,
+
+                GrandTotal = data.ActiveReservation == null
+            ? 0
+            : data.ActiveReservation.Orders
+                  .SelectMany(o => o.OrderDetails)
+                  .Sum(od => od.Quantity * od.UnitPrice),
 
             }).ToList();
 
@@ -85,7 +89,7 @@ namespace BusinessAccessLayer.Services
             {
                 // Nếu status gửi lên là "Available", bạn có muốn bao gồm cả "Reserved" không?
                 // Nếu muốn tách biệt hoàn toàn thì giữ nguyên:
-                allTableDtos = allTableDtos.Where(t => t.Status == status).ToList();               
+                allTableDtos = allTableDtos.Where(t => t.Status == status).ToList();
             }
 
             // 4. Lấy tổng số lượng
@@ -437,7 +441,7 @@ namespace BusinessAccessLayer.Services
                     CreatedAt = DateTime.Now,
                     TotalAmount = 0,    // Tạm tính là 0
                     Status = "Pending",  // Trạng thái chờ,
-                    OrderType="Tại bàn"
+                    OrderType = "Tại bàn"
                 };
 
                 await _dashboardRepo.AddOrderAsync(currentOrder);
@@ -498,7 +502,7 @@ namespace BusinessAccessLayer.Services
                             {
                                 // 1. Cập nhật giá trị mới
                                 existingItem.Quantity = itemDto.Quantity;
-                                existingItem.Notes = itemDto.Note;                        
+                                existingItem.Notes = itemDto.Note;
 
                                 // 2. GỌI HÀM UPDATE REPO (QUAN TRỌNG)
                                 await _dashboardRepo.UpdateOrderDetailAsync(existingItem);
@@ -521,12 +525,12 @@ namespace BusinessAccessLayer.Services
                         break;
                 }
             }
-            
+
 
             // BƯỚC 4: LƯU CÁC THAY ĐỔI CỦA MÓN ĂN
             await _dashboardRepo.SaveChangesAsync();
         }
     }
-     
 
-    }
+
+}

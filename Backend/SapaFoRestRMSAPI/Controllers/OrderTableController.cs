@@ -274,9 +274,9 @@ namespace SapaFoRestRMSAPI.Controllers
         // [GET] Lấy danh sách yêu cầu (Có lọc Area, Phân trang)
         // URL: api/Assistance/Pending?areaId=1&page=1
         [HttpGet("Pending")]
-        public async Task<IActionResult> GetPending([FromQuery] int? areaId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetPending([FromQuery] string? sort, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var result = await _orderTableService.GetStaffPendingRequestsAsync(areaId, page, pageSize);
+            var result = await _orderTableService.GetStaffPendingRequestsAsync(sort, page, pageSize);
             return Ok(result);
         }
 

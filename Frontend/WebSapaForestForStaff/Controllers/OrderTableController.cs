@@ -94,7 +94,7 @@ namespace WebSapaFoRestForStaff.Controllers
         }
 
         // === THAY THẾ TOÀN BỘ HÀM INDEX CŨ BẰNG HÀM NÀY ===
-        public async Task<IActionResult> AssistanceList(int? areaId, int page = 1)
+        public async Task<IActionResult> AssistanceList(string? sort, int page = 1)
         {
             var httpClient = _httpClientFactory.CreateClient("BackendApi");
             int pageSize = 10;
@@ -106,12 +106,11 @@ namespace WebSapaFoRestForStaff.Controllers
                 ["pageSize"] = pageSize.ToString()
             };
 
-            if (areaId.HasValue)
-                queryParams.Add("areaId", areaId.Value.ToString());
+            if (!string.IsNullOrEmpty(sort))
+                queryParams.Add("sort", sort); // gửi sort = "newest" hoặc "oldest"
 
             var queryString = string.Join("&", queryParams.Select(kv => $"{kv.Key}={kv.Value}"));
 
-            // --- SỬ DỤNG _apiBaseUrl để đảm bảo có /api ---
             var apiUrl = $"{_apiBaseUrl}/api/OrderTable/Pending?{queryString}";
 
             // --- Chuẩn bị model mặc định ---
@@ -124,7 +123,6 @@ namespace WebSapaFoRestForStaff.Controllers
 
             try
             {
-                // --- Gọi API Pending ---
                 var response = await httpClient.GetAsync(apiUrl);
 
                 if (response.IsSuccessStatusCode)
@@ -146,9 +144,9 @@ namespace WebSapaFoRestForStaff.Controllers
                 TempData["ErrorMessage"] = "Lỗi kết nối: " + ex.Message;
             }
 
-            ViewData["CurrentAreaId"] = areaId;
             return View(resultModel);
         }
+
 
 
     }

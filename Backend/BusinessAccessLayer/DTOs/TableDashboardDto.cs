@@ -25,11 +25,14 @@ namespace BusinessAccessLayer.DTOs
 
         public DateTime? ReservationTime { get; set; }
 
-        // ✨ THÊM 2 TRƯỜNG NÀY ✨
+        //  THÊM 2 TRƯỜNG NÀY 
         public string? CustomerName { get; set; }
         public string? CustomerPhone { get; set; }
 
         public decimal TotalAmount { get; set; }
+
+        public decimal GrandTotal { get; set; }
+
 
     }
 }

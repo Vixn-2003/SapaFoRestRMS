@@ -366,13 +366,13 @@
     <div class="filter-card">
         <form asp-action="AssistanceList" method="get" class="row g-3 align-items-center">
 
-            
 
-            <div class="col-md-6">
-                <div class="search-box-wrapper">
-                    <i class="fa-solid fa-magnifying-glass text-secondary"></i>
-                    <input type="text" placeholder="Tìm theo tên bàn..."  style="cursor: not-allowed; opacity: 0.6;" title="Tính năng đang phát triển" />
-                </div>
+
+            <div class="col-md-2 text-end">
+                <select name="sort" class="form-select">
+                    <option value="newest" selected>Mới nhất</option>
+                    <option value="oldest">Cũ nhất</option>
+                </select>
             </div>
 
             <div class="col-md-2 text-end">
@@ -411,9 +411,9 @@
                     {
                         <tr data-id="@item.RequestId" id="req-row-@item.RequestId">
                             <td><div class="fw-bold fs-5">@item.TableName</div></td>
-                            <td>@item.AreaName</td>
+                            <td>@item.AreaName - Tầng: @item.Floor</td>
                             <td>
-                                <span class="fw-bold text-dark">@item.Note</span>
+                                <span class="fw-bold text-dark">@(string.IsNullOrEmpty(item.Note) ? "Khách cần hỗ trợ !" : item.Note)</span>
                             </td>
                             <td>
                                 <i class="fa-regular fa-clock text-muted me-1"></i>
@@ -430,7 +430,8 @@
                                         data-id="@item.RequestId"
                                         data-table="@item.TableName"
                                         data-area="@item.AreaName"
-                                        data-note="@item.Note"
+                                        data-floor="@item.Floor"
+                                        data-note="@(string.IsNullOrEmpty(item.Note) ? "Khách cần hỗ trợ !" : item.Note)"
                                         data-time="@item.RequestTime.ToLocalTime().ToString("HH:mm")"
                                         title="Xem & Xử lý">
                                     <i class="fas fa-arrow-right"></i>
@@ -554,21 +555,24 @@
         }
 
         // --- 3. MỞ MODAL & FILL DATA (Dùng Data Attributes từ Row) ---
-        function openDetailModal(btn) {
-            const id = btn.data('id');
-            const tableName = btn.data('table');
-            const areaName = btn.data('area');
-            const note = btn.data('note');
-            const time = btn.data('time');
+          function openDetailModal(btn) {
+        const tableName = btn.data('table');
+        const areaName = btn.data('area');
+        const floor = btn.data('floor');
+        const note = btn.data('note');
+        const time = btn.data('time');
 
-            $('#modalRequestId').val(id);
-            $('#modalTableName').text(tableName);
-            $('#modalAreaName').text(areaName);
-            $('#modalRequestTime').text(time);
-            $('#modalNote').text(note || "Khách cần hỗ trợ chung");
+        $('#modalTableName').text(tableName);
 
-            showModalUI();
-        }
+        // Gộp khu vực + tầng
+        $('#modalAreaName').text(`${areaName} - Tầng ${floor}`);
+
+        $('#modalRequestTime').text(time);
+        $('#modalNote').text(note || "Khách cần hỗ trợ !");
+
+        showModalUI();
+    }
+
 
         // --- 4. XỬ LÝ YÊU CẦU (GỌI API COMPLETE) ---
         function completeRequest() {
@@ -634,7 +638,7 @@
                         <button class="btn-detail-view btn-open-modal mx-auto"
                                 data-id="${data.requestId}"
                                 data-table="${data.tableName}"
-                                data-area="${data.areaName}"
+                                data-area="${data.areaName} - Tầng: ${data.floor}"
                                 data-note="${data.note}"
                                 data-time="${data.time}" title="Xem & Xử lý">
                             <i class="fas fa-arrow-right"></i>

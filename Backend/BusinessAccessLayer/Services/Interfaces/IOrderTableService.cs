@@ -53,7 +53,8 @@ namespace BusinessAccessLayer.Services.Interfaces
         /// <param name="page"></param>
         /// <param name="pageSize"></param>
         /// <returns></returns>
-        Task<BusinessAccessLayer.DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>> GetStaffPendingRequestsAsync(int? areaId, int page, int pageSize);
+        Task<DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>> GetStaffPendingRequestsAsync(
+             string? sort, int page, int pageSize);
         Task CompleteAssistanceRequestAsync(int requestId);
     }
 }

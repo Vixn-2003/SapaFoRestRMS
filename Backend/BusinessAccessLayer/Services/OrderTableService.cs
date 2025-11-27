@@ -530,8 +530,6 @@ namespace BusinessAccessLayer.Services
             return result; // Trả về DTO
         }
 
-
-
         public async Task<bool> CancelOrderItemAsync(int orderDetailId)
         {
             var item = await _context.OrderDetails
@@ -573,61 +571,29 @@ namespace BusinessAccessLayer.Services
 
             return true;
         }
-
-
-        // Gọi xử lý sự cố
-        // 
-
-        //public async Task RequestAssistanceAsync(AssistanceRequestDto requestDto)
-        //{
-        //    // 1. Kiểm tra Reservation
-        //    var reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(requestDto.TableId);
-        //    if (reservation == null)
-        //    {
-        //        throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
-        //    }
-
-        //    // 2. (CHỐNG SPAM) Kiểm tra 
-        //    bool alreadyPending = await _orderTableRepository.
-        //        HasPendingAssistanceRequestAsync(requestDto.TableId);
-        //    if (alreadyPending)
-        //    {
-        //        throw new Exception("Bạn đã gửi yêu cầu trước đó. Nhân viên sẽ đến ngay!");
-        //    }
-
-        //    // 3. Tạo yêu cầu mới
-        //    var newRequest = new AssistanceRequest
-        //    {
-        //        TableId = requestDto.TableId,
-        //        ReservationId = reservation.ReservationId,
-        //        RequestTime = DateTime.UtcNow,
-        //        Status = "Pending",
-        //        Note = requestDto.Note,
-        //        HandledTime = null
-        //    };
-
-        //    await _orderTableRepository.CreateAssistanceRequestAsync(newRequest);
-        //    await _context.SaveChangesAsync();
-
-        //    // (SignalR logic...)
-        //}
-
-
+       
         public async Task RequestAssistanceAsync(AssistanceRequestDto requestDto)
         {
-            // 1. Kiểm tra Reservation (Giữ nguyên code của bạn)
-            var reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(requestDto.TableId);
-            if (reservation == null) throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
+            Reservation? reservation = null;
 
-            // 2. CHỐNG SPAM (Giữ nguyên code của bạn)
+            if (requestDto.UseReservation)
+            {
+                reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(requestDto.TableId);
+                if (reservation == null)
+                {
+                    throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
+                }
+            }
+
+            // CHỐNG SPAM vẫn giữ nguyên
             bool alreadyPending = await _orderTableRepository.HasPendingAssistanceRequestAsync(requestDto.TableId);
             if (alreadyPending) throw new Exception("Bạn đã gửi yêu cầu trước đó. Nhân viên sẽ đến ngay!");
 
-            // 3. Tạo yêu cầu mới (Giữ nguyên code của bạn)
+            // Tạo yêu cầu mới (dù có reservation hay không)
             var newRequest = new AssistanceRequest
             {
                 TableId = requestDto.TableId,
-                ReservationId = reservation.ReservationId,
+                ReservationId = reservation?.ReservationId, // null nếu không có reservation
                 RequestTime = DateTime.UtcNow,
                 Status = "Pending",
                 Note = requestDto.Note,
@@ -635,13 +601,9 @@ namespace BusinessAccessLayer.Services
             };
 
             await _orderTableRepository.CreateAssistanceRequestAsync(newRequest);
-
-            // Gọi SaveChanges (từ Repo hoặc Context tùy cấu trúc của bạn)
             await _context.SaveChangesAsync();
 
-            // === 4. SIGNALR LOGIC (THÊM MỚI VÀO ĐÂY) ===
-            // Lấy thông tin bàn (Tên bàn, Khu vực) để hiển thị thông báo đẹp
-            // (Giả sử bạn có hàm GetTableByIdAsync trong Repo, hoặc query nhanh)
+            // SIGNALR vẫn gửi thông báo bình thường
             var tableInfo = await _context.Tables
                 .Include(t => t.Area)
                 .FirstOrDefaultAsync(t => t.TableId == requestDto.TableId);
@@ -649,7 +611,6 @@ namespace BusinessAccessLayer.Services
             var tableName = tableInfo?.TableNumber.ToString() ?? requestDto.TableId.ToString();
             var areaName = tableInfo?.Area?.AreaName ?? "Không xác định";
 
-            // Bắn thông báo đến nhóm "Employees"
             await _hubContext.Clients.Group("Employees").SendAsync("ReceiveNewRequest", new
             {
                 requestId = newRequest.RequestId,
@@ -731,15 +692,19 @@ namespace BusinessAccessLayer.Services
 
 
         // 1. HÀM LẤY DANH SÁCH (Cho màn hình nhân viên)
-        public async Task<DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>> GetStaffPendingRequestsAsync(int? areaId, int page, int pageSize)
+        public async Task<DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>> GetStaffPendingRequestsAsync(
+     string? sort, int page, int pageSize)
         {
-            var (items, totalCount) = await _orderTableRepository.GetPendingRequestsForStaffAsync(areaId, page, pageSize);
+            // Bỏ areaId, dùng sort (newest/oldest)
+            var (items, totalCount) = await _orderTableRepository.GetPendingRequestsForStaffAsync(
+                sort, page, pageSize);
 
             var dtos = items.Select(x => new AssistanceResponseDto
             {
                 RequestId = x.RequestId,
                 TableName = x.Table != null ? $"Bàn {x.Table.TableNumber}" : "Bàn ?",
                 AreaName = x.Table?.Area?.AreaName ?? "N/A",
+                Floor = x.Table?.Area?.Floor ?? 0,
                 Note = x.Note,
                 RequestTime = x.RequestTime,
                 TimeAgo = CalculateTimeAgo(x.RequestTime) // Hàm phụ tính thời gian
@@ -753,6 +718,7 @@ namespace BusinessAccessLayer.Services
                 PageSize = pageSize
             };
         }
+
 
         // 2. HÀM XỬ LÝ YÊU CẦU (Nhân viên ấn "Xong")
         public async Task CompleteAssistanceRequestAsync(int requestId)
@@ -852,6 +818,9 @@ namespace BusinessAccessLayer.Services
 
             [StringLength(500)]
             public string? Note { get; set; }
+
+            public bool UseReservation { get; set; } = true; // mặc định là true
+
         }
         // DTO này chứa toàn bộ dữ liệu cho trang Menu
         public class MenuPageViewModel

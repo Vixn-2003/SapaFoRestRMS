@@ -78,8 +78,8 @@ namespace WebSapaForestForStaff.Controllers
         public async Task<IActionResult> ListOrder(
      string? searchTerm,
      string? status,
-     DateTime? filterDate, // ✨ MỚI
-     string? filterSlot,   // ✨ MỚI
+     DateTime? filterDate, 
+     string? filterSlot,   
      int page = 1)
         {
             var httpClient = _httpClientFactory.CreateClient("BackendApi");
@@ -96,7 +96,7 @@ namespace WebSapaForestForStaff.Controllers
 
             // ⭐️ THÊM THAM SỐ NGÀY & SLOT VÀO URL ⭐️
             if (filterDate.HasValue)
-                queryParams.Add("reservationDate", filterDate.Value.ToString("yyyy-MM-dd")); // Tên param phải khớp với API Backend (ReservationQueryParameters)
+                queryParams.Add("reservationDate", filterDate.Value.ToString("yyyy-MM-dd")); 
 
             if (!string.IsNullOrEmpty(filterSlot))
                 queryParams.Add("timeSlot", filterSlot); // Tên param phải khớp với API Backend
@@ -148,7 +148,6 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         // Action này sẽ nhận 'id' (chính là tableId) từ link ở Bước 1
-        // Sửa lại Action OrderDetail
         public async Task<IActionResult> OrderDetail(int id, int? categoryId, string? searchString)
         {
             var httpClient = _httpClientFactory.CreateClient("BackendApi");
@@ -170,7 +169,6 @@ namespace WebSapaForestForStaff.Controllers
             string queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
 
             // 2. Ghép vào URL API (Lưu ý: Đảm bảo đúng đường dẫn API của bạn)
-            // API của bạn có dạng: .../GetStaffOrder/{id}?categoryId=1&searchString=abc
             var apiUrl = $"https://localhost:7096/api/DashboardTable/MenuOrder/{id}{queryString}";
 
             StaffOrderScreenDto model = new StaffOrderScreenDto();
