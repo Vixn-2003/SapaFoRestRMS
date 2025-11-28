@@ -200,6 +200,7 @@ builder.Services.AddScoped<IUnitService, UnitService>();
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
 builder.Services.AddScoped<IKitchenDisplayService, KitchenDisplayService>();
+builder.Services.AddScoped<IWaiterOrderTrackingService, WaiterOrderTrackingService>();
 
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
 
@@ -370,8 +371,15 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
             "http://localhost:5054",    // 👈 Frontend bạn đang chạy 
             "http://localhost:5123",    // Razor nội bộ
-                                        "http://192.168.1.47:5123", // IP Razor Wifi nhà
-                                        "http://192.168.1.47:5180"  // Swagger wifi nhà
+            "https://localhost:7096",   // 👈 Backend HTTPS localhost
+            "http://localhost:5180",    // Backend HTTP localhost
+            "http://192.168.1.47:5123", // IP Razor Wifi nhà
+            "http://192.168.1.47:5180",  // Swagger wifi nhà
+            "http://192.168.1.97:5054",  // 👈 Frontend IP mới
+            "http://192.168.1.97:5180",  // 👈 Backend HTTP IP mới
+            "https://192.168.1.97:7096", // 👈 Backend HTTPS IP mới (PORT CHÍNH)
+            "http://192.168.1.97:7096",  // 👈 Backend HTTP IP mới (nếu dùng HTTP)
+            "http://192.168.1.97:5123"   // 👈 Razor IP mới
                                         //   "http://192.168.105.100:5123", // IP Razor
                                         //  "http://192.168.105.100:5180"  // Swagger
 
