@@ -1,5 +1,6 @@
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Enums;
 using DomainAccessLayer.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -52,8 +53,36 @@ public class ReceiptService : IReceiptService
         // Generate order code (Controller will build same format when returning file)
         var orderCode = $"RMS{orderId:D6}";
 
-        // Calculate amounts
-        var subtotal = order.OrderDetails?.Sum(od => od.UnitPrice * od.Quantity) ?? 0;
+        // Calculate amounts with new billing logic
+        decimal subtotal = 0;
+        if (order.OrderDetails != null && order.OrderDetails.Any())
+        {
+            foreach (var od in order.OrderDetails)
+            {
+                // Skip removed items
+                if (od.Status == "Removed")
+                {
+                    continue;
+                }
+
+                int billableQuantity;
+                
+                // Apply billing logic based on item type
+                if (od.MenuItem?.BillingType == ItemBillingType.ConsumptionBased)
+                {
+                    // Consumption-based items: charge for quantity used
+                    billableQuantity = od.QuantityUsed ?? od.Quantity;
+                }
+                else
+                {
+                    // Kitchen-prepared items: always charge for full quantity ordered
+                    billableQuantity = od.Quantity;
+                }
+                
+                subtotal += od.UnitPrice * billableQuantity;
+            }
+        }
+        
         var vatAmount = subtotal * 0.1m; // 10% VAT
         var serviceFee = subtotal * 0.05m; // 5% service fee
         

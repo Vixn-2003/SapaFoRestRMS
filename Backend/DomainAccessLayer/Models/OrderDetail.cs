@@ -13,6 +13,14 @@ public partial class OrderDetail
 
     public int Quantity { get; set; }
 
+    /// <summary>
+    /// Số lượng thực tế khách sử dụng (dành cho ConsumptionBased items)
+    /// Null = chưa được xác nhận bởi khách
+    /// Nếu MenuItem.BillingType = ConsumptionBased thì tính tiền theo QuantityUsed
+    /// Nếu MenuItem.BillingType = KitchenPrepared thì tính tiền theo Quantity (100%)
+    /// </summary>
+    public int? QuantityUsed { get; set; }
+
     public decimal UnitPrice { get; set; }
 
     public string? Status { get; set; }

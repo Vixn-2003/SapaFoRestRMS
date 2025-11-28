@@ -161,6 +161,93 @@ Khách đặt món → Waiter ghi order → Bếp làm món
 
 ---
 
+### 2.3. 🪑 Quy Tắc: Giải Phóng Bàn Khi Thanh Toán
+
+**Nguyên tắc quan trọng:**
+> **Khi thanh toán được khởi tạo hoặc đơn hàng đang được thanh toán, bàn sẽ được giải phóng NGAY LẬP TỨC (Table Status = "Available") để phục vụ khách hàng tiếp theo.**
+
+**Timeline giải phóng bàn:**
+
+```
+[Khách ăn xong] → [Ra quầy thanh toán] → [Thu ngân xác nhận món] → [Khách nhấn "Thanh toán"]
+                                                                              ↓
+                                                                    🔓 BÀN ĐƯỢC GIẢI PHÓNG NGAY
+                                                                       (Table Status = Available)
+                                                                              ↓
+                    [Waiter có thể dọn bàn ngay] ← ← ← ← ← ← ← [Thu ngân xử lý thanh toán]
+                              ↓
+                    [Bàn sẵn sàng cho khách mới]
+                              ↓
+                    [Hệ thống cho phép đặt bàn mới]
+```
+
+**Tại sao giải phóng bàn sớm?**
+
+1. **Tối ưu hóa hiệu suất phục vụ:**
+   - ✅ Khách đã ăn xong và đang thanh toán → Không cần bàn nữa
+   - ✅ Waiter có thể bắt đầu dọn bàn ngay khi thấy khách ở quầy
+   - ✅ Bàn sẵn sàng cho khách tiếp theo nhanh hơn
+
+2. **Tăng table turnover rate:**
+   - ✅ Giảm thời gian bàn bị chiếm giữ không cần thiết
+   - ✅ Phục vụ được nhiều khách hơn trong cùng thời gian
+   - ✅ Tối đa hóa doanh thu cho nhà hàng
+
+3. **Cải thiện trải nghiệm khách hàng:**
+   - ✅ Khách mới không phải chờ lâu để có bàn
+   - ✅ Quy trình phục vụ nhanh và hiệu quả hơn
+
+**Trạng thái bàn theo Order Status:**
+
+| Order Status | Table Status | Thời điểm | Ghi chú |
+|--------------|--------------|-----------|---------|
+| `waiting-confirmation` | `Occupied` | Khách đang ăn | Bàn đang được sử dụng |
+| `confirmed` | `Occupied` | Khách đã xác nhận món | Khách đang ở quầy, chuẩn bị thanh toán |
+| **`pending-payment`** | **`Available`** | **Bắt đầu thanh toán** | **🔓 BÀN ĐƯỢC GIẢI PHÓNG** |
+| `paid` | `Available` | Đã thanh toán xong | Bàn vẫn available |
+| `partially-paid` | `Available` | Thanh toán 1 phần | Bàn vẫn available |
+| `completed` | `Available` | Hoàn tất | Bàn vẫn available |
+
+**Lưu ý quan trọng cho Thu Ngân:**
+
+- 🔓 **Bàn được giải phóng TỰ ĐỘNG** khi bạn bấm nút "Thanh toán" (khởi tạo payment)
+- ⚠️ **KHÔNG CẦN** thao tác thủ công để giải phóng bàn
+- ✅ **Waiter sẽ thấy** bàn có trạng thái "Available" và có thể bắt đầu dọn ngay
+- 📱 **Hệ thống tự động** thông báo cho Waiter về việc bàn đã sẵn sàng để dọn
+
+**Workflow thực tế:**
+
+```
+Thu Ngân:
+1. Xem đơn hàng (Order Status = "waiting-confirmation")
+2. Xác nhận món với khách
+3. Khách đồng ý → Bấm "Khách đã xác nhận" (Status → "confirmed")
+4. Bấm nút "Thanh toán" → Chọn phương thức
+   
+   → 🔓 BÀN TỰ ĐỘNG GIẢI PHÓNG TẠI ĐÂY (Status → "pending-payment", Table → "Available")
+   
+5. Xử lý thanh toán (Cash/QR/Split Bill)
+6. Hoàn tất thanh toán
+
+Waiter (song song):
+1. Thấy bàn status = "Available" trên dashboard
+2. Ra bàn dọn dẹp ngay (không cần chờ khách trả tiền xong)
+3. Bàn sẵn sàng cho khách mới
+```
+
+**Các câu hỏi thường gặp:**
+
+**Q: Nếu khách thanh toán lâu (QR không quét được), bàn có bị chiếm lại không?**  
+A: Không. Bàn đã được giải phóng rồi. Khách đang thanh toán ở quầy, không ảnh hưởng đến bàn.
+
+**Q: Nếu cần cancel payment, bàn có quay lại "Occupied" không?**  
+A: Không. Bàn vẫn "Available" vì khách đã ăn xong. Nếu khách muốn ngồi lại, tạo order mới cho bàn đó.
+
+**Q: Waiter có thể dọn bàn khi khách vẫn đang thanh toán không?**  
+A: Có. Đó chính là mục đích của quy tắc này - tối ưu hóa thời gian. Khách đã ăn xong và ra quầy rồi.
+
+---
+
 ## 3. Các Bước Trong Luồng Thanh Toán
 
 ### 2.1. Sơ Đồ Tổng Quan

@@ -3,6 +3,7 @@ using BusinessAccessLayer.Constants;
 using BusinessAccessLayer.DTOs.Payment;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Enums;
 using DomainAccessLayer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -175,6 +176,44 @@ public class PaymentService : IPaymentService
 
         var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
         
+        // 🔓 GIẢI PHÓNG BÀN NGAY KHI BẮT ĐẦU THANH TOÁN
+        try
+        {
+            var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+            if (tables != null && tables.Any())
+            {
+                foreach (var table in tables)
+                {
+                    table.Status = "Available";
+                    await _unitOfWork.Tables.UpdateAsync(table);
+                    
+                    // Log table release
+                    await _auditLogService.LogEventAsync(
+                        eventType: "table_released",
+                        entityType: "Table",
+                        entityId: table.TableId,
+                        description: $"Bàn {table.TableNumber} được giải phóng khi bắt đầu thanh toán cho Order {request.OrderId}",
+                        userId: null,
+                        ct: ct
+                    );
+                }
+                
+                await _unitOfWork.Tables.SaveAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the payment - table release is secondary
+            await _auditLogService.LogEventAsync(
+                eventType: "table_release_failed",
+                entityType: "Order",
+                entityId: request.OrderId,
+                description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                userId: null,
+                ct: ct
+            );
+        }
+        
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
 
@@ -264,12 +303,17 @@ public class PaymentService : IPaymentService
 
             if (confirmed.IsRemoved)
             {
+                // Món bị hủy: set cả Quantity và QuantityUsed về 0
                 detail.Quantity = 0;
+                detail.QuantityUsed = 0;
                 detail.Status = "Removed";
             }
             else
             {
-                detail.Quantity = confirmed.QuantityUsed < 0 ? 0 : confirmed.QuantityUsed;
+                // ✅ FIX BUG: KHÔNG ghi đè Quantity (SL đặt)
+                // Chỉ cập nhật QuantityUsed (SL thực tế khách dùng)
+                // Giữ nguyên detail.Quantity (đây là SL ban đầu đặt)
+                detail.QuantityUsed = confirmed.QuantityUsed < 0 ? 0 : confirmed.QuantityUsed;
                 detail.Status = "Confirmed";
             }
         }
@@ -363,11 +407,36 @@ public class PaymentService : IPaymentService
     /// </summary>
     private void CalculateOrderAmounts(Order order, OrderDto orderDto)
     {
-        // Tính subtotal từ OrderDetails
+        // Tính subtotal từ OrderDetails với logic mới
         decimal subtotal = 0;
         if (order.OrderDetails != null && order.OrderDetails.Any())
         {
-            subtotal = order.OrderDetails.Sum(od => od.UnitPrice * od.Quantity);
+            foreach (var od in order.OrderDetails)
+            {
+                // Bỏ qua món đã bị xóa
+                if (od.Status == "Removed")
+                {
+                    continue;
+                }
+
+                int billableQuantity;
+                
+                // ✅ LOGIC MỚI: Phân biệt 2 loại món
+                if (od.MenuItem?.BillingType == ItemBillingType.ConsumptionBased)
+                {
+                    // (A) Món tiêu hao: Tính tiền theo SL thực tế khách dùng
+                    // Nếu chưa confirm (QuantityUsed = null), fallback về Quantity
+                    billableQuantity = od.QuantityUsed ?? od.Quantity;
+                }
+                else
+                {
+                    // (B) Món bếp chế biến: LUÔN tính theo SL đặt (100%)
+                    // Bếp đã nấu thì phải thanh toán đủ
+                    billableQuantity = od.Quantity;
+                }
+                
+                subtotal += od.UnitPrice * billableQuantity;
+            }
         }
 
         orderDto.Subtotal = subtotal;
@@ -585,6 +654,44 @@ public class PaymentService : IPaymentService
                 null,
                 ct
             );
+
+            // 🔓 GIẢI PHÓNG BÀN SAU KHI THANH TOÁN THÀNH CÔNG
+            try
+            {
+                var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+                if (tables != null && tables.Any())
+                {
+                    foreach (var table in tables)
+                    {
+                        table.Status = "Available";
+                        await _unitOfWork.Tables.UpdateAsync(table);
+                        
+                        // Log table release
+                        await _auditLogService.LogEventAsync(
+                            eventType: "table_released",
+                            entityType: "Table",
+                            entityId: table.TableId,
+                            description: $"Bàn {table.TableNumber} được giải phóng sau thanh toán tiền mặt cho Order {request.OrderId}",
+                            userId: userId,
+                            ct: ct
+                        );
+                    }
+                    
+                    await _unitOfWork.Tables.SaveAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the payment - table release is secondary
+                await _auditLogService.LogEventAsync(
+                    eventType: "table_release_failed",
+                    entityType: "Order",
+                    entityId: request.OrderId,
+                    description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                    userId: userId,
+                    ct: ct
+                );
+            }
 
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
@@ -950,6 +1057,44 @@ public class PaymentService : IPaymentService
                 ct
             );
 
+            // 🔓 GIẢI PHÓNG BÀN KHI BẮT ĐẦU SPLIT BILL
+            try
+            {
+                var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+                if (tables != null && tables.Any())
+                {
+                    foreach (var table in tables)
+                    {
+                        table.Status = "Available";
+                        await _unitOfWork.Tables.UpdateAsync(table);
+                        
+                        // Log table release
+                        await _auditLogService.LogEventAsync(
+                            eventType: "table_released",
+                            entityType: "Table",
+                            entityId: table.TableId,
+                            description: $"Bàn {table.TableNumber} được giải phóng khi bắt đầu split bill cho Order {request.OrderId}",
+                            userId: userId,
+                            ct: ct
+                        );
+                    }
+                    
+                    await _unitOfWork.Tables.SaveAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the payment - table release is secondary
+                await _auditLogService.LogEventAsync(
+                    eventType: "table_release_failed",
+                    entityType: "Order",
+                    entityId: request.OrderId,
+                    description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                    userId: userId,
+                    ct: ct
+                );
+            }
+
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
 
@@ -1139,6 +1284,44 @@ public class PaymentService : IPaymentService
 
         // Trigger post-payment actions
         await TriggerPostPaymentActionsAsync(request.OrderId, transaction.TransactionId, ct);
+
+        // 🔓 GIẢI PHÓNG BÀN SAU KHI XÁC NHẬN THANH TOÁN THÀNH CÔNG
+        try
+        {
+            var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+            if (tables != null && tables.Any())
+            {
+                foreach (var table in tables)
+                {
+                    table.Status = "Available";
+                    await _unitOfWork.Tables.UpdateAsync(table);
+                    
+                    // Log table release
+                    await _auditLogService.LogEventAsync(
+                        eventType: "table_released",
+                        entityType: "Table",
+                        entityId: table.TableId,
+                        description: $"Bàn {table.TableNumber} được giải phóng sau xác nhận thanh toán cho Order {request.OrderId}",
+                        userId: userId,
+                        ct: ct
+                    );
+                }
+                
+                await _unitOfWork.Tables.SaveAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the payment - table release is secondary
+            await _auditLogService.LogEventAsync(
+                eventType: "table_release_failed",
+                entityType: "Order",
+                entityId: request.OrderId,
+                description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                userId: userId,
+                ct: ct
+            );
+        }
 
         // Unlock order
         await UnlockOrderAsync(request.OrderId, ct);

@@ -124,6 +124,10 @@ var transaction = new Transaction
     SessionId = sessionId
 };
 // Order vẫn ở trạng thái "Confirmed" hoặc chuyển sang "Pending-Payment"
+
+// 🔓 Giải phóng bàn để phục vụ khách tiếp theo
+table.Status = "Available";
+await _unitOfWork.Tables.UpdateAsync(table);
 ```
 
 **Frontend hiển thị:**
@@ -131,6 +135,11 @@ var transaction = new Transaction
 Status: "Chờ thanh toán"
 Badge: bg-info text-dark (Xanh nhạt)
 ```
+
+**📌 Table Status Change:**
+- ⚠️ **QUAN TRỌNG:** Khi thanh toán được khởi tạo, bàn sẽ được **giải phóng ngay lập tức** (`Table.Status = "Available"`)
+- **Lý do:** Cho phép bàn phục vụ khách hàng tiếp theo ngay sau khi khách hiện tại bắt đầu thanh toán
+- Khách đã ăn xong và đang thanh toán → Bàn có thể dọn và sẵn sàng cho khách mới
 
 **Hành động tiếp theo:**
 - ✅ Cashier xác nhận thanh toán thành công → `Paid`
@@ -196,6 +205,8 @@ transaction.Status = "Paid";
 transaction.CompletedAt = DateTime.UtcNow;
 order.Status = "Paid";
 await TriggerPostPaymentActionsAsync(orderId, transactionId);
+
+// Lưu ý: Bàn đã được giải phóng từ lúc bắt đầu thanh toán (Pending-Payment)
 ```
 
 **Frontend hiển thị:**
@@ -204,9 +215,14 @@ Status: "Đã thanh toán"
 Badge: bg-success (Xanh lá)
 ```
 
+**📌 Table Status:**
+- ✅ Bàn đã được giải phóng (`Table.Status = "Available"`) từ khi thanh toán được khởi tạo
+- Bàn có thể được dọn dẹp và phục vụ khách hàng mới ngay lập tức
+
 **Hành động tiếp theo:**
 - ✅ Cashier in/gửi hóa đơn cho khách
-- ✅ Waiter dọn bàn → `Completed`
+- ✅ Waiter dọn bàn và sẵn sàng phục vụ khách mới
+- ✅ Order chuyển sang `Completed` khi waiter xác nhận hoàn tất
 - 🔒 Không thể chỉnh sửa hay hủy đơn
 
 ---
@@ -219,7 +235,7 @@ Badge: bg-success (Xanh lá)
 **Điều kiện:**
 - Order đã `Paid`
 - Waiter xác nhận đã dọn bàn xong
-- Table trở về trạng thái `Available`
+- Table đã ở trạng thái `Available` (được giải phóng từ lúc thanh toán)
 
 **Người thực hiện:** Waiter
 
@@ -227,7 +243,7 @@ Badge: bg-success (Xanh lá)
 ```csharp
 // Backend/BusinessAccessLayer/Services/TableService.cs
 order.Status = "Completed";
-table.Status = "Available";
+// Lưu ý: table.Status đã = "Available" từ trước (khi bắt đầu thanh toán)
 ```
 
 **Frontend hiển thị:**
@@ -235,6 +251,10 @@ table.Status = "Available";
 Status: "Hoàn tất"
 Badge: bg-success (Xanh lá)
 ```
+
+**📌 Table Status:**
+- ℹ️ Bàn đã được giải phóng từ khi thanh toán được khởi tạo (status `Pending-Payment`)
+- Bước này chỉ đánh dấu order là hoàn tất, không thay đổi trạng thái bàn
 
 **Hành động tiếp theo:**
 - 📊 Dữ liệu được archive/báo cáo
@@ -277,6 +297,88 @@ Badge: bg-danger (Đỏ)
 - 📝 Log vào OrderHistory với lý do
 - 🔓 Unlock bàn nếu đã lock
 - 🔒 Không thể khôi phục (permanent)
+
+---
+
+## 🪑 Quản Lý Trạng Thái Bàn (Table Status Management)
+
+### ⚡ Business Rule: Giải Phóng Bàn Khi Thanh Toán
+
+**Nguyên tắc quan trọng:**
+> **Khi thanh toán được khởi tạo hoặc đơn hàng đang được thanh toán, bàn sẽ được giải phóng ngay lập tức để phục vụ khách hàng tiếp theo.**
+
+### 📊 Bảng Thay Đổi Trạng Thái Bàn
+
+| Order Status | Table Status | Thời điểm thay đổi | Lý do |
+|--------------|--------------|-------------------|-------|
+| `Pending` | `Occupied` | Waiter tạo order | Khách đang ngồi và chưa ăn xong |
+| `Confirmed` | `Occupied` | Cashier xác nhận món | Khách đã ăn xong, đang kiểm tra bill |
+| **`Pending-Payment`** | **`Available`** | **Cashier khởi tạo thanh toán** | **🔓 Giải phóng bàn - khách đã ăn xong** |
+| `Paid` | `Available` | Thanh toán hoàn tất | Bàn vẫn available (đã giải phóng từ trước) |
+| `PartiallyPaid` | `Available` | Split bill bắt đầu | Bàn vẫn available (đã giải phóng từ trước) |
+| `Completed` | `Available` | Waiter xác nhận hoàn tất | Bàn vẫn available (đã giải phóng từ trước) |
+| `Cancelled` | `Available` | Order bị hủy | Giải phóng bàn |
+
+### 🎯 Logic và Lý Do
+
+**1. Tại sao giải phóng bàn khi bắt đầu thanh toán?**
+- ✅ Khách đã ăn xong và đang thanh toán → Không cần giữ bàn nữa
+- ✅ Tối ưu hóa việc phục vụ: Waiter có thể bắt đầu dọn bàn ngay
+- ✅ Bàn sẵn sàng cho khách hàng tiếp theo nhanh hơn
+- ✅ Tăng hiệu suất sử dụng bàn (table turnover rate)
+
+**2. Luồng hoạt động thực tế:**
+```
+[Khách ăn xong] → [Gọi thu ngân] → [Xác nhận món] → [Bắt đầu thanh toán]
+                                                              ↓
+                                                    🔓 BÀN ĐƯỢC GIẢI PHÓNG
+                                                              ↓
+[Waiter bắt đầu dọn bàn] ← ← ← ← ← ← ← ← ← ← ← [Thu ngân xử lý thanh toán]
+         ↓
+[Bàn sẵn sàng cho khách mới]
+```
+
+**3. Implementation trong code:**
+
+```csharp
+// Backend/BusinessAccessLayer/Services/PaymentService.cs
+
+// Khi khởi tạo thanh toán (bất kỳ phương thức nào)
+public async Task<TransactionDto> InitiatePaymentAsync(...)
+{
+    // ... validate order ...
+    
+    // Tạo transaction
+    var transaction = new Transaction { ... };
+    await _unitOfWork.Payments.SaveTransactionAsync(transaction);
+    
+    // 🔓 GIẢI PHÓNG BÀN NGAY TẠI ĐÂY
+    var table = await _unitOfWork.Tables.GetTableByOrderIdAsync(orderId);
+    if (table != null)
+    {
+        table.Status = "Available";
+        await _unitOfWork.Tables.UpdateAsync(table);
+        
+        // Log table release
+        await _auditLogService.LogEventAsync(
+            "table_released",
+            "Table",
+            table.TableId,
+            $"Bàn được giải phóng khi bắt đầu thanh toán cho Order {orderId}",
+            null, userId, null, ct
+        );
+    }
+    
+    return transaction;
+}
+```
+
+### ⚠️ Lưu Ý Quan Trọng
+
+1. **Bàn được giải phóng NGAY KHI THANH TOÁN BẮT ĐẦU**, không phải khi thanh toán hoàn tất
+2. **Order Status `Paid` và `Completed`** không làm thay đổi table status (vì đã thay đổi từ trước)
+3. **Waiter có thể bắt đầu dọn bàn ngay** khi thấy khách đang ở quầy thu ngân
+4. **Hệ thống cho phép đặt bàn mới** ngay khi table status = "Available"
 
 ---
 
