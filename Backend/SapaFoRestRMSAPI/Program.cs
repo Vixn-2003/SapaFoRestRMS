@@ -73,7 +73,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title = "CellPhoneShop API",
+        Title = "SapaFoRestSMS API",
         Version = "v1"
     });
 
@@ -116,7 +116,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.AccessDeniedPath = "/Auth/AccessDenied";
 
     // Tên của cookie lưu trữ thông tin đăng nhập
-    options.Cookie.Name = "CellPhoneShop.Auth";
+    options.Cookie.Name = "SapaFoRestRMS.Auth";
 
     // Cookie chỉ cho server đọc (client JS không đọc được) → tăng bảo mật
     options.Cookie.HttpOnly = true;
@@ -211,6 +211,8 @@ builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<IReservationDepositRepository, ReservationDepositRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+
 builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 

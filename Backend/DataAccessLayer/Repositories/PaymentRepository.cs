@@ -217,5 +217,14 @@ public class PaymentRepository : IPaymentRepository
     {
         await _context.Set<OrderHistory>().AddAsync(history);
     }
+    
+    public async Task<OrderDetail?> GetOrderDetailByIdAsync(int orderDetailId)
+    {
+        return await _context.Set<OrderDetail>()
+            .Include(od => od.MenuItem)
+            .Include(od => od.Combo)
+            .Include(od => od.Order)
+            .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
+    }
 }
 

@@ -66,5 +66,10 @@ public interface IPaymentRepository : IRepository<Order>
     Task<Transaction?> GetTransactionByCodeAsync(string transactionCode);
 
     Task AddOrderHistoryAsync(OrderHistory history);
+    
+    /// <summary>
+    /// Lấy OrderDetail theo ID (bao gồm MenuItem và Combo)
+    /// </summary>
+    Task<OrderDetail?> GetOrderDetailByIdAsync(int orderDetailId);
 }
 

@@ -1069,6 +1069,344 @@ namespace SapaFoRestRMSAPI.Services
             Console.WriteLine($"   Total: {ordersCreated} orders created for comprehensive testing.");
         }
 
+        /// <summary>
+        /// Seed comprehensive Areas and Tables for restaurant testing
+        /// Creates multiple areas (floors) with various table configurations
+        /// </summary>
+        public static async Task SeedAreasAndTablesAsync(SapaFoRestRmsContext context)
+        {
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] === Starting Areas & Tables seeding ===");
+
+            // Define areas with tables
+            var areasData = new[]
+            {
+                new
+                {
+                    AreaName = "Khu VIP - Tầng 1",
+                    Floor = 1,
+                    Description = "Khu vực VIP với view đẹp và riêng tư",
+                    Tables = new[] { "VIP01", "VIP02", "VIP03", "VIP04", "VIP05" },
+                    Capacities = new[] { 6, 8, 10, 6, 8 }
+                },
+                new
+                {
+                    AreaName = "Khu chính - Tầng 1",
+                    Floor = 1,
+                    Description = "Khu vực chính phục vụ đông khách",
+                    Tables = new[] { "A01", "A02", "A03", "A04", "A05", "A06", "A07", "A08", "A09", "A10" },
+                    Capacities = new[] { 4, 4, 6, 6, 4, 4, 6, 8, 6, 4 }
+                },
+                new
+                {
+                    AreaName = "Khu gia đình - Tầng 1",
+                    Floor = 1,
+                    Description = "Khu vực dành cho gia đình có trẻ nhỏ",
+                    Tables = new[] { "F01", "F02", "F03", "F04", "F05", "F06" },
+                    Capacities = new[] { 6, 8, 6, 8, 10, 6 }
+                },
+                new
+                {
+                    AreaName = "Khu ngoài trời - Tầng 1",
+                    Floor = 1,
+                    Description = "Khu vực sân vườn thoáng mát",
+                    Tables = new[] { "O01", "O02", "O03", "O04", "O05" },
+                    Capacities = new[] { 4, 6, 4, 6, 8 }
+                },
+                new
+                {
+                    AreaName = "Khu VIP - Tầng 2",
+                    Floor = 2,
+                    Description = "Khu VIP tầng 2 view núi",
+                    Tables = new[] { "VIP11", "VIP12", "VIP13" },
+                    Capacities = new[] { 10, 12, 8 }
+                },
+                new
+                {
+                    AreaName = "Khu chính - Tầng 2",
+                    Floor = 2,
+                    Description = "Khu vực chính tầng 2",
+                    Tables = new[] { "B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08" },
+                    Capacities = new[] { 4, 4, 6, 6, 4, 6, 8, 6 }
+                },
+                new
+                {
+                    AreaName = "Khu bar - Tầng 2",
+                    Floor = 2,
+                    Description = "Quầy bar và ghế cao",
+                    Tables = new[] { "BAR01", "BAR02", "BAR03", "BAR04" },
+                    Capacities = new[] { 2, 2, 4, 4 }
+                },
+                new
+                {
+                    AreaName = "Khu hội nghị - Tầng 3",
+                    Floor = 3,
+                    Description = "Phòng hội nghị và tiệc lớn",
+                    Tables = new[] { "CONF01", "CONF02", "CONF03" },
+                    Capacities = new[] { 20, 30, 15 }
+                }
+            };
+
+            int areasCreated = 0;
+            int tablesCreated = 0;
+
+            foreach (var areaData in areasData)
+            {
+                // Check if area exists
+                var existingArea = await context.Areas
+                    .FirstOrDefaultAsync(a => a.AreaName == areaData.AreaName && a.Floor == areaData.Floor);
+
+                Area area;
+                if (existingArea == null)
+                {
+                    area = new Area
+                    {
+                        AreaName = areaData.AreaName,
+                        Floor = areaData.Floor,
+                        Description = areaData.Description
+                    };
+                    await context.Areas.AddAsync(area);
+                    await context.SaveChangesAsync();
+                    areasCreated++;
+                    Console.WriteLine($"✅ Created area: {areaData.AreaName}");
+                }
+                else
+                {
+                    area = existingArea;
+                    Console.WriteLine($"ℹ️ Area already exists: {areaData.AreaName}");
+                }
+
+                // Create tables for this area
+                for (int i = 0; i < areaData.Tables.Length; i++)
+                {
+                    var tableNumber = areaData.Tables[i];
+                    var capacity = areaData.Capacities[i];
+
+                    // Check if table exists
+                    var existingTable = await context.Tables
+                        .FirstOrDefaultAsync(t => t.TableNumber == tableNumber);
+
+                    if (existingTable == null)
+                    {
+                        var table = new Table
+                        {
+                            TableNumber = tableNumber,
+                            Capacity = capacity,
+                            Status = "Available",
+                            AreaId = area.AreaId
+                        };
+                        await context.Tables.AddAsync(table);
+                        tablesCreated++;
+                    }
+                }
+
+                await context.SaveChangesAsync();
+            }
+
+            Console.WriteLine($"🎯 Areas & Tables seeding finished.");
+            Console.WriteLine($"   - Areas created: {areasCreated}");
+            Console.WriteLine($"   - Tables created: {tablesCreated}");
+            Console.WriteLine($"   - Total areas in DB: {await context.Areas.CountAsync()}");
+            Console.WriteLine($"   - Total tables in DB: {await context.Tables.CountAsync()}");
+        }
+
+        /// <summary>
+        /// Seed comprehensive menu items with BillingType classification
+        /// Creates both Kitchen-prepared and Consumption-based items
+        /// </summary>
+        public static async Task SeedMenuItemsWithBillingTypeAsync(SapaFoRestRmsContext context)
+        {
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] === Starting Menu Items with BillingType seeding ===");
+
+            // Ensure categories exist
+            var categories = new[]
+            {
+                new { Name = "Món Khai Vị", Description = "Appetizers" },
+                new { Name = "Món Chính", Description = "Main Course" },
+                new { Name = "Món Phụ", Description = "Side Dishes" },
+                new { Name = "Đồ Uống", Description = "Beverages" },
+                new { Name = "Tráng Miệng", Description = "Desserts" }
+            };
+
+            var categoryMap = new Dictionary<string, int>();
+
+            foreach (var cat in categories)
+            {
+                var existing = await context.MenuCategories
+                    .FirstOrDefaultAsync(c => c.CategoryName == cat.Name);
+
+                if (existing == null)
+                {
+                    var newCat = new MenuCategory { CategoryName = cat.Name };
+                    await context.MenuCategories.AddAsync(newCat);
+                    await context.SaveChangesAsync();
+                    categoryMap[cat.Name] = newCat.CategoryId;
+                    Console.WriteLine($"✅ Created category: {cat.Name}");
+                }
+                else
+                {
+                    categoryMap[cat.Name] = existing.CategoryId;
+                }
+            }
+
+            // Menu items with BillingType classification
+            var menuItemsData = new[]
+            {
+                // === KITCHEN-PREPARED ITEMS (BillingType = 2) ===
+                // Main courses
+                new { Name = "Steak Sapa Signature", Price = 245000m, Category = "Món Chính", CourseType = "MainCourse", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 20, BatchSize = 1, Description = "Steak bò Úc nhập khẩu" },
+                new { Name = "Lẩu cá hồi Fansipan", Price = 320000m, Category = "Món Chính", CourseType = "MainCourse", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 25, BatchSize = 1, Description = "Lẩu cá hồi tươi đặc biệt" },
+                new { Name = "Gà ta nướng lá sen", Price = 180000m, Category = "Món Chính", CourseType = "MainCourse", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 30, BatchSize = 2, Description = "Gà ta nướng thơm lừng" },
+                new { Name = "Cá hồi áp chảo", Price = 220000m, Category = "Món Chính", CourseType = "MainCourse", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 15, BatchSize = 1, Description = "Cá hồi Na Uy áp chảo" },
+                new { Name = "Bò lúc lắc khoai tây", Price = 190000m, Category = "Món Chính", CourseType = "MainCourse", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 18, BatchSize = 2, Description = "Bò lúc lắc phong cách Sapa" },
+                
+                // Side dishes
+                new { Name = "Rau tổng hợp", Price = 85000m, Category = "Món Phụ", CourseType = "SideDish", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 5, BatchSize = 1, Description = "Rau sạch địa phương" },
+                new { Name = "Cơm trắng", Price = 15000m, Category = "Món Phụ", CourseType = "SideDish", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 2, BatchSize = 5, Description = "Cơm nấu từ gạo Sapa" },
+                new { Name = "Khoai tây chiên", Price = 55000m, Category = "Món Phụ", CourseType = "SideDish", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 8, BatchSize = 3, Description = "Khoai tây chiên giòn" },
+                
+                // Appetizers
+                new { Name = "Salad rau mầm", Price = 65000m, Category = "Món Khai Vị", CourseType = "Appetizer", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 5, BatchSize = 2, Description = "Salad tươi mát" },
+                new { Name = "Chả giò Hà Nội", Price = 75000m, Category = "Món Khai Vị", CourseType = "Appetizer", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 12, BatchSize = 5, Description = "Chả giò truyền thống" },
+                
+                // Desserts
+                new { Name = "Panna Cotta dâu", Price = 65000m, Category = "Tráng Miệng", CourseType = "Dessert", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 10, BatchSize = 1, Description = "Panna Cotta Ý" },
+                new { Name = "Bánh flan", Price = 45000m, Category = "Tráng Miệng", CourseType = "Dessert", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 8, BatchSize = 4, Description = "Bánh flan caramel" },
+                
+                // === CONSUMPTION-BASED ITEMS (BillingType = 1) ===
+                // Beers
+                new { Name = "Bia Tiger lon (330ml)", Price = 25000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Bia Tiger lon" },
+                new { Name = "Bia Heineken lon (330ml)", Price = 28000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Bia Heineken nhập khẩu" },
+                new { Name = "Bia Sài Gòn lon (330ml)", Price = 20000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Bia Sài Gòn đỏ" },
+                new { Name = "Bia Hà Nội chai (450ml)", Price = 22000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Bia Hà Nội chai" },
+                new { Name = "Bia tươi (ly)", Price = 18000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Bia tươi ướp lạnh" },
+                
+                // Soft drinks
+                new { Name = "Coca Cola lon", Price = 18000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Coca Cola 330ml" },
+                new { Name = "Pepsi lon", Price = 18000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Pepsi 330ml" },
+                new { Name = "7Up lon", Price = 18000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "7Up 330ml" },
+                new { Name = "Sprite lon", Price = 18000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Sprite 330ml" },
+                
+                // Water
+                new { Name = "Nước suối Aquafina", Price = 10000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Nước suối 500ml" },
+                new { Name = "Nước suối Lavie", Price = 10000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Nước suối 500ml" },
+                
+                // Others consumption items
+                new { Name = "Khăn lạnh", Price = 5000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Khăn lạnh thơm" },
+                new { Name = "Khăn ướt", Price = 3000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.ConsumptionBased, TimeCook = 0, BatchSize = 1, Description = "Khăn ướt sát khuẩn" },
+                
+                // Hot drinks (Kitchen-prepared - need preparation)
+                new { Name = "Trà sen Tuyết", Price = 45000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 5, BatchSize = 2, Description = "Trà sen đặc sản" },
+                new { Name = "Trà đào cam sả", Price = 55000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 5, BatchSize = 2, Description = "Trà trái cây nhiệt đới" },
+                new { Name = "Cà phê đen Sapa", Price = 35000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 5, BatchSize = 3, Description = "Cà phê phin truyền thống" },
+                new { Name = "Cà phê sữa", Price = 38000m, Category = "Đồ Uống", CourseType = "Beverage", BillingType = ItemBillingType.KitchenPrepared, TimeCook = 5, BatchSize = 3, Description = "Cà phê sữa đá" }
+            };
+
+            int menuItemsCreated = 0;
+
+            foreach (var itemData in menuItemsData)
+            {
+                // Check if item exists
+                var existing = await context.MenuItems
+                    .FirstOrDefaultAsync(m => m.Name == itemData.Name);
+
+                if (existing == null)
+                {
+                    var menuItem = new MenuItem
+                    {
+                        Name = itemData.Name,
+                        Price = itemData.Price,
+                        CategoryId = categoryMap.ContainsKey(itemData.Category) ? categoryMap[itemData.Category] : null,
+                        CourseType = itemData.CourseType,
+                        BillingType = itemData.BillingType,
+                        IsAvailable = true,
+                        TimeCook = itemData.TimeCook,
+                        BatchSize = itemData.BatchSize,
+                        Description = itemData.Description
+                    };
+                    await context.MenuItems.AddAsync(menuItem);
+                    menuItemsCreated++;
+                }
+                else
+                {
+                    // Update BillingType for existing items
+                    existing.BillingType = itemData.BillingType;
+                    existing.TimeCook = itemData.TimeCook;
+                    existing.BatchSize = itemData.BatchSize;
+                    context.MenuItems.Update(existing);
+                }
+            }
+
+            await context.SaveChangesAsync();
+
+            Console.WriteLine($"🎯 Menu Items seeding finished.");
+            Console.WriteLine($"   - New items created: {menuItemsCreated}");
+            Console.WriteLine($"   - Kitchen-prepared items: {await context.MenuItems.CountAsync(m => m.BillingType == ItemBillingType.KitchenPrepared)}");
+            Console.WriteLine($"   - Consumption-based items: {await context.MenuItems.CountAsync(m => m.BillingType == ItemBillingType.ConsumptionBased)}");
+        }
+
+        /// <summary>
+        /// Seed everything - Complete restaurant setup
+        /// </summary>
+        public static async Task SeedAllTestDataAsync(SapaFoRestRmsContext context)
+        {
+            Console.WriteLine("════════════════════════════════════════════════════════");
+            Console.WriteLine("  🌱 COMPREHENSIVE DATA SEEDING STARTED");
+            Console.WriteLine("════════════════════════════════════════════════════════");
+            Console.WriteLine("");
+
+            try
+            {
+                // 1. Basic users
+                await SeedAdminAsync(context);
+                Console.WriteLine("");
+
+                await SeedPositionsAsync(context);
+                Console.WriteLine("");
+
+                await SeedTestCustomerAsync(context);
+                Console.WriteLine("");
+
+                await SeedTestStaffAndManagerAsync(context);
+                Console.WriteLine("");
+
+                await SeedStaffWithAllPositionsAsync(context);
+                Console.WriteLine("");
+
+                // 2. Restaurant structure
+                await SeedAreasAndTablesAsync(context);
+                Console.WriteLine("");
+
+                // 3. Menu with BillingType
+                await SeedMenuItemsWithBillingTypeAsync(context);
+                Console.WriteLine("");
+
+                // 4. Orders for testing
+                await SeedCashierWorkflowTestAsync(context);
+                Console.WriteLine("");
+
+                Console.WriteLine("════════════════════════════════════════════════════════");
+                Console.WriteLine("  ✅ ALL DATA SEEDED SUCCESSFULLY!");
+                Console.WriteLine("════════════════════════════════════════════════════════");
+                Console.WriteLine("");
+                Console.WriteLine("📊 Database Summary:");
+                Console.WriteLine($"   - Users: {await context.Users.CountAsync()}");
+                Console.WriteLine($"   - Staff: {await context.Staffs.CountAsync()}");
+                Console.WriteLine($"   - Customers: {await context.Customers.CountAsync()}");
+                Console.WriteLine($"   - Areas: {await context.Areas.CountAsync()}");
+                Console.WriteLine($"   - Tables: {await context.Tables.CountAsync()}");
+                Console.WriteLine($"   - Menu Items: {await context.MenuItems.CountAsync()}");
+                Console.WriteLine($"   - Combos: {await context.Combos.CountAsync()}");
+                Console.WriteLine($"   - Orders: {await context.Orders.CountAsync()}");
+                Console.WriteLine("");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ ERROR during seeding:");
+                Console.WriteLine($"   {ex.Message}");
+                Console.WriteLine($"   {ex.StackTrace}");
+                throw;
+            }
+        }
     }
 }
 

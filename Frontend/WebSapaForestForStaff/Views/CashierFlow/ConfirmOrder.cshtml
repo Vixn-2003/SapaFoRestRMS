@@ -178,6 +178,7 @@
                                             <td class="text-center">@item.Quantity</td>
                                             <td class="text-center" style="width: 140px;">
                                                 <input type="hidden" name="Items[@i].OrderDetailId" value="@item.OrderDetailId" />
+                                                <input type="hidden" name="Items[@i].Quantity" value="@item.Quantity" />
                                                 <input type="hidden" name="Items[@i].IsRemoved" value="false" />
                                                 @if (canEdit)
                                                 {
@@ -193,6 +194,7 @@
                                                 else
                                                 {
                                                     <span class="readonly-value">@item.QuantityUsed</span>
+                                                    <input type="hidden" name="Items[@i].QuantityUsed" value="@item.QuantityUsed" />
                                                 }
                                             </td>
                                             <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
