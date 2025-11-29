@@ -15,7 +15,7 @@
         background: white;
         border-radius: 12px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        padding: 2rem;
+        padding: 1rem;
         margin-bottom: 2rem;
     }
 
@@ -125,7 +125,7 @@
 
     .audit-btn-filter {
         padding: 0.75rem 1.5rem;
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        background: #3b82f6;
         color: white;
         border: none;
         border-radius: 8px;
@@ -158,7 +158,7 @@
     }
 
     .audit-table thead {
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+            background: #3d3d3d;
     }
 
     .audit-table th {
@@ -320,9 +320,9 @@
     }
 
     .audit-pagination-btn.active {
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+            background: #3378ea;
         color: white;
-        border-color: #9333ea;
+            border-color: #3378ea;
     }
 
     .audit-pagination-btn.disabled {
@@ -376,7 +376,7 @@
     }
 
     .audit-modal-header {
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        background: #3d3d3d;
         padding: 2rem;
         border-radius: 16px 16px 0 0;
         position: sticky;
@@ -826,7 +826,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        background: #059669;
     color: white;
     border: none;
     border-radius: 8px;
@@ -1045,9 +1045,7 @@
     <div class="audit-list-header">
         <div class="audit-list-title-section">
             <div class="audit-list-title-left">
-                <div class="audit-list-icon">
-                    &#128203;
-                </div>
+
                 <div class="audit-list-title">
                     <h1>Danh sách đơn kiểm kê</h1>
                     <p class="audit-list-subtitle">Quản lý các đơn kiểm kê nguyên liệu</p>
@@ -1134,6 +1132,7 @@
                     {
                         <tr class="audit-row" 
                             data-audit-id="@audit.AuditId"
+                            data-audit-code="@audit.AuditId"
                             data-purchase-order-id="@audit.PurchaseOrderId"
                             data-ingredient-code="@audit.IngredientCode"
                             data-ingredient-name="@audit.IngredientName"
@@ -1280,20 +1279,21 @@
     });
 
     function applyFilters() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
         const status = document.getElementById('statusFilter').value;
         const dateFrom = document.getElementById('dateFromFilter').value;
         const dateTo = document.getElementById('dateToFilter').value;
 
         filteredRows = allRows.filter(row => {
-            const auditCode = row.dataset.auditCode.toLowerCase();
-            const purchaseOrderId = row.dataset.purchaseOrderId.toLowerCase();
-            const ingredientName = row.dataset.ingredientName.toLowerCase();
-            const ingredientCode = row.dataset.ingredientCode.toLowerCase();
-            const auditStatus = row.dataset.auditStatus;
-            const createdAt = row.dataset.createdAt;
+            // Lấy các giá trị từ data attributes
+            const auditCode = (row.dataset.auditCode || '').toLowerCase();
+            const purchaseOrderId = (row.dataset.purchaseOrderId || '').toLowerCase();
+            const ingredientName = (row.dataset.ingredientName || '').toLowerCase();
+            const ingredientCode = (row.dataset.ingredientCode || '').toLowerCase();
+            const auditStatus = row.dataset.auditStatus || '';
+            const createdAt = row.dataset.createdAt || '';
 
-            // Search filter
+            // Search filter - tìm kiếm trong mã đơn, mã lô, tên và mã nguyên liệu
             const matchSearch = !searchTerm || 
                 auditCode.includes(searchTerm) ||
                 purchaseOrderId.includes(searchTerm) ||
@@ -1307,15 +1307,20 @@
             let matchDate = true;
             if (dateFrom || dateTo) {
                 const rowDate = parseDate(createdAt);
+                if (!rowDate) {
+                    matchDate = false;
+                } else {
                 if (dateFrom) {
                     const fromDate = new Date(dateFrom);
+                        fromDate.setHours(0, 0, 0, 0);
                     matchDate = matchDate && rowDate >= fromDate;
                 }
                 if (dateTo) {
                     const toDate = new Date(dateTo);
-                    toDate.setHours(23, 59, 59);
+                        toDate.setHours(23, 59, 59, 999);
                     matchDate = matchDate && rowDate <= toDate;
                 }
+            }
             }
 
             return matchSearch && matchStatus && matchDate;
@@ -1326,10 +1331,30 @@
     }
 
     function parseDate(dateStr) {
+        if (!dateStr) return null;
+
+        try {
         // Parse "dd/MM/yyyy HH:mm" format
         const parts = dateStr.split(' ');
+            if (parts.length < 1) return null;
+
         const dateParts = parts[0].split('/');
-        return new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+            if (dateParts.length !== 3) return null;
+
+            const day = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
+            const year = parseInt(dateParts[2]);
+
+            const date = new Date(year, month, day);
+
+            // Validate date
+            if (isNaN(date.getTime())) return null;
+
+            return date;
+        } catch (error) {
+            console.error('Error parsing date:', dateStr, error);
+            return null;
+        }
     }
 
     function updatePagination() {
