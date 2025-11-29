@@ -84,6 +84,10 @@ namespace DataAccessLayer.UnitOfWork
 
         public IOrderLockRepository OrderLocks => _orderLocks ??= new OrderLockRepository(_context);
 
+        private ITableRepository _tables;
+
+        public ITableRepository Tables => _tables ??= new TableRepository(_context);
+
         public UnitOfWork(SapaFoRestRmsContext context)
         {
             _context = context;

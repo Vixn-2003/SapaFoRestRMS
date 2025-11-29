@@ -396,6 +396,13 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
             entity.Property(e => e.TimeCook).HasColumnType("int");
             entity.Property(e => e.BatchSize).HasColumnType("int").HasDefaultValue(1);
+            
+            // NEW: Configure BillingType enum
+            // Use C# property initializer instead of database default to avoid sentinel ambiguity
+            entity.Property(e => e.BillingType)
+                .HasConversion<int>() // Store as int in database
+                .IsRequired();
+            
             entity.HasOne(d => d.Category).WithMany(p => p.MenuItems)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK__MenuItems__Categ__2BFE89A6");
@@ -469,6 +476,11 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.IsUrgent).HasDefaultValue(false);
             entity.Property(e => e.ReadyAt).HasColumnType("datetime");
             entity.Property(e => e.StartedAt).HasColumnType("datetime");
+            
+            // NEW: Configure QuantityUsed (nullable - only set when customer confirms)
+            entity.Property(e => e.QuantityUsed)
+                .HasDefaultValue(null)
+                .IsRequired(false);
 
             entity.HasOne(d => d.MenuItem).WithMany(p => p.OrderDetails)
                 .HasForeignKey(d => d.MenuItemId)
