@@ -307,7 +307,7 @@ namespace SapaFoRestRMSAPI.Controllers
             try
             {
                 var transactions = await _stockTransactionService.GetExportTransactionsAsync();
-                
+
                 var result = transactions.Select(t => new
                 {
                     id = t.TransactionId,
@@ -332,8 +332,8 @@ namespace SapaFoRestRMSAPI.Controllers
                     error = ex.Message
                 });
             }
-        }
-    }
+
+
         }
 
 
