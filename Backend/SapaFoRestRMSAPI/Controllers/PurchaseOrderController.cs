@@ -134,9 +134,9 @@ namespace SapaFoRestRMSAPI.Controllers
                         {
                             IngredientId = id,
                             PurchaseOrderDetailId = item.PurchaseOrderDetailId,
-                            ExpiryDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-5)),
                             WarehouseId = idW,
-                            QuantityRemaining = item.Quantity
+                            QuantityRemaining = item.Quantity,
+                            ExpiryDate = item.ExpiryDate
                         };
 
                         int idBatch = await _inventoryIngredientService.AddNewBatch(batchIngredientDTO);
@@ -167,9 +167,9 @@ namespace SapaFoRestRMSAPI.Controllers
                         {
                             IngredientId = (int)item.IngredientId,
                             PurchaseOrderDetailId = item.PurchaseOrderDetailId,
-                            ExpiryDate = DateOnly.FromDateTime(DateTime.Now.AddDays(-5)),
                             WarehouseId = idW,
-                            QuantityRemaining = item.Quantity
+                            QuantityRemaining = item.Quantity,
+                            ExpiryDate = item.ExpiryDate
                         };
 
                         int idBatch = await _inventoryIngredientService.AddNewBatch(batchIngredientDTO);

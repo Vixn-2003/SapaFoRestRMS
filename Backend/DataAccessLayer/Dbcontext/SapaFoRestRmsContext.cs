@@ -121,6 +121,8 @@ public partial class SapaFoRestRmsContext : DbContext
     // Thêm bảng mới
     public DbSet<AssistanceRequest> AssistanceRequests { get; set; }
 
+    public virtual DbSet<AuditInventory> AuditInventories { get; set; } = null!;
+
 
     public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
 
@@ -263,6 +265,10 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Available)
                 .HasColumnType("decimal(18, 2)")
                 .HasComputedColumnSql("([QuantityRemaining] - [QuantityReserved])", stored: true);
+
+            entity.Property(e => e.IsActive)
+        .HasDefaultValue(true)  
+        .IsRequired();
 
             // ====== Quan hệ Ingredient - InventoryBatch ======
             entity.HasOne(d => d.Ingredient)
@@ -838,7 +844,13 @@ public partial class SapaFoRestRmsContext : DbContext
                   .HasForeignKey(d => d.IngredientId)
                   .OnDelete(DeleteBehavior.SetNull)
                   .HasConstraintName("FK_PurchaseOrderDetails_Ingredients");
-
+            entity.Property(e => e.ExpiryDate)
+    .HasConversion(
+        v => v.HasValue ? v.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+        v => v.HasValue ? DateOnly.FromDateTime(v.Value) : (DateOnly?)null
+    )
+    .HasColumnType("date");
+    
         });
 
 
@@ -1126,6 +1138,138 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.CodeSupplier).HasMaxLength(50);
         });
+
+        // Cấu hình AuditInventory
+        modelBuilder.Entity<AuditInventory>(entity =>
+        {
+            entity.HasKey(e => e.AuditId)
+                .HasName("PK__AuditInventory__AuditId");
+
+            entity.ToTable("AuditInventory");
+
+            entity.Property(e => e.AuditId)
+        .IsRequired()
+        .HasMaxLength(50)
+        .ValueGeneratedNever();
+
+            entity.Property(e => e.BatchId)
+    .IsRequired();
+
+            entity.Property(e => e.PurchaseOrderId)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.IngredientCode)
+                .IsRequired()
+                .HasMaxLength(50);
+
+
+            entity.Property(e => e.ingredientName)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            
+            entity.Property(e => e.unit)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.OriginalQuantity)
+                .IsRequired()
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.ExpiryDate)
+                .HasConversion(
+                    v => v.HasValue ? v.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+                    v => v.HasValue ? DateOnly.FromDateTime(v.Value) : (DateOnly?)null
+                )
+                .HasColumnType("date");
+
+            // Thông tin người tạo
+            entity.Property(e => e.CreatorId)
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired()
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.CreatorName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.CreatorPosition)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.CreatorPhone)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.Reason)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(e => e.AdjustmentQuantity)
+                .IsRequired()
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.IsAddition)
+                .IsRequired();
+
+            entity.Property(e => e.IngredientStatus)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.AuditStatus)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.ImagePath)
+                .HasMaxLength(500);
+
+            // Thông tin người xác nhận (nullable)
+            entity.Property(e => e.ConfirmedAt)
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.ConfirmerName)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ConfirmerPosition)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ConfirmerPhone)
+                .HasMaxLength(20);
+
+            // Relationships
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.CreatorId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__AuditInventory__CreatorId");
+
+            entity.HasOne(d => d.Confirmer)
+                .WithMany()
+                .HasForeignKey(d => d.ConfirmerId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__AuditInventory__ConfirmerId");
+
+            // Indexes
+            entity.HasIndex(e => e.PurchaseOrderId)
+                .HasDatabaseName("IX_AuditInventory_PurchaseOrderId");
+
+            entity.HasIndex(e => e.IngredientCode)
+                .HasDatabaseName("IX_AuditInventory_IngredientCode");
+
+            entity.HasIndex(e => e.AuditStatus)
+                .HasDatabaseName("IX_AuditInventory_AuditStatus");
+
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_AuditInventory_CreatedAt");
+
+            entity.HasIndex(e => e.CreatorId)
+                .HasDatabaseName("IX_AuditInventory_CreatorId");
+        });
+
+
 
         modelBuilder.Entity<SystemLogo>(entity =>
         {
