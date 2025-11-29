@@ -168,7 +168,7 @@
 
         /* Main Content - prefix với .layout-main */
         .layout-main-content {
-            margin: 20px;
+            margin: 10px;
             flex: 1;
             overflow-y: auto;
             background-color: #e8eaed;
@@ -237,6 +237,73 @@
                         font-size: 18px;
                     }
         }
+
+        /* Thêm vào cuối phần CSS của layout */
+
+/* Submenu styles */
+.sidebar-menu-group {
+    
+}
+
+        .sidebar-menu-parent {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%; /* Thêm dòng này */
+        }
+
+            /* Thêm style cho submenu arrow */
+            .sidebar-menu-parent .submenu-arrow {
+                width: 16px;
+                height: 16px;
+                margin-left: auto;
+                transition: transform 0.2s;
+                flex-shrink: 0; /* Thêm dòng này để icon không bị co lại */
+            }
+
+.sidebar-submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+.sidebar-menu-group.active .sidebar-submenu {
+    max-height: 200px;
+}
+
+.sidebar-menu-group.active .submenu-arrow {
+    transform: rotate(180deg);
+}
+
+.sidebar-submenu-item {
+    display: block;
+    padding: 12px 20px 12px 52px;
+    color: #333;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    margin: 5px 10px;
+}
+
+.sidebar-submenu-item:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-submenu-item.active {
+    background-color: #22c55e;
+    color: white;
+}
+
+@@media (max-width: 576px) {
+    .sidebar-submenu-item span {
+        display: none;
+    }
+}
     </style>
 </head>
 <body>
