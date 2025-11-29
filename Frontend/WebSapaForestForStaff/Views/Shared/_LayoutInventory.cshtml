@@ -237,6 +237,63 @@
                         font-size: 18px;
                     }
         }
+
+        /* Thêm vào cuối phần CSS của layout */
+
+/* Submenu styles */
+.sidebar-menu-group {
+    margin: 0 15px 5px;
+}
+
+.sidebar-menu-parent {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.sidebar-submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+.sidebar-menu-group.active .sidebar-submenu {
+    max-height: 200px;
+}
+
+.sidebar-menu-group.active .submenu-arrow {
+    transform: rotate(180deg);
+}
+
+.sidebar-submenu-item {
+    display: block;
+    padding: 12px 20px 12px 52px;
+    color: #333;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    margin: 5px 10px;
+}
+
+.sidebar-submenu-item:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-submenu-item.active {
+    background-color: #22c55e;
+    color: white;
+}
+
+@@media (max-width: 576px) {
+    .sidebar-submenu-item span {
+        display: none;
+    }
+}
     </style>
 </head>
 <body>
@@ -276,14 +333,31 @@
                     <span>Xuất hàng</span>
                 </a>
 
-                <a href="@Url.Action("DisplayIngredent", "ManagerIngredent")"
-                   class="sidebar-menu-item"
-                   data-controller="ManagerIngredent">
-                    <svg fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" />
-                    </svg>
-                    <span>Nguyên liệu</span>
-                </a>
+                <div class="sidebar-menu-group">
+                    <div class="sidebar-menu-item sidebar-menu-parent"
+                         onclick="toggleSubmenu(this)"
+                         data-controller="ManagerIngredent">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" />
+                        </svg>
+                        <span>Nguyên liệu</span>
+                        <svg class="submenu-arrow" fill="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px; margin-left: auto; transition: transform 0.2s;">
+                            <path d="M7 10l5 5 5-5z" />
+                        </svg>
+                    </div>
+                    <div class="sidebar-submenu">
+                        <a href="@Url.Action("DisplayIngredent", "ManagerIngredent")"
+                           class="sidebar-submenu-item"
+                           data-controller="ManagerIngredent">
+                            <span>Danh sách nguyên liệu</span>
+                        </a>
+                        <a href="@Url.Action("Index", "AuditInventory")"
+                           class="sidebar-submenu-item"
+                           data-controller="AuditInventory">
+                            <span>Danh sách đơn kiểm kê</span>
+                        </a>
+                    </div>
+                </div>
 
                 <a href="@Url.Action("Index", "BaoCao")"
                    class="sidebar-menu-item"
@@ -348,6 +422,63 @@
                 
                 if (itemController && itemController.toLowerCase() === currentController.toLowerCase()) {
                     item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        });
+
+        // Toggle submenu
+        function toggleSubmenu(element) {
+            const group = element.closest('.sidebar-menu-group');
+            const allGroups = document.querySelectorAll('.sidebar-menu-group');
+
+            // Close all other submenus
+            allGroups.forEach(g => {
+                if (g !== group) {
+                    g.classList.remove('active');
+                }
+            });
+
+            // Toggle current submenu
+            group.classList.toggle('active');
+        }
+
+        // Highlight active menu item based on current controller
+        document.addEventListener('DOMContentLoaded', function () {
+            const currentController = '@ViewContext.RouteData.Values["Controller"]';
+            const menuItems = document.querySelectorAll('.sidebar-menu-item');
+            const submenuItems = document.querySelectorAll('.sidebar-submenu-item');
+
+            console.log('Current Controller:', currentController);
+
+            // Check main menu items
+            menuItems.forEach(item => {
+                const itemController = item.getAttribute('data-controller');
+                if (itemController && itemController.toLowerCase() === currentController.toLowerCase()) {
+                    item.classList.add('active');
+
+                    // If it's a parent menu, expand it
+                    const group = item.closest('.sidebar-menu-group');
+                    if (group) {
+                        group.classList.add('active');
+                    }
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Check submenu items
+            submenuItems.forEach(item => {
+                const itemController = item.getAttribute('data-controller');
+                if (itemController && itemController.toLowerCase() === currentController.toLowerCase()) {
+                    item.classList.add('active');
+
+                    // Expand parent menu
+                    const group = item.closest('.sidebar-menu-group');
+                    if (group) {
+                        group.classList.add('active');
+                    }
                 } else {
                     item.classList.remove('active');
                 }

@@ -60,7 +60,8 @@ namespace BusinessAccessLayer.Services
                 Quantity = d.Quantity,
                 UnitPrice = d.UnitPrice,
                 Subtotal = d.TotalPrice,
-                WarehouseName = d.WarehouseName
+                WarehouseName = d.WarehouseName,
+                ExpiryDate = d.ExpiryDate,
             }).ToList();
 
             return await _unitOfWork.PurchaseOrder.CreatePurchaseOrderAsync(purchaseOrder, details);
