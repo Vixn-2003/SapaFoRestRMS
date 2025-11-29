@@ -32,6 +32,18 @@
         gap: 1rem;
     }
 
+    .audit-list-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+
     .audit-list-title h1 {
         font-size: 2rem;
         font-weight: 700;
@@ -1079,6 +1091,12 @@
                        id="dateToFilter"
                        class="audit-form-input" />
             </div>
+
+            <div class="audit-form-group" style="display: flex; align-items: flex-end;">
+                <button type="button" onclick="applyFilters()" class="audit-btn-filter">
+                    &#128269; Tìm kiếm
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1276,7 +1294,7 @@
             const createdAt = row.dataset.createdAt || '';
 
             // Search filter - tìm kiếm trong mã đơn, mã lô, tên và mã nguyên liệu
-            const matchSearch = !searchTerm ||
+            const matchSearch = !searchTerm || 
                 auditCode.includes(searchTerm) ||
                 purchaseOrderId.includes(searchTerm) ||
                 ingredientName.includes(searchTerm) ||
@@ -1292,17 +1310,17 @@
                 if (!rowDate) {
                     matchDate = false;
                 } else {
-                    if (dateFrom) {
-                        const fromDate = new Date(dateFrom);
+                if (dateFrom) {
+                    const fromDate = new Date(dateFrom);
                         fromDate.setHours(0, 0, 0, 0);
-                        matchDate = matchDate && rowDate >= fromDate;
-                    }
-                    if (dateTo) {
-                        const toDate = new Date(dateTo);
-                        toDate.setHours(23, 59, 59, 999);
-                        matchDate = matchDate && rowDate <= toDate;
-                    }
+                    matchDate = matchDate && rowDate >= fromDate;
                 }
+                if (dateTo) {
+                    const toDate = new Date(dateTo);
+                        toDate.setHours(23, 59, 59, 999);
+                    matchDate = matchDate && rowDate <= toDate;
+                }
+            }
             }
 
             return matchSearch && matchStatus && matchDate;
@@ -1316,11 +1334,11 @@
         if (!dateStr) return null;
 
         try {
-            // Parse "dd/MM/yyyy HH:mm" format
-            const parts = dateStr.split(' ');
+        // Parse "dd/MM/yyyy HH:mm" format
+        const parts = dateStr.split(' ');
             if (parts.length < 1) return null;
 
-            const dateParts = parts[0].split('/');
+        const dateParts = parts[0].split('/');
             if (dateParts.length !== 3) return null;
 
             const day = parseInt(dateParts[0]);

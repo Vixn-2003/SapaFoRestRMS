@@ -1,4 +1,5 @@
 ﻿@using WebSapaForestForStaff.DTOs;
+@using WebSapaForestForStaff.DTOs.Inventory;
 @{
     Layout = "_LayoutInventory";
     ViewData["Title"] = "Quản Lý Nhập Hàng";
@@ -321,6 +322,12 @@
         border-radius: 12px 12px 0 0;
     }
 
+    .modal-header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
     .modal-header h2 {
         margin: 0;
         font-size: 1.5rem;
@@ -347,6 +354,33 @@
         border-radius: 0 0 12px 12px;
     }
 
+    .modal-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .btn-edit-header {
+        background-color: #3b82f6;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .btn-edit-header:hover {
+            background-color: #2563eb;
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
     .close-btn {
         background: rgba(255, 255, 255, 0.2);
         border: 2px solid rgba(255, 255, 255, 0.4);
@@ -360,13 +394,14 @@
         align-items: center;
         justify-content: center;
         transition: all 0.2s;
+        flex-shrink: 0;
     }
 
-    .close-btn:hover {
-        background: rgba(239, 68, 68, 0.9);
-        border-color: #ef4444;
-        transform: rotate(90deg);
-    }
+        .close-btn:hover {
+            background: rgba(239, 68, 68, 0.9);
+            border-color: #ef4444;
+            transform: rotate(90deg);
+        }
 
     .info-header {
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
@@ -375,29 +410,82 @@
         border-left: 4px solid #3b82f6;
         margin-bottom: 1.5rem;
         box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
     }
 
-    .info-header p {
-        margin: 0.5rem 0;
-        font-size: 1rem;
-        color: #1e40af;
+    .info-header-content {
+        flex: 1;
+    }
+
+        .info-header-content p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            color: #1e40af;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-header-content strong {
+            font-weight: 600;
+            color: #1e3a8a;
+            min-width: 140px;
+        }
+
+        .info-header-content span {
+            font-weight: 500;
+            color: #1f2937;
+            background: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+        }
+
+    .info-header-actions {
         display: flex;
         align-items: center;
+        flex-shrink: 0;
     }
 
-    .info-header strong {
+    .btn-edit-info {
+        background-color: #3b82f6;
+        color: white;
+        padding: 0.6rem 1.25rem;
+        border-radius: 0.5rem;
+        border: none;
+        font-size: 0.875rem;
         font-weight: 600;
-        color: #1e3a8a;
-        min-width: 140px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     }
 
-    .info-header span {
-        font-weight: 500;
-        color: #1f2937;
-        background: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 6px;
+        .btn-edit-info:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-edit-info:active {
+            transform: translateY(0);
+        }
+
+        @@media (max-width: 768px) {
+    .info-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
+    
+    .info-header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
 
     .batch-table-container {
         background: white;
@@ -698,6 +786,483 @@
         }
 
     .edit-modal-footer {
+        padding: 1rem 2rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0 12px 12px;
+    }
+
+  /* Trạng thái nguyên liệu */
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-normal {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-low-stock {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* ✅ THÊM: Style cho "Dưới tối thiểu" - Màu cam */
+.status-below-reorder {
+    background-color: #fed7aa;
+    color: #9a3412;
+}
+
+.status-expiring-soon {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+
+    /* ✅ THÊM: Style cho "Hết hạn" - Màu đen/xám đậm */
+    .status-expired {
+        background-color: #f3f4f6;
+        color: #1f2937;
+        border: 1px solid #6b7280;
+    }
+
+    /* Style cho lô hết hạn trong modal */
+    .batch-table tbody tr.batch-expired {
+        background-color: #fee2e2;
+        border-left: 4px solid #ef4444;
+    }
+
+        .batch-table tbody tr.batch-expired:hover {
+            background-color: #fecaca;
+        }
+
+    /* Style cho lô sắp hết hạn trong modal */
+    .batch-table tbody tr.batch-expiring-soon {
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
+    }
+
+        .batch-table tbody tr.batch-expiring-soon:hover {
+            background-color: #fde68a;
+        }
+
+    /* Badge cho trạng thái trong modal */
+    .batch-status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .batch-status-expired {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .batch-status-expiring {
+        background-color: #f59e0b;
+        color: white;
+    }
+
+    .batch-status-normal {
+        background-color: #10b981;
+        color: white;
+    }
+
+/* Utility classes */
+.inline-flex {
+    display: inline-flex;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.gap-1 {
+    gap: 0.25rem;
+}
+
+.gap-1\.5 {
+    gap: 0.375rem;
+}
+
+.px-3 {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.py-1\.5 {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.rounded-md {
+    border-radius: 0.375rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.border-2 {
+    border-width: 2px;
+}
+
+.shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+
+    @@keyframes pulse-red {
+        0%, 100% {
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+
+        50% {
+            opacity: 0.85;
+            box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.6);
+        }
+    }
+
+    .pulse-red-alert {
+        animation: pulse-red 2s ease-in-out infinite;
+    }
+
+/* Màu sắc */
+.bg-red-100 { background-color: #fee2e2; }
+.text-red-700 { color: #b91c1c; }
+.border-red-400 { border-color: #f87171; }
+.bg-orange-100 { background-color: #ffedd5; }
+.text-orange-700 { color: #c2410c; }
+.border-orange-400 { border-color: #fb923c; }
+.bg-yellow-100 { background-color: #fef3c7; }
+.text-yellow-700 { color: #a16207; }
+.border-yellow-400 { border-color: #facc15; }
+.bg-green-100 { background-color: #dcfce7; }
+.text-green-700 { color: #15803d; }
+.border-green-300 { border-color: #86efac; }
+
+
+    /* Audit Modal Styles */
+    .audit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1002;
+        backdrop-filter: blur(4px);
+    }
+
+        .audit-modal-overlay.active {
+            display: flex;
+        }
+
+    .audit-modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 1200px;
+        max-width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .audit-modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        border-radius: 12px 12px 0 0;
+    }
+
+        .audit-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+    .audit-modal-body {
+        padding: 2rem;
+    }
+
+    .audit-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+        .audit-table thead {
+            background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        }
+
+            .audit-table thead th {
+                padding: 1rem;
+                text-align: left;
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: white;
+            }
+
+                .audit-table thead th.text-right {
+                    text-align: right;
+                }
+
+        .audit-table tbody td {
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+        }
+
+            .audit-table tbody td.text-right {
+                text-align: right;
+            }
+
+    .audit-actions {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #93c5fd;
+    }
+
+    .audit-radio-group {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .audit-radio-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #374151;
+        transition: color 0.2s;
+    }
+
+        .audit-radio-label:hover {
+            color: #9333ea;
+        }
+
+        .audit-radio-label input[type="radio"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+    .audit-quantity-input {
+        width: 16rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+        .audit-quantity-input:focus {
+            outline: none;
+            border-color: #9333ea;
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+        }
+
+    .audit-preview {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #f59e0b;
+    }
+
+    .audit-preview-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d97706;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+        .audit-preview-table thead {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+            .audit-preview-table thead th {
+                padding: 1rem;
+                text-align: left;
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: white;
+            }
+
+        .audit-preview-table tbody td {
+            padding: 1rem;
+            border: 1px solid #fde68a;
+            background: white;
+        }
+
+    .audit-confirmer-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .audit-confirmer-box {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #93c5fd;
+    }
+
+    .audit-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 1rem;
+        transition: color 0.2s;
+    }
+
+        .audit-checkbox-label:hover {
+            color: #2563eb;
+        }
+
+        .audit-checkbox-label input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+    .audit-input-group {
+        margin-bottom: 1rem;
+    }
+
+    .audit-input-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .audit-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+        .audit-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .audit-input:read-only {
+            background-color: #eff6ff;
+            cursor: not-allowed;
+        }
+
+    .audit-placeholder {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #9ca3af;
+    }
+
+        .audit-placeholder i {
+            font-size: 3rem;
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+
+    .audit-success-note {
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        background: #d1fae5;
+        border: 1px solid #10b981;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #065f46;
+    }
+
+    .audit-image-box {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #6ee7b7;
+    }
+
+    .audit-upload-area {
+        border: 2px dashed #6ee7b7;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-upload-area:hover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+    .audit-image-preview {
+        max-width: 100%;
+        max-height: 12rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-bottom: 0.75rem;
+    }
+
+    .audit-modal-footer {
         padding: 1rem 2rem;
         border-top: 2px solid #e5e7eb;
         display: flex;
@@ -1892,14 +2457,16 @@
                             <th class="text-right">Tồn đầu kỳ</th>
                             <th class="text-right">SL nhập</th>
                             <th class="text-right">SL xuất</th>
+                            <th class="text-center">Trạng thái số lượng</th>
+                            <th class="text-center">Trạng thái chất lượng</th>
                             <th class="text-center">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="ingredientTableBody">
                         @if (Model.Ingredients == null || !Model.Ingredients.Any())
                         {
-                            <tr>
-                                <td colspan="9" style="text-align:center; padding:3rem; color:#6b7280;">
+                            <tr class="no-data-row">
+                                <td colspan="10" style="text-align:center; padding:3rem; color:#6b7280;">
                                     <i class="fas fa-inbox" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
                                     <br>
                                     <strong style="font-size:1.1rem; color:#374151;">Không tìm thấy nguyên liệu nào</strong>
@@ -1914,7 +2481,31 @@
 
                             @foreach (var item in Model.Ingredients)
                             {
-                                <tr>
+                                var rowClass = "";
+                                var dataStatus = "normal";
+
+                                if (item.IsExpired)
+                                {
+                                    rowClass = "expired";
+                                    dataStatus = "expired";
+                                }
+                                else if (item.IsLowStock)
+                                {
+                                    rowClass = "low-stock";
+                                    dataStatus = "low-stock";
+                                }
+                                else if (item.IsBelowReorderLevel)
+                                {
+                                    rowClass = "below-reorder";
+                                    dataStatus = "below-reorder";
+                                }
+                                else if (item.HasExpiringSoon)
+                                {
+                                    rowClass = "expiring-soon";
+                                    dataStatus = "expiring-soon";
+                                }
+
+                                <tr class="@rowClass ingredient-row" data-status="@dataStatus">
                                     <td>@stt</td>
                                     <td>@item.IngredientCode</td>
                                     <td>@item.Name</td>
@@ -1996,11 +2587,6 @@
                                                onclick="showIngredientDetailFromRow(this); return false;">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <button onclick="openEditModal('@item.IngredientId', '@item.Name', '@(item.Unit?.UnitName ?? "---")', '@(item.Unit?.UnitId ?? 0)')"
-                                                    class="action-btn edit"
-                                                    title="Chỉnh sửa">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -2019,7 +2605,7 @@
     <div id="ingredientModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Chi tiết nguyên liệu</h2>
+                <h2><i class="fas fa-info-circle"></i> Chi tiết nguyên liệu</h2>
                 <button id="closeModal" class="close-btn">&times;</button>
             </div>
 
@@ -2107,12 +2693,15 @@
                                 <th>Ngày nhập</th>
                                 <th>Hạn sử dụng</th>
                                 <th>Số lượng còn</th>
+                                <th>Tình trạng</th>
                                 <th>Thuộc kho</th>
+                                <th>Đang sử dụng</th>
                                 <th>Thao tác</th>
+                                <th id="auditActionHeader" style="display: none;">Kiểm kê</th>
                             </tr>
                         </thead>
                         <tbody id="batchTableBody">
-                            <tr><td colspan="7" style="text-align:center;">Chưa có dữ liệu</td></tr>
+                            <tr><td colspan="8" style="text-align:center;">Chưa có dữ liệu</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -2131,7 +2720,6 @@
                 <button id="closeModalFooter" class="btn btn-danger" style="flex-shrink: 0;">
                     <i class="fas fa-times"></i> Đóng
                 </button>
-                <button id="closeModalFooter" class="btn btn-danger">Đóng</button>
             </div>
         </div>
     </div>
@@ -2357,8 +2945,16 @@
             if (e.target === modal) modal.style.display = "none";
         });
 
-    });
+        const auditQuantityInput = document.getElementById('auditQuantity');
+        if (auditQuantityInput) {
+            auditQuantityInput.addEventListener('input', function (e) {
+                validateAuditQuantity(this);
+            });
 
+            auditQuantityInput.addEventListener('blur', function (e) {
+                validateAuditQuantity(this);
+            });
+        }
 
         updateDashboard();
         currentStatusFilter = 'all';
@@ -2522,17 +3118,26 @@
     function attachWarehouseEventListeners() {
         // Lắng nghe sự kiện thay đổi warehouse
         document.querySelectorAll('.warehouse-select').forEach(select => {
-            select.addEventListener('change', function() {
+            select.addEventListener('change', function () {
                 const row = this.closest('tr');
                 const originalWarehouseId = parseInt(row.dataset.originalWarehouseId);
                 const newWarehouseId = parseInt(this.value);
                 const saveBtn = row.querySelector('.btn-save-warehouse');
+                const checkbox = row.querySelector('.isactive-checkbox');
 
-                if (newWarehouseId !== originalWarehouseId) {
+                const hasWarehouseChange = newWarehouseId !== originalWarehouseId;
+                const hasIsActiveChange = checkbox && checkbox.checked !== (row.dataset.originalIsActive === 'true');
+
+                if (hasWarehouseChange) {
                     this.classList.add('changed');
-                    saveBtn.classList.add('show');
                 } else {
                     this.classList.remove('changed');
+                }
+
+                // Hiển thị nút Lưu nếu có bất kỳ thay đổi nào
+                if (hasWarehouseChange || hasIsActiveChange) {
+                    saveBtn.classList.add('show');
+                } else {
                     saveBtn.classList.remove('show');
                 }
             });
@@ -2543,28 +3148,46 @@
             btn.addEventListener('click', function () {
                 const batchId = this.dataset.batchId;
                 const row = this.closest('tr');
-                const purchaseOrderId = row.querySelector('td:first-child').textContent; // ← LẤY TEXT TỪ CỘT ĐẦU TIÊN
+                const purchaseOrderId = row.querySelector('td:first-child').textContent;
                 const select = row.querySelector('.warehouse-select');
+                const checkbox = row.querySelector('.isactive-checkbox');
+
                 const newWarehouseId = parseInt(select.value);
                 const newWarehouseName = select.options[select.selectedIndex].text;
+                const newIsActive = checkbox.checked;
 
-                showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, row);
+                showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, newIsActive, row);
             });
         });
     }
 
-    function showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, row) {
+    function showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, newIsActive, row) {
+        const originalIsActive = row.dataset.originalIsActive === 'true';
+        const statusText = newIsActive ? 'ĐANG SỬ DỤNG' : 'NGỪNG SỬ DỤNG';
+        const statusColor = newIsActive ? '#10b981' : '#ef4444';
+
+        // Kiểm tra xem có thay đổi gì không
+        const hasWarehouseChange = parseInt(row.dataset.originalWarehouseId) !== newWarehouseId;
+        const hasIsActiveChange = originalIsActive !== newIsActive;
+
+        let confirmMessage = `Bạn có chắc chắn muốn cập nhật lô <strong>#${purchaseOrderId}</strong>?<br><br>`;
+
+        if (hasWarehouseChange) {
+            confirmMessage += `• Chuyển sang kho: <strong>${newWarehouseName}</strong><br>`;
+        }
+
+        if (hasIsActiveChange) {
+            confirmMessage += `• Trạng thái: <strong style="color: ${statusColor}">${statusText}</strong>`;
+        }
+
         const confirmHtml = `
             <div class="confirm-popup" id="confirmPopup">
                 <div class="confirm-content">
                     <h3>
                         <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
-                        Xác nhận thay đổi kho
+                        Xác nhận cập nhật
                     </h3>
-                    <p>
-                        Bạn có chắc chắn muốn chuyển lô <strong>#${purchaseOrderId}</strong>
-                        sang kho <strong>${newWarehouseName}</strong>?
-                    </p>
+                    <p>${confirmMessage}</p>
                     <div class="confirm-buttons">
                         <button class="btn btn-danger" id="cancelBtn">
                             <i class="fas fa-times"></i> Hủy
@@ -2592,7 +3215,7 @@
                 confirmBtn.disabled = true;
                 confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
 
-                await updateBatchWarehouse(batchId, newWarehouseId, row);
+                await updateBatchWarehouse(batchId, newWarehouseId, newIsActive, row);
 
                 popup.remove();
             } catch (error) {
@@ -2603,7 +3226,7 @@
         });
     }
 
-    async function updateBatchWarehouse(batchId, newWarehouseId, row) {
+    async function updateBatchWarehouse(batchId, newWarehouseId, newIsActive, row) {
         try {
             const response = await fetch('/ManagerIngredent/UpdateBatchWarehouse', {
                 method: 'POST',
@@ -2612,31 +3235,37 @@
                 },
                 body: JSON.stringify({
                     batchId: batchId,
-                    warehouseId: newWarehouseId
+                    warehouseId: newWarehouseId,
+                    isActive: newIsActive  // ✅ Thêm IsActive
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Không thể cập nhật kho');
+                throw new Error('Không thể cập nhật thông tin lô');
             }
 
             const result = await response.json();
 
             if (result.success) {
+                // Cập nhật giá trị gốc
                 row.dataset.originalWarehouseId = newWarehouseId;
+                row.dataset.originalIsActive = newIsActive;
+
                 const select = row.querySelector('.warehouse-select');
+                const checkbox = row.querySelector('.isactive-checkbox');
                 const saveBtn = row.querySelector('.btn-save-warehouse');
 
                 select.classList.remove('changed');
+                checkbox.classList.remove('changed');
                 saveBtn.classList.remove('show');
 
-                showSuccessMessage('Cập nhật kho thành công!');
+                showSuccessMessage('Cập nhật thông tin lô thành công!');
             } else {
                 throw new Error(result.message || 'Có lỗi xảy ra');
             }
 
         } catch (error) {
-            console.error('Error updating warehouse:', error);
+            console.error('Error updating batch:', error);
             throw error;
         }
     }
@@ -2684,27 +3313,42 @@
         }
     }
 
+    // Helper: Parse số format VN về JavaScript number
+    function parseVietnameseNumber(text) {
+        if (!text) return 0;
+        // "1.234,56" -> "1234.56" -> 1234.56
+        const cleaned = text.toString().trim()
+            .replace(/\./g, '')  // Xóa dấu chấm (hàng nghìn)
+            .replace(',', '.');  // Thay dấu phẩy thành dấu chấm (thập phân)
+        return parseFloat(cleaned) || 0;
+    }
+
     function formatNumber(value) {
-        if (value === null || value === undefined) return '0.00';
+        if (value === null || value === undefined) return '0,00';
 
         try {
             const num = Number(value);
-            if (isNaN(num)) return '0.00';
-            return num.toLocaleString('vi-VN', {
+            if (isNaN(num)) return '0,00';
+
+            // Dùng de-DE locale: 1.234.567,89
+            return num.toLocaleString('de-DE', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
         } catch (e) {
-            return '0.00';
+            return '0,00';
         }
     }
+
+    
+
 
     function displayNoData(tbody) {
         document.getElementById("mName").textContent = "---";
         document.getElementById("mUnit").textContent = "---";
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align:center;padding:2rem;color:#9ca3af;">
+                <td colspan="10" style="text-align:center;padding:2rem;color:#9ca3af;">
                     <i class="fas fa-inbox"></i><br>
                     Không có dữ liệu lô nhập
                 </td>
@@ -2715,7 +3359,7 @@
     function displayError(tbody, message) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align:center;padding:2rem;color:#ef4444;">
+                <td colspan="10" style="text-align:center;padding:2rem;color:#ef4444;">
                     <i class="fas fa-exclamation-circle"></i><br>
                     Có lỗi xảy ra: ${message}
                 </td>
@@ -2840,7 +3484,8 @@ function closeAlert() {
         const ingredientCode = button.getAttribute('data-ingredient-code');
         const ingredientName = button.getAttribute('data-ingredient-name');
         const ingredientUnit = button.getAttribute('data-ingredient-unit');
-        const ingredientUnitId = button.getAttribute('data-ingredient-unit-id'); // ← THÊM DÒNG NÀY
+        const ingredientUnitId = button.getAttribute('data-ingredient-unit-id');
+        const ingredientUnitType = parseInt(button.getAttribute('data-ingredient-unit-type'));
 
         const reorderLevel = button.getAttribute('data-reorder-level');
 
@@ -2861,7 +3506,8 @@ function closeAlert() {
         modal.setAttribute('data-ingredient-code', ingredientCode);
         modal.setAttribute('data-ingredient-name', ingredientName);
         modal.setAttribute('data-ingredient-unit', ingredientUnit);
-        modal.setAttribute('data-ingredient-unit-id', ingredientUnitId); // ← THÊM DÒNG NÀY
+        modal.setAttribute('data-ingredient-unit-id', ingredientUnitId);
+        modal.setAttribute('data-ingredient-unit-type', ingredientUnitType); // ← THÊM DÒNG NÀY
 
         // Gọi function load batch
         loadBatchList(ingredientId);
@@ -2876,7 +3522,7 @@ function closeAlert() {
         try {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align:center;padding:2rem;">
+                    <td colspan="10" style="text-align:center;padding:2rem;">
                         <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...
                     </td>
                 </tr>

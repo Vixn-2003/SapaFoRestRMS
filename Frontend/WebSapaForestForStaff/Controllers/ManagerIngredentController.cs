@@ -348,6 +348,7 @@ namespace WebSapaForestForStaff.Controllers
         {
             public int BatchId { get; set; }
             public int WarehouseId { get; set; }
+            public bool IsActive { get; set; }
         }
 
         [HttpGet]
@@ -372,6 +373,143 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        
+
+        // Trong ManagerIngredentController.cs
+        [HttpGet]
+        public async Task<IActionResult> CheckAuditStatus(int batchId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/InventoryIngredient/api/Audit/CheckStatus/{batchId}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var result = JsonConvert.DeserializeObject<dynamic>(content);
+
+                    return Ok(new
+                    {
+                        success = true,
+                        hasUnprocessedAudit = (bool)result.hasUnprocessedAudit,
+                        auditId = (string)result.auditId
+                    });
+                }
+
+                return BadRequest(new { success = false, message = "Không thể kiểm tra trạng thái đơn kiểm kê" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [Route("api/Audit/SubmitAudit")]
+        public async Task<IActionResult> SubmitAudit([FromForm] AuditInventoryRequestDTO request)
+        {
+            try
+            {
+                // ✅ 1. VALIDATE DỮ LIỆU
+                if (string.IsNullOrWhiteSpace(request.PurchaseOrderId))
+                    return BadRequest(new { success = false, message = "Mã lô không hợp lệ" });
+
+                if (string.IsNullOrWhiteSpace(request.Reason))
+                    return BadRequest(new { success = false, message = "Vui lòng nhập lý do kiểm kê" });
+
+                if (string.IsNullOrWhiteSpace(request.CreatorName) ||
+                    string.IsNullOrWhiteSpace(request.CreatorPosition) ||
+                    string.IsNullOrWhiteSpace(request.CreatorPhone))
+                    return BadRequest(new { success = false, message = "Thông tin người tạo đơn không đầy đủ" });
+
+                if (request.ImageFile == null || request.ImageFile.Length == 0)
+                    return BadRequest(new { success = false, message = "Thiếu hình ảnh minh chứng" });
+
+                // TODO: Lấy UserId từ Session/Claims
+                int currentUserId = 2; // Tạm thời hardcode
+
+                Console.WriteLine($"Processing audit for PO: {request.PurchaseOrderId}");
+
+                // ✅ 2. TẠO MULTIPART FORM DATA ĐỂ GỬI SANG API BACKEND
+                var formData = new MultipartFormDataContent();
+
+                // Thêm các field thông tin cơ bản
+                formData.Add(new StringContent(request.BatchId.ToString()), "BatchId");
+                formData.Add(new StringContent(request.PurchaseOrderId), "PurchaseOrderId");
+                formData.Add(new StringContent(request.IngredientCode ?? ""), "IngredientCode");
+                formData.Add(new StringContent(request.IngredientName ?? ""), "IngredientName");
+                formData.Add(new StringContent(request.Unit ?? ""), "Unit");
+                formData.Add(new StringContent(request.OriginalQuantity.ToString()), "OriginalQuantity");
+
+                // Xử lý ExpiryDate (nullable)
+                if (request.ExpiryDate.HasValue)
+                {
+                    formData.Add(new StringContent(request.ExpiryDate.Value.ToString("yyyy-MM-dd")), "ExpiryDate");
+                }
+
+                // Thông tin người tạo đơn
+                formData.Add(new StringContent(currentUserId.ToString()), "CreatorId");
+                formData.Add(new StringContent(request.CreatedAt.ToString("o")), "CreatedAt"); // ISO 8601 format
+                formData.Add(new StringContent(request.CreatorName), "CreatorName");
+                formData.Add(new StringContent(request.CreatorPosition), "CreatorPosition");
+                formData.Add(new StringContent(request.CreatorPhone), "CreatorPhone");
+
+                // Thông tin kiểm kê
+                formData.Add(new StringContent(request.Reason), "Reason");
+                formData.Add(new StringContent(request.AdjustmentQuantity.ToString()), "AdjustmentQuantity");
+                formData.Add(new StringContent(request.IsAddition.ToString().ToLower()), "IsAddition");
+                formData.Add(new StringContent(request.IngredientStatus ?? ""), "IngredientStatus");
+                formData.Add(new StringContent("processing"), "AuditStatus"); // Mặc định là processing
+
+                // ✅ 3. THÊM FILE ẢNH
+                if (request.ImageFile != null && request.ImageFile.Length > 0)
+                {
+                    var fileStream = request.ImageFile.OpenReadStream();
+                    var streamContent = new StreamContent(fileStream);
+                    streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+                        request.ImageFile.ContentType ?? "image/jpeg"
+                    );
+                    formData.Add(streamContent, "ImageFile", request.ImageFile.FileName);
+                }
+
+                Console.WriteLine("Sending audit data to API Backend...");
+
+                // ✅ 4. GỬI SANG API BACKEND
+                var response = await _httpClient.PostAsync("api/InventoryIngredient/Audit/Create", formData);
+
+                Console.WriteLine($"API Response Status: {response.StatusCode}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"API Success: {result}");
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Tạo đơn kiểm kê thành công!",
+                        data = result
+                    });
+                }
+
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Error: {error}");
+                return StatusCode((int)response.StatusCode, new
+                {
+                    success = false,
+                    message = $"Không thể tạo đơn kiểm kê: {error}"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = $"Có lỗi xảy ra: {ex.Message}"
+                });
+            }
+        }
+
+       
     }
 }

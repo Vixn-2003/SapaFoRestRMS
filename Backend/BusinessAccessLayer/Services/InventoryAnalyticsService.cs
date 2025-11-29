@@ -132,5 +132,6 @@ namespace BusinessAccessLayer.Services.Inventory
 
             return await _context.SaveChangesAsync(cancellationToken);
         }
+
     }
 }
