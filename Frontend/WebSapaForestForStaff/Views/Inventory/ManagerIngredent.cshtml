@@ -22,7 +22,7 @@
 
     .container {
         min-height: 100vh;
-        padding: 1.5rem;
+        padding: 0.2rem;
     }
 
     .max-width {
@@ -146,7 +146,9 @@
     }
 
     .table-wrapper {
-        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 600px; /* Chiều cao cho khoảng 9 dòng (~65px/dòng) */
+        position: relative;
     }
 
     .table {
@@ -154,10 +156,13 @@
         border-collapse: collapse;
     }
 
-    .table thead {
-        background-color: #f9fafb;
-        border-bottom: 1px solid #e5e7eb;
-    }
+        .table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
 
     .table th {
         padding: 0.75rem 1rem;
@@ -298,9 +303,9 @@
     .modal-content {
         background: white;
         border-radius: 12px;
-        width: 1200px;
+        width: 1400px;
         max-width: 95%;
-        max-height: 90vh;
+        max-height: 100vh;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         animation: slideUp 0.3s ease-out;
         display: flex;
@@ -313,7 +318,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);      
+        background: linear-gradient(135deg, #5a5a5a 0%, #5a5a5a 100%);
         border-radius: 12px 12px 0 0;
     }
 
@@ -834,7 +839,6 @@
 
     /* Style cho lô hết hạn trong modal */
     .batch-table tbody tr.batch-expired {
-        background-color: #fee2e2;
         border-left: 4px solid #ef4444;
     }
 
@@ -844,7 +848,6 @@
 
     /* Style cho lô sắp hết hạn trong modal */
     .batch-table tbody tr.batch-expiring-soon {
-        background-color: #fef3c7;
         border-left: 4px solid #f59e0b;
     }
 
@@ -997,7 +1000,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        background: #313131;
         border-radius: 12px 12px 0 0;
     }
 
@@ -1479,6 +1482,317 @@
             accent-color: #f59e0b;
         }
 
+/* Thêm vào phần <style> */
+
+/* ===== TRẠNG THÁI HẾT HÀNG ===== */
+.status-out-of-stock {
+    background-color: #1f2937;
+    color: white;
+    animation: pulse-dark 2s ease-in-out infinite;
+}
+
+@@keyframes pulse-dark {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(31, 41, 55, 0.7);
+    }
+    50% {
+        opacity: 0.85;
+        box-shadow: 0 0 12px 4px rgba(31, 41, 55, 0.9);
+    }
+}
+
+/* Row hết hàng trong bảng batch */
+.batch-table tbody tr.batch-out-of-stock {
+    background-color: #f3f4f6;
+    opacity: 0.7;
+}
+
+.batch-table tbody tr.batch-out-of-stock:hover {
+    background-color: #e5e7eb;
+    opacity: 0.85;
+}
+
+/* Badge hết hàng */
+.batch-status-badge.batch-status-out-of-stock {
+    background-color: #1f2937;
+    color: white;
+    animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(31, 41, 55, 0.7);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 8px 2px rgba(31, 41, 55, 0.9);
+    }
+}
+
+/* ===== PAGINATION CHO MODAL ===== */
+.batch-pagination {
+    padding: 1rem;
+    border-top: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f9fafb;
+}
+
+.batch-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.batch-pagination-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s;
+    color: #374151;
+}
+
+.batch-pagination-btn:hover:not(.disabled) {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+}
+
+.batch-pagination-btn.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.batch-pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.batch-pagination-info {
+    font-size: 0.875rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+/* Responsive cho filter layout */
+@@media (max-width: 1024px) {
+    form.card > div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+}
+
+@@media (max-width: 768px) {
+    form.card > div > div > div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Tooltip cho Mức tối thiểu */
+.info-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5rem;
+    cursor: help;
+}
+
+.info-tooltip .fa-info-circle {
+    width: 20px;
+    height: 20px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.info-tooltip:hover .fa-info-circle {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
+.tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+/* Mũi tên tooltip */
+.tooltip-text::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1f2937;
+}
+
+.info-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+    bottom: 135%;
+}
+
+/* Responsive cho tooltip */
+@@media (max-width: 768px) {
+    .tooltip-text {
+        white-space: normal;
+        max-width: 200px;
+    }
+}
+
+
+
+/* ===== DASHBOARD CARDS ===== */
+.dashboard-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+}
+
+.dashboard-card:hover::before {
+    transform: translateX(0);
+}
+
+.dashboard-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.25) !important;
+}
+
+.dashboard-card:active {
+    transform: translateY(-4px);
+}
+
+/* ===== FILTER SHORTCUT BUTTONS ===== */
+.filter-shortcut-btn {
+    padding: 0.875rem 1.5rem;
+    border: 2px solid #d1d5db;
+    background: white;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.filter-shortcut-btn i {
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+}
+
+.filter-shortcut-btn:hover i {
+    transform: scale(1.15);
+}
+
+.filter-shortcut-btn:hover {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: #1e40af;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.filter-shortcut-btn.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-color: #2563eb;
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
+}
+
+.filter-shortcut-btn.active i {
+    color: white;
+}
+
+.count-badge {
+    background: rgba(0, 0, 0, 0.15);
+    padding: 0.25rem 0.625rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: center;
+}
+
+.filter-shortcut-btn.active .count-badge {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ===== ANIMATION CHO DASHBOARD ===== */
+@@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#dashboardStats {
+    animation: slideInDown 0.5s ease-out;
+}
+
+#filterShortcuts {
+    animation: slideInDown 0.6s ease-out;
+}
+
+/* ===== HOVER EFFECT CHO CARDS ===== */
+.dashboard-card p:first-child {
+    transition: transform 0.2s ease;
+}
+
+.dashboard-card:hover p:first-child {
+    transform: translateX(4px);
+}
+
 </style>
 
 <div class="container">
@@ -1511,51 +1825,141 @@
             </div>
         }
         <div class="card">
-            <h1 class="header-title">Nguyên liệu</h1>
+            <h1 class="header-title">Danh Sách Nguyên liệu</h1>
             <p class="header-subtitle">Quản lý thông tin nguyên liệu</p>
         </div>
 
-        <form method="post" asp-controller="ManagerIngredent" asp-action="FilterIngredent" class="card" id="filterForm">
-            @Html.AntiForgeryToken()
-            <div class="filter-grid">
-                <div class="form-group">
-                    <label class="form-label">Tìm kiếm</label>
-                    <input type="text"
-                           placeholder="Nhập tên nguyên liệu hoặc mã nguyên liệu"
-                           name="searchIngredent"
-                           class="form-input"
-                           value="@Model.SearchIngredent" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Từ ngày</label>
-                    <input type="date" name="fromDate" class="form-input"
-                           value="@((Model.FromDate ?? DateTime.Now.AddDays(-7)).ToString("yyyy-MM-dd"))" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Đến ngày</label>
-                    <input type="date" name="toDate" class="form-input"
-                           value="@((Model.ToDate ?? DateTime.Now).ToString("yyyy-MM-dd"))" />
-                </div>
-
-                <!-- ✅ THÊM: Dropdown lọc trạng thái (chỉ filter ở client) -->
-                <div class="form-group">
-                    <label class="form-label">Trạng thái</label>
-                    <select id="statusFilter" class="form-select">
-                        <option value="">Tất cả</option>
-                        <option value="normal">Bình thường</option>
-                        <option value="expiring-soon">Sắp hết hạn</option>
-                        <option value="expired">Hết hạn</option>
-                        <option value="below-reorder">Dưới tối thiểu</option>
-                        <option value="low-stock">Sắp hết hàng</option>
-                    </select>
+        <!-- ===== DASHBOARD STATS ===== -->
+        <div id="dashboardStats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+            <!-- Card 1: Hết hàng -->
+            <div class="dashboard-card" style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;" onclick="filterByStatus('out-of-stock')">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="color: #f3f4f6; font-size: 0.875rem; font-weight: 500; margin: 0;">Hết hàng</p>
+                        <p id="outOfStockCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 50%;">
+                        <i class="fas fa-box-open" style="font-size: 1.75rem; color: #f3f4f6;"></i>
+                    </div>
                 </div>
             </div>
 
+            <!-- Card 2: Sắp hết hàng -->
+            <div class="dashboard-card" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer;" onclick="filterByStatus('low-stock')">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="color: #fee2e2; font-size: 0.875rem; font-weight: 500; margin: 0;">Sắp hết hàng</p>
+                        <p id="lowStockCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 50%;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 1.75rem; color: white;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Sắp hết hạn -->
+            <div class="dashboard-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); cursor: pointer;" onclick="filterByStatus('expiring-soon')">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="color: #fef3c7; font-size: 0.875rem; font-weight: 500; margin: 0;">Sắp hết hạn</p>
+                        <p id="expiringSoonCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 50%;">
+                        <i class="fas fa-clock" style="font-size: 1.75rem; color: white;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: Hết hạn -->
+            <div class="dashboard-card" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); cursor: pointer;" onclick="filterByStatus('expired')">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="color: #ede9fe; font-size: 0.875rem; font-weight: 500; margin: 0;">Hết hạn</p>
+                        <p id="expiredCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 50%;">
+                        <i class="fas fa-times-circle" style="font-size: 1.75rem; color: white;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FILTER SHORTCUTS ===== -->
+        <div id="filterShortcuts" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-radius: 0.75rem; border: 1px solid #e5e7eb;">
+            <button class="filter-shortcut-btn active" data-filter="all" onclick="filterByStatus('all')">
+                <i class="fas fa-th-large"></i>
+                <span>Tất cả</span>
+                <span class="count-badge" id="totalCount">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="out-of-stock" onclick="filterByStatus('out-of-stock')">
+                <i class="fas fa-box-open"></i>
+                <span>Hết hàng</span>
+                <span class="count-badge" id="outOfStockBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="low-stock" onclick="filterByStatus('low-stock')">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Sắp hết</span>
+                <span class="count-badge" id="lowStockBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="below-reorder" onclick="filterByStatus('below-reorder')">
+                <i class="fas fa-box"></i>
+                <span>Dưới tối thiểu</span>
+                <span class="count-badge" id="belowReorderBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="expiring-soon" onclick="filterByStatus('expiring-soon')">
+                <i class="fas fa-clock"></i>
+                <span>Sắp hết hạn</span>
+                <span class="count-badge" id="expiringSoonBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="expired" onclick="filterByStatus('expired')">
+                <i class="fas fa-times-circle"></i>
+                <span>Hết hạn</span>
+                <span class="count-badge" id="expiredBtn">0</span>
+            </button>
+        </div>
+
+        <form method="post" asp-controller="ManagerIngredent" asp-action="FilterIngredent" class="card" id="filterForm">
+
+            <!-- Container chính chia 2 cột -->
+            <div style="grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1rem;">
+
+
+                <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: #1e40af; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-search"></i>
+                        Tìm kiếm & Thống kê theo thời gian
+                    </h3>
+
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Ô tìm kiếm -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-box"></i> Tìm kiếm nguyên liệu
+                            </label>
+                            <input type="text"
+                                   placeholder="Nhập tên nguyên liệu hoặc mã nguyên liệu"
+                                   name="searchIngredent"
+                                   class="form-input"
+                                   value="@Model.SearchIngredent" />
+                        </div>
+                    </div>
+                </div>
+
+               
+            </div>
+
+            <!-- Nút thao tác -->
             <div class="button-group">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-filter"></i> Tìm Kiếm
+                </button>
+                <button type="button" class="btn" style="background-color: #6b7280; color: white;" onclick="resetFilters()">
+                    <i class="fas fa-redo"></i> Đặt lại bộ lọc
                 </button>
                 <a href="/ImportInventory" class="btn btn-success">
                     <i class="fas fa-plus"></i> Thêm nguyên liệu
@@ -1635,7 +2039,15 @@
                                     <td class="text-right">@item.TotalExport</td>
                                     <td class="text-center">
                                         @* Trạng thái số lượng *@
-                                        @if (item.IsLowStock)
+
+                                        @if (item.TotalQuantity == 0)
+                                                {
+                                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-bold border-2 border-gray-700 shadow-sm pulse-dark">
+                                                <i class="fas fa-box-open"></i>
+                                                <span>Hết hàng</span>
+                                            </div>
+                                                }
+                                        else if (item.IsLowStock)
                                         {
                                             <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-md text-sm font-bold border-2 border-red-400 shadow-sm pulse-red-alert">
                                                 <i class="fas fa-exclamation-triangle"></i>
@@ -1692,6 +2104,7 @@
                                                data-ingredient-unit="@(item.Unit?.UnitName ?? "---")"
                                                data-ingredient-unit-id="@(item.Unit?.UnitId ?? 0)"
                                                data-ingredient-unit-type="@((int)(item.Unit?.UnitType ?? UnitType.Integer))"
+                                               data-reorder-level="@(item.ReorderLevel?.ToString() ?? "")"
                                                class="action-btn view"
                                                title="Xem chi tiết"
                                                onclick="showIngredientDetailFromRow(this); return false;">
@@ -1707,34 +2120,7 @@
                 </table>
             </div>
 
-            <div class="pagination">
-                <div class="pagination-controls">
-                    <span class="pagination-text">Trang</span>
-                    <a asp-action="FilterIngredent"
-                       asp-route-page="@(Model.CurrentPage - 1)"
-                       asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
-                       asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")"
-                       asp-route-searchIngredent="@Model.SearchIngredent"
-                       class="pagination-btn @(Model.CurrentPage <= 1 ? "disabled" : "")">
-                        &lt;
-                    </a>
-                    <span class="pagination-btn active">@Model.CurrentPage</span>
-                    <a asp-action="FilterIngredent"
-                       asp-route-page="@(Model.CurrentPage + 1)"
-                       asp-route-fromDate="@Model.FromDate?.ToString("yyyy-MM-dd")"
-                       asp-route-toDate="@Model.ToDate?.ToString("yyyy-MM-dd")"
-                       asp-route-searchIngredent="@Model.SearchIngredent"
-                       class="pagination-btn @(Model.CurrentPage * Model.ItemsPerPage >= Model.TotalItems ? "disabled" : "")">
-                        &gt;
-                    </a>
-                </div>
-                <div class="pagination-info">
-                    Hiển thị @((Model.CurrentPage - 1) * Model.ItemsPerPage + 1)
-                    -
-                    @Math.Min(Model.CurrentPage * Model.ItemsPerPage, Model.TotalItems)
-                    trên @Model.TotalItems kết quả
-                </div>
-            </div>
+            
         </div>
     </div>
 
@@ -1751,6 +2137,16 @@
                     <div class="info-header-content">
                         <p><strong>Tên nguyên liệu:</strong> <span id="mName">---</span></p>
                         <p><strong>Đơn vị tính:</strong> <span id="mUnit">---</span></p>
+                        <p style="position: relative;">
+                            <strong>Mức tối thiểu:</strong>
+                            <span id="mReorderLevel">---</span>
+                            <span class="info-tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">
+                                    Đây là số lượng trung bình nguyên liệu này xuất ra trong 30 ngày gần nhất.
+                                </span>
+                            </span>
+                        </p>
                     </div>
                     <div class="info-header-actions">
                         <button class="btn-edit-info" onclick="openEditModalFromDetail()">
@@ -1759,6 +2155,54 @@
                         <button class="btn-edit-info" style="background-color: #10b981; margin-left: 0.5rem;" onclick="toggleAuditButtons()">
                             <i class="fas fa-clipboard-check"></i> Kiểm kê thực tế
                         </button>
+                    </div>
+                </div>
+                <!-- Thêm vào sau div.info-header trong modal-body -->
+                <div class="batch-filter-container" style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 1rem; align-items: end;">
+                        <!-- Tìm kiếm theo mã lô -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-search"></i> Tìm kiếm mã lô
+                            </label>
+                            <input type="text"
+                                   id="batchCodeSearch"
+                                   class="form-input"
+                                   placeholder="Nhập mã lô..."
+                                   onkeyup="filterBatches()">
+                        </div>
+
+                        <!-- Filter trạng thái sử dụng -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-toggle-on"></i> Trạng thái sử dụng
+                            </label>
+                            <select id="isActiveFilter" class="form-select" onchange="filterBatches()">
+                                <option value="">Tất cả</option>
+                                <option value="true">Đang sử dụng</option>
+                                <option value="false">Ngừng sử dụng</option>
+                            </select>
+                        </div>
+
+                        <!-- Checkbox hiển thị lô hết hàng -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="opacity: 0;">.</label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                                <input type="checkbox"
+                                       id="showEmptyBatches"
+                                       onchange="filterBatches()"
+                                       style="width: 1.125rem; height: 1.125rem; cursor: pointer;">
+                                <span>Hiển thị lô hết hàng</span>
+                            </label>
+                        </div>
+
+                        <!-- Nút reset filter -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="opacity: 0;">.</label>
+                            <button class="btn btn-primary" onclick="resetBatchFilters()" style="width: 100%;">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <hr>
@@ -1786,8 +2230,17 @@
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button id="closeModalFooter" class="btn btn-danger">
+            <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+                <div style="flex: 1; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #dc2626;
+                margin-right: 1rem;">
+                    <p style="margin: 0; font-size: 0.875rem; color: #991b1b; line-height: 1.5;
+                  display: flex; align-items: start; gap: 0.5rem;">
+                        <i class="fas fa-exclamation-circle" style="margin-top: 0.125rem; flex-shrink: 0; font-size: 1rem;"></i>
+                        <span><strong>Lưu ý:</strong> Với các lô nguyên liệu hết hạn sử dụng nhưng vẫn có trạng thái đang sử dụng, hệ thống sẽ không trừ nguyên liệu để chất lượng nguyên liệu luôn được đảm bảo.</span>
+                    </p>
+                </div>
+                <button id="closeModalFooter" class="btn btn-danger" style="flex-shrink: 0;">
                     <i class="fas fa-times"></i> Đóng
                 </button>
             </div>
@@ -1911,7 +2364,7 @@
                                 </div>
                                 <div style="display: flex; align-items: start; gap: 0.75rem;">
                                     <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Số lượng:</div>
-                                    <div id="auditCurrentQty" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; text-align: right;">0</div>
+                                    <div id="auditCurrentQty" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; text-align: left;">0</div>
                                 </div>
                                 <div style="display: flex; align-items: start; gap: 0.75rem;">
                                     <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">
@@ -2087,6 +2540,12 @@
 <script>
     let warehouseList = [];
 
+    // ===== BIẾN TOÀN CỤC CHO PHÂN TRANG =====
+    let allBatches = []; // Lưu toàn bộ batches
+    let filteredBatches = []; // Batches sau khi filter
+    let currentBatchPage = 1;
+    const batchesPerPage = 5;
+
     // Load warehouse list khi trang được tải
     async function loadWarehouses() {
         try {
@@ -2131,6 +2590,9 @@
                 validateAuditQuantity(this);
             });
         }
+
+        updateDashboard();
+        currentStatusFilter = 'all';
 
     });
 
@@ -2660,9 +3122,18 @@ function closeAlert() {
         const ingredientUnitId = button.getAttribute('data-ingredient-unit-id');
         const ingredientUnitType = parseInt(button.getAttribute('data-ingredient-unit-type'));
 
+        const reorderLevel = button.getAttribute('data-reorder-level');
+
         // Hiển thị thông tin nguyên liệu ngay lập tức
         document.getElementById("mName").textContent = ingredientName || "---";
         document.getElementById("mUnit").textContent = ingredientUnit || "---";
+
+        const reorderLevelEl = document.getElementById("mReorderLevel");
+        if (reorderLevel && reorderLevel !== "null" && reorderLevel !== "") {
+            reorderLevelEl.textContent = formatNumber(parseFloat(reorderLevel));
+        } else {
+            reorderLevelEl.textContent = "Chưa thiết lập";
+        }
 
         // Lưu thông tin vào modal để dùng cho Edit
         const modal = document.getElementById("ingredientModal");
@@ -2701,96 +3172,323 @@ function closeAlert() {
 
             if (!Array.isArray(data) || data.length === 0) {
                 displayNoData(tbody);
+                allBatches = [];
+                filteredBatches = [];
                 return;
             }
 
-            tbody.innerHTML = "";
+            // ✅ LƯU TOÀN BỘ BATCHES VÀO BIẾN TOÀN CỤC
+            allBatches = data;
 
-            data.forEach((batch) => {
-                const batchStatus = getBatchStatus(batch);
-                const row = document.createElement("tr");
-
-                if (batchStatus.isExpired) {
-                    row.className = 'batch-expired';
-                } else if (batchStatus.isExpiringSoon) {
-                    row.className = 'batch-expiring-soon';
-                }
-
-                row.dataset.batchId = batch.batchId;
-                row.dataset.originalWarehouseId = batch.warehouseId;
-                row.dataset.originalIsActive = batch.isActive; // ✅ Lưu giá trị ban đầu
-
-                const createdDate = formatDate(batch.createdAt);
-                const expiryDate = formatDate(batch.expiryDate);
-                const quantity = formatNumber(batch.quantityRemaining);
-
-                const warehouseOptions = warehouseList
-                    .filter(w => w.isActive)
-                    .map(w => `<option value="${w.warehouseId}" ${w.warehouseId === batch.warehouseId ? 'selected' : ''}>${w.name}</option>`)
-                    .join('');
-
-                row.innerHTML = `
-                    <td style="font-weight: 600; color: #3b82f6;">${batch.purchaseOrderId}</td>
-                    <td>${batch.supplierName || 'N/A'}</td>
-                    <td>${createdDate}</td>
-                    <td>${expiryDate}</td>
-                    <td style="text-align: right; font-weight: 500;">${quantity}</td>
-                    <td style="text-align: center;">
-                        ${batchStatus.badge}
-                    </td>
-                    <td>
-                        <select class="warehouse-select" data-batch-id="${batch.batchId}">
-                            ${warehouseOptions}
-                        </select>
-                    </td>
-                    <td class="isactive-checkbox-container">
-                        <input type="checkbox"
-                               class="isactive-checkbox"
-                               data-batch-id="${batch.batchId}"
-                               ${batch.isActive ? 'checked' : ''}>
-                    </td>
-                    <td style="text-align: center;">
-                        <button class="btn-save-warehouse" data-batch-id="${batch.batchId}">
-                            <i class="fas fa-save"></i> Lưu
-                        </button>
-                    </td>
-                `;
-
-                tbody.appendChild(row);
-
-                if (showAuditColumnFlag) {
-                    const cell = document.createElement('td');
-                    cell.style.textAlign = 'center';
-                    cell.innerHTML = `
-                        <button class="btn btn-primary" style="background-color: #9333ea; padding: 0.5rem 1rem;" onclick="openAuditModal('${batch.batchId}')">
-                            <i class="fas fa-clipboard-check"></i> Kiểm kê
-                        </button>
-                    `;
-                    row.appendChild(cell);
-                }
-            });
-
-            attachWarehouseEventListeners();
-            attachIsActiveEventListeners(); // ✅ Thêm event listeners cho checkbox
-            console.log(`Successfully displayed ${data.length} batches`);
+            // ✅ RESET FILTERS VÀ HIỂN THỊ TRANG ĐẦU TIÊN
+            resetBatchFilters();
 
         } catch (error) {
             console.error("Error:", error);
             displayError(tbody, error.message);
+            allBatches = [];
+            filteredBatches = [];
         }
     }
 
-    function filterByStatus() {
-        const statusFilter = document.getElementById('statusFilter').value;
+    function filterBatches() {
+        const searchText = document.getElementById('batchCodeSearch').value.toLowerCase();
+        const isActiveFilter = document.getElementById('isActiveFilter').value;
+        const showEmpty = document.getElementById('showEmptyBatches').checked;
+
+        filteredBatches = allBatches.filter(batch => {
+            const matchSearch = batch.purchaseOrderId.toLowerCase().includes(searchText);
+
+            let matchIsActive = true;
+            if (isActiveFilter !== '') {
+                matchIsActive = batch.isActive.toString() === isActiveFilter;
+            }
+
+            const matchQuantity = showEmpty || batch.quantityRemaining > 0;
+
+            return matchSearch && matchIsActive && matchQuantity;
+        });
+
+        // ✅ THÊM: Sắp xếp sau khi filter
+        filteredBatches = sortBatches(filteredBatches);
+
+        currentBatchPage = 1;
+        renderBatchTable();
+    }
+
+    function resetBatchFilters() {
+        document.getElementById('batchCodeSearch').value = '';
+        document.getElementById('isActiveFilter').value = '';
+        document.getElementById('showEmptyBatches').checked = false;
+
+        // Mặc định không hiển thị lô hết hàng
+        filteredBatches = allBatches.filter(b => b.quantityRemaining > 0);
+
+        // ✅ THÊM: Sắp xếp
+        filteredBatches = sortBatches(filteredBatches);
+
+        currentBatchPage = 1;
+        renderBatchTable();
+    }
+
+    function sortBatches(batches) {
+        return batches.sort((a, b) => {
+            // 1. Ưu tiên lô đang sử dụng lên trước
+            if (a.isActive !== b.isActive) {
+                return b.isActive - a.isActive; // true (1) lên trước false (0)
+            }
+
+            // 2. Ưu tiên lô còn hàng lên trước lô hết hàng
+            const aHasStock = a.quantityRemaining > 0;
+            const bHasStock = b.quantityRemaining > 0;
+            if (aHasStock !== bHasStock) {
+                return bHasStock - aHasStock;
+            }
+
+            // 3. Trong các lô còn hàng: sắp xếp theo hạn sử dụng (FEFO)
+            if (aHasStock && bHasStock) {
+                const dateA = new Date(a.expiryDate);
+                const dateB = new Date(b.expiryDate);
+
+                // Lô hết hạn sớm hơn lên trước
+                if (dateA.getTime() !== dateB.getTime()) {
+                    return dateA - dateB;
+                }
+
+                // Nếu cùng hạn sử dụng, sắp xếp theo ngày nhập (FIFO)
+                const createdA = new Date(a.createdAt);
+                const createdB = new Date(b.createdAt);
+                return createdA - createdB;
+            }
+
+            // 4. Các lô hết hàng: sắp xếp theo ngày nhập mới nhất lên trước
+            const createdA = new Date(a.createdAt);
+            const createdB = new Date(b.createdAt);
+            return createdB - createdA;
+        });
+    }
+
+    function renderBatchTable() {
+        const tbody = document.getElementById("batchTableBody");
+        const modal = document.getElementById("ingredientModal");
+
+        if (filteredBatches.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align:center;padding:2rem;color:#9ca3af;">
+                        <i class="fas fa-inbox" style="font-size:2rem; margin-bottom:0.5rem;"></i><br>
+                        Không tìm thấy lô nào phù hợp với điều kiện lọc
+                    </td>
+                </tr>
+            `;
+
+            // Ẩn pagination nếu không có data
+            const existingPagination = document.querySelector('.batch-pagination');
+            if (existingPagination) existingPagination.remove();
+            return;
+        }
+
+        // Tính toán phân trang
+        const totalPages = Math.ceil(filteredBatches.length / batchesPerPage);
+        const startIndex = (currentBatchPage - 1) * batchesPerPage;
+        const endIndex = startIndex + batchesPerPage;
+        const currentBatches = filteredBatches.slice(startIndex, endIndex);
+
+        // ✅ KHÔNG CẬP NHẬT LẠI - Thông tin đã được set khi mở modal
+        // Tên nguyên liệu và đơn vị tính đã hiển thị từ function showIngredientDetailFromRow()
+        // và không cần thay đổi khi filter/phân trang batch
+
+        // Clear và render bảng
+        tbody.innerHTML = "";
+
+        currentBatches.forEach((batch) => {
+            const batchStatus = getBatchStatus(batch);
+            const row = document.createElement("tr");
+
+            // ✅ THÊM CLASS CHO LÔ HẾT HÀNG
+            if (batch.quantityRemaining === 0) {
+                row.className = 'batch-out-of-stock';
+            } else if (batchStatus.isExpired) {
+                row.className = 'batch-expired';
+            } else if (batchStatus.isExpiringSoon) {
+                row.className = 'batch-expiring-soon';
+            }
+
+            row.dataset.batchId = batch.batchId;
+            row.dataset.originalWarehouseId = batch.warehouseId;
+            row.dataset.originalIsActive = batch.isActive;
+
+            const createdDate = formatDate(batch.createdAt);
+            const expiryDate = formatDate(batch.expiryDate);
+            const quantity = formatNumber(batch.quantityRemaining);
+
+            const warehouseOptions = warehouseList
+                .filter(w => w.isActive)
+                .map(w => `<option value="${w.warehouseId}" ${w.warehouseId === batch.warehouseId ? 'selected' : ''}>${w.name}</option>`)
+                .join('');
+
+            // ✅ CẬP NHẬT BADGE TRẠNG THÁI
+            let statusBadge = batchStatus.badge;
+            if (batch.quantityRemaining === 0) {
+                statusBadge = '<span class="batch-status-badge batch-status-out-of-stock"><i class="fas fa-box-open"></i> Hết hàng</span>';
+            }
+
+            row.innerHTML = `
+                <td style="font-weight: 600; color: #3b82f6;">${batch.purchaseOrderId}</td>
+                <td>${batch.supplierName || 'N/A'}</td>
+                <td>${createdDate}</td>
+                <td>${expiryDate}</td>
+                <td style="text-align: right; font-weight: 500;">${quantity}</td>
+                <td style="text-align: center;">
+                    ${statusBadge}
+                </td>
+                <td>
+                    <select class="warehouse-select" data-batch-id="${batch.batchId}" ${batch.quantityRemaining === 0 ? 'disabled' : ''}>
+                        ${warehouseOptions}
+                    </select>
+                </td>
+                <td class="isactive-checkbox-container">
+                    <input type="checkbox"
+                           class="isactive-checkbox"
+                           data-batch-id="${batch.batchId}"
+                           ${batch.isActive ? 'checked' : ''}
+                           ${batch.quantityRemaining === 0 ? 'disabled' : ''}>
+                </td>
+                <td style="text-align: center;">
+                    <button class="btn-save-warehouse"
+                            data-batch-id="${batch.batchId}"
+                            ${batch.quantityRemaining === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                        <i class="fas fa-save"></i> Lưu
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+
+            if (showAuditColumnFlag && batch.quantityRemaining > 0) {
+                const cell = document.createElement('td');
+                cell.style.textAlign = 'center';
+                cell.innerHTML = `
+                    <button class="btn btn-primary" style="background-color: #9333ea; padding: 0.5rem 1rem;" onclick="openAuditModal('${batch.batchId}')">
+                        <i class="fas fa-clipboard-check"></i> Kiểm kê
+                    </button>
+                `;
+                row.appendChild(cell);
+            }
+        });
+
+        attachWarehouseEventListeners();
+        attachIsActiveEventListeners();
+
+        // ✅ RENDER PAGINATION
+        renderBatchPagination(totalPages);
+    }
+
+    function renderBatchPagination(totalPages) {
+        // Xóa pagination cũ nếu có
+        const existingPagination = document.querySelector('.batch-pagination');
+        if (existingPagination) existingPagination.remove();
+
+        if (totalPages <= 1) return; // Không cần pagination nếu chỉ có 1 trang
+
+        const batchTableContainer = document.querySelector('.batch-table-container');
+
+        const paginationHTML = `
+            <div class="batch-pagination">
+                <div class="batch-pagination-controls">
+                    <button class="batch-pagination-btn ${currentBatchPage === 1 ? 'disabled' : ''}"
+                            onclick="changeBatchPage(${currentBatchPage - 1})"
+                            ${currentBatchPage === 1 ? 'disabled' : ''}>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="batch-pagination-btn active">${currentBatchPage}</span>
+                    <span style="color: #6b7280; font-size: 0.875rem;">/ ${totalPages}</span>
+                    <button class="batch-pagination-btn ${currentBatchPage === totalPages ? 'disabled' : ''}"
+                            onclick="changeBatchPage(${currentBatchPage + 1})"
+                            ${currentBatchPage === totalPages ? 'disabled' : ''}>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="batch-pagination-info">
+                    Hiển thị ${((currentBatchPage - 1) * batchesPerPage) + 1} - ${Math.min(currentBatchPage * batchesPerPage, filteredBatches.length)}
+                    trên ${filteredBatches.length} lô
+                </div>
+            </div>
+        `;
+
+        batchTableContainer.insertAdjacentHTML('beforeend', paginationHTML);
+    }
+
+    // ===== HÀM THAY ĐỔI TRANG =====
+    function changeBatchPage(newPage) {
+        const totalPages = Math.ceil(filteredBatches.length / batchesPerPage);
+
+        if (newPage < 1 || newPage > totalPages) return;
+
+        currentBatchPage = newPage;
+        renderBatchTable();
+
+        // Scroll lên đầu bảng
+        document.querySelector('.batch-table-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+
+    function filterByQuantityAndQuality() {
+        const quantityStatus = document.getElementById('quantityStatusFilter').value;
+        const qualityStatus = document.getElementById('qualityStatusFilter').value;
+
+        // ✅ NẾU ĐANG DÙNG SHORTCUT FILTER, ƯU TIÊN SHORTCUT
+        if (currentStatusFilter !== 'all') {
+            filterByStatus(currentStatusFilter);
+            return;
+        }
+
+        // ✅ NẾU KHÔNG CÓ FILTER NÀO, HIỂN THỊ TẤT CẢ
+        if (quantityStatus === '' && qualityStatus === '') {
+            filterByStatus('all');
+            return;
+        }
+
         const rows = document.querySelectorAll('.ingredient-row');
         const noDataRow = document.querySelector('.no-data-row');
 
         let visibleCount = 0;
 
         rows.forEach(row => {
-            const rowStatus = row.getAttribute('data-status');
+            let showRow = true;
 
-            if (statusFilter === '' || rowStatus === statusFilter) {
+            // ✅ FILTER THEO SỐ LƯỢNG
+            if (quantityStatus !== '') {
+                const qtyCell = row.querySelector('td:nth-child(9)'); // Cột trạng thái số lượng
+                const qtyText = qtyCell.textContent.toLowerCase();
+
+                if (quantityStatus === 'normal') {
+                    showRow = showRow && qtyText.includes('bình thường');
+                } else if (quantityStatus === 'below-reorder') {
+                    showRow = showRow && qtyText.includes('dưới tối thiểu');
+                } else if (quantityStatus === 'low-stock') {
+                    showRow = showRow && qtyText.includes('sắp hết hàng');
+                } else if (quantityStatus === 'out-of-stock') {
+                    showRow = showRow && qtyText.includes('hết hàng');
+                }
+            }
+
+            // ✅ FILTER THEO CHẤT LƯỢNG
+            if (qualityStatus !== '') {
+                const qualityCell = row.querySelector('td:nth-child(10)'); // Cột trạng thái chất lượng
+                const qualityText = qualityCell.textContent.toLowerCase();
+
+                if (qualityStatus === 'quality-normal') {
+                    showRow = showRow && qualityText.includes('bình thường');
+                } else if (qualityStatus === 'expiring-soon') {
+                    showRow = showRow && qualityText.includes('sắp hết hạn');
+                } else if (qualityStatus === 'expired') {
+                    showRow = showRow && qualityText.includes('hết hạn');
+                }
+            }
+
+            // Hiển thị hoặc ẩn row
+            if (showRow) {
                 row.style.display = '';
                 visibleCount++;
             } else {
@@ -2804,35 +3502,33 @@ function closeAlert() {
             const noResultRow = document.createElement('tr');
             noResultRow.className = 'no-result-row';
             noResultRow.innerHTML = `
-                    <td colspan="10" style="text-align:center; padding:3rem; color:#6b7280;">
-                        <i class="fas fa-filter" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
-                        <br>
-                        <strong style="font-size:1.1rem; color:#374151;">Không có nguyên liệu nào với trạng thái này</strong>
-                        <br>
-                        <span style="font-size:0.875rem;">Vui lòng chọn trạng thái khác</span>
-                    </td>
-                `;
+                <td colspan="11" style="text-align:center; padding:3rem; color:#6b7280;">
+                    <i class="fas fa-filter" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
+                    <br>
+                    <strong style="font-size:1.1rem; color:#374151;">Không có nguyên liệu nào phù hợp với bộ lọc</strong>
+                    <br>
+                    <span style="font-size:0.875rem;">Vui lòng thay đổi điều kiện lọc</span>
+                </td>
+            `;
             tbody.appendChild(noResultRow);
         } else {
-            // Xóa thông báo "không có kết quả" nếu có
             const noResultRow = document.querySelector('.no-result-row');
             if (noResultRow) {
                 noResultRow.remove();
             }
         }
 
-        // Cập nhật số lượng hiển thị
         updatePaginationInfo(visibleCount);
+        updateDashboard();
     }
 
-    // ✅ THÊM: Cập nhật thông tin pagination
-    function updatePaginationInfo(visibleCount) {
-        const paginationInfo = document.querySelector('.pagination-info');
-        if (paginationInfo && visibleCount > 0) {
-            const totalItems = document.querySelectorAll('.ingredient-row').length;
-            paginationInfo.innerHTML = `Hiển thị ${visibleCount} trên ${totalItems} kết quả`;
-        }
+    function resetFilters() {
+        document.getElementById('quantityStatusFilter').value = '';
+        document.getElementById('qualityStatusFilter').value = '';
+        currentStatusFilter = 'all';
+        filterByStatus('all');
     }
+
 
     // ✅ THÊM: Lắng nghe sự kiện thay đổi dropdown
     document.addEventListener('DOMContentLoaded', function () {
@@ -2862,6 +3558,18 @@ function closeAlert() {
         if (statusFilterDropdown) {
             statusFilterDropdown.addEventListener('change', filterByStatus);
         }
+
+        const quantityFilter = document.getElementById('quantityStatusFilter');
+        const qualityFilter = document.getElementById('qualityStatusFilter');
+
+        if (quantityFilter) {
+            quantityFilter.addEventListener('change', filterByQuantityAndQuality);
+        }
+
+        if (qualityFilter) {
+            qualityFilter.addEventListener('change', filterByQuantityAndQuality);
+        }
+
     });
 
     // ✅ Function kiểm tra trạng thái của batch
@@ -3522,5 +4230,186 @@ function closeAlert() {
             });
         });
     }
+
+    // ===== BIẾN TOÀN CỤC LƯU TRẠNG THÁI FILTER =====
+    let currentStatusFilter = 'all';
+
+    // ===== HÀM ĐẾM SỐ LƯỢNG NGUYÊN LIỆU THEO TRẠNG THÁI =====
+    function countIngredientsByStatus() {
+        const rows = document.querySelectorAll('.ingredient-row');
+
+        let counts = {
+            total: rows.length,
+            outOfStock: 0,
+            lowStock: 0,
+            belowReorder: 0,
+            expiringSoon: 0,
+            expired: 0
+        };
+
+        rows.forEach(row => {
+            // Đếm hết hàng
+            const qtyText = row.querySelector('td:nth-child(5)').textContent.trim();
+            const qty = parseVietnameseNumber(qtyText);
+            if (qty === 0) {
+                counts.outOfStock++;
+            }
+
+            // Đếm trạng thái số lượng
+            const qtyStatusCell = row.querySelector('td:nth-child(9)');
+            if (qtyStatusCell) {
+                const statusText = qtyStatusCell.textContent.toLowerCase();
+                if (statusText.includes('sắp hết hàng')) {
+                    counts.lowStock++;
+                } else if (statusText.includes('dưới tối thiểu')) {
+                    counts.belowReorder++;
+                }
+            }
+
+            // Đếm trạng thái chất lượng
+            const qualityStatusCell = row.querySelector('td:nth-child(10)');
+            if (qualityStatusCell) {
+                const qualityText = qualityStatusCell.textContent.toLowerCase();
+                if (qualityText.includes('hết hạn:')) {
+                    counts.expired++;
+                }
+                if (qualityText.includes('sắp hết hạn:')) {
+                    counts.expiringSoon++;
+                }
+            }
+        });
+
+        return counts;
+    }
+
+    // ===== CẬP NHẬT DASHBOARD VÀ BUTTONS =====
+    function updateDashboard() {
+        const counts = countIngredientsByStatus();
+
+        // Cập nhật Dashboard Cards
+        document.getElementById('outOfStockCount').textContent = counts.outOfStock;
+        document.getElementById('lowStockCount').textContent = counts.lowStock;
+        document.getElementById('expiringSoonCount').textContent = counts.expiringSoon;
+        document.getElementById('expiredCount').textContent = counts.expired;
+
+        // Cập nhật Filter Buttons
+        document.getElementById('totalCount').textContent = counts.total;
+        document.getElementById('outOfStockBtn').textContent = counts.outOfStock;
+        document.getElementById('lowStockBtn').textContent = counts.lowStock;
+        document.getElementById('belowReorderBtn').textContent = counts.belowReorder;
+        document.getElementById('expiringSoonBtn').textContent = counts.expiringSoon;
+        document.getElementById('expiredBtn').textContent = counts.expired;
+    }
+
+    // ===== LỌC NGUYÊN LIỆU THEO TRẠNG THÁI =====
+    function filterByStatus(status) {
+        currentStatusFilter = status;
+
+        const rows = document.querySelectorAll('.ingredient-row');
+        const noDataRow = document.querySelector('.no-data-row');
+        let visibleCount = 0;
+
+        // Xóa "no result" row cũ nếu có
+        const oldNoResult = document.querySelector('.no-result-row');
+        if (oldNoResult) oldNoResult.remove();
+
+        // Cập nhật active state cho buttons
+        document.querySelectorAll('.filter-shortcut-btn').forEach(btn => {
+            if (btn.getAttribute('data-filter') === status) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Nếu filter = "all", hiển thị tất cả
+        if (status === 'all') {
+            rows.forEach(row => {
+                row.style.display = '';
+                visibleCount++;
+            });
+            updatePaginationInfo(visibleCount);
+            return;
+        }
+
+        // Lọc theo từng loại trạng thái
+        rows.forEach(row => {
+            let shouldShow = false;
+
+            const qtyText = row.querySelector('td:nth-child(5)').textContent.trim();
+            const qty = parseVietnameseNumber(qtyText);
+            const qtyStatusCell = row.querySelector('td:nth-child(9)');
+            const qualityStatusCell = row.querySelector('td:nth-child(10)');
+
+            const qtyStatusText = qtyStatusCell ? qtyStatusCell.textContent.toLowerCase() : '';
+            const qualityStatusText = qualityStatusCell ? qualityStatusCell.textContent.toLowerCase() : '';
+
+            switch (status) {
+                case 'out-of-stock':
+                    shouldShow = qty === 0;
+                    break;
+
+                case 'low-stock':
+                    shouldShow = qtyStatusText.includes('sắp hết hàng');
+                    break;
+
+                case 'below-reorder':
+                    shouldShow = qtyStatusText.includes('dưới tối thiểu');
+                    break;
+
+                case 'expiring-soon':
+                    shouldShow = qualityStatusText.includes('sắp hết hạn:');
+                    break;
+
+                case 'expired':
+                    shouldShow = qualityStatusText.includes('hết hạn:');
+                    break;
+            }
+
+            if (shouldShow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Hiển thị thông báo nếu không có kết quả
+        if (visibleCount === 0 && !noDataRow) {
+            const tbody = document.getElementById('ingredientTableBody');
+            const statusNames = {
+                'out-of-stock': 'Hết hàng',
+                'low-stock': 'Sắp hết hàng',
+                'below-reorder': 'Dưới tối thiểu',
+                'expiring-soon': 'Sắp hết hạn',
+                'expired': 'Hết hạn'
+            };
+
+            const noResultRow = document.createElement('tr');
+            noResultRow.className = 'no-result-row';
+            noResultRow.innerHTML = `
+                <td colspan="11" style="text-align:center; padding:3rem; color:#6b7280;">
+                    <i class="fas fa-filter" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
+                    <br>
+                    <strong style="font-size:1.1rem; color:#374151;">Không có nguyên liệu nào ở trạng thái "${statusNames[status]}"</strong>
+                    <br>
+                    <span style="font-size:0.875rem;">Nhấn "Tất cả" để xem toàn bộ danh sách</span>
+                </td>
+            `;
+            tbody.appendChild(noResultRow);
+        }
+
+        updatePaginationInfo(visibleCount);
+    }
+
+    // ===== CẬP NHẬT THÔNG TIN PAGINATION =====
+    function updatePaginationInfo(visibleCount) {
+        const paginationInfo = document.querySelector('.pagination-info');
+        if (paginationInfo && visibleCount > 0) {
+            const totalItems = document.querySelectorAll('.ingredient-row').length;
+            paginationInfo.innerHTML = `Hiển thị ${visibleCount} trên ${totalItems} kết quả`;
+        }
+    }
+
 
 </script>
