@@ -281,6 +281,8 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 // AuditLog Service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
+builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
+
 // Receipt Service - Pass WebRootPath from IWebHostEnvironment
 builder.Services.AddScoped<IReceiptService>(sp =>
 {

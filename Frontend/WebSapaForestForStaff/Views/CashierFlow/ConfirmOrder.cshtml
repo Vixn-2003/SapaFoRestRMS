@@ -223,6 +223,16 @@
                                         <td class="text-end fw-bold text-danger">-@Model.DiscountAmount.ToString("N0") ₫</td>
                                     </tr>
                                 }
+                                @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                                {
+                                    <tr class="table-info">
+                                        <td colspan="5" class="fw-semibold ps-3">
+                                            <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+                                            Đã đặt cọc
+                                        </td>
+                                        <td class="text-end fw-bold text-success">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
+                                    </tr>
+                                }
                                 <tr class="table-success">
                                     <td colspan="5" class="fw-bold fs-5 ps-3">Tổng cộng thanh toán</td>
                                     <td class="text-end fw-bold text-primary fs-4">@Model.TotalAmount.ToString("N0") ₫</td>
@@ -267,10 +277,12 @@
                 }
                 else if (canProceedPayment)
                 {
-                    <a href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = Model.OrderId })"
-                       class="btn btn-success">
-                        Thanh toán
-                    </a>
+                    <button type="button"
+                            class="btn btn-success btn-lg"
+                            onclick="showPaymentConfirmationModal(@Model.OrderId, '@tables', @Model.TotalAmount, '@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = Model.OrderId })')">
+                        <i class="fa-solid fa-credit-card me-2"></i>
+                        Xử lý thanh toán
+                    </button>
                 }
                 else if (!isConfirmed)
                 {
@@ -285,6 +297,14 @@
         </form>
     </div>
 </div>
+
+@* Include Payment Confirmation Modal *@
+@{
+    ViewBag.TableNumber = tables;
+    ViewBag.OrderId = Model.OrderId;
+    ViewBag.TotalAmount = Model.TotalAmount;
+}
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_PaymentConfirmationModal.cshtml")
 
 @if (canUndoConfirm)
 {

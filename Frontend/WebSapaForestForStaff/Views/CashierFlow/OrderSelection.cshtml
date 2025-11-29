@@ -60,6 +60,9 @@
     @await Html.PartialAsync("~/Views/CashierFlow/_OrderListPartial.cshtml", Model.PendingOrders)
 </div>
 
+@* Include Payment Confirmation Modal *@
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_PaymentConfirmationModal.cshtml")
+
 @section Scripts {
 <script>
 document.addEventListener("DOMContentLoaded", () => {

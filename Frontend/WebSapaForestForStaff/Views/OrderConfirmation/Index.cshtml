@@ -627,6 +627,34 @@
                             </span>
                         </div>
                     }
+                    @{
+                        var depositPaid = false;
+                        var depositAmount = 0m;
+                        try
+                        {
+                            if (order != null && order.Value.TryGetProperty("depositPaid", out var depositPaidProp))
+                            {
+                                depositPaid = depositPaidProp.GetBoolean();
+                            }
+                            if (order != null && order.Value.TryGetProperty("depositAmount", out var depositAmountProp))
+                            {
+                                depositAmount = depositAmountProp.GetDecimal();
+                            }
+                        }
+                        catch { }
+                    }
+                    @if (depositPaid && depositAmount > 0)
+                    {
+                        <div class="summary-row" style="background-color: #d1fae5;">
+                            <span class="summary-label">
+                                <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+                                Đã đặt cọc:
+                            </span>
+                            <span class="summary-value" style="color: #059669;">
+                                -@depositAmount.ToString("N0") ₫
+                            </span>
+                        </div>
+                    }
                     <div class="summary-row highlight">
                         <span>Tổng cộng thanh toán:</span>
                         <span id="totalDisplay" style="color: #667eea; font-size: 22px;">

@@ -3,18 +3,49 @@ using Newtonsoft.Json;
 using System.Text;
 using WebSapaForestForStaff.Models;
 using WebSapaForestForStaff.DTOs;
+using Microsoft.AspNetCore.Authorization;
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Roles = "Manager")]
     public class ReservationStaffController : Controller
     {
         private readonly HttpClient _client;
+        private readonly IHttpContextAccessor _httpContextAccessor;
        
-        public ReservationStaffController(IHttpClientFactory clientFactory)
+        public ReservationStaffController(IHttpClientFactory clientFactory, IHttpContextAccessor httpContextAccessor)
         {
             _client = clientFactory.CreateClient();
             _client.BaseAddress = new Uri("https://localhost:7096/api/");
+            _httpContextAccessor = httpContextAccessor;
         }
- 
+       
+        private string? GetToken()
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null) return null;
+
+            // First try to get from Session
+            var tokenFromSession = httpContext.Session.GetString("Token");
+            if (!string.IsNullOrEmpty(tokenFromSession))
+            {
+                return tokenFromSession;
+            }
+
+            // If not in Session, try to get from Claims
+            var tokenFromClaims = httpContext.User?.FindFirst("Token")?.Value;
+            return tokenFromClaims;
+        }
+       
+        private void SetAuthorizationHeader()
+        {
+            var token = GetToken();
+            if (!string.IsNullOrEmpty(token))
+            {
+                _client.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+        }
+       
         public async Task<IActionResult> Index(
              string? status,
              string? customerName,
@@ -24,6 +55,8 @@ namespace WebSapaForestForStaff.Controllers
              int page = 1,
              int pageSize = 10)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             // Build query string safely
             var queryParts = new List<string>();
             if (!string.IsNullOrEmpty(status)) queryParts.Add($"status={Uri.EscapeDataString(status)}");
@@ -74,6 +107,8 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> AssignTables(int id)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!resResponse.IsSuccessStatusCode)
                 return NotFound();
@@ -148,6 +183,8 @@ namespace WebSapaForestForStaff.Controllers
                 return RedirectToAction("AssignTables", new { id = ReservationId });
             }
 
+            SetAuthorizationHeader(); // Add auth token
+            
             // Tạo DTO gửi API
             var dto = new AssignTableDto
             {
@@ -177,6 +214,8 @@ namespace WebSapaForestForStaff.Controllers
         [HttpPost]
         public async Task<IActionResult> ResetTables(int reservationId)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var res = await _client.PostAsync($"ReservationStaff/reset-tables/{reservationId}", null);
 
             if (!res.IsSuccessStatusCode)
@@ -195,6 +234,8 @@ namespace WebSapaForestForStaff.Controllers
         [HttpPost]
         public async Task<IActionResult> CancelReservation(int id, bool refund)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var response = await _client.PutAsync(
                 $"ReservationStaff/cancel/{id}?refund={refund.ToString().ToLower()}",
                 null
@@ -228,6 +269,8 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            SetAuthorizationHeader(); // Add auth token
+            
             // Gửi đúng API "ReservationStaff/add"
             var dto = new
             {
@@ -270,6 +313,8 @@ namespace WebSapaForestForStaff.Controllers
         [HttpGet]
         public async Task<IActionResult> EditReservation(int id)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var response = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!response.IsSuccessStatusCode)
                 return NotFound();
@@ -299,6 +344,8 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View("EditReservation", model);
 
+            SetAuthorizationHeader(); // Add auth token
+            
             var dto = new
             {
                 model.ReservationDate,
@@ -341,6 +388,8 @@ namespace WebSapaForestForStaff.Controllers
             if (dto.DepositAmount <= 0)
                 return Json(new { success = false, message = "Số tiền đặt cọc không hợp lệ." });
 
+            SetAuthorizationHeader(); // Add auth token
+            
             // Lấy thông tin đặt bàn
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{dto.ReservationId}");
             if (!resResponse.IsSuccessStatusCode)

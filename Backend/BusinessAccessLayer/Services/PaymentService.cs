@@ -176,43 +176,8 @@ public class PaymentService : IPaymentService
 
         var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
         
-        // 🔓 GIẢI PHÓNG BÀN NGAY KHI BẮT ĐẦU THANH TOÁN
-        try
-        {
-            var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
-            if (tables != null && tables.Any())
-            {
-                foreach (var table in tables)
-                {
-                    table.Status = "Available";
-                    await _unitOfWork.Tables.UpdateAsync(table);
-                    
-                    // Log table release
-                    await _auditLogService.LogEventAsync(
-                        eventType: "table_released",
-                        entityType: "Table",
-                        entityId: table.TableId,
-                        description: $"Bàn {table.TableNumber} được giải phóng khi bắt đầu thanh toán cho Order {request.OrderId}",
-                        userId: null,
-                        ct: ct
-                    );
-                }
-                
-                await _unitOfWork.Tables.SaveAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log error but don't fail the payment - table release is secondary
-            await _auditLogService.LogEventAsync(
-                eventType: "table_release_failed",
-                entityType: "Order",
-                entityId: request.OrderId,
-                description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
-                userId: null,
-                ct: ct
-            );
-        }
+        // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION NGAY KHI BẮT ĐẦU THANH TOÁN
+        await ReleaseTablesAndCompleteReservationAsync(request.OrderId, null, ct);
         
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
@@ -461,8 +426,29 @@ public class PaymentService : IPaymentService
             orderDto.DiscountAmount = 0;
         }
 
-        // Tính tổng cộng
-        orderDto.TotalAmount = subtotal + orderDto.VatAmount.Value + orderDto.ServiceFee.Value - orderDto.DiscountAmount.Value;
+        // Lấy thông tin đặt cọc từ Reservation (nếu có)
+        decimal depositToDeduct = 0;
+        if (order.Reservation != null)
+        {
+            orderDto.DepositAmount = order.Reservation.DepositAmount;
+            orderDto.DepositPaid = order.Reservation.DepositPaid;
+            
+            // Chỉ trừ tiền cọc nếu khách đã thanh toán cọc
+            if (order.Reservation.DepositPaid && order.Reservation.DepositAmount.HasValue)
+            {
+                depositToDeduct = order.Reservation.DepositAmount.Value;
+            }
+        }
+
+        // Tính tổng cộng (Subtotal + VAT + Service Fee - Discount - Deposit)
+        orderDto.TotalAmount = subtotal + orderDto.VatAmount.Value + orderDto.ServiceFee.Value 
+                              - orderDto.DiscountAmount.Value - depositToDeduct;
+        
+        // Đảm bảo tổng tiền không âm
+        if (orderDto.TotalAmount < 0)
+        {
+            orderDto.TotalAmount = 0;
+        }
     }
 
     private static bool IsPendingStatus(string? status) =>
@@ -655,43 +641,8 @@ public class PaymentService : IPaymentService
                 ct
             );
 
-            // 🔓 GIẢI PHÓNG BÀN SAU KHI THANH TOÁN THÀNH CÔNG
-            try
-            {
-                var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
-                if (tables != null && tables.Any())
-                {
-                    foreach (var table in tables)
-                    {
-                        table.Status = "Available";
-                        await _unitOfWork.Tables.UpdateAsync(table);
-                        
-                        // Log table release
-                        await _auditLogService.LogEventAsync(
-                            eventType: "table_released",
-                            entityType: "Table",
-                            entityId: table.TableId,
-                            description: $"Bàn {table.TableNumber} được giải phóng sau thanh toán tiền mặt cho Order {request.OrderId}",
-                            userId: userId,
-                            ct: ct
-                        );
-                    }
-                    
-                    await _unitOfWork.Tables.SaveAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log error but don't fail the payment - table release is secondary
-                await _auditLogService.LogEventAsync(
-                    eventType: "table_release_failed",
-                    entityType: "Order",
-                    entityId: request.OrderId,
-                    description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
-                    userId: userId,
-                    ct: ct
-                );
-            }
+            // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION
+            await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
@@ -1057,43 +1008,8 @@ public class PaymentService : IPaymentService
                 ct
             );
 
-            // 🔓 GIẢI PHÓNG BÀN KHI BẮT ĐẦU SPLIT BILL
-            try
-            {
-                var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
-                if (tables != null && tables.Any())
-                {
-                    foreach (var table in tables)
-                    {
-                        table.Status = "Available";
-                        await _unitOfWork.Tables.UpdateAsync(table);
-                        
-                        // Log table release
-                        await _auditLogService.LogEventAsync(
-                            eventType: "table_released",
-                            entityType: "Table",
-                            entityId: table.TableId,
-                            description: $"Bàn {table.TableNumber} được giải phóng khi bắt đầu split bill cho Order {request.OrderId}",
-                            userId: userId,
-                            ct: ct
-                        );
-                    }
-                    
-                    await _unitOfWork.Tables.SaveAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Log error but don't fail the payment - table release is secondary
-                await _auditLogService.LogEventAsync(
-                    eventType: "table_release_failed",
-                    entityType: "Order",
-                    entityId: request.OrderId,
-                    description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
-                    userId: userId,
-                    ct: ct
-                );
-            }
+            // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION KHI BẮT ĐẦU SPLIT BILL
+            await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
@@ -1285,43 +1201,8 @@ public class PaymentService : IPaymentService
         // Trigger post-payment actions
         await TriggerPostPaymentActionsAsync(request.OrderId, transaction.TransactionId, ct);
 
-        // 🔓 GIẢI PHÓNG BÀN SAU KHI XÁC NHẬN THANH TOÁN THÀNH CÔNG
-        try
-        {
-            var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
-            if (tables != null && tables.Any())
-            {
-                foreach (var table in tables)
-                {
-                    table.Status = "Available";
-                    await _unitOfWork.Tables.UpdateAsync(table);
-                    
-                    // Log table release
-                    await _auditLogService.LogEventAsync(
-                        eventType: "table_released",
-                        entityType: "Table",
-                        entityId: table.TableId,
-                        description: $"Bàn {table.TableNumber} được giải phóng sau xác nhận thanh toán cho Order {request.OrderId}",
-                        userId: userId,
-                        ct: ct
-                    );
-                }
-                
-                await _unitOfWork.Tables.SaveAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log error but don't fail the payment - table release is secondary
-            await _auditLogService.LogEventAsync(
-                eventType: "table_release_failed",
-                entityType: "Order",
-                entityId: request.OrderId,
-                description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
-                userId: userId,
-                ct: ct
-            );
-        }
+        // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION
+        await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
         // Unlock order
         await UnlockOrderAsync(request.OrderId, ct);
@@ -1399,6 +1280,67 @@ public class PaymentService : IPaymentService
 
         return retriedTransactions;
     }
+
+    /// <summary>
+    /// Giải phóng bàn và cập nhật trạng thái Reservation khi bắt đầu thanh toán
+    /// </summary>
+    private async Task ReleaseTablesAndCompleteReservationAsync(int orderId, int? userId = null, CancellationToken ct = default)
+    {
+        try
+        {
+            // Lấy order với reservation details
+            var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
+           
+
+            // Lấy reservation
+            var reservation = await _unitOfWork.Reservations.GetReservationByIdAsync(order.ReservationId.Value);
+           
+
+            // Cập nhật trạng thái Reservation thành "Completed"
+            reservation.Status = "Completed";
+            
+            // Giải phóng các bàn trong ReservationTables
+            if (reservation.ReservationTables != null && reservation.ReservationTables.Any())
+            {
+                var tableIds = reservation.ReservationTables.Select(rt => rt.TableId).ToList();
+                reservation.ReservationTables.Clear();
+                
+              
+                
+                await _unitOfWork.Tables.SaveAsync();
+            }
+            
+            // Lưu thay đổi reservation (entity đã được tracked, chỉ cần SaveChanges)
+            await _unitOfWork.Reservations.SaveChangesAsync();
+            
+            // Log reservation completion
+            await _auditLogService.LogEventAsync(
+                eventType: "reservation_completed",
+                entityType: "Reservation",
+                entityId: reservation.ReservationId,
+                description: $"Reservation {reservation.ReservationId} được đánh dấu hoàn thành khi bắt đầu thanh toán Order {orderId}",
+                userId: userId,
+                ct: ct
+            );
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the payment - table release is secondary
+            await _auditLogService.LogEventAsync(
+                eventType: "table_release_failed",
+                entityType: "Order",
+                entityId: orderId,
+                description: $"Lỗi khi giải phóng bàn và cập nhật reservation cho Order {orderId}: {ex.Message}",
+                userId: userId,
+                ct: ct
+            );
+        }
+    }
+
+    /// <summary>
+    /// Chỉ giải phóng bàn (không có reservation hoặc reservation không tồn tại)
+    /// </summary>
+   
 
     /// <summary>
     /// Step 8: Trigger post-payment actions (inventory, reports, revenue, WebSocket events)
