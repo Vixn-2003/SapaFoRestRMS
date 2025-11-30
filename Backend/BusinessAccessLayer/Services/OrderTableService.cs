@@ -18,15 +18,19 @@ namespace BusinessAccessLayer.Services
         private readonly IOrderTableRepository _orderTableRepository;
         private readonly IConfiguration _config; //  KHAI BÁO _config
         private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
+        private readonly IInventoryIngredientService _inventoryService;
         private readonly IHubContext<RestaurantHub> _hubContext;
         public OrderTableService(
              IOrderTableRepository orderTableRepository,
              IConfiguration config, SapaFoRestRmsContext context,
+             IInventoryIngredientService inventoryService,
+        
              IHubContext<RestaurantHub> hubContext)
         {
             _orderTableRepository = orderTableRepository;
             _config = config;
             _context = context;
+            _inventoryService = inventoryService;
             _hubContext = hubContext;
         }
 
@@ -566,6 +570,14 @@ namespace BusinessAccessLayer.Services
             if (item.Order != null)
             {
                 item.Order.TotalAmount -= (item.UnitPrice * item.Quantity);
+            }
+
+            // Hủy món → Chỉ giảm QuantityReserved
+            var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
+            if (!releaseResult.success)
+            {
+                // Log warning but don't fail the cancellation
+                Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món: {releaseResult.message}");
             }
 
             await _context.SaveChangesAsync();

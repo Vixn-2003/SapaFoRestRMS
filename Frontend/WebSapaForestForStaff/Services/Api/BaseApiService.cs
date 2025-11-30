@@ -1,6 +1,9 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using WebSapaForestForStaff.DTOs.Auth;
 using WebSapaForestForStaff.Services.Api.Interfaces;
 
@@ -11,6 +14,10 @@ namespace WebSapaForestForStaff.Services.Api
     /// </summary>
     public abstract class BaseApiService : IBaseApiService
     {
+        private const string AccessTokenSessionKey = "Token";
+        private const string RefreshTokenSessionKey = "RefreshToken";
+        private const string RefreshTokenCookieKey = "sfr.refreshToken";
+
         protected readonly HttpClient _httpClient;
         protected readonly IConfiguration _configuration;
         protected readonly IHttpContextAccessor _httpContextAccessor;
@@ -44,7 +51,7 @@ namespace WebSapaForestForStaff.Services.Api
             if (httpContext == null) return null;
 
             // First try to get from Session (for backward compatibility with ApiService.LoginAsync)
-            var tokenFromSession = httpContext.Session.GetString("Token");
+            var tokenFromSession = httpContext.Session.GetString(AccessTokenSessionKey);
             if (!string.IsNullOrEmpty(tokenFromSession))
             {
                 return tokenFromSession;
@@ -60,7 +67,7 @@ namespace WebSapaForestForStaff.Services.Api
         /// </summary>
         public void SetToken(string token)
         {
-            _httpContextAccessor.HttpContext?.Session.SetString("Token", token);
+            _httpContextAccessor.HttpContext?.Session.SetString(AccessTokenSessionKey, token);
         }
 
         /// <summary>
@@ -68,8 +75,9 @@ namespace WebSapaForestForStaff.Services.Api
         /// </summary>
         public void ClearToken()
         {
-            _httpContextAccessor.HttpContext?.Session.Remove("Token");
-            _httpContextAccessor.HttpContext?.Session.Remove("RefreshToken");
+            var context = _httpContextAccessor.HttpContext;
+            context?.Session.Remove(AccessTokenSessionKey);
+            ClearRefreshTokenStorage();
         }
 
         /// <summary>
@@ -119,25 +127,32 @@ namespace WebSapaForestForStaff.Services.Api
         {
             try
             {
-                var refreshToken = _httpContextAccessor.HttpContext?.Session.GetString("RefreshToken");
+                var refreshToken = GetRefreshTokenValue();
                 if (string.IsNullOrEmpty(refreshToken)) return false;
 
                 var payload = new { RefreshToken = refreshToken };
                 var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await _httpClient.PostAsync($"{GetApiBaseUrl()}/Auth/refresh-token", content);
+                using var request = new HttpRequestMessage(HttpMethod.Post, $"{GetApiBaseUrl().TrimEnd('/')}/Auth/refresh-token")
+                {
+                    Content = content
+                };
+
+                var originalAuthHeader = _httpClient.DefaultRequestHeaders.Authorization;
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+
+                var response = await _httpClient.SendAsync(request);
+
+                _httpClient.DefaultRequestHeaders.Authorization = originalAuthHeader;
+
                 if (!response.IsSuccessStatusCode) return false;
 
                 var body = await response.Content.ReadAsStringAsync();
                 var refreshed = JsonSerializer.Deserialize<LoginResponse>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (refreshed == null || string.IsNullOrEmpty(refreshed.Token)) return false;
 
-                SetToken(refreshed.Token);
-                if (!string.IsNullOrEmpty(refreshed.RefreshToken))
-                {
-                    _httpContextAccessor.HttpContext?.Session.SetString("RefreshToken", refreshed.RefreshToken);
-                }
+                await SaveTokenToSessionAndClaimsAsync(refreshed.Token, refreshed.RefreshToken);
                 return true;
             }
             catch { return false; }
@@ -159,6 +174,112 @@ namespace WebSapaForestForStaff.Services.Api
                 }
             }
             return response;
+        }
+
+        protected void SetRefreshToken(string refreshToken, TimeSpan? lifetime = null)
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return;
+
+            context.Session.SetString(RefreshTokenSessionKey, refreshToken);
+
+            if (context.Response?.HasStarted == true) return;
+
+            var options = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTimeOffset.UtcNow.Add(lifetime ?? TimeSpan.FromDays(7))
+            };
+            context.Response?.Cookies.Append(RefreshTokenCookieKey, refreshToken, options);
+        }
+
+        private string? GetRefreshTokenValue()
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return null;
+
+            var fromSession = context.Session.GetString(RefreshTokenSessionKey);
+            if (!string.IsNullOrEmpty(fromSession))
+            {
+                return fromSession;
+            }
+
+            if (context.Request?.Cookies.TryGetValue(RefreshTokenCookieKey, out var fromCookie) == true &&
+                !string.IsNullOrWhiteSpace(fromCookie))
+            {
+                return fromCookie;
+            }
+
+            return null;
+        }
+
+        private void ClearRefreshTokenStorage()
+        {
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null) return;
+
+            context.Session.Remove(RefreshTokenSessionKey);
+            if (context.Response?.HasStarted == true) return;
+
+            context.Response?.Cookies.Delete(RefreshTokenCookieKey);
+        }
+
+        /// <summary>
+        /// Saves access token to session and re-issues authentication cookie with updated claims
+        /// </summary>
+        /// <param name="token">New access token</param>
+        /// <param name="refreshToken">Optional refresh token</param>
+        protected async Task SaveTokenToSessionAndClaimsAsync(string token, string? refreshToken = null)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return;
+            }
+
+            var context = _httpContextAccessor.HttpContext;
+            if (context == null)
+            {
+                return;
+            }
+
+            context.Session.SetString(AccessTokenSessionKey, token);
+
+            if (!string.IsNullOrEmpty(refreshToken))
+            {
+                SetRefreshToken(refreshToken);
+            }
+
+            if (context.User?.Identity?.IsAuthenticated == true && context.Response?.HasStarted != true)
+            {
+                var authenticateResult =
+                    await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                var principal = authenticateResult?.Principal ?? context.User;
+
+                if (principal?.Identity is not ClaimsIdentity identity)
+                {
+                    return;
+                }
+
+                var existingTokenClaim = identity.FindFirst("Token");
+                if (existingTokenClaim != null)
+                {
+                    identity.RemoveClaim(existingTokenClaim);
+                }
+                identity.AddClaim(new Claim("Token", token));
+
+                var properties = authenticateResult?.Properties ?? new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
+                };
+
+                await context.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    principal,
+                    properties);
+            }
         }
 
         /// <summary>

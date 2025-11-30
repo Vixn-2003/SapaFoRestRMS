@@ -18,6 +18,7 @@ namespace WebSapaForestForStaff.DTOs
         public decimal UnitPrice { get; set; }
 
         public decimal Subtotal { get; set; }
+        public DateOnly? ExpiryDate { get; set; }
 
         public string? WarehouseName { get; set; }
 

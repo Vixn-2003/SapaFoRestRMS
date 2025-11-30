@@ -16,4 +16,6 @@ public partial class Combo
     public bool? IsAvailable { get; set; }
 
     public virtual ICollection<ComboItem> ComboItems { get; set; } = new List<ComboItem>();
+    
+    public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
 }

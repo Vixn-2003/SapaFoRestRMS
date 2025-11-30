@@ -168,16 +168,44 @@
         }
 
         .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 12px;
-            background-color: #fef3c7;
-            color: #b45309;
-            border-radius: 999px;
-            font-size: 14px;
-            font-weight: 500;
-        }
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 2px solid;
+}
+
+/* Trạng thái Completed - Hoàn thành */
+.status-pill.completed {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-color: #10b981;
+}
+
+/* Trạng thái Cancelled - Từ chối */
+.status-pill.cancelled {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #ef4444;
+}
+
+/* Hiệu ứng nháy cho Processing */
+@@keyframes pulseGlow {
+    0%, 100% {
+        border-color: #fbbf24;
+        background-color: #fef3c7;
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+    }
+    50% {
+        border-color: #f59e0b;
+        background-color: #fde68a;
+        box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.6),
+                    0 0 0 8px rgba(251, 191, 36, 0.2);
+    }
+}
 
         .creator-detail {
             display: flex;
@@ -1774,7 +1802,18 @@
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Trạng thái:</span>
-                                <span class="status-pill">@Model.Status</span>
+                                @if (Model.Status == "Completed")
+                                {
+                                    <span class="status-pill completed">Hoàn thành</span>
+                                }
+                                else if (Model.Status == "Cancelled")
+                                {
+                                    <span class="status-pill cancelled">Từ chối</span>
+                                }
+                                else
+                                {
+                                    <span class="status-pill">@Model.Status</span>
+                                }
                             </div>
                         </div>
                     </div>
@@ -1872,6 +1911,7 @@
                                 <th>Mã nguyên liệu</th>
                                 <th>Tên nguyên liệu</th>
                                 <th>Kho lưu trữ</th>
+                                <th>Hạn sử dụng</th>
                                 <th class="text-center">Số lượng</th>
                                 <th class="text-center">Đơn vị</th>
                                 <th class="text-right">Đơn giá</th>
@@ -1889,6 +1929,11 @@
                                         <td class="font-medium">@item.IngredientCode</td>
                                         <td>@item.IngredientName</td>
                                         <td>@item.WarehouseName</td>
+                                        <td>
+                                            @(item.ExpiryDate != null
+                                                ? item.ExpiryDate.Value.ToString("dd/MM/yyyy")
+                                                : "—")
+                                        </td>
                                         <td class="text-center font-semibold">@item.Quantity</td>
                                         <td class="text-center">@item.Unit</td>
                                         <td class="text-right">@string.Format("{0:N0}₫", item.UnitPrice)</td>
@@ -2105,9 +2150,7 @@
         }
 
         function goBack() {
-            if (confirm('Bạn có chắc chắn muốn quay lại?')) {
-                window.history.back();
-            }
+            window.history.back();
         }
 
 
@@ -2129,9 +2172,7 @@
 
         // ===== PRINT ORDER FUNCTION =====
         function printOrder() {
-            if (confirm('Bạn có muốn in phiếu nhập hàng này?')) {
                 window.print();
-            }
         }
 
         // ===== TOAST NOTIFICATION SYSTEM =====

@@ -5,10 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace SapaFoRestRMSAPI.Controllers;
 
@@ -25,13 +27,15 @@ public class PaymentController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly IReceiptService _receiptService;
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<PaymentController> _logger;
 
-    public PaymentController(IPaymentService paymentService, IConfiguration configuration, IReceiptService receiptService, IWebHostEnvironment env)
+    public PaymentController(IPaymentService paymentService, IConfiguration configuration, IReceiptService receiptService, IWebHostEnvironment env, ILogger<PaymentController> logger)
     {
         _paymentService = paymentService;
         _configuration = configuration;
         _receiptService = receiptService;
         _env = env;
+        _logger = logger;
     }
 
     /// <summary>
@@ -40,12 +44,14 @@ public class PaymentController : ControllerBase
     /// </summary>
     [HttpGet("orders")]
     public async Task<IActionResult> GetPendingOrders(
-        [FromQuery] string status = "pending-payment",
+        [FromQuery] DateOnly? date = null,
+        [FromQuery] string? status = "all",
+        [FromQuery] string sortOrder = "desc",
         CancellationToken ct = default)
     {
         try
         {
-            var orders = await _paymentService.GetPendingOrdersAsync(ct);
+            var orders = await _paymentService.GetOrdersAsync(date, status, sortOrder, ct);
             return Ok(orders);
         }
         catch (Exception ex)
@@ -75,6 +81,65 @@ public class PaymentController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Lỗi khi lấy chi tiết đơn hàng", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Khách xác nhận món trước khi thanh toán
+    /// PUT /api/payment/orders/{orderId}/confirm
+    /// </summary>
+    [HttpPut("orders/{orderId}/confirm")]
+    public async Task<IActionResult> ConfirmOrder(int orderId, [FromBody] CustomerConfirmRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            request.OrderId = orderId;
+            var result = await _paymentService.ConfirmOrderAsync(request, ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xác nhận món", error = ex.Message });
+        }
+    }
+
+    [HttpPut("orders/{orderId}/undo-confirm")]
+    public async Task<IActionResult> UndoConfirmOrder(int orderId, [FromBody] UndoConfirmRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            await _paymentService.UndoConfirmOrderAsync(orderId, request, ct);
+            return Ok(new { message = "Order reverted successfully." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi hoàn tác xác nhận", error = ex.Message });
         }
     }
 
@@ -798,54 +863,70 @@ public class PaymentController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("Receipt download requested for order {OrderId}", orderId);
+
             // Get order to verify it exists and is paid
             var order = await _paymentService.GetOrderDetailAsync(orderId, ct);
             if (order == null)
             {
+                _logger.LogWarning("Receipt download failed for order {OrderId}: order not found", orderId);
                 return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {orderId}" });
             }
 
             // Check if order is paid
-            if (order.Status != "Paid" && order.Status != "PAID")
+            if (!IsPaidStatus(order.Status))
             {
+                _logger.LogWarning("Receipt download blocked for order {OrderId}: status {Status}", orderId, order.Status);
                 return BadRequest(new { message = $"Đơn hàng chưa được thanh toán. Trạng thái hiện tại: {order.Status}" });
             }
 
             // Generate order code
-            var orderCode = order.OrderCode ?? $"RMS{orderId:D6}";
+            var orderCode = $"RMS{orderId:D6}";
             var pdfFileName = $"{orderCode}.pdf";
             var pdfPath = Path.Combine(_env.WebRootPath, "receipts", pdfFileName);
+            _logger.LogInformation("Using receipt file path {PdfPath} for order {OrderId}", pdfPath, orderId);
 
             // Check if PDF exists, if not generate it
             if (!System.IO.File.Exists(pdfPath))
             {
                 // Generate receipt
+                _logger.LogInformation("Receipt PDF not found for order {OrderId}. Generating new file.", orderId);
                 await _receiptService.GenerateReceiptPdfAsync(orderId, ct);
             }
 
             // Verify file exists after generation
             if (!System.IO.File.Exists(pdfPath))
             {
+                _logger.LogError("Receipt generation failed for order {OrderId}. File missing at {PdfPath}", orderId, pdfPath);
                 return NotFound(new { message = "Không thể tạo hóa đơn. Vui lòng thử lại." });
             }
 
             // Return PDF file
             var fileBytes = await System.IO.File.ReadAllBytesAsync(pdfPath, ct);
+            _logger.LogInformation("Returning receipt PDF for order {OrderId}. Size: {ByteCount} bytes.", orderId, fileBytes.Length);
             return File(fileBytes, "application/pdf", pdfFileName);
         }
         catch (KeyNotFoundException ex)
         {
+            _logger.LogWarning(ex, "Receipt download failed for order {OrderId}: not found", orderId);
             return NotFound(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
+            _logger.LogWarning(ex, "Receipt download failed for order {OrderId}: invalid state", orderId);
             return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Unexpected error when downloading receipt for order {OrderId}", orderId);
             return StatusCode(500, new { message = "Lỗi khi tải hóa đơn", error = ex.Message });
         }
     }
+
+    private static bool IsPaidStatus(string? status)
+        => string.Equals(status, "Paid", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status, "Success", StringComparison.OrdinalIgnoreCase);
 
     // Helper method to get user ID from claims
     private int? GetUserIdFromClaims()

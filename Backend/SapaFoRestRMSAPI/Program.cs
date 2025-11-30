@@ -19,6 +19,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SapaFoRestRMSAPI.Services;
 using System.Text;
+using SapaFoRestRMSAPI.Hubs;
+using Microsoft.AspNetCore.Http.Features;
+using BusinessAccessLayer.Services.Inventory;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,11 +45,28 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase"), sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(60); // 60 seconds command timeout
+    });
+});
 
 //Show connection string in console
 Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));
 
+
+//check error sql
+builder.Logging.AddConsole();
+builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("MyDatabase"),
+        sqlOptions =>
+        {
+            sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        })
+           .EnableSensitiveDataLogging()
+           .LogTo(Console.WriteLine, LogLevel.Information));
 
 builder.Services.AddEndpointsApiExplorer();
 // Bật middleware Swagger
@@ -54,7 +74,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title = "CellPhoneShop API",
+        Title = "SapaFoRestSMS API",
         Version = "v1"
     });
 
@@ -97,7 +117,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.AccessDeniedPath = "/Auth/AccessDenied";
 
     // Tên của cookie lưu trữ thông tin đăng nhập
-    options.Cookie.Name = "CellPhoneShop.Auth";
+    options.Cookie.Name = "SapaFoRestRMS.Auth";
 
     // Cookie chỉ cho server đọc (client JS không đọc được) → tăng bảo mật
     options.Cookie.HttpOnly = true;
@@ -172,14 +192,19 @@ builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
 builder.Services.AddScoped<IUnitService, UnitService>();
+builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService>();
+builder.Services.AddHostedService<ReorderLevelBackgroundJob>();
 
-
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 
 
 
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
+builder.Services.AddScoped<IKitchenDisplayService, KitchenDisplayService>();
+builder.Services.AddScoped<IWaiterOrderTrackingService, WaiterOrderTrackingService>();
+
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
 
 //UnitOfWork
@@ -189,6 +214,8 @@ builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
 builder.Services.AddScoped<IReservationDepositRepository, ReservationDepositRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+
 builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
@@ -262,7 +289,18 @@ builder.Services.AddScoped<IReceiptService>(sp =>
 {
     var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
     var env = sp.GetRequiredService<IWebHostEnvironment>();
-    return new ReceiptService(unitOfWork, env.WebRootPath);
+    var logger = sp.GetRequiredService<ILogger<ReceiptService>>();
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var webRootPath = string.IsNullOrWhiteSpace(env.WebRootPath)
+        ? Path.Combine(env.ContentRootPath, "wwwroot")
+        : env.WebRootPath;
+
+    if (!Directory.Exists(webRootPath))
+    {
+        Directory.CreateDirectory(webRootPath);
+    }
+
+    return new ReceiptService(unitOfWork, webRootPath, logger, configuration);
 });
 
 // SalaryChangeRequest Service/Repository
@@ -276,6 +314,7 @@ builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
 builder.Services.AddSignalR();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
+builder.Services.AddSignalR();
 
 // ✅ Đảm bảo hỗ trợ multipart form data
 builder.Services.AddControllers()
@@ -335,8 +374,15 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
             "http://localhost:5054",    // 👈 Frontend bạn đang chạy 
             "http://localhost:5123",    // Razor nội bộ
-                                        "http://192.168.1.47:5123", // IP Razor Wifi nhà
-                                        "http://192.168.1.47:5180"  // Swagger wifi nhà
+            "https://localhost:7096",   // 👈 Backend HTTPS localhost
+            "http://localhost:5180",    // Backend HTTP localhost
+            "http://192.168.1.47:5123", // IP Razor Wifi nhà
+            "http://192.168.1.47:5180",  // Swagger wifi nhà
+            "http://192.168.1.97:5054",  // 👈 Frontend IP mới
+            "http://192.168.1.97:5180",  // 👈 Backend HTTP IP mới
+            "https://192.168.1.97:7096", // 👈 Backend HTTPS IP mới (PORT CHÍNH)
+            "http://192.168.1.97:7096",  // 👈 Backend HTTP IP mới (nếu dùng HTTP)
+            "http://192.168.1.97:5123"   // 👈 Razor IP mới
                                         //   "http://192.168.105.100:5123", // IP Razor
                                         //  "http://192.168.105.100:5180"  // Swagger
 
@@ -364,10 +410,20 @@ app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<KitchenHub>("/kitchenHub");
+
 
 app.MapHub<ReservationHub>("/reservationHub");
 app.MapHub<RestaurantHub>("/restaurantHub");
 app.MapControllers();
+
+await app.EnsureSeededAsync();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
+    
+}
 
 // Upsert Admin from configuration (Development)
 using (var scope = app.Services.CreateScope())
@@ -375,11 +431,12 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
-    await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
-
     await DataSeeder.SeedPositionsAsync(ctx);
     await DataSeeder.SeedTestCustomerAsync(ctx);
-    await DataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
+    await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
+    await MenuDataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
+    await MenuDataSeeder.SeedKitchenOrdersAsync(ctx);
+    await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);

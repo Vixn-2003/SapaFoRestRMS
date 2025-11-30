@@ -1,0 +1,147 @@
+@model WebSapaForestForStaff.ViewModels.Payment.PaymentConfirmViewModel
+
+@using WebSapaForestForStaff.Controllers
+
+@{
+    ViewData["Title"] = "Xác nhận giao dịch";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    var sessionId = string.IsNullOrWhiteSpace(Model.Session?.SessionId) ? "--" : Model.Session.SessionId;
+    var paymentMethod = string.IsNullOrWhiteSpace(Model.Session?.PaymentMethod) ? "QR / Ví điện tử" : Model.Session.PaymentMethod;
+    var amount = Model.Session?.Amount ?? 0m;
+    var qrCodeUrl = string.IsNullOrWhiteSpace(Model.Session?.QrCodeUrl) ? null : Model.Session.QrCodeUrl;
+}
+
+<style>
+    body {
+        background-color: #f5f7fa;
+    }
+
+    .cashier-shell {
+        padding: 32px 40px;
+    }
+
+    .cashier-card {
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 15px 40px rgba(15, 139, 131, 0.08);
+    }
+</style>
+
+<div class="cashier-shell">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h2 class="mb-1">Xác nhận giao dịch QR / Ví điện tử</h2>
+            <div class="text-muted">Mã phiên: @sessionId</div>
+        </div>
+        <a href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = Model.OrderId })"
+           class="btn btn-outline-secondary">
+            ← Quay lại chọn phương thức
+        </a>
+    </div>
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle fs-4"></i>
+            <span>@errorMessage</span>
+        </div>
+    }
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-3" role="alert">
+            <i class="bi bi-check-circle fs-4"></i>
+            <span>@successMessage</span>
+        </div>
+    }
+
+    <div class="row g-4 align-items-stretch">
+        <div class="col-lg-5">
+            <div class="card cashier-card h-100">
+                <div class="card-header fw-bold bg-white text-center">
+                    Mã QR thanh toán
+                </div>
+                <div class="card-body text-center p-4">
+                    @if (!string.IsNullOrEmpty(qrCodeUrl))
+                    {
+                        <img src="@qrCodeUrl"
+                             class="img-fluid rounded-3 shadow-sm"
+                             alt="QR Thanh toán"
+                             style="max-width: 100%; height: auto;" />
+                        <div class="text-muted small mt-3">
+                            Khách vui lòng quét mã để chuyển khoản đúng số tiền hiển thị.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted py-4">
+                            Không tìm thấy QR. Vui lòng quay lại bước chọn phương thức và khởi tạo lại phiên.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card cashier-card h-100">
+                <div class="card-header fw-bold bg-white">
+                    Thông tin giao dịch
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="text-muted text-uppercase small">Mã phiên thanh toán</div>
+                            <div class="fw-semibold fs-5">@sessionId</div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <div class="text-muted text-uppercase small">Phương thức</div>
+                            <div class="fw-semibold fs-5">@paymentMethod</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="text-muted text-uppercase small">Số tiền cần nhận</div>
+                            <div class="display-6 fw-bold text-primary">@amount.ToString("N0") ₫</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-muted text-uppercase small">Mã đơn RMS</div>
+                            <div class="fw-semibold">#@Model.OrderId</div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <div class="text-muted text-uppercase small">Trạng thái hiện tại</div>
+                            <span class="badge bg-warning text-dark text-uppercase px-3 py-2">
+                                Chờ thu ngân xác nhận
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-4 mb-0">
+                        <div class="d-flex">
+                            <i class="bi bi-info-circle me-2 fs-4"></i>
+                            <div>
+                                <strong>Nhắc nhở:</strong>
+                                <div class="small mb-0">
+                                    Xác nhận chỉ sau khi đã kiểm tra thông báo từ ngân hàng/ví điện tử.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white d-flex flex-wrap justify-content-end gap-2">
+                    <form asp-action="ConfirmPayment"
+                          asp-controller="CashierPaymentFlow"
+                          method="post"
+                          class="d-flex flex-wrap gap-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="OrderId" value="@Model.OrderId" />
+                        <input type="hidden" name="SessionId" value="@Model.Session?.SessionId" />
+                        <a class="btn btn-outline-secondary"
+                           href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = Model.OrderId })">
+                            ← Quay lại chọn phương thức
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            Xác nhận giao dịch
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

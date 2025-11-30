@@ -96,6 +96,18 @@ namespace DataAccessLayer.Repositories
                     rt.TableId == tableId &&
                     rt.Reservation.Status != "Cancelled");
         }
+
+        /// <summary>
+        /// Get all tables associated with an order (via Reservation)
+        /// </summary>
+        public async Task<List<Table>> GetTablesByOrderIdAsync(int orderId)
+        {
+            return await _context.Tables
+                .Where(t => t.ReservationTables.Any(rt =>
+                    rt.Reservation.Orders.Any(o => o.OrderId == orderId)))
+                .ToListAsync();
+        }
+
         public async Task SaveAsync()
         {
             await _context.SaveChangesAsync();

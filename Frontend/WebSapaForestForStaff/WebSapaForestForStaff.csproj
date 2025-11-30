@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.5.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +28,7 @@
     <Folder Include="DTOs\Filter\" />
     <Folder Include="Views\Admin\Users\" />
     <Folder Include="Views\Auth\" />
+    <Folder Include="Views\CashierFlow\ShiftManagement\" />
     <Folder Include="Views\Manager\" />
     <Folder Include="Views\Staff\" />
   </ItemGroup>

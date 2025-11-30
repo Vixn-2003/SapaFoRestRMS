@@ -14,6 +14,14 @@ public partial class OrderDetail
 
     public int Quantity { get; set; }
 
+    /// <summary>
+    /// Số lượng thực tế khách sử dụng (dành cho ConsumptionBased items)
+    /// Null = chưa được xác nhận bởi khách
+    /// Nếu MenuItem.BillingType = ConsumptionBased thì tính tiền theo QuantityUsed
+    /// Nếu MenuItem.BillingType = KitchenPrepared thì tính tiền theo Quantity (100%)
+    /// </summary>
+    public int? QuantityUsed { get; set; }
+
     public decimal UnitPrice { get; set; }
 
     public string? Status { get; set; }
@@ -27,6 +35,21 @@ public partial class OrderDetail
     public Combo? Combo { get; set; }
 
     public string? Notes { get; set; } // Thêm ? để cho phép null
+    
+    /// <summary>
+    /// Đánh dấu order được yêu cầu làm ngay từ bếp phó
+    /// </summary>
+    public bool IsUrgent { get; set; } = false;
+
+    /// <summary>
+    /// Thời gian món được đánh dấu "Sẵn sàng" (Ready)
+    /// </summary>
+    public DateTime? ReadyAt { get; set; }
+
+    /// <summary>
+    /// Thời gian bắt đầu nấu (khi status chuyển sang "Cooking")
+    /// </summary>
+    public DateTime? StartedAt { get; set; }
 
     [NotMapped] // Nếu không muốn lưu vào DB
     public bool IsCustomerOrder { get; set; }

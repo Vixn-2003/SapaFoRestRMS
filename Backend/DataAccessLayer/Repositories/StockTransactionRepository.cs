@@ -1,6 +1,7 @@
 ﻿using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,9 +21,40 @@ namespace DataAccessLayer.Repositories
         public async Task<bool> AddNewStockTransaction(StockTransaction stockTransaction)
         {
             await _context.StockTransactions.AddAsync(stockTransaction);
-            await _context.SaveChangesAsync();
-
+            // Don't save here - let UnitOfWork.SaveChangesAsync() handle it
             return true;
         }
+
+        public async Task<IEnumerable<StockTransaction>> GetExportTransactionsAsync()
+        {
+            return await _context.StockTransactions
+                .Include(st => st.Ingredient)
+                    .ThenInclude(i => i.Unit)
+                .Include(st => st.Batch)
+                    .ThenInclude(b => b.Warehouse)
+                .Include(st => st.Batch)
+                    .ThenInclude(b => b.PurchaseOrderDetail)
+                        .ThenInclude(pod => pod.PurchaseOrder)
+                            .ThenInclude(po => po.Supplier)
+                .Where(st => st.Type == "Export")
+                .OrderByDescending(st => st.TransactionDate)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<StockTransaction>> GetAllExport()
+        {
+            return await _context.StockTransactions
+                .Where(p => p.Type == "Export")
+                .Include(t => t.Batch)
+                    .ThenInclude(b => b.Ingredient)
+                        .ThenInclude(i => i.Unit)
+                .Include(t => t.Batch.Warehouse)
+                .Include(t => t.Batch.PurchaseOrderDetail)
+                    .ThenInclude(pod => pod.PurchaseOrder)
+                        .ThenInclude(po => po.Supplier)
+                .ToListAsync();
+        }
+
+
     }
 }

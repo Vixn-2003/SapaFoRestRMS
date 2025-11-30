@@ -32,8 +32,10 @@ namespace DataAccessLayer.UnitOfWork
         private IStockTransactionRepository _stockTransactionRepository;
         private IUnitRepository _unitRepository;
 
+        private IAuditRepository _auditRepository;
 
         public IUnitRepository UnitRepository => _unitRepository ??= new UnitRepository(_context);
+        public IAuditRepository AuditRepository => _auditRepository ??= new AuditRepository(_context);
         public IStockTransactionRepository StockTransaction => _stockTransactionRepository ??= new StockTransactionRepository(_context);
         public IPurchaseOrderDetailRepository PurchaseOrderDetail => _purchaseOrderDetailRepository ??= new PurchaseOrderDetailRepository(_context);
 
@@ -66,6 +68,14 @@ namespace DataAccessLayer.UnitOfWork
 
         public IPaymentRepository Payments => _payments ??= new PaymentRepository(_context);
 
+        private IOrderRepository _orders;
+
+        public IOrderRepository Orders => _orders ??= new OrderRepository(_context);
+
+        private IOrderDetailRepository _orderDetails;
+
+        public IOrderDetailRepository OrderDetails => _orderDetails ??= new OrderDetailRepository(_context);
+
         private IAuditLogRepository _auditLogs;
 
         public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(_context);
@@ -73,6 +83,10 @@ namespace DataAccessLayer.UnitOfWork
         private IOrderLockRepository _orderLocks;
 
         public IOrderLockRepository OrderLocks => _orderLocks ??= new OrderLockRepository(_context);
+
+        private ITableRepository _tables;
+
+        public ITableRepository Tables => _tables ??= new TableRepository(_context);
 
         public UnitOfWork(SapaFoRestRmsContext context)
         {

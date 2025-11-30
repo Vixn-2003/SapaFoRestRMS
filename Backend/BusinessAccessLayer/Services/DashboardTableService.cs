@@ -366,9 +366,15 @@ namespace BusinessAccessLayer.Services
                     screenDto.CustomerPhone = activeReservation.Customer.User.Phone;
                 }
 
-                foreach (var order in activeReservation.Orders)
+                var latestOrder = activeReservation.Orders?
+                    .OrderByDescending(o => o.CreatedAt ?? DateTime.MinValue)
+                    .FirstOrDefault();
+
+                if (latestOrder != null)
                 {
-                    foreach (var od in order.OrderDetails)
+                    screenDto.ActiveOrderId = latestOrder.OrderId;
+
+                    foreach (var od in latestOrder.OrderDetails)
                     {
 
                         string itemName = od.MenuItemId.HasValue
@@ -388,6 +394,32 @@ namespace BusinessAccessLayer.Services
                             Status = od.Status,
                             Notes = od.Notes
                         });
+                    }
+                }
+                else
+                {
+                    foreach (var order in activeReservation.Orders)
+                    {
+                        foreach (var od in order.OrderDetails)
+                        {
+                            string itemName = od.MenuItemId.HasValue
+                                              ? od.MenuItem?.Name
+                                              : (od.ComboId.HasValue ? od.Combo?.Name : "Lỗi dữ liệu");
+
+                            if (itemName == null) continue;
+
+                            screenDto.OrderedItems.Add(new OrderedItemDto
+                            {
+                                OrderDetailId = od.OrderDetailId,
+                                MenuItemId = od.MenuItemId,
+                                ComboId = od.ComboId,
+                                ItemName = itemName,
+                                Quantity = od.Quantity,
+                                UnitPrice = od.UnitPrice,
+                                Status = od.Status,
+                                Notes = od.Notes
+                            });
+                        }
                     }
                 }
             }

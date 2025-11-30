@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using WebSapaForestForStaff.DTOs.Auth;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using System.Security.Claims;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+using WebSapaForestForStaff.DTOs.Auth;
 using WebSapaForestForStaff.Services;
 
 namespace WebSapaForestForStaff.Controllers
@@ -21,11 +21,35 @@ namespace WebSapaForestForStaff.Controllers
         public string ReturnUrl { get; set; }
 
         [HttpGet]
-        public IActionResult Login(string returnUrl = null)
+        public async Task<IActionResult> Login(string returnUrl = null)
         {
             // If already authenticated via cookie, redirect by role
             if (User?.Identity?.IsAuthenticated == true)
             {
+                var sessionToken = HttpContext.Session.GetString("Token") ?? User.FindFirst("Token")?.Value;
+                var refreshToken = HttpContext.Session.GetString("RefreshToken");
+
+                if (string.IsNullOrEmpty(sessionToken))
+                {
+                    await ForceSignOutAsync();
+                    return RedirectToAction("Login");
+                }
+
+                if (IsTokenExpired(sessionToken))
+                {
+                    if (string.IsNullOrEmpty(refreshToken) || !await _apiService.TryRefreshTokenAsync())
+                    {
+                        await ForceSignOutAsync();
+                        return RedirectToAction("Login");
+                    }
+
+                    var refreshedToken = HttpContext.Session.GetString("Token");
+                    if (!string.IsNullOrEmpty(refreshedToken))
+                    {
+                        await UpdateTokenClaimAsync(refreshedToken);
+                    }
+                }
+
                 if (User.IsInRole("Owner"))
                 {
                     return RedirectToAction("Index", "Admin"); // Owner has admin privileges
@@ -49,7 +73,7 @@ namespace WebSapaForestForStaff.Controllers
                             var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsClaim);
                             if (positions != null && positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
                             {
-                                return RedirectToAction("OrderSelection", "Payment");
+                                return RedirectToAction("Index", "DashboardTable");
                             }
                         }
                         catch
@@ -129,7 +153,7 @@ namespace WebSapaForestForStaff.Controllers
                     if (authResponse.RoleId == 4 && authResponse.Positions != null && 
                         authResponse.Positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
                     {
-                        redirectUrl = returnUrl ?? Url.Action("OrderSelection", "Payment");
+                        redirectUrl = returnUrl ?? Url.Action("Index", "DashboardTable");
                     }
                     else
                     {
@@ -276,6 +300,60 @@ namespace WebSapaForestForStaff.Controllers
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
+        }
+
+        private static bool IsTokenExpired(string token)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                if (!handler.CanReadToken(token))
+                {
+                    return true;
+                }
+
+                var jwt = handler.ReadJwtToken(token);
+                var expiration = jwt.ValidTo;
+                return expiration <= DateTime.UtcNow.AddMinutes(-1);
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
+        private async Task UpdateTokenClaimAsync(string token)
+        {
+            var authenticateResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = authenticateResult?.Principal ?? HttpContext.User;
+            if (principal?.Identity is not ClaimsIdentity identity)
+            {
+                return;
+            }
+
+            var existingTokenClaim = identity.FindFirst("Token");
+            if (existingTokenClaim != null)
+            {
+                identity.RemoveClaim(existingTokenClaim);
+            }
+            identity.AddClaim(new Claim("Token", token));
+
+            var authProperties = authenticateResult?.Properties ?? new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
+            };
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                authProperties);
+        }
+
+        private async Task ForceSignOutAsync()
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            _apiService.Logout();
         }
     }
 }

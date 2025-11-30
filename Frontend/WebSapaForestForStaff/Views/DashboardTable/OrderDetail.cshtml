@@ -1,4 +1,5 @@
 ﻿@model WebSapaForestForStaff.DTOs.OrderGuest.StaffOrderScreenDto
+@using WebSapaForestForStaff.Controllers
 @{
     ViewData["Title"] = $"Chi tiết bàn: {Model.TableNumber}";
 
@@ -7,6 +8,10 @@
     var currentCategory = ViewData["CurrentCategory"] as int?;
     var tableId = ViewData["TableId"] ?? Model.TableId;
     var categories = ViewData["Categories"] as List<WebSapaForestForStaff.DTOs.OrderGuest.CategoryDto>;
+    var hasActiveOrder = Model.ActiveOrderId.HasValue;
+    var checkoutUrl = hasActiveOrder
+        ? Url.Action(nameof(CashierPaymentFlowController.OrderDetail), "CashierPaymentFlow", new { id = Model.ActiveOrderId })
+        : string.Empty;
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 

@@ -18,6 +18,10 @@ public class OrderDto
 
     public string? CustomerName { get; set; }
 
+    public string? CustomerPhone { get; set; }
+
+    public string? CustomerEmail { get; set; }
+
     public string OrderType { get; set; } = null!;
 
     public decimal? TotalAmount { get; set; }
@@ -36,7 +40,12 @@ public class OrderDto
 
     public string? TableNumber { get; set; }
 
+    public List<string> TableNumbers { get; set; } = new();
+
     public string? StaffName { get; set; }
+    public string? WaiterName { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public string? PaymentMethod { get; set; }
 
     public List<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
 }
