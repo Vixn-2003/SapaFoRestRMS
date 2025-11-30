@@ -1,7 +1,6 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Dbcontext;
-using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BusinessAccessLayer.Services.Inventory
@@ -22,7 +21,7 @@ namespace BusinessAccessLayer.Services.Inventory
             var today = DateTime.UtcNow.Date;
             var fromDate = today.AddDays(-daysWindow);
 
-            // 1. Lấy giao dịch xuất
+            // 1. Lấy giao dịch xuất trong 30 ngày qua
             var exports = await _context.StockTransactions
                 .AsNoTracking()
                 .Where(t => t.Type == "Export"
@@ -32,33 +31,31 @@ namespace BusinessAccessLayer.Services.Inventory
                 .Select(t => new
                 {
                     t.IngredientId,
-                    t.Quantity,
-                    Date = t.TransactionDate!.Value.Date
+                    t.Quantity
                 })
                 .ToListAsync(cancellationToken);
 
             if (!exports.Any())
                 return new List<IngredientUsageForecastDto>();
 
-            // 2. Group theo ingredient & theo ngày
+            // 2. Tính tổng xuất theo từng ingredient
             var grouped = exports
                 .GroupBy(x => x.IngredientId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.GroupBy(t => t.Date)
-                          .Select(d => new { Date = d.Key, Total = d.Sum(x => x.Quantity) })
-                          .OrderBy(x => x.Date)
-                          .ToList()
-                );
+                .Select(g => new
+                {
+                    IngredientId = g.Key,
+                    TotalExport = g.Sum(x => x.Quantity)
+                })
+                .ToList();
 
             // 3. Lấy thông tin ingredient
-            var ingredientIds = grouped.Keys.ToList();
+            var ingredientIds = grouped.Select(g => g.IngredientId).ToList();
 
             var ingredients = await _context.Ingredients
                 .Where(i => ingredientIds.Contains(i.IngredientId))
                 .ToDictionaryAsync(i => i.IngredientId, i => i, cancellationToken);
 
-            // 4. Lấy tồn kho (sử dụng QuantityRemaining từ Batch)
+            // 4. Lấy tồn kho hiện tại
             var stocks = await _context.InventoryBatches
                 .AsNoTracking()
                 .Where(b => ingredientIds.Contains(b.IngredientId))
@@ -72,86 +69,46 @@ namespace BusinessAccessLayer.Services.Inventory
 
             var result = new List<IngredientUsageForecastDto>();
 
-            foreach (var kvp in grouped)
+            foreach (var item in grouped)
             {
-                var ingId = kvp.Key;
-                var dailyList = kvp.Value;
+                var totalExport = item.TotalExport;
 
-                var total = dailyList.Sum(x => x.Total);
+                // 5. TÍNH TRUNG BÌNH MỖI NGÀY
+                var averageDailyUsage = totalExport / daysWindow;
 
-                var minDate = dailyList.First().Date;
-                var maxDate = dailyList.Last().Date;
+                // 6. Lấy tồn kho
+                stocks.TryGetValue(item.IngredientId, out var currentStock);
 
-                var dateRange = (maxDate - minDate).TotalDays + 1;
-                if (dateRange <= 0) dateRange = 1;
+                // 7. Tính số ngày còn đủ dùng
+                decimal? daysRemaining = averageDailyUsage > 0
+                    ? (currentStock / averageDailyUsage)
+                    : null;
 
-                var adu = (decimal)total / (decimal)dateRange;
-
-                // --- Tính CV (Coefficient of Variation) ---
-                decimal? cv = null;
-                var arr = dailyList.Select(x => x.Total).ToList();
-                if (arr.Count > 1)
-                {
-                    var mean = (decimal)arr.Average();
-                    if (mean > 0)
-                    {
-                        var variance = arr.Sum(v => (decimal)Math.Pow((double)(v - mean), 2)) / (arr.Count - 1);
-                        var std = (decimal)Math.Sqrt((double)variance);
-                        cv = std / mean;
-                    }
-                }
-
-                // --- SafetyDays dùng theo CV ---
-                decimal safetyDays;
-                if (cv == null)
-                {
-                    safetyDays = 2;
-                }
-                else
-                {
-                    safetyDays = 2 + (decimal)cv * 5;
-                    safetyDays = Math.Clamp(safetyDays, 2, 10);
-                }
-
-                var reorder = adu * safetyDays;
-
-                stocks.TryGetValue(ingId, out var stock);
-
-                decimal? daysRemain = adu > 0 ? (stock / adu) : null;
-
-                ingredients.TryGetValue(ingId, out var ing);
+                // 8. Lấy thông tin ingredient
+                ingredients.TryGetValue(item.IngredientId, out var ing);
 
                 result.Add(new IngredientUsageForecastDto
                 {
-                    IngredientId = ingId,
+                    IngredientId = item.IngredientId,
                     IngredientName = ing?.Name ?? "N/A",
                     UnitName = ing?.Unit?.UnitName ?? "",
 
-                    AverageDailyUsage = Math.Round(adu, 2),
-                    SafetyDays = Math.Round(safetyDays, 2),
-                    SafetyStockQuantity = Math.Round(reorder, 2),
-                    ReorderLevel = Math.Round(reorder, 2),
+                    //  CHỈ CẦN CÁI NÀY
+                    AverageDailyUsage = Math.Round(averageDailyUsage, 2),
 
+                    CurrentStock = currentStock,
+                    DaysRemaining = daysRemaining.HasValue
+                        ? Math.Round(daysRemaining.Value, 1)
+                        : null,
 
-                    CurrentStock = stock,
-
-                    DaysRemaining = daysRemain.HasValue
-        ? Math.Round(daysRemain.Value, 1)
-        : null,
-
-                    DaysWindowUsed = (int)dateRange,
-
-                    DistinctUsedDays = dailyList?.Count ?? 0,
-
-                    CoefficientOfVariation = cv.HasValue? Math.Round(cv.Value, 3)
-        : null
+                    DaysWindowUsed = daysWindow
                 });
-
             }
 
             return result.OrderByDescending(x => x.AverageDailyUsage).ToList();
         }
 
+        //  CẬP NHẬT: Chỉ lưu AverageDailyUsage vào ReorderLevel (tạm thời)
         public async Task<int> RecalculateReorderLevelsAsync(
             int daysWindow = 30,
             CancellationToken cancellationToken = default)
@@ -168,10 +125,13 @@ namespace BusinessAccessLayer.Services.Inventory
             foreach (var ing in ings)
             {
                 var f = forecast.First(x => x.IngredientId == ing.IngredientId);
-                ing.ReorderLevel = f.ReorderLevel;
+
+                //  LƯU TRUNG BÌNH TIÊU THỤ MỖI NGÀY
+                ing.ReorderLevel = f.AverageDailyUsage;
             }
 
             return await _context.SaveChangesAsync(cancellationToken);
         }
+
     }
 }

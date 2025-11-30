@@ -1,13 +1,15 @@
-﻿@* ⭐️ Dùng @model để nhận dữ liệu từ Controller *@
-@model WebSapaForestForStaff.DTOs.OrderGuest.ListOrder.ReservationListViewModel
+﻿@model WebSapaForestForStaff.DTOs.OrderGuest.ListOrder.ReservationListViewModel
 
 @{
     ViewData["Title"] = "Danh sách Đặt bàn";
+
     // Lấy giá trị filter để điền lại vào form
     string currentSearch = ViewData["CurrentSearch"] as string;
     string currentStatus = ViewData["CurrentStatus"] as string ?? "all";
     int currentPage = Model.Pagination.PageNumber;
     int totalPages = (int)Math.Ceiling((double)Model.Pagination.TotalCount / Model.Pagination.PageSize);
+    var currentDate = ViewData["CurrentDate"] as string; 
+    var currentSlot = ViewData["CurrentSlot"] as string; 
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
@@ -15,6 +17,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
+    /* --- GLOBAL VARIABLES --- */
     :root {
         --primary-orange: #ff7b00;
         --primary-orange-hover: #e67e22;
@@ -30,7 +33,7 @@
         color: var(--text-dark);
     }
 
-    /* --- Page Header --- */
+    /* --- PAGE HEADER --- */
     .page-header-container {
         background: white;
         padding: 15px 25px;
@@ -48,7 +51,7 @@
         font-size: 1.5rem;
     }
 
-    /* --- Filter Bar (Style giống Search Box POS) --- */
+    /* --- FILTERS --- */
     .filter-card {
         background: white;
         border-radius: var(--card-radius);
@@ -73,25 +76,16 @@
             box-shadow: 0 0 0 3px rgba(255, 123, 0, 0.1);
         }
 
-        .search-box-wrapper input {
+        .search-box-wrapper input, .search-box-wrapper select {
             border: none;
             outline: none;
             width: 100%;
             margin-left: 10px;
             font-size: 14px;
-        }
-
-        .search-box-wrapper select {
-            border: none;
-            outline: none;
             background: transparent;
-            font-size: 14px;
-            width: 100%;
-            margin-left: 10px;
-            color: #555;
         }
 
-    /* --- Table Styling --- */
+    /* --- TABLE STYLING --- */
     .table-card {
         background: white;
         border-radius: var(--card-radius);
@@ -122,10 +116,10 @@
         }
 
         .custom-table tbody tr:hover {
-            background-color: #fffcf5; /* Màu cam rất nhạt khi hover */
+            background-color: #fffcf5;
         }
 
-    /* --- Status Badges --- */
+    /* --- STATUS BADGES --- */
     .status-badge {
         padding: 6px 12px;
         border-radius: 20px;
@@ -152,7 +146,7 @@
         border: 1px solid #ffcdd2;
     }
 
-    /* --- Buttons --- */
+    /* --- BUTTONS --- */
     .btn-pos-primary {
         background-color: var(--primary-orange);
         color: white;
@@ -186,7 +180,7 @@
             color: white;
         }
 
-    /* --- Pagination --- */
+    /* --- PAGINATION --- */
     .pagination-container {
         padding: 15px;
         display: flex;
@@ -222,7 +216,7 @@
             background: #f5f5f5;
         }
 
-    /* --- Modal Custom (Giữ cấu trúc cũ nhưng style lại) --- */
+    /* --- MODAL --- */
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -330,7 +324,36 @@
         justify-content: flex-end;
         gap: 10px;
     }
+
+    /* --- TOAST NOTIFICATION --- */
+    .toast.bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .toast.bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .toast.show {
+        animation: slideInRight 0.3s ease-out forwards;
+    }
+    @@keyframes slideInRight {
+        from
+
+    {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    }
 </style>
+
+<div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
 
 <div class="page-header-container">
     <h1 class="page-title"><i class="fa-regular fa-calendar-check me-2"></i>Danh sách Đặt bàn</h1>
@@ -343,25 +366,48 @@
 
     <div class="filter-card">
         <form asp-action="ListOrder" method="get" class="row g-3 align-items-center">
-            <div class="col-md-5">
+
+            <div class="col-md-3">
                 <div class="search-box-wrapper">
                     <i class="fa-solid fa-magnifying-glass text-secondary"></i>
-                    <input type="text" name="searchTerm" placeholder="Tìm tên khách hoặc SĐT..." value="@currentSearch" />
+                    <input type="text" name="searchTerm" placeholder="Tên khách, SĐT..." value="@currentSearch" />
                 </div>
             </div>
-            <div class="col-md-4">
+
+            <div class="col-md-3">
                 <div class="search-box-wrapper">
                     <i class="fa-solid fa-filter text-secondary"></i>
                     <select name="status">
                         <option value="all" selected="@(currentStatus == "all")">Tất cả Trạng thái</option>
-                        <option value="Confirmed" selected="@(currentStatus == "Confirmed")">Chờ khách (Confirmed)</option>
-                        <option value="Guest Seated" selected="@(currentStatus == "Guest Seated")">Đang ngồi (Guest Seated)</option>
+                        <option value="Confirmed" selected="@(currentStatus == "Confirmed")">Chờ khách </option>
+                        <option value="Guest Seated" selected="@(currentStatus == "Guest Seated")">Đang ngồi </option>
                     </select>
                 </div>
             </div>
-            <div class="col-md-3 text-end">
+
+            <div class="col-md-2">
+                <div class="search-box-wrapper">
+                    <i class="fa-regular fa-calendar text-secondary"></i>
+                    <input type="date" name="filterDate" value="@currentDate" title="Chọn ngày đặt" />
+                </div>
+            </div>
+
+            <div class="col-md-2">
+                <div class="search-box-wrapper">
+                    <i class="fa-regular fa-clock text-secondary"></i>
+                    <select name="filterSlot">
+                        <option value="" selected="@(string.IsNullOrEmpty(currentSlot))">Tất cả Ca</option>
+                        <option value="Ca sáng" selected="@(currentSlot == "Ca sáng")">Ca sáng</option>
+                        <option value="Ca trưa" selected="@(currentSlot == "Ca trưa")">Ca trưa</option>
+                        <option value="Ca chiều" selected="@(currentSlot == "Ca chiều")">Ca chiều</option>
+                        <option value="Ca tối" selected="@(currentSlot == "Ca tối")">Ca tối</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-2 text-end">
                 <button type="submit" class="btn-pos-primary w-100">
-                    <i class="fas fa-search me-2"></i> Lọc dữ liệu
+                    <i class="fas fa-search me-2"></i> Lọc
                 </button>
             </div>
         </form>
@@ -379,7 +425,7 @@
                         <th>Giờ đặt</th>
                         <th>Ca (Slot)</th>
                         <th>Trạng thái</th>
-                        <th class="text-center">Check in</th>
+                        <th class="text-center">Xác nhận</th>
                     </tr>
                 </thead>
                 <tbody id="reservationTableBody">
@@ -395,14 +441,10 @@
                     @foreach (var res in Model.Reservations)
                     {
                         <tr data-id="@res.ReservationId" id="res-row-@res.ReservationId">
-                            <td>
-                                <div class="fw-bold">@res.CustomerName</div>
-                            </td>
+                            <td><div class="fw-bold">@res.CustomerName</div></td>
                             <td>@res.CustomerPhone</td>
                             <td>@res.Areas</td>
-                            <td>
-                                <span class="badge bg-light text-dark border">@res.Tables</span>
-                            </td>
+                            <td><span class="badge bg-light text-dark border">@res.Tables</span></td>
                             <td>
                                 <i class="fa-regular fa-clock text-muted me-1"></i>
                                 @res.ReservationTime.ToString(@"hh\:mm")
@@ -431,9 +473,7 @@
             <div class="d-flex">
                 @if (Model.Pagination.HasPreviousPage)
                 {
-                    <a asp-action="ListOrder" asp-route-searchTerm="@currentSearch" asp-route-status="@currentStatus" asp-route-page="@(currentPage - 1)" class="page-btn">
-                        <i class="fas fa-chevron-left"></i>
-                    </a>
+                    <a asp-action="ListOrder" asp-route-searchTerm="@currentSearch" asp-route-status="@currentStatus" asp-route-page="@(currentPage - 1)" class="page-btn"><i class="fas fa-chevron-left"></i></a>
                 }
                 else
                 {
@@ -444,9 +484,7 @@
 
                 @if (Model.Pagination.HasNextPage)
                 {
-                    <a asp-action="ListOrder" asp-route-searchTerm="@currentSearch" asp-route-status="@currentStatus" asp-route-page="@(currentPage + 1)" class="page-btn">
-                        <i class="fas fa-chevron-right"></i>
-                    </a>
+                    <a asp-action="ListOrder" asp-route-searchTerm="@currentSearch" asp-route-status="@currentStatus" asp-route-page="@(currentPage + 1)" class="page-btn"><i class="fas fa-chevron-right"></i></a>
                 }
                 else
                 {
@@ -459,7 +497,6 @@
 
 <div class="modal-overlay" id="detailModal">
     <div class="modal-popup">
-
         <div class="modal-header-custom">
             <h2><i class="fa-solid fa-clipboard-list me-2"></i>Chi tiết Đặt bàn</h2>
             <i class="fas fa-times modal-close" id="closeModal"></i>
@@ -469,54 +506,30 @@
             <div class="detail-section">
                 <h3>Thông tin Khách hàng</h3>
                 <div class="detail-grid">
-                    <div class="detail-item">
-                        <strong>Họ và tên</strong>
-                        <span id="modalCustomerName">...</span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Số điện thoại</strong>
-                        <span id="modalCustomerPhone">...</span>
-                    </div>
-                    <div class="detail-item full-width">
-                        <strong>Email</strong>
-                        <span id="modalCustomerEmail">...</span>
-                    </div>
+                    <div class="detail-item"><strong>Họ và tên</strong><span id="modalCustomerName">...</span></div>
+                    <div class="detail-item"><strong>Số điện thoại</strong><span id="modalCustomerPhone">...</span></div>
+                    <div class="detail-item full-width"><strong>Email</strong><span id="modalCustomerEmail">...</span></div>
                 </div>
             </div>
 
             <div class="detail-section">
                 <h3>Thông tin Đặt chỗ</h3>
                 <div class="detail-grid">
-                    <div class="detail-item">
-                        <strong>Ngày đặt</strong>
-                        <span id="modalReservationDate">...</span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Giờ đến</strong>
-                        <span id="modalReservationTime" class="text-danger">...</span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Ca (Slot)</strong>
-                        <span id="modalTimeSlot">...</span>
-                    </div>
-                    <div class="detail-item">
-                        <strong>Số lượng khách</strong>
-                        <span id="modalGuestCount">...</span>
-                    </div>
+                    <div class="detail-item"><strong>Ngày đặt</strong><span id="modalReservationDate">...</span></div>
+                    <div class="detail-item"><strong>Giờ đến</strong><span id="modalReservationTime" class="text-danger">...</span></div>
+                    <div class="detail-item"><strong>Ca (Slot)</strong><span id="modalTimeSlot">...</span></div>
+                    <div class="detail-item"><strong>Số lượng khách</strong><span id="modalGuestCount">...</span></div>
                 </div>
             </div>
 
             <div class="detail-section">
                 <h3>Vị trí bàn</h3>
-                <div id="modalTableInfo" class="row g-2">
-                </div>
+                <div id="modalTableInfo" class="row g-2"></div>
             </div>
 
             <div class="detail-section border-bottom-0">
                 <h3>Ghi chú</h3>
-                <div class="p-3 bg-light rounded text-muted fst-italic" id="modalNotes">
-                    Không có ghi chú
-                </div>
+                <div class="p-3 bg-light rounded text-muted fst-italic" id="modalNotes">Không có ghi chú</div>
             </div>
         </div>
 
@@ -536,50 +549,68 @@
 <script>
     $(document).ready(function() {
 
-        // === CẤU HÌNH ===
         const apiBaseUrl = "https://localhost:7096/api/DashboardTable";
         const signalRHubUrl = "https://localhost:7096/reservationHub";
         const modal = $('#detailModal');
         const tableBody = $('#reservationTableBody');
 
-        // === HÀM UI: Modal Animation ===
+        // --- 1. HÀM HIỂN THỊ TOAST ---
+        function showToast(message, type = 'success') {
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fa-solid ${icon} me-2"></i> ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+
+            $('#toast-container').append(toastHtml);
+            setTimeout(() => { $('#toast-container .toast').first().remove(); }, 3000);
+        }
+
+        // --- 2. KIỂM TRA SESSION KHI LOAD TRANG (Để hiện Toast sau khi Reload) ---
+        if (sessionStorage.getItem('showSuccessToast')) {
+            showToast(sessionStorage.getItem('showSuccessToast'), 'success');
+            sessionStorage.removeItem('showSuccessToast');
+        }
+
+        // --- 3. HÀM UI MODAL ---
         function showModalUI() {
             modal.css('display', 'flex');
-            setTimeout(() => modal.addClass('show'), 10); // Trigger animation
+            setTimeout(() => modal.addClass('show'), 10);
         }
-
         function hideModalUI() {
             modal.removeClass('show');
-            setTimeout(() => modal.css('display', 'none'), 300); // Wait for animation
+            setTimeout(() => modal.css('display', 'none'), 300);
         }
 
-        // === LOGIC DATA ===
+        // --- 4. LOAD DỮ LIỆU MODAL ---
         function openDetailModal(id) {
-            // Hiển thị trạng thái loading tạm thời (tùy chọn)
             $('#modalCustomerName').text('Đang tải...');
-
             $.get(`${apiBaseUrl}/${id}`, function(data) {
-                // 1. Thông tin khách
+                // Fill Data
                 $('#modalCustomerName').text(data.customerName || 'N/A');
                 $('#modalCustomerPhone').text(data.customerPhone || 'N/A');
                 $('#modalCustomerEmail').text(data.customerEmail || 'N/A');
-
-                // 2. Thông tin đặt
                 $('#modalReservationDate').text(new Date(data.reservationDate).toLocaleDateString('vi-VN'));
                 $('#modalReservationTime').text(formatTimeSpan(data.reservationTime));
                 $('#modalTimeSlot').text(data.timeSlot || 'N/A');
                 $('#modalGuestCount').text(data.numberOfGuests + ' người');
+                $('#modalNotes').text(data.notes || 'Không có ghi chú');
 
-                // 3. Thông tin bàn
+                // Fill Tables
                 const tableInfoDiv = $('#modalTableInfo').empty();
                 if (data.assignedTables && data.assignedTables.length > 0) {
                     data.assignedTables.forEach(table => {
                         const tableHtml = `
                             <div class="col-12">
                                 <div class="d-flex align-items-center p-2 border rounded bg-white">
-                                    <div class="bg-light rounded-circle p-2 me-3 text-secondary">
-                                        <i class="fas fa-chair"></i>
-                                    </div>
+                                    <div class="bg-light rounded-circle p-2 me-3 text-secondary"><i class="fas fa-chair"></i></div>
                                     <div>
                                         <div class="fw-bold text-dark">Bàn ${escapeHtml(table.tableNumber)}</div>
                                         <div class="small text-muted">${escapeHtml(table.position)} - Tầng ${table.floor}</div>
@@ -592,24 +623,15 @@
                     tableInfoDiv.html('<div class="col-12 text-danger p-2"><i class="fa-solid fa-circle-exclamation me-1"></i> Chưa gán bàn!</div>');
                 }
 
-                // 4. Ghi chú
-                $('#modalNotes').text(data.notes || 'Không có ghi chú');
-
-                // 5. Nút hành động
+                // Handle Button
                 $('#modalReservationId').val(data.reservationId);
-                if (data.status === 'Confirmed') {
-                    $('#btnSeatGuest').show();
-                } else {
-                    $('#btnSeatGuest').hide();
-                }
+                if (data.status === 'Confirmed') { $('#btnSeatGuest').show(); } else { $('#btnSeatGuest').hide(); }
 
-                showModalUI(); // Gọi hàm hiển thị đẹp
-
-            }).fail(function() {
-                alert('Không thể tải chi tiết đặt bàn.');
-            });
+                showModalUI();
+            }).fail(function() { alert('Không thể tải chi tiết đặt bàn.'); });
         }
 
+        // --- 5. XỬ LÝ NÚT "XÁC NHẬN KHÁCH NGỒI" ---
         function seatGuest() {
             const id = $('#modalReservationId').val();
             if (!id) return;
@@ -621,10 +643,12 @@
                 method: 'PUT',
                 success: function() {
                     hideModalUI();
+                    // Lưu cờ vào session để reload xong mới hiện thông báo
+                    sessionStorage.setItem('showSuccessToast', 'Cập nhật trạng thái thành công: Khách đã ngồi!');
                     location.reload();
                 },
                 error: function(err) {
-                    alert('Lỗi: ' + (err.responseJSON?.message || 'Không thể cập nhật trạng thái.'));
+                    showToast('Lỗi: ' + (err.responseJSON?.message || 'Không thể cập nhật trạng thái.'), 'error');
                 },
                 complete: function() {
                     $('#btnSeatGuest').prop('disabled', false).html('<i class="fas fa-user-check me-2"></i> Xác nhận Khách ngồi');
@@ -632,56 +656,36 @@
             });
         }
 
-        // === UTILS ===
-        function getStatusBadge(status) {
-            const statusMap = {
-                'Confirmed': '<span class="status-badge status-confirmed">Chờ khách</span>',
-                'Guest Seated': '<span class="status-badge status-guest-seated">Đang ngồi</span>',
-            };
-            return statusMap[status] || `<span class="status-badge bg-light border">${status}</span>`;
-        }
-
+        // --- UTILS ---
         function formatTimeSpan(timeSpan) {
             if (typeof timeSpan === 'string') return timeSpan.substring(0, 5);
             if (typeof timeSpan === 'object') return `${String(timeSpan.hours).padStart(2, '0')}:${String(timeSpan.minutes).padStart(2, '0')}`;
             return 'N/A';
         }
-
         function escapeHtml(text) {
             if (!text) return "";
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+        function getStatusBadge(status) {
+             const statusMap = {
+                'Confirmed': '<span class="status-badge status-confirmed">Chờ khách đến</span>',
+                'Guest Seated': '<span class="status-badge status-guest-seated">Đang ngồi</span>',
+            };
+            return statusMap[status] || `<span class="status-badge bg-light border">${status}</span>`;
         }
 
-        // === EVENTS ===
-        tableBody.on('click', '.btn-open-modal', function() {
-            openDetailModal($(this).data('id'));
-        });
-
-        $('#closeModal, #closeModalFooter').on('click', function() {
-            hideModalUI();
-        });
-
-        // Đóng khi click ra ngoài modal
-        $(window).on('click', function(e) {
-             if ($(e.target).is('#detailModal')) {
-                hideModalUI();
-            }
-        });
-
+        // --- EVENTS ---
+        tableBody.on('click', '.btn-open-modal', function() { openDetailModal($(this).data('id')); });
+        $('#closeModal, #closeModalFooter').on('click', function() { hideModalUI(); });
+        $(window).on('click', function(e) { if ($(e.target).is('#detailModal')) hideModalUI(); });
         $('#btnSeatGuest').on('click', seatGuest);
 
-        // === SIGNALR ===
+        // --- SIGNALR (REALTIME) ---
         const connection = new signalR.HubConnectionBuilder().withUrl(signalRHubUrl).build();
         connection.on("ReservationStatusChanged", function (data) {
             const row = $(`#res-row-${data.reservationId}`);
             if (row.length) {
                 row.find('.status-cell').html(getStatusBadge(data.newStatus));
-                // Thêm hiệu ứng nháy sáng để báo hiệu thay đổi
                 row.css('background-color', '#fff3cd').animate({ backgroundColor: '#ffffff' }, 1000);
             }
         });
@@ -694,7 +698,7 @@
     {
         return status switch
         {
-            "Confirmed" => "<span class=\"status-badge status-confirmed\">Chờ khách</span>",
+            "Confirmed" => "<span class=\"status-badge status-confirmed\">Chờ khách đến</span>",
             "Guest Seated" => "<span class=\"status-badge status-guest-seated\">Đang ngồi</span>",
             _ => $"<span class=\"status-badge bg-light border\">{status}</span>"
         };

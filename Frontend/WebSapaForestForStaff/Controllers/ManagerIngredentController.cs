@@ -21,10 +21,8 @@ namespace WebSapaForestForStaff.Controllers
             _httpClient.BaseAddress = new Uri("https://localhost:7096/");
         }
 
-        public async Task<IActionResult> DisplayIngredent(int page = 1)
+        public async Task<IActionResult> DisplayIngredent()
         {
-            int itemsPerPage = 10;
-
             try
             {
                 var response = await _httpClient.GetAsync("api/InventoryIngredient");
@@ -33,7 +31,6 @@ namespace WebSapaForestForStaff.Controllers
                 List<InventoryIngredientDTO> ingredientList;
                 List<UnitDTO> unitList;
 
-                // ✅ XỬ LÝ UNIT TRƯỚC
                 if (!responseUnit.IsSuccessStatusCode)
                 {
                     unitList = new List<UnitDTO>();
@@ -55,7 +52,6 @@ namespace WebSapaForestForStaff.Controllers
                     ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json)
                                      ?? new List<InventoryIngredientDTO>();
 
-                    // ✅ MAP UNIT VÀO INGREDIENT
                     foreach (var ingredient in ingredientList)
                     {
                         if (ingredient.UnitId.HasValue)
@@ -66,19 +62,10 @@ namespace WebSapaForestForStaff.Controllers
                     }
                 }
 
-                var totalItems = ingredientList.Count;
-                var pagedList = ingredientList
-                    .Skip((page - 1) * itemsPerPage)
-                    .Take(itemsPerPage)
-                    .ToList();
-
                 var model = new InventoryPagedViewModel
                 {
-                    Ingredients = pagedList,
-                    CurrentPage = page,
-                    ItemsPerPage = itemsPerPage,
-                    TotalItems = totalItems,
-                    Units = unitList // ✅ THÊM DANH SÁCH UNIT VÀO MODEL
+                    Ingredients = ingredientList, // Không skip/take nữa
+                    Units = unitList
                 };
 
                 return View("~/Views/Inventory/ManagerIngredent.cshtml", model);
@@ -88,10 +75,7 @@ namespace WebSapaForestForStaff.Controllers
                 var model = new InventoryPagedViewModel
                 {
                     Ingredients = new List<InventoryIngredientDTO>(),
-                    CurrentPage = 1,
-                    ItemsPerPage = itemsPerPage,
-                    TotalItems = 0,
-                    Units = new List<UnitDTO>() // ✅ THÊM
+                    Units = new List<UnitDTO>()
                 };
 
                 TempData["ErrorMessage"] = "Có lỗi xảy ra khi tải danh sách nguyên liệu: " + ex.Message;
@@ -104,20 +88,16 @@ namespace WebSapaForestForStaff.Controllers
         public async Task<IActionResult> FilterIngredent(
     DateTime? fromDate,
     DateTime? toDate,
-    string searchIngredent,
-    int page = 1)
+    string searchIngredent)
         {
-            int itemsPerPage = 10;
-
             if (fromDate == null && toDate == null &&
                 string.IsNullOrEmpty(searchIngredent))
             {
-                return await DisplayIngredent(page);
+                return await DisplayIngredent();
             }
 
             try
             {
-                // ✅ THÊM: Load Unit list
                 var responseUnit = await _httpClient.GetAsync("api/Unit");
                 List<UnitDTO> unitList;
 
@@ -160,7 +140,6 @@ namespace WebSapaForestForStaff.Controllers
                     ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json)
                                      ?? new List<InventoryIngredientDTO>();
 
-                    // ✅ MAP UNIT VÀO INGREDIENT
                     foreach (var ingredient in ingredientList)
                     {
                         if (ingredient.UnitId.HasValue)
@@ -176,22 +155,13 @@ namespace WebSapaForestForStaff.Controllers
                     }
                 }
 
-                var totalItems = ingredientList.Count;
-                var pagedList = ingredientList
-                    .Skip((page - 1) * itemsPerPage)
-                    .Take(itemsPerPage)
-                    .ToList();
-
                 var model = new InventoryPagedViewModel
                 {
-                    Ingredients = pagedList,
-                    CurrentPage = page,
-                    ItemsPerPage = itemsPerPage,
-                    TotalItems = totalItems,
+                    Ingredients = ingredientList, // Không phân trang
                     FromDate = fromDate,
                     ToDate = toDate,
                     SearchIngredent = searchIngredent,
-                    Units = unitList // ✅ THÊM
+                    Units = unitList
                 };
 
                 return View("~/Views/Inventory/ManagerIngredent.cshtml", model);
@@ -201,20 +171,16 @@ namespace WebSapaForestForStaff.Controllers
                 var model = new InventoryPagedViewModel
                 {
                     Ingredients = new List<InventoryIngredientDTO>(),
-                    CurrentPage = 1,
-                    ItemsPerPage = itemsPerPage,
-                    TotalItems = 0,
                     FromDate = fromDate,
                     ToDate = toDate,
                     SearchIngredent = searchIngredent,
-                    Units = new List<UnitDTO>() // ✅ THÊM
+                    Units = new List<UnitDTO>()
                 };
 
                 TempData["ErrorMessage"] = "Có lỗi xảy ra khi tìm kiếm: " + ex.Message;
                 return View("~/Views/Inventory/ManagerIngredent.cshtml", model);
             }
         }
-
 
         [HttpGet]
         [Route("api/InventoryIngredient/BatchIngredient/{id}")]

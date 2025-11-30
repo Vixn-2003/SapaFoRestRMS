@@ -414,6 +414,7 @@ app.MapHub<KitchenHub>("/kitchenHub");
 
 
 app.MapHub<ReservationHub>("/reservationHub");
+app.MapHub<RestaurantHub>("/restaurantHub");
 app.MapControllers();
 
 await app.EnsureSeededAsync();
