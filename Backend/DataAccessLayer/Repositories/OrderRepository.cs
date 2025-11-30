@@ -92,7 +92,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -158,7 +158,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -176,7 +176,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .ToListAsync();
         }
 
@@ -194,7 +194,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .ToListAsync();
         }
     }

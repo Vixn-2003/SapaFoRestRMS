@@ -80,7 +80,7 @@ namespace BusinessAccessLayer.Services
     ? 0
     : data.ActiveReservation.Orders
         .SelectMany(o => o.OrderDetails)
-        .Where(od => od.Status == "Đang chế biến" || od.Status == "Đã xong")
+        .Where(od => od.Status == "Cooking" || od.Status == "Ready" || od.Status == "Done")
         .Sum(od => od.Quantity * od.UnitPrice),
 
 
@@ -516,7 +516,7 @@ namespace BusinessAccessLayer.Services
                             Quantity = itemDto.Quantity,
                             UnitPrice = price,       // Tên đúng trong Model của bạn
                             Notes = itemDto.Note,    // Tên đúng trong Model của bạn
-                            Status = "Đang chế biến",   // Trạng thái mặc định: Đang chế biến
+                            Status = "Pending",   // Trạng thái mặc định: Pending (sau khi gọi món)
                             CreatedAt = DateTime.Now // Tên đúng trong Model của bạn
                         };
 
