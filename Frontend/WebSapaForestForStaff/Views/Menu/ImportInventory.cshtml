@@ -439,20 +439,26 @@
 
             .ip-materials-table th:nth-child(7),
             .ip-materials-table td:nth-child(7) {
-                width: 120px; 
-            }
+                width: 120px;
+                text-align: center;
+                }
 
             .ip-materials-table th:nth-child(8),
             .ip-materials-table td:nth-child(8) {
-                width: 140px;
+                width: 120px;
+                text-align: right;
             }
 
             .ip-materials-table th:nth-child(9),
             .ip-materials-table td:nth-child(9) {
-                width: 60px;
-            }
-
-    .ip-quantity-input {
+                    width: 140px;
+                    text-align: right;
+            } 
+            .ip-materials-table th:nth-child(10), 
+            .ip-materials-table td:nth-child(10) {
+                           width: 60px;
+                } 
+       .ip-quantity-input {
         width: 80px;
         padding: 6px 8px;
         border: 1px solid #475569;
@@ -2024,6 +2030,7 @@
                                 <th>Kho nhập</th>
                                 <th>Số lượng</th>
                                 <th>Đơn vị</th>
+                                <th>Ngày hết hạn</th>
                                 <th>Đơn giá</th>
                                 <th>Thành tiền</th>
                                 <th></th>
@@ -2206,6 +2213,12 @@
                         <div class="ip-modal-form-group">
                             <label class="required">Đơn Giá (VNĐ)</label>
                             <input type="number" id="ipFormUnitPrice" placeholder="Giá/đơn vị" step="1000" disabled />
+                        </div>
+
+                        <div class="ip-modal-form-group">
+                            <label>Ngày hết hạn</label>
+                            <input type="date" id="ipFormExpiryDate" disabled />
+                            <span class="ip-form-hint">Để trống nếu không có hạn sử dụng</span>
                         </div>
 
                         <div class="ip-modal-total-preview" id="ipModalTotalPreview">
@@ -2605,6 +2618,7 @@
 
             // ✅ Số lượng sẽ được enable bởi event change của unit select
             document.getElementById('ipFormUnitPrice').disabled = false;
+            document.getElementById('ipFormExpiryDate').disabled = false;
             document.getElementById('ipModalBtnAdd').disabled = false;
 
             showToast('success', 'Đã chọn nguyên liệu', `Nhập số lượng và đơn giá cho ${material.Name}`);
@@ -2641,6 +2655,7 @@
             quantityInput.removeAttribute('data-unit-type');
 
             document.getElementById('ipFormUnitPrice').disabled = false;
+            document.getElementById('ipFormExpiryDate').disabled = false;
             document.getElementById('ipModalBtnAdd').disabled = false;
 
             // Xóa selected từ tất cả items trong danh sách
@@ -2691,6 +2706,7 @@
             document.getElementById('ipFormUnit').value = '';
             document.getElementById('ipFormQuantity').value = '';
             document.getElementById('ipFormUnitPrice').value = '';
+            document.getElementById('ipFormExpiryDate').value = '';
             document.getElementById('ipModalTotalPreview').style.display = 'none';
 
             // Disable tất cả các trường
@@ -2747,6 +2763,8 @@
             const quantity = parseFloat(quantityInput.value);
             const unitPrice = parseFloat(document.getElementById('ipFormUnitPrice').value);
             const unitType = parseInt(quantityInput.getAttribute('data-unit-type'));
+            const expiryDateInput = document.getElementById('ipFormExpiryDate').value;
+            const expiryDate = expiryDateInput ? expiryDateInput : null;
 
             // Validate thông tin cơ bản
             if (!name) {
@@ -2801,7 +2819,8 @@
                 unit,
                 quantity,
                 unitPrice,
-                warehouseName: warehouseList.length > 0 ? warehouseList[0].Name : ''  
+                warehouseName: warehouseList.length > 0 ? warehouseList[0].Name : '',
+                expiryDate: expiryDate
             };
 
             // Kiểm tra nếu đã có trong danh sách nhập (theo mã)
@@ -2838,37 +2857,36 @@
             const tbody = document.getElementById('ipMaterialsTableBody');
 
             if (ipImportList.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="ip-empty-state">Chưa có nguyên liệu nào. Nhấn "Thêm nguyên liệu" để bắt đầu.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="ip-empty-state">Chưa có nguyên liệu nào. Nhấn "Thêm nguyên liệu" để bắt đầu.</td></tr>';
                 ipUpdateTotal();
                 return;
             }
 
-            // THÊM DÒNG NÀY - Quan trọng!
             tbody.innerHTML = ipImportList.map((item, i) => `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td>${item.code}</td>
-                            <td>${item.name}</td>
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${item.code}</td>
+                    <td>${item.name}</td>
+                    <td>
+                        <select class="ip-warehouse-select" data-index="${i}">
+                            ${warehouseList.map(w => `
+                                <option value="${w.Name}" ${w.Name === item.warehouseName ? 'selected' : ''}>
+                                    ${w.Name}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </td>
+                    <td><span>${item.quantity}</span></td>
+                    <td>${item.unit}</td>
 
-                            <!-- CỘT SELECT KHO -->
-                                   <td>
-                                  <select class="ip-warehouse-select" data-index="${i}">
-                                     ${warehouseList.map(w => `
-                                     <option value="${w.Name}" ${w.Name === item.warehouseName ? 'selected' : ''}>
-                                      ${w.Name}
-                                       </option>
-                                        `).join('')}
-                                     </select>
-                                     </td>
+                    <!-- ✅ THÊM CỘT NGÀY HẾT HẠN -->
+                    <td>${item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('vi-VN') : '-'}</td>
 
-                                    <td><span>${item.quantity}</span></td>
-                                   <td>${item.unit}</td>
-                                      <td><span>${item.unitPrice.toLocaleString('vi-VN')}đ</span></td>
-
-                            <td style="font-weight:600;color:#10b981;">${ipFormatCurrency(item.quantity * item.unitPrice)}</td>
-                            <td><button class="ip-btn-remove" data-index="${i}">×</button></td>
-                        </tr>
-                    `).join('');
+                    <td><span>${item.unitPrice.toLocaleString('vi-VN')}đ</span></td>
+                    <td style="font-weight:600;color:#10b981;">${ipFormatCurrency(item.quantity * item.unitPrice)}</td>
+                    <td><button class="ip-btn-remove" data-index="${i}">×</button></td>
+                </tr>
+            `).join('');
 
             // Event cho select kho
             tbody.querySelectorAll('.ip-warehouse-select').forEach(select => {
@@ -3087,7 +3105,8 @@
                     Unit: item.unit,
                     Quantity: item.quantity,
                     UnitPrice: item.unitPrice,
-                    WarehouseName: item.warehouseName  // ✅ Mới
+                    WarehouseName: item.warehouseName,
+                    ExpiryDate: item.expiryDate
                 }));
 
                 const generatedCode = generateNewImportCode();

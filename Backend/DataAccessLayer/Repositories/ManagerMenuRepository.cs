@@ -95,7 +95,10 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<Recipe>> GetRecipeByMenuItem(int id)
         {
-            return await _context.Recipes.Where(x => x.MenuItemId == id).ToListAsync();
+            return await _context.Recipes
+                .Include(r => r.Ingredient)
+                .Where(x => x.MenuItemId == id)
+                .ToListAsync();
         }
 
         public async Task<bool> DeleteRecipeByMenuItemId(int menuItemId)
@@ -119,5 +122,14 @@ namespace DataAccessLayer.Repositories
             return true;
         }
 
+        public async Task<List<string>> GetCourseTypesAsync()
+        {
+            return await _context.MenuItems
+                .Where(m => !string.IsNullOrEmpty(m.CourseType))
+                .Select(m => m.CourseType!)
+                .Distinct()
+                .OrderBy(ct => ct)
+                .ToListAsync();
+        }
     }
 }

@@ -46,7 +46,7 @@ namespace WebSapaForestForStaff.Services.Api
                         SetToken(loginResponse.Token);
                         if (!string.IsNullOrEmpty(loginResponse.RefreshToken))
                         {
-                            _httpContextAccessor.HttpContext?.Session.SetString("RefreshToken", loginResponse.RefreshToken);
+                            SetRefreshToken(loginResponse.RefreshToken);
                         }
                     }
 

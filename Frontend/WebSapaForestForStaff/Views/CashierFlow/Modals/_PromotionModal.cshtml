@@ -1,0 +1,50 @@
+<div class="modal fade" id="promotionModal" tabindex="-1" aria-labelledby="promotionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="promotionModalLabel">
+                    <i class="bi bi-tag-fill me-2"></i>Áp dụng ưu đãi / Mã giảm giá
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <label for="discountCode" class="form-label fw-bold">
+                        <i class="bi bi-upc-scan me-2"></i>Nhập mã giảm giá
+                    </label>
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               id="discountCode"
+                               placeholder="Nhập mã giảm giá...">
+                        <button class="btn btn-primary" type="button" onclick="validateDiscountCode()">
+                            <i class="bi bi-check-circle me-2"></i>Áp dụng
+                        </button>
+                    </div>
+                    <div id="discountCodeMessage" class="mt-2"></div>
+                </div>
+
+                <hr>
+
+                <div>
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-gift me-2"></i>Chương trình ưu đãi hiện có
+                    </h6>
+                    <div class="promotion-list" id="promotionList">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Đang tải...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

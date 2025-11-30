@@ -1,0 +1,154 @@
+@model WebSapaForestForStaff.ViewModels.Payment.OrderSelectionViewModel
+
+@{
+    ViewData["Title"] = "Đơn hàng thu ngân";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-1">Quản lý đơn hàng</h2>
+        <small class="text-muted">Thu ngân xử lý thanh toán trong ca</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <label for="datePicker" class="text-muted mb-0">Chọn ngày:</label>
+        <input type="date" 
+               id="datePicker" 
+               class="form-control" 
+               value="@Model.SelectedDate.ToString("yyyy-MM-dd")" 
+               style="width: auto;" />
+        <button type="button" 
+                id="refreshBtn" 
+                class="btn btn-outline-primary">
+            <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+        </button>
+    </div>
+</div>
+
+<!-- Tabs cho hai trạng thái đơn -->
+<ul class="nav nav-tabs nav-fill mb-4" role="tablist" id="orderTabs">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active fw-semibold" 
+           href="#" 
+           data-status="pending" 
+           id="pending-tab-link">
+            🧾 Đơn chờ thanh toán
+            <span class="badge bg-warning text-dark ms-2" id="pending-badge">@Model.PendingOrders.Count</span>
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link fw-semibold" 
+           href="#" 
+           data-status="processed" 
+           id="paid-tab-link">
+            💰 Đơn đã thanh toán
+            <span class="badge bg-success ms-2" id="paid-badge">@Model.PaidOrders.Count</span>
+        </a>
+    </li>
+</ul>
+
+<!-- Loading indicator -->
+<div id="loadingIndicator" class="text-center py-4" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Đang tải...</span>
+    </div>
+    <p class="text-muted mt-2">Đang tải danh sách đơn hàng...</p>
+</div>
+
+<!-- Order list container -->
+<div id="orderListContainer">
+    @await Html.PartialAsync("~/Views/CashierFlow/_OrderListPartial.cshtml", Model.PendingOrders)
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const datePicker = document.getElementById("datePicker");
+    const tabs = document.querySelectorAll("#orderTabs a");
+    const container = document.getElementById("orderListContainer");
+    const loadingIndicator = document.getElementById("loadingIndicator");
+    const refreshBtn = document.getElementById("refreshBtn");
+    let currentStatus = "pending";
+
+    async function loadOrders() {
+        const date = datePicker.value;
+        if (!date) {
+            console.error("Date is required");
+            return;
+        }
+
+        // Show loading indicator
+        container.style.opacity = "0.5";
+        loadingIndicator.style.display = "block";
+
+        try {
+            const url = `/cashier-flow/orders/partial?date=${date}&status=${currentStatus}`;
+            const response = await fetch(url, {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const html = await response.text();
+            container.innerHTML = html;
+            
+            // Update badge count
+            const orderRows = container.querySelectorAll("tbody tr");
+            const count = orderRows.length > 0 && !orderRows[0].querySelector("td[colspan]") 
+                ? orderRows.length 
+                : 0;
+            
+            const badgeId = currentStatus === "pending" ? "pending-badge" : "paid-badge";
+            const badge = document.getElementById(badgeId);
+            if (badge) {
+                badge.textContent = count;
+            }
+        } catch (err) {
+            console.error("Failed to load orders:", err);
+            container.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Không thể tải danh sách đơn hàng. Vui lòng thử lại.
+                </div>
+            `;
+        } finally {
+            // Hide loading indicator
+            container.style.opacity = "1";
+            loadingIndicator.style.display = "none";
+        }
+    }
+
+    // Reload when date changes
+    datePicker.addEventListener("change", () => {
+        loadOrders();
+    });
+
+    // Reload when clicking refresh button
+    refreshBtn.addEventListener("click", () => {
+        loadOrders();
+    });
+
+    // Handle tab switching
+    tabs.forEach(tab => {
+        tab.addEventListener("click", (e) => {
+            e.preventDefault();
+            
+            // Update active tab
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            
+            // Update current status
+            currentStatus = tab.dataset.status;
+            
+            // Reload orders
+            loadOrders();
+        });
+    });
+});
+</script>
+}
+

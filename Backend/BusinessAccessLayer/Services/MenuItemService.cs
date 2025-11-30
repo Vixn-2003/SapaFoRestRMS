@@ -21,16 +21,18 @@ namespace BusinessAccessLayer.Services
         public async Task<IEnumerable<BestSellerDto>> GetTopBestSellersAsync(int top = 10)
         {
             var data = await _menuItemRepository.GetTopBestSellersAsync(top);
-            return data.Select(x => new BestSellerDto
-            {
-                MenuItemId = x.MenuItem.MenuItemId,
-                MenuItemName = x.MenuItem.Name,
-                TotalQuantity = x.TotalQuantity,
-                Description = x.MenuItem.Description,   // thêm mô tả
-                ImageUrl = x.MenuItem.ImageUrl,
-                Price = x.MenuItem.Price
+            return data
+      .Where(x => x.MenuItem != null) // lọc các item không có MenuItem
+      .Select(x => new BestSellerDto
+      {
+          MenuItemId = x.MenuItem.MenuItemId,
+          MenuItemName = x.MenuItem.Name,
+          TotalQuantity = x.TotalQuantity,
+          Description = x.MenuItem.Description,
+          ImageUrl = x.MenuItem.ImageUrl,
+          Price = x.MenuItem.Price
+      });
 
-            });
         }
     }
 }

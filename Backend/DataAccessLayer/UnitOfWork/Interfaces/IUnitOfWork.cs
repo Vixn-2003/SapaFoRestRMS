@@ -20,6 +20,7 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IStockTransactionRepository StockTransaction { get; }
         IManagerSupplierRepository Supplier { get; }
 
+        IAuditRepository AuditRepository { get; }
         IUnitRepository UnitRepository { get; }
         IWarehouseRepository Warehouse { get; }
         IManagerComboRepository Combo { get; }
@@ -29,6 +30,9 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IPaymentRepository Payments { get; }
         IAuditLogRepository AuditLogs { get; }
         IOrderLockRepository OrderLocks { get; }
+        IOrderRepository Orders { get; }
+        IOrderDetailRepository OrderDetails { get; }
+        ITableRepository Tables { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

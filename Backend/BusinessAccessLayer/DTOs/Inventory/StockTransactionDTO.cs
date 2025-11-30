@@ -11,6 +11,7 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public int TransactionId { get; set; }
 
         public int IngredientId { get; set; }
+        public string? IngredientName { get; set; }
 
         public string Type { get; set; } = null!;
 
@@ -21,5 +22,6 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string? Note { get; set; }
 
         public int? BatchId { get; set; }
+        public string? BatchName { get; set; }
     }
 }

@@ -1,0 +1,930 @@
+@model WebSapaForestForStaff.DTOs.Waiter.WaiterOrderTrackingDto
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Theo dõi tiến độ phục vụ";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+@functions {
+    string GetStatusClass(string status)
+    {
+        var statusLower = (status ?? "").ToLower().Trim();
+        if (statusLower.Contains("cooking") || statusLower.Contains("chế biến") || statusLower.Contains("đang nấu"))
+            return "cooking";
+        if (statusLower.Contains("ready") || statusLower.Contains("sẵn sàng"))
+            return "ready";
+        if (statusLower.Contains("cancelled") || statusLower.Contains("hủy") || statusLower.Contains("đã hủy"))
+            return "cancelled";
+        if (statusLower.Contains("pending") || statusLower.Contains("chờ") || statusLower.Contains("chờ bếp"))
+            return "pending";
+        if (statusLower.Contains("late") || statusLower.Contains("trễ"))
+            return "late";
+        if (statusLower.Contains("done") || statusLower.Contains("hoàn thành") || statusLower.Contains("xong"))
+            return "done";
+        return "";
+    }
+
+    string GetStatusText(string status)
+    {
+        var statusLower = (status ?? "").ToLower().Trim();
+        // Format thống nhất theo yêu cầu
+        if (statusLower.Contains("pending") || statusLower.Contains("chờ") || statusLower.Contains("chờ bếp"))
+            return "CHỜ";
+        if (statusLower.Contains("cooking") || statusLower.Contains("chế biến") || statusLower.Contains("đang nấu"))
+            return "ĐANG NẤU";
+        if (statusLower.Contains("ready") || statusLower.Contains("sẵn sàng"))
+            return "SẴN SÀNG";
+        if (statusLower.Contains("late") || statusLower.Contains("trễ"))
+            return "TRỄ";
+        if (statusLower.Contains("cancelled") || statusLower.Contains("hủy") || statusLower.Contains("đã hủy"))
+            return "ĐÃ HỦY";
+        if (statusLower.Contains("done") || statusLower.Contains("hoàn thành") || statusLower.Contains("xong"))
+            return "HOÀN THÀNH";
+        return "CHỜ";
+    }
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    :root {
+        --primary-orange: #ff7b00;
+        --active-purple: #594a87;
+        --bg-light: #f5f7fa;
+        --text-dark: #2c3e50;
+        --text-muted: #6c757d;
+        --card-radius: 12px;
+        --border-color: #e0e0e0;
+    }
+
+    body {
+        background-color: #f5f5f5;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden;
+        color: var(--text-dark);
+    }
+
+    /* Header - Đơn giản, màu xám */
+    .top-header {
+        background: #2d3748;
+        color: white;
+        padding: 20px 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 0;
+    }
+
+    .avatar-circle {
+        width: 48px;
+        height: 48px;
+        background: #4a5568;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        font-size: 18px;
+    }
+
+    /* Status Cards - Đơn giản, màu xám */
+    .status-card {
+        background: #4a5568;
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .status-card .count {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .status-card .label {
+        font-size: 12px;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    /* Filter Buttons - Đơn giản */
+    .filter-btn {
+        border: none;
+        background: #4a5568;
+        padding: 10px 20px;
+        border-radius: 8px;
+        margin-right: 10px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s;
+        font-size: 14px;
+    }
+
+    .filter-btn:hover {
+        background: #5a6578;
+    }
+
+    .filter-btn.active {
+        background: white;
+        color: #2d3748;
+    }
+
+    /* Order Group Card - Style đẹp hơn */
+    /* Orders Container - 2 cột theo chiều ngang */
+    .orders-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+        width: 100% !important;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 0 !important;
+    }
+
+    @@media (max-width: 1200px) {
+        .orders-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    /* Order Card - Đơn giản */
+    .order-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+    }
+
+    .order-card.has-ready {
+        border-color: #22c55e;
+        border-width: 2px;
+    }
+
+    .order-card.has-urgent {
+        border-color: #ef4444;
+        border-width: 2px;
+    }
+
+    .order-card-urgent {
+        margin-top: 8px;
+        color: #ef4444;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .order-card-header {
+        padding: 16px;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .order-card-header.has-ready {
+        background: #f0fdf4;
+    }
+
+    .order-card-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .order-card-subtitle {
+        font-size: 14px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 500;
+    }
+
+    .table-badge {
+        background: #4a5568;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .table-badge.has-ready {
+        background: #22c55e;
+    }
+
+    /* Timer Badges - Màu sắc dễ nhìn hơn */
+    .timer-badge {
+        font-size: 22px;
+        font-weight: 700;
+        padding: 10px 18px;
+        border-radius: 10px;
+        display: inline-block;
+        min-width: 80px;
+        text-align: center;
+        letter-spacing: 0.5px;
+    }
+
+    .timer-normal { 
+        background: #e8f4f8; 
+        color: #2c3e50;
+        border: 2px solid #b8d4e3;
+    }
+
+    .timer-warning { 
+        background: #fff8e1; 
+        color: #f57c00;
+        border: 2px solid #ffc107;
+        animation: pulse-warning 2s infinite;
+    }
+
+    .timer-critical { 
+        background: #ffebee; 
+        color: #c62828;
+        border: 2px solid #ef5350;
+        animation: pulse-critical 1.5s infinite;
+        font-weight: 800;
+    }
+
+    @@keyframes pulse-warning {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+    }
+
+    @@keyframes pulse-critical {
+        0%, 100% { 
+            transform: scale(1); 
+            box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.6);
+        }
+        50% { 
+            transform: scale(1.05); 
+            box-shadow: 0 0 0 6px rgba(239, 83, 80, 0);
+        }
+    }
+
+    /* Progress Bar */
+    .progress-container {
+        margin: 16px 0;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .progress {
+        height: 10px;
+        border-radius: 10px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.3s;
+    }
+
+    /* Item List - Style như React */
+    .item-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .item-row-wrapper {
+        transition: all 0.2s;
+    }
+    
+    .item-row-wrapper.filtered-out {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    .item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 20px;
+        margin-bottom: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+        gap: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.2s;
+    }
+
+    .item-row:hover {
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        border-color: #d1d5db;
+    }
+
+    .item-row.ready {
+        background: #f0fdf4;
+        border-left: 4px solid #22c55e;
+        border-color: #86efac;
+    }
+
+    .item-row.urgent {
+        background: #fef2f2;
+        border-left: 4px solid #ef4444;
+        border-color: #fca5a5;
+    }
+
+    .item-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .item-name {
+        font-weight: 700;
+        font-size: 20px;
+        color: #1f2937;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .item-quantity {
+        background: transparent;
+        color: #374151;
+        padding: 0;
+        border-radius: 0;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .item-notes {
+        font-size: 13px;
+        color: #6b7280;
+        margin: 8px 0;
+        padding: 0;
+        background: transparent;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+    }
+
+    .item-notes i {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .item-notes strong {
+        color: #374151;
+        font-weight: 600;
+    }
+
+    .item-time {
+        font-size: 14px;
+        color: #6b7280;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .item-time.waiting-long {
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    .item-time i {
+        font-size: 14px;
+    }
+
+    .item-status-btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+    /* Màu sắc giống bếp */
+    .item-status-btn.pending {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .item-status-btn.cooking {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .item-status-btn.cooking.urgent {
+        background: #ffebee;
+        color: #c62828;
+        animation: pulse-warning 2s infinite;
+    }
+
+    .item-status-btn.ready {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .item-status-btn.done {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .item-status-btn.served {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .order-complete-badge {
+        background: #28a745;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    /* Action Buttons - Thẳng hàng */
+    .item-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+        min-width: 200px;
+    }
+
+    .action-buttons-row {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-action-item {
+        padding: 8px 12px;
+        font-size: 13px;
+        border-radius: 6px;
+        border: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        background: #e5e7eb;
+        color: #374151;
+        white-space: nowrap;
+    }
+
+    .btn-action-item:hover {
+        background: #d1d5db;
+    }
+
+    .btn-urgent.active {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-cancel {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .btn-pickup {
+        background: #22c55e;
+        color: white;
+        padding: 12px 32px;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn-pickup:hover {
+        background: #16a34a;
+    }
+
+    .badge-urgent {
+        background: #ef4444;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 8px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-urgent i {
+        font-size: 12px;
+    }
+
+</style>
+
+<div class="container-fluid p-0">
+    @if (!string.IsNullOrEmpty(ViewData["ErrorMessage"] as string))
+    {
+        <div class="alert alert-danger m-3">@ViewData["ErrorMessage"]</div>
+    }
+    else
+    {
+        <!-- Header -->
+        <header class="top-header">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle me-2">NV</div>
+                    <div>
+                        <h6 class="mb-0 text-white" style="font-size: 20px; font-weight: 700;">Trần Thị B</h6>
+                        <small style="font-size: 13px; color: rgba(255,255,255,0.8);">Màn hình phục vụ của bạn</small>
+                    </div>
+                </div>
+                <div class="text-end text-white">
+                    <div class="fw-bold" style="font-size: 36px;" id="currentTime"></div>
+                    <small style="font-size: 12px; color: rgba(255,255,255,0.8);" id="currentDate"></small>
+                </div>
+            </div>
+
+            <!-- Status Cards -->
+            <div class="row g-3 mb-3">
+                <div class="col-3">
+                    <div class="status-card">
+                        <div class="count" id="processingCount">@Model.ProcessingCount</div>
+                        <div class="label">Đang xử lý</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="status-card">
+                        <div class="count" id="waitingKitchenCount">@Model.WaitingKitchenCount</div>
+                        <div class="label">Chờ bếp</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="status-card">
+                        <div class="count" id="cookingCount">@Model.CookingCount</div>
+                        <div class="label">Đang nấu</div>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="status-card">
+                        <div class="count" id="readyCount">@Model.ReadyCount</div>
+                        <div class="label">Sẵn sàng lấy <i class="fas fa-bell"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Buttons -->
+            <div>
+                <button class="filter-btn" data-filter="processing">Đang xử lý (<span id="filterProcessingCount">@Model.ProcessingCount</span>)</button>
+                <button class="filter-btn active" data-filter="all">Tất cả (<span id="filterTotalCount">@Model.TotalCount</span>)</button>
+            </div>
+        </header>
+
+        <!-- Main Content: Orders Grid (Card Layout giống màn hình bếp) -->
+        <div class="p-4">
+            <div class="orders-grid" id="ordersGrid">
+                @if (Model.OrderGroups != null && Model.OrderGroups.Any())
+                {
+                    @foreach (var group in Model.OrderGroups)
+                    {
+                        var maxWaitingMinutes = group.Items.Any() ? group.Items.Max(i => i.WaitingMinutes) : 0;
+                        var timerClass = maxWaitingMinutes > 15 ? "timer-critical" : (maxWaitingMinutes >= 10 ? "timer-warning" : "timer-normal");
+                        var readyCount = group.Items.Count(i => 
+                            (i.Status ?? "").ToLower().Contains("ready") || 
+                            (i.Status ?? "").ToLower().Contains("sẵn sàng"));
+                        var totalItems = group.Items.Count;
+                        var canComplete = readyCount == totalItems && totalItems > 0;
+                        var hasUrgentItems = group.Items.Any(i => i.IsUrgent);
+                        
+                        <div class="order-card @(readyCount > 0 ? "has-ready" : "") @(hasUrgentItems ? "has-urgent" : "")" data-order-id="@group.OrderNumber">
+                            <!-- Card Header -->
+                            <div class="order-card-header @(readyCount > 0 ? "has-ready" : "")">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="flex-grow-1">
+                                        <div class="order-card-title">
+                                            <span class="table-badge @(readyCount > 0 ? "has-ready" : "")">@group.OrderNumber</span>
+                                            <span>@group.AreaName</span>
+                                        </div>
+                                        <div class="order-card-subtitle">
+                                            <i class="fas fa-users"></i> @group.NumberOfGuests khách
+                                        </div>
+                                        @if (hasUrgentItems)
+                                        {
+                                            <div class="order-card-urgent" style="margin-top: 8px; color: #ef4444; font-weight: 700; font-size: 14px;">
+                                                <i class="fas fa-fire" style="margin-right: 4px;"></i> LÀM GẤP
+                                            </div>
+                                        }
+                                    </div>
+                                    @if (readyCount > 0)
+                                    {
+                                        <div class="d-flex align-items-center gap-2" style="background: #22c55e; color: white; padding: 8px 16px; border-radius: 6px;">
+                                            <i class="fas fa-check-circle"></i>
+                                            <span style="font-weight: 700; font-size: 14px;">CÓ MÓN XONG!</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Item List -->
+                            <div class="item-list">
+                                @foreach (var item in group.Items)
+                                {
+                                    var itemStatusLower = (item.Status ?? "").ToLower().Trim();
+                                    var isDone = itemStatusLower.Contains("done") || itemStatusLower.Contains("hoàn thành") || itemStatusLower.Contains("xong");
+                                    
+                                    <div class="item-row-wrapper" data-item-status="@item.Status" data-is-done="@(isDone ? "true" : "false")">
+                                    @{
+                                        var statusClass = GetStatusClass(item.Status);
+                                        var statusText = GetStatusText(item.Status);
+                                        var isWaitingLong = item.WaitingMinutes > 60;
+                                        var statusBtnClass = statusClass == "pending" ? "pending" : 
+                                                            (statusClass == "cooking" ? "cooking" : 
+                                                            (statusClass == "ready" ? "ready" : "served"));
+                                        
+                                        var isReady = itemStatusLower.Contains("ready") || itemStatusLower.Contains("sẵn sàng");
+                                        var isPending = itemStatusLower.Contains("pending") || itemStatusLower.Contains("chờ") || itemStatusLower.Contains("chờ bếp");
+                                        var isCooking = itemStatusLower.Contains("cooking") || itemStatusLower.Contains("chế biến") || itemStatusLower.Contains("đang nấu");
+                                        var isReadyStatus = itemStatusLower.Contains("ready") || itemStatusLower.Contains("sẵn sàng");
+                                    }
+                                    <div class="item-row @(isReady ? "ready" : "") @(item.IsUrgent ? "urgent" : "")" data-item-id="@item.OrderDetailId">
+                                        <div class="item-info">
+                                            <div class="item-name">
+                                                <span class="item-quantity">x@(item.Quantity)</span>
+                                                <span>@item.MenuItemName</span>
+                                                @if (item.IsUrgent)
+                                                {
+                                                    <span class="badge-urgent"><i class="fas fa-fire"></i> LÀM GẤP</span>
+                                                }
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(item.Notes))
+                                            {
+                                                <div class="item-notes">
+                                                    <i class="fas fa-exclamation-triangle"></i> <strong>GHI CHÚ:</strong> @item.Notes
+                                                </div>
+                                            }
+                                            <div class="item-time @(isWaitingLong ? "waiting-long" : "")">
+                                                <i class="fas fa-clock"></i> Order: @item.OrderTime.ToString("HH:mm")
+                                                @if (isReadyStatus || isDone)
+                                                {
+                                                    <span> | Hoàn thành</span>
+                                                }
+                                                else
+                                                {
+                                                    <span> | Đã chờ @item.WaitingMinutes phút</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="item-actions">
+                                            <!-- Action Buttons for Pending/Cooking -->
+                                            @if (isPending || isCooking)
+                                            {
+                                                <div class="action-buttons-row mb-2">
+                                                    @if (item.CanRequestUrgent)
+                                                    {
+                                                        <button class="btn btn-urgent btn-action-item @(item.IsUrgent ? "active" : "")" 
+                                                                onclick="event.stopPropagation(); requestUrgent(@item.OrderDetailId)" 
+                                                                title="Làm gấp">
+                                                            <i class="fas fa-fire"></i>
+                                                            @(item.IsUrgent ? "Đã gấp" : "Làm gấp")
+                                                        </button>
+                                                    }
+                                                    @if (item.CanCancel)
+                                                    {
+                                                        <button class="btn btn-cancel btn-action-item" 
+                                                                onclick="event.stopPropagation(); cancelItem(@item.OrderDetailId)" 
+                                                                title="Hủy món">
+                                                            <i class="fas fa-times"></i>
+                                                            Hủy món
+                                                        </button>
+                                                    }
+                                                </div>
+                                                
+                                                <!-- Status Button -->
+                                                @if (isPending)
+                                                {
+                                                    <button class="item-status-btn pending">
+                                                        <i class="fas fa-hourglass-half"></i> CHỜ
+                                                    </button>
+                                                }
+                                                else if (isCooking)
+                                                {
+                                                    <button class="item-status-btn cooking @(item.IsUrgent ? "urgent" : "")">
+                                                        <i class="fas fa-utensils"></i> ĐANG NẤU
+                                                        @if (item.IsUrgent)
+                                                        {
+                                                            <i class="fas fa-exclamation-circle"></i>
+                                                        }
+                                                    </button>
+                                                }
+                                            }
+                                            
+                                            <!-- Ready Status - Button LẤY MÓN lớn -->
+                                            @if (isReadyStatus)
+                                            {
+                                                @if (item.IsSplit)
+                                                {
+                                                    <!-- Đã tách rồi, không cần popup, lấy hết -->
+                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServedDirect(@item.OrderDetailId, @item.Quantity)">
+                                                        <i class="fas fa-check-circle"></i>
+                                                        LẤY MÓN
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <!-- Chưa tách, cần popup để chọn số lượng -->
+                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServed(@item.OrderDetailId, @item.Quantity)">
+                                                        <i class="fas fa-check-circle"></i>
+                                                        LẤY MÓN
+                                                    </button>
+                                                }
+                                            }
+                                            
+                                            <!-- Done Status -->
+                                            @if (isDone)
+                                            {
+                                                <button class="item-status-btn done">
+                                                    <i class="fas fa-check"></i> HOÀN THÀNH
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div style="font-size: 80px; margin-bottom: 16px;">🎉</div>
+                        <h3 style="font-size: 24px; font-weight: 700; color: #374151; margin-bottom: 8px;">Tuyệt vời!</h3>
+                        <p style="color: #6b7280;">Bạn không còn món nào cần phục vụ</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modals -->
+@await Html.PartialAsync("_UrgentModal")
+@await Html.PartialAsync("_CancelModal")
+
+<!-- Pickup Quantity Modal -->
+<div class="modal fade" id="pickupQuantityModal" tabindex="-1" aria-labelledby="pickupQuantityModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pickupQuantityModalLabel">Xác nhận lấy món</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pickupOrderDetailId" />
+                <div class="mb-3">
+                    <label for="pickupMenuItemName" class="form-label">Món:</label>
+                    <input type="text" class="form-control" id="pickupMenuItemName" readonly />
+                </div>
+                <div class="mb-3">
+                    <label for="pickupQuantity" class="form-label">Số lượng lấy:</label>
+                    <input type="number" class="form-control" id="pickupQuantity" min="1" value="1" />
+                    <small class="form-text text-muted">Tối đa: <span id="pickupMaxQuantity">1</span> món</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" onclick="submitPickupRequest()">Xác nhận lấy món</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/waiterOrderTracking.js"></script>
+<script>
+    // Update time
+    function updateTime() {
+        const now = new Date();
+        const timeEl = document.getElementById('currentTime');
+        const dateEl = document.getElementById('currentDate');
+        if (timeEl) {
+            timeEl.textContent = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        }
+        if (dateEl) {
+            dateEl.textContent = now.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const filter = this.getAttribute('data-filter');
+            sessionStorage.setItem('waiterOrderFilter', filter);
+            filterOrders(filter);
+        });
+    });
+    
+    // Khôi phục filter từ sessionStorage sau khi reload
+    const savedFilter = sessionStorage.getItem('waiterOrderFilter') || 'all';
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        const filter = btn.getAttribute('data-filter');
+        if (filter === savedFilter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Áp dụng filter đã lưu
+    if (savedFilter) {
+        filterOrders(savedFilter);
+    }
+
+    // Filter orders
+    function filterOrders(filterType) {
+        console.log('Filtering by:', filterType);
+        
+        const itemRows = document.querySelectorAll('.item-row-wrapper');
+        console.log('Total items found:', itemRows.length);
+        
+        let doneCount = 0;
+        let processingCount = 0;
+        
+        itemRows.forEach((itemRow, index) => {
+            const isDoneAttr = itemRow.getAttribute('data-is-done');
+            const isDone = isDoneAttr === 'true';
+            
+            if (index < 5) {
+                console.log(`Item ${index}: data-is-done="${isDoneAttr}", isDone=${isDone}`);
+            }
+            
+            if (filterType === 'all') {
+                // Hiển thị tất cả items
+                itemRow.style.display = '';
+                itemRow.style.visibility = '';
+                itemRow.classList.remove('filtered-out');
+            } else if (filterType === 'processing') {
+                // Ẩn các items có status "Done"
+                if (isDone) {
+                    itemRow.style.display = 'none';
+                    itemRow.style.visibility = 'hidden';
+                    itemRow.classList.add('filtered-out');
+                    doneCount++;
+                } else {
+                    itemRow.style.display = '';
+                    itemRow.style.visibility = '';
+                    itemRow.classList.remove('filtered-out');
+                    processingCount++;
+                }
+            }
+        });
+        
+        console.log(`Done items: ${doneCount}, Processing items: ${processingCount}`);
+        
+        // Không ẩn order cards, chỉ ẩn items Done bên trong
+        // Order cards luôn hiển thị, chỉ items bên trong bị ẩn
+        const orderCards = document.querySelectorAll('.order-card');
+        orderCards.forEach(card => {
+            // Luôn hiển thị card
+            card.style.display = '';
+        });
+        
+        console.log('Filter applied - Only items are filtered, cards remain visible');
+    }
+
+    // Search orders
+    const searchInput = document.getElementById('searchOrders');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const cards = document.querySelectorAll('.order-group-card');
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(searchTerm) ? 'block' : 'none';
+            });
+        });
+    }
+</script>
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace DomainAccessLayer.Models;
@@ -19,3 +19,4 @@ public partial class KitchenTicket
 
     public virtual Order Order { get; set; } = null!;
 }
+

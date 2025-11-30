@@ -16,10 +16,14 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<IEnumerable<InventoryIngredientDTO>> GetAllIngredientSearch( string search);
         Task<(decimal TImport, decimal TExport, decimal totalFirst)> GetImportExportBatchesId(int id, DateTime? StartDate, DateTime? EndDate);
         Task<IEnumerable<BatchIngredientDTO>> GetBatchesAsync(int id);
-        Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse);
+        Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse, bool isActive);
         Task<int> AddNewIngredient(IngredientDTO ingredient);
         Task<int> AddNewBatch(InventoryBatchDTO batchIngredientDTO);
         Task<(bool success, string message)> UpdateIngredient(int idIngredient, string nameIngredient, int unit);
-
+        
+        // Batch reservation methods
+        Task<(bool success, string message)> ReserveBatchesForOrderDetailAsync(int orderDetailId);
+        Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailAsync(int orderDetailId);
+        Task<(bool success, string message)> ReleaseReservedBatchesForOrderDetailAsync(int orderDetailId);
     }
 }

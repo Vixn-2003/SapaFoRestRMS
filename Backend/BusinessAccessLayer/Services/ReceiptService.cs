@@ -1,7 +1,10 @@
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Enums;
 using DomainAccessLayer.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -15,11 +18,15 @@ public class ReceiptService : IReceiptService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly string _webRootPath;
+    private readonly ILogger<ReceiptService> _logger;
+    private readonly IConfiguration _configuration;
 
-    public ReceiptService(IUnitOfWork unitOfWork, string webRootPath)
+    public ReceiptService(IUnitOfWork unitOfWork, string webRootPath, ILogger<ReceiptService> logger, IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _webRootPath = webRootPath ?? throw new ArgumentNullException(nameof(webRootPath));
+        _logger = logger;
+        _configuration = configuration;
         
         // Set QuestPDF license (free for non-commercial use)
         QuestPDF.Settings.License = LicenseType.Community;
@@ -28,23 +35,54 @@ public class ReceiptService : IReceiptService
     public async Task<string> GenerateReceiptPdfAsync(int orderId, CancellationToken ct = default)
     {
         // Get order with all related data (includes OrderDetails, MenuItem, Transactions, etc.)
+        _logger.LogInformation("Starting PDF receipt generation for order {OrderId}", orderId);
         var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
         if (order == null)
         {
+            _logger.LogWarning("Cannot generate receipt for order {OrderId}: order not found", orderId);
             throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {orderId}");
         }
 
         // Check if order is paid
-        if (order.Status != "Paid" && order.Status != "PAID")
+        if (!IsPaidStatus(order.Status))
         {
+            _logger.LogWarning("Cannot generate receipt for order {OrderId}: status {Status}", orderId, order.Status);
             throw new InvalidOperationException($"Đơn hàng chưa được thanh toán. Trạng thái hiện tại: {order.Status}");
         }
 
-        // Generate order code
+        // Generate order code (Controller will build same format when returning file)
         var orderCode = $"RMS{orderId:D6}";
 
-        // Calculate amounts
-        var subtotal = order.OrderDetails?.Sum(od => od.UnitPrice * od.Quantity) ?? 0;
+        // Calculate amounts with new billing logic
+        decimal subtotal = 0;
+        if (order.OrderDetails != null && order.OrderDetails.Any())
+        {
+            foreach (var od in order.OrderDetails)
+            {
+                // Skip removed items
+                if (od.Status == "Removed")
+                {
+                    continue;
+                }
+
+                int billableQuantity;
+                
+                // Apply billing logic based on item type
+                if (od.MenuItem?.BillingType == ItemBillingType.ConsumptionBased)
+                {
+                    // Consumption-based items: charge for quantity used
+                    billableQuantity = od.QuantityUsed ?? od.Quantity;
+                }
+                else
+                {
+                    // Kitchen-prepared items: always charge for full quantity ordered
+                    billableQuantity = od.Quantity;
+                }
+                
+                subtotal += od.UnitPrice * billableQuantity;
+            }
+        }
+        
         var vatAmount = subtotal * 0.1m; // 10% VAT
         var serviceFee = subtotal * 0.05m; // 5% service fee
         
@@ -64,6 +102,28 @@ public class ReceiptService : IReceiptService
         // Get table number
         var tableNumber = order.Reservation?.ReservationTables?.FirstOrDefault()?.Table?.TableNumber?.ToString() ?? "N/A";
 
+        // Get customer name if available
+        var customerName = order.Customer?.User?.FullName ?? "Khách vãng lai";
+
+        // Get restaurant info from configuration (with defaults)
+        var restaurantName = _configuration["ReceiptSettings:RestaurantName"] ?? "SAPA FO REST";
+        var restaurantAddress = _configuration["ReceiptSettings:RestaurantAddress"] ?? "123 Đường ABC, Quận XYZ, TP.HCM";
+        var restaurantPhone = _configuration["ReceiptSettings:RestaurantPhone"] ?? "0123 456 789";
+
+        // Format payment method in uppercase
+        var paymentMethodUpper = paymentMethod.ToUpperInvariant();
+        if (paymentMethodUpper.Contains("CASH"))
+            paymentMethodUpper = "TIỀN MẶT";
+        else if (paymentMethodUpper.Contains("VIETQR") || paymentMethodUpper.Contains("CHUYỂN KHOẢN"))
+            paymentMethodUpper = "CHUYỂN KHOẢN";
+        else if (paymentMethodUpper.Contains("COMBINED") || paymentMethodUpper.Contains("KẾT HỢP"))
+            paymentMethodUpper = "KẾT HỢP";
+
+        // Convert amount to Vietnamese words
+        var amountInWordsRaw = ConvertNumberToVietnameseWords(totalAmount);
+        // Capitalize first letter
+        var amountInWords = char.ToUpperInvariant(amountInWordsRaw[0]) + amountInWordsRaw.Substring(1);
+
         // Create receipts directory if it doesn't exist
         var receiptsPath = Path.Combine(_webRootPath, "receipts");
         if (!Directory.Exists(receiptsPath))
@@ -75,54 +135,87 @@ public class ReceiptService : IReceiptService
         var pdfPath = Path.Combine(receiptsPath, pdfFileName);
 
         // Generate PDF using QuestPDF
+        _logger.LogInformation("Composed receipt document for order {OrderId}. Totals: subtotal {Subtotal}, VAT {Vat}, service fee {ServiceFee}, discount {Discount}, total {Total}", orderId, subtotal, vatAmount, serviceFee, discountAmount, totalAmount);
+
         var document = Document.Create(container =>
         {
             container.Page(page =>
             {
                 page.Size(PageSizes.A4);
-                page.Margin(30);
+                page.Margin(25);
 
-                // Header
+                // Restaurant Header
                 page.Header()
                     .Column(column =>
                     {
-                        column.Item().AlignCenter().Text("HÓA ĐƠN THANH TOÁN")
-                            .FontSize(20)
+                        // Restaurant name (bold, larger)
+                        column.Item().AlignCenter().Text(restaurantName)
+                            .FontSize(18)
                             .Bold()
-                            .FontColor(Colors.Blue.Darken3);
+                            .FontColor(Colors.Black);
+
+                        column.Item().PaddingTop(3);
+
+                        // Address and phone (smaller font)
+                        column.Item().AlignCenter().Text(restaurantAddress)
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken2);
+
+                        column.Item().AlignCenter().Text($"ĐT: {restaurantPhone}")
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken2);
+
+                        column.Item().PaddingTop(8);
+
+                        // Title "HÓA ĐƠN THANH TOÁN"
+                        column.Item().AlignCenter().Text("HÓA ĐƠN THANH TOÁN")
+                            .FontSize(16)
+                            .Bold()
+                            .FontColor(Colors.Black);
 
                         column.Item().PaddingTop(5);
-                        column.Item().AlignCenter().Text($"#{orderCode}")
-                            .FontSize(16)
-                            .Bold();
+
+                        // Invoice number and date on same line
+                        column.Item().Row(row =>
+                        {
+                            row.RelativeItem().AlignLeft().Text($"Số HĐ: {orderId:D4}")
+                                .FontSize(10)
+                                .Bold();
+                            row.RelativeItem().AlignRight().Text($"Ngày: {paidAt:dd/MM/yyyy HH:mm}")
+                                .FontSize(10);
+                        });
+
+                        column.Item().PaddingTop(3);
                     });
 
                 // Content
                 page.Content()
-                    .PaddingVertical(10)
+                    .PaddingVertical(8)
                     .Column(column =>
                     {
-                        // Order Information
-                        column.Item().Text($"Ngày: {paidAt:dd/MM/yyyy HH:mm:ss}")
-                            .FontSize(10);
-                        column.Item().Text($"Bàn: {tableNumber}")
-                            .FontSize(10);
-                        column.Item().Text($"Thu ngân: {confirmedBy}")
-                            .FontSize(10);
-                        column.Item().Text($"Phương thức thanh toán: {paymentMethod}")
-                            .FontSize(10);
-                        column.Item().PaddingBottom(10);
-
-                        column.Item().LineHorizontal(1).LineColor(Colors.Grey.Medium);
-
-                        // Items Table
-                        column.Item().Table(table =>
+                        // Order Information Section
+                        column.Item().Column(infoColumn =>
                         {
-                            // Define columns
+                            infoColumn.Item().Text($"Bàn: {tableNumber}")
+                                .FontSize(10);
+                            infoColumn.Item().Text($"Thu ngân: {confirmedBy}")
+                                .FontSize(10);
+                            infoColumn.Item().Text($"Khách hàng: {customerName}")
+                                .FontSize(10);
+                        });
+
+                        column.Item().PaddingTop(5);
+                        column.Item().LineHorizontal(1).LineColor(Colors.Black);
+
+                        // Items Table with numbering
+                        column.Item().PaddingTop(5).Table(table =>
+                        {
+                            // Define columns: Number, Item name, Quantity, Unit price, Total
                             table.ColumnsDefinition(columns =>
                             {
-                                columns.RelativeColumn(4); // Item name
-                                columns.RelativeColumn(1.5f); // Quantity
+                                columns.ConstantColumn(25); // Number column
+                                columns.RelativeColumn(3.5f); // Item name
+                                columns.ConstantColumn(30); // Quantity
                                 columns.RelativeColumn(2); // Unit price
                                 columns.RelativeColumn(2.5f); // Total
                             });
@@ -130,15 +223,17 @@ public class ReceiptService : IReceiptService
                             // Table header
                             table.Header(header =>
                             {
-                                header.Cell().Element(CellStyle).Text("Tên món").Bold();
-                                header.Cell().Element(CellStyle).AlignRight().Text("SL").Bold();
-                                header.Cell().Element(CellStyle).AlignRight().Text("Đơn giá").Bold();
-                                header.Cell().Element(CellStyle).AlignRight().Text("Thành tiền").Bold();
+                                header.Cell().Element(CellStyle).Text("STT").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).Text("Tên món").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).AlignRight().Text("SL").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).AlignRight().Text("Đơn giá").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).AlignRight().Text("Thành tiền").Bold().FontSize(9);
                             });
 
-                            // Table rows
+                            // Table rows with numbering
                             if (order.OrderDetails != null && order.OrderDetails.Any())
                             {
+                                int itemNumber = 1;
                                 foreach (var item in order.OrderDetails)
                                 {
                                     var itemName = item.MenuItem?.Name ?? "N/A";
@@ -146,54 +241,104 @@ public class ReceiptService : IReceiptService
                                     var unitPrice = item.UnitPrice;
                                     var itemTotal = unitPrice * quantity;
 
-                                    table.Cell().Element(CellStyle).Text(itemName);
-                                    table.Cell().Element(CellStyle).AlignRight().Text(quantity.ToString());
-                                    table.Cell().Element(CellStyle).AlignRight().Text($"{unitPrice:N0} ₫");
-                                    table.Cell().Element(CellStyle).AlignRight().Text($"{itemTotal:N0} ₫");
+                                    table.Cell().Element(CellStyle).AlignCenter().Text($"({itemNumber})").FontSize(9);
+                                    table.Cell().Element(CellStyle).Text(itemName).FontSize(9);
+                                    table.Cell().Element(CellStyle).AlignRight().Text(quantity.ToString()).FontSize(9);
+                                    table.Cell().Element(CellStyle).AlignRight().Text($"{unitPrice:N0} đ").FontSize(9);
+                                    table.Cell().Element(CellStyle).AlignRight().Text($"{itemTotal:N0} đ").FontSize(9).Bold();
+
+                                    itemNumber++;
                                 }
                             }
                         });
 
-                        column.Item().PaddingTop(10);
-                        column.Item().LineHorizontal(1).LineColor(Colors.Grey.Medium);
+                        column.Item().PaddingTop(8);
+                        column.Item().LineHorizontal(1).LineColor(Colors.Black);
 
-                        // Summary
-                        column.Item().AlignRight().Column(summaryColumn =>
+                        // Totals Section
+                        column.Item().PaddingTop(5).AlignRight().Column(summaryColumn =>
                         {
-                            summaryColumn.Item().Text($"Tổng tạm tính: {subtotal:N0} ₫")
-                                .FontSize(10);
-                            summaryColumn.Item().Text($"Thuế VAT (10%): {vatAmount:N0} ₫")
-                                .FontSize(10);
-                            summaryColumn.Item().Text($"Phí dịch vụ (5%): {serviceFee:N0} ₫")
-                                .FontSize(10);
-                            
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("Tổng cộng:").FontSize(10);
+                                row.RelativeItem().AlignRight().Text($"{subtotal:N0} đ").FontSize(10).Bold();
+                            });
+
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("VAT (10%):").FontSize(10);
+                                row.RelativeItem().AlignRight().Text($"{vatAmount:N0} đ").FontSize(10);
+                            });
+
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("Phí dịch vụ (5%):").FontSize(10);
+                                row.RelativeItem().AlignRight().Text($"{serviceFee:N0} đ").FontSize(10);
+                            });
+
                             if (discountAmount > 0)
                             {
-                                summaryColumn.Item().Text($"Giảm giá: -{discountAmount:N0} ₫")
-                                    .FontSize(10)
-                                    .FontColor(Colors.Red.Darken2);
+                                summaryColumn.Item().Row(row =>
+                                {
+                                    row.RelativeItem().AlignLeft().Text("Giảm giá:").FontSize(10).FontColor(Colors.Red.Darken2);
+                                    row.RelativeItem().AlignRight().Text($"-{discountAmount:N0} đ").FontSize(10).FontColor(Colors.Red.Darken2).Bold();
+                                });
                             }
 
+                            summaryColumn.Item().PaddingTop(3);
+                            summaryColumn.Item().LineHorizontal(1).LineColor(Colors.Black);
+
+                            summaryColumn.Item().PaddingTop(3);
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("TỔNG CỘNG:").FontSize(12).Bold();
+                                row.RelativeItem().AlignRight().Text($"{totalAmount:N0} đ").FontSize(12).Bold();
+                            });
+
                             summaryColumn.Item().PaddingTop(5);
-                            summaryColumn.Item()
-                                .Text($"TỔNG CỘNG: {totalAmount:N0} ₫")
-                                .FontSize(14)
-                                .Bold()
-                                .FontColor(Colors.Blue.Darken3);
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("Phương thức:").FontSize(10);
+                                row.RelativeItem().AlignRight().Text(paymentMethodUpper).FontSize(10).Bold();
+                            });
+
+                            summaryColumn.Item().PaddingTop(3);
+                            summaryColumn.Item().Text($"Bằng chữ: {amountInWords}")
+                                .FontSize(9)
+                                .Italic()
+                                .FontColor(Colors.Grey.Darken1);
                         });
                     });
 
                 // Footer
                 page.Footer()
+                    .PaddingTop(10)
                     .AlignCenter()
-                    .Text("Cảm ơn quý khách! Hẹn gặp lại 💚")
-                    .FontSize(10)
-                    .FontColor(Colors.Grey.Darken1);
+                    .Text("Cảm ơn Quý Khách – Hẹn Gặp Lại!")
+                    .FontSize(11)
+                    .Bold()
+                    .FontColor(Colors.Black);
             });
         });
 
         // Generate PDF file
-        document.GeneratePdf(pdfPath);
+        try
+        {
+            document.GeneratePdf(pdfPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate PDF for order {OrderId}", orderId);
+            throw;
+        }
+
+        long fileSize = 0;
+        if (System.IO.File.Exists(pdfPath))
+        {
+            fileSize = new FileInfo(pdfPath).Length;
+        }
+
+        _logger.LogInformation("Finished generating receipt for order {OrderId}. File saved to {PdfPath} ({FileSize} bytes)", orderId, pdfPath, fileSize);
 
         // Return relative URL path
         return $"/receipts/{pdfFileName}";
@@ -209,6 +354,108 @@ public class ReceiptService : IReceiptService
             .BorderColor(Colors.Grey.Lighten2)
             .PaddingVertical(5)
             .PaddingHorizontal(5);
+    }
+
+    private static bool IsPaidStatus(string? status)
+        => string.Equals(status, "Paid", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status, "Success", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Converts a number to Vietnamese words (e.g., 790000 -> "Bảy trăm chín mươi nghìn đồng chẵn")
+    /// </summary>
+    private static string ConvertNumberToVietnameseWords(decimal amount)
+    {
+        if (amount == 0)
+            return "Không đồng";
+
+        var wholePart = (long)Math.Floor(amount);
+        var fractionalPart = (long)((amount - wholePart) * 100);
+
+        var words = ConvertNumberToWords(wholePart);
+        var result = words + " đồng";
+
+        if (fractionalPart > 0)
+        {
+            result += " " + ConvertNumberToWords(fractionalPart) + " xu";
+        }
+        else
+        {
+            result += " chẵn";
+        }
+
+        return result;
+    }
+
+    private static string ConvertNumberToWords(long number)
+    {
+        if (number == 0)
+            return "không";
+
+        if (number < 0)
+            return "âm " + ConvertNumberToWords(-number);
+
+        string[] ones = { "", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín" };
+        string[] tens = { "", "mười", "hai mươi", "ba mươi", "bốn mươi", "năm mươi", "sáu mươi", "bảy mươi", "tám mươi", "chín mươi" };
+        string[] hundreds = { "", "một trăm", "hai trăm", "ba trăm", "bốn trăm", "năm trăm", "sáu trăm", "bảy trăm", "tám trăm", "chín trăm" };
+
+        if (number < 10)
+            return ones[number];
+
+        if (number < 100)
+        {
+            var ten = number / 10;
+            var one = number % 10;
+            if (one == 0)
+                return tens[ten];
+            if (one == 1 && ten == 1)
+                return "mười một";
+            if (one == 1 && ten > 1)
+                return tens[ten] + " mốt";
+            if (one == 5 && ten > 1)
+                return tens[ten] + " lăm";
+            return tens[ten] + " " + ones[one];
+        }
+
+        if (number < 1000)
+        {
+            var hundred = number / 100;
+            var remainder = number % 100;
+            if (remainder == 0)
+                return hundreds[hundred];
+            return hundreds[hundred] + " " + ConvertNumberToWords(remainder);
+        }
+
+        if (number < 1_000_000)
+        {
+            var thousand = number / 1000;
+            var remainder = number % 1000;
+            var thousandWords = ConvertNumberToWords(thousand) + " nghìn";
+            if (remainder == 0)
+                return thousandWords;
+            if (remainder < 100)
+                return thousandWords + " không trăm " + ConvertNumberToWords(remainder);
+            return thousandWords + " " + ConvertNumberToWords(remainder);
+        }
+
+        if (number < 1_000_000_000)
+        {
+            var million = number / 1_000_000;
+            var remainder = number % 1_000_000;
+            var millionWords = ConvertNumberToWords(million) + " triệu";
+            if (remainder == 0)
+                return millionWords;
+            if (remainder < 1000)
+                return millionWords + " không nghìn " + ConvertNumberToWords(remainder);
+            return millionWords + " " + ConvertNumberToWords(remainder);
+        }
+
+        var billion = number / 1_000_000_000;
+        var billionRemainder = number % 1_000_000_000;
+        var billionWords = ConvertNumberToWords(billion) + " tỷ";
+        if (billionRemainder == 0)
+            return billionWords;
+        return billionWords + " " + ConvertNumberToWords(billionRemainder);
     }
 }
 

@@ -1,0 +1,89 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+  }
+  
+  h5 {
+    border-left: 4px solid #0d6efd;
+    padding-left: 8px;
+  }
+  
+  .highlight-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    transition: all 0.3s;
+  }
+  .highlight-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .label {
+    font-size: 0.9rem;
+    color: #666;
+  }
+  
+  .highlight-id, .highlight-money, .highlight-number {
+    font-weight: 700;
+    font-size: 1.25rem;
+  }
+  
+  .highlight-money {
+    text-shadow: 0 0 6px rgba(25,135,84,0.3);
+  }
+  
+  .highlight-warning {
+    color: #d9534f;
+    font-weight: 600;
+  }
+  
+  .alert-difference {
+    background: #fff3cd;
+    border-left: 6px solid #ffc107;
+    padding: 8px 12px;
+    border-radius: 6px;
+  }
+  
+  .highlight-input:focus {
+    box-shadow: 0 0 6px rgba(13,110,253,0.5);
+    border-color: #0d6efd;
+  }
+  
+  .pin-input {
+    letter-spacing: 8px;
+    text-align: center;
+    font-size: 1.5rem;
+    border: 2px solid #6610f2;
+  }
+  
+  .pin-input:focus {
+    box-shadow: 0 0 10px rgba(102,16,242,0.5);
+  }
+  
+  .btn-main-action {
+    background: linear-gradient(135deg, #198754 0%, #157347 100%);
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 10px;
+    transition: all 0.3s;
+  }
+  .btn-main-action:hover {
+    box-shadow: 0 0 15px rgba(25,135,84,0.5);
+    transform: scale(1.05);
+  }
+  
+  .info-box {
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  
+  .text-success {
+    color: #198754 !important;
+  }
+  

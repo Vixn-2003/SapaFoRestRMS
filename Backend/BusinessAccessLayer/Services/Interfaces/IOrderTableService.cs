@@ -1,4 +1,5 @@
-﻿using static BusinessAccessLayer.Services.OrderTableService;
+﻿using BusinessAccessLayer.DTOs;
+using static BusinessAccessLayer.Services.OrderTableService;
 
 namespace BusinessAccessLayer.Services.Interfaces
 {
@@ -37,7 +38,23 @@ namespace BusinessAccessLayer.Services.Interfaces
         /// <summary>
         /// Nhận giỏ hàng từ khách và tạo Order
         /// </summary>
-        Task<OrderResultDto> SubmitOrderAsync(OrderSubmissionDto orderDto);
+        Task<OrderResultDto> SubmitOrderAsync(SubmitOrderRequest orderDto);
+        //Gọi xử lý sự cố
+        Task RequestAssistanceAsync(AssistanceRequestDto requestDto);
 
+        Task<ComboDetailDto> GetComboDetailsAsync(int comboId);
+
+        Task<MenuItemDetailDto> GetMenuItemDetailsAsync(int menuItemId);
+
+        /// <summary>
+        /// xử lý yêu vầu
+        /// </summary>
+        /// <param name="areaId"></param>
+        /// <param name="page"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
+        Task<DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>> GetStaffPendingRequestsAsync(
+             string? sort, int page, int pageSize);
+        Task CompleteAssistanceRequestAsync(int requestId);
     }
 }

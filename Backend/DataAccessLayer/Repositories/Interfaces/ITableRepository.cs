@@ -13,6 +13,7 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task UpdateAsync(Table table);
         Task DeleteAsync(int id);
         Task<bool> IsTableInUseAsync(int tableId);
+        Task<List<Table>> GetTablesByOrderIdAsync(int orderId);
         Task SaveAsync();
     }
 }

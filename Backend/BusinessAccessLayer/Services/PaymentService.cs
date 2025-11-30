@@ -1,7 +1,9 @@
 using AutoMapper;
+using BusinessAccessLayer.Constants;
 using BusinessAccessLayer.DTOs.Payment;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Enums;
 using DomainAccessLayer.Models;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -31,34 +33,72 @@ public class PaymentService : IPaymentService
         _serviceProvider = serviceProvider;
     }
 
-    public async Task<IEnumerable<OrderDto>> GetPendingOrdersAsync(CancellationToken ct = default)
+    private static readonly HashSet<string> PendingStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
-        var orders = await _unitOfWork.Payments.GetPendingOrdersAsync();
+        "Pending",
+        "pending-payment",
+        "WaitingForPayment",
+        "Processing",
+        "Confirmed"  // Đơn đã được khách xác nhận, chờ thanh toán
+    };
+
+    private static readonly HashSet<string> ProcessedStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Paid",
+        "Completed",
+        "Success"
+    };
+
+    public async Task<OrderListResponseDto> GetOrdersAsync(DateOnly? date = default, string? statusFilter = null, string sortOrder = "desc", CancellationToken ct = default)
+    {
+        var selectedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        IEnumerable<Order> orders;
+        if (date.HasValue)
+        {
+            orders = await _unitOfWork.Payments.GetOrdersByDateAsync(selectedDate);
+        }
+        else
+        {
+            orders = await _unitOfWork.Payments.GetAllOrdersWithDetailsAsync();
+        }
         var orderDtos = new List<OrderDto>();
 
         foreach (var order in orders)
         {
             var orderDto = _mapper.Map<OrderDto>(order);
-            
-            // Tính toán lại tổng tiền nếu cần
             CalculateOrderAmounts(order, orderDto);
-            
-            // Lấy thông tin bàn nếu có
-            if (order.Reservation != null && order.Reservation.ReservationTables != null && order.Reservation.ReservationTables.Any())
-            {
-                // Lấy TableNumber từ ReservationTables (có thể có nhiều bàn)
-                var tableNumbers = order.Reservation.ReservationTables
-                    .Where(rt => rt.Table != null)
-                    .Select(rt => rt.Table.TableNumber)
-                    .ToList();
-                
-                orderDto.TableNumber = string.Join(", ", tableNumbers); // Nếu có nhiều bàn, join bằng dấu phẩy
-            }
-
+            PopulateOrderMetadata(order, orderDto);
             orderDtos.Add(orderDto);
         }
 
-        return orderDtos;
+        var pendingCount = orderDtos.Count(o => IsPendingStatus(o.Status));
+        var processedCount = orderDtos.Count(o => IsProcessedStatus(o.Status));
+
+        IEnumerable<OrderDto> filteredOrders = orderDtos;
+        if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            if (statusFilter.Equals("pending", StringComparison.OrdinalIgnoreCase))
+            {
+                filteredOrders = orderDtos.Where(o => IsPendingStatus(o.Status));
+            }
+            else if (statusFilter.Equals("processed", StringComparison.OrdinalIgnoreCase))
+            {
+                filteredOrders = orderDtos.Where(o => IsProcessedStatus(o.Status));
+            }
+        }
+
+        filteredOrders = sortOrder?.Equals("asc", StringComparison.OrdinalIgnoreCase) == true
+            ? filteredOrders.OrderBy(o => o.CreatedAt)
+            : filteredOrders.OrderByDescending(o => o.CreatedAt);
+
+        return new OrderListResponseDto
+        {
+            SelectedDate = selectedDate,
+            TotalOrders = orderDtos.Count,
+            PendingOrders = pendingCount,
+            ProcessedOrders = processedCount,
+            Orders = filteredOrders.ToList()
+        };
     }
 
     public async Task<OrderDto?> GetOrderDetailAsync(int orderId, CancellationToken ct = default)
@@ -74,23 +114,7 @@ public class PaymentService : IPaymentService
         
         // Tính toán các khoản tiền
         CalculateOrderAmounts(order, orderDto);
-
-        // Lấy thông tin bàn và khách hàng
-        if (order.Reservation != null && order.Reservation.ReservationTables != null && order.Reservation.ReservationTables.Any())
-        {
-            // Lấy TableNumber từ ReservationTables (có thể có nhiều bàn)
-            var tableNumbers = order.Reservation.ReservationTables
-                .Where(rt => rt.Table != null)
-                .Select(rt => rt.Table.TableNumber)
-                .ToList();
-            
-            orderDto.TableNumber = string.Join(", ", tableNumbers); // Nếu có nhiều bàn, join bằng dấu phẩy
-        }
-
-        if (order.Customer != null)
-        {
-            orderDto.CustomerName = order.Customer.User.FullName;
-        }
+        PopulateOrderMetadata(order, orderDto);
 
         return orderDto;
     }
@@ -128,6 +152,13 @@ public class PaymentService : IPaymentService
             throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
         }
 
+        // Validate: Đơn hàng phải được khách xác nhận trước khi thanh toán
+        if (string.IsNullOrEmpty(order.Status) || 
+            !order.Status.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Đơn hàng chưa được khách xác nhận, không thể thanh toán. Vui lòng yêu cầu khách xác nhận số lượng món đã dùng trước.");
+        }
+
         // Tạo sessionId cho giao dịch
         var sessionId = $"SESSION-{DateTime.UtcNow.Ticks}-{request.OrderId}";
 
@@ -145,6 +176,44 @@ public class PaymentService : IPaymentService
 
         var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
         
+        // 🔓 GIẢI PHÓNG BÀN NGAY KHI BẮT ĐẦU THANH TOÁN
+        try
+        {
+            var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+            if (tables != null && tables.Any())
+            {
+                foreach (var table in tables)
+                {
+                    table.Status = "Available";
+                    await _unitOfWork.Tables.UpdateAsync(table);
+                    
+                    // Log table release
+                    await _auditLogService.LogEventAsync(
+                        eventType: "table_released",
+                        entityType: "Table",
+                        entityId: table.TableId,
+                        description: $"Bàn {table.TableNumber} được giải phóng khi bắt đầu thanh toán cho Order {request.OrderId}",
+                        userId: null,
+                        ct: ct
+                    );
+                }
+                
+                await _unitOfWork.Tables.SaveAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the payment - table release is secondary
+            await _auditLogService.LogEventAsync(
+                eventType: "table_release_failed",
+                entityType: "Order",
+                entityId: request.OrderId,
+                description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                userId: null,
+                ct: ct
+            );
+        }
+        
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
 
@@ -155,6 +224,13 @@ public class PaymentService : IPaymentService
         if (order == null)
         {
             throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
+        }
+
+        // Validate: Đơn hàng phải được khách xác nhận trước khi thanh toán
+        if (string.IsNullOrEmpty(order.Status) || 
+            !order.Status.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Đơn hàng chưa được khách xác nhận, không thể thanh toán. Vui lòng yêu cầu khách xác nhận số lượng món đã dùng trước.");
         }
 
         // Validate payment amount
@@ -192,7 +268,7 @@ public class PaymentService : IPaymentService
         };
 
         // Cập nhật trạng thái đơn hàng
-        order.Status = "Paid";
+        order.Status = OrderStatusConstants.Paid;
         await _unitOfWork.Payments.UpdateAsync(order);
 
         // Lưu transaction
@@ -202,6 +278,116 @@ public class PaymentService : IPaymentService
         await _unitOfWork.SaveChangesAsync();
 
         return _mapper.Map<TransactionDto>(savedTransaction);
+    }
+
+    public async Task<OrderDto> ConfirmOrderAsync(CustomerConfirmRequestDto request, CancellationToken ct = default)
+    {
+        var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
+        if (order == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
+        }
+
+        if (order.OrderDetails == null || !order.OrderDetails.Any())
+        {
+            throw new InvalidOperationException("Đơn hàng không có món để xác nhận.");
+        }
+
+        foreach (var confirmed in request.Items)
+        {
+            var detail = order.OrderDetails.FirstOrDefault(d => d.OrderDetailId == confirmed.OrderDetailId);
+            if (detail == null)
+            {
+                continue;
+            }
+
+            if (confirmed.IsRemoved)
+            {
+                // Món bị hủy: set cả Quantity và QuantityUsed về 0
+                detail.Quantity = 0;
+                detail.QuantityUsed = 0;
+                detail.Status = "Removed";
+            }
+            else
+            {
+                // ✅ FIX BUG: KHÔNG ghi đè Quantity (SL đặt)
+                // Chỉ cập nhật QuantityUsed (SL thực tế khách dùng)
+                // Giữ nguyên detail.Quantity (đây là SL ban đầu đặt)
+                detail.QuantityUsed = confirmed.QuantityUsed < 0 ? 0 : confirmed.QuantityUsed;
+                detail.Status = "Confirmed";
+            }
+        }
+
+        // Sau khi khách xác nhận, chuyển trạng thái đơn sang "Confirmed" (đã xác nhận, chờ thanh toán)
+        order.Status = OrderStatusConstants.Confirmed;
+
+        await _unitOfWork.SaveChangesAsync();
+
+        var orderDto = _mapper.Map<OrderDto>(order);
+        CalculateOrderAmounts(order, orderDto);
+        PopulateOrderMetadata(order, orderDto);
+        return orderDto;
+    }
+
+    public async Task<bool> UndoConfirmOrderAsync(int orderId, UndoConfirmRequestDto request, CancellationToken ct = default)
+    {
+        var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
+        if (order == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {orderId}");
+        }
+
+        if (!string.Equals(order.Status, OrderStatusConstants.Confirmed, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Order cannot be reverted at this stage.");
+        }
+
+        if (order.Payments != null && order.Payments.Any(p => p.PaymentDate.HasValue))
+        {
+            throw new InvalidOperationException("Không thể hoàn tác vì đơn hàng đã bắt đầu thanh toán.");
+        }
+
+        if (order.OrderDetails != null && order.OrderDetails.Any(od =>
+            string.Equals(od.Status, "Cooking", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(od.Status, "Served", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new InvalidOperationException("Không thể hoàn tác vì bếp đã bắt đầu chế biến món.");
+        }
+
+        order.Status = OrderStatusConstants.WaitingConfirmation;
+        order.ConfirmedAt = null;
+        order.ConfirmedByStaffId = null;
+
+        await _unitOfWork.Payments.UpdateAsync(order);
+
+        var staffId = await ResolveStaffIdAsync(request.StaffId, ct);
+
+        var history = new OrderHistory
+        {
+            OrderId = orderId,
+            Action = "Undo Confirmation",
+            Reason = request.Reason,
+            StaffId = staffId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _unitOfWork.Payments.AddOrderHistoryAsync(history);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+    }
+
+    private async Task<int> ResolveStaffIdAsync(int userId, CancellationToken ct = default)
+    {
+        var user = await _unitOfWork.StaffProfiles.GetWithDetailsAsync(userId, ct);
+        var staff = user?.Staff?.FirstOrDefault();
+
+        if (staff == null)
+        {
+            throw new InvalidOperationException("Không tìm thấy hồ sơ nhân viên tương ứng.");
+        }
+
+        return staff.StaffId;
     }
 
     public async Task<TransactionDto?> GetPaymentResultAsync(string sessionId, CancellationToken ct = default)
@@ -221,11 +407,36 @@ public class PaymentService : IPaymentService
     /// </summary>
     private void CalculateOrderAmounts(Order order, OrderDto orderDto)
     {
-        // Tính subtotal từ OrderDetails
+        // Tính subtotal từ OrderDetails với logic mới
         decimal subtotal = 0;
         if (order.OrderDetails != null && order.OrderDetails.Any())
         {
-            subtotal = order.OrderDetails.Sum(od => od.UnitPrice * od.Quantity);
+            foreach (var od in order.OrderDetails)
+            {
+                // Bỏ qua món đã bị xóa
+                if (od.Status == "Removed")
+                {
+                    continue;
+                }
+
+                int billableQuantity;
+                
+                // ✅ LOGIC MỚI: Phân biệt 2 loại món
+                if (od.MenuItem?.BillingType == ItemBillingType.ConsumptionBased)
+                {
+                    // (A) Món tiêu hao: Tính tiền theo SL thực tế khách dùng
+                    // Nếu chưa confirm (QuantityUsed = null), fallback về Quantity
+                    billableQuantity = od.QuantityUsed ?? od.Quantity;
+                }
+                else
+                {
+                    // (B) Món bếp chế biến: LUÔN tính theo SL đặt (100%)
+                    // Bếp đã nấu thì phải thanh toán đủ
+                    billableQuantity = od.Quantity;
+                }
+                
+                subtotal += od.UnitPrice * billableQuantity;
+            }
         }
 
         orderDto.Subtotal = subtotal;
@@ -252,6 +463,67 @@ public class PaymentService : IPaymentService
 
         // Tính tổng cộng
         orderDto.TotalAmount = subtotal + orderDto.VatAmount.Value + orderDto.ServiceFee.Value - orderDto.DiscountAmount.Value;
+    }
+
+    private static bool IsPendingStatus(string? status) =>
+        !string.IsNullOrWhiteSpace(status) && PendingStatuses.Contains(status);
+
+    private static bool IsProcessedStatus(string? status) =>
+        !string.IsNullOrWhiteSpace(status) && ProcessedStatuses.Contains(status);
+
+    private static void PopulateOrderMetadata(Order order, OrderDto orderDto)
+    {
+        if (order.Reservation != null && order.Reservation.ReservationTables != null && order.Reservation.ReservationTables.Any())
+        {
+            var tableNumbers = order.Reservation.ReservationTables
+                .Where(rt => rt.Table != null && !string.IsNullOrWhiteSpace(rt.Table.TableNumber))
+                .Select(rt => rt.Table.TableNumber!)
+                .Distinct()
+                .ToList();
+
+            orderDto.TableNumbers = tableNumbers;
+            orderDto.TableNumber = string.Join(", ", tableNumbers);
+        }
+
+        if (order.Customer?.User != null)
+        {
+            orderDto.CustomerName = order.Customer.User.FullName;
+            orderDto.CustomerPhone = order.Customer.User.Phone;
+            orderDto.CustomerEmail = order.Customer.User.Email;
+        }
+
+        if (order.Reservation?.Staff != null)
+        {
+            var staffName = order.Reservation.Staff.FullName;
+            orderDto.StaffName = staffName;
+            orderDto.WaiterName = staffName;
+        }
+
+        if (order.Transactions != null && order.Transactions.Any())
+        {
+            var latestPaidTransaction = order.Transactions
+                .OrderByDescending(t => t.CompletedAt ?? t.CreatedAt)
+                .FirstOrDefault(t =>
+                    string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase));
+
+            if (latestPaidTransaction != null)
+            {
+                orderDto.PaidAt = latestPaidTransaction.CompletedAt ?? latestPaidTransaction.CreatedAt;
+                orderDto.PaymentMethod = latestPaidTransaction.PaymentMethod;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(orderDto.WaiterName) && string.IsNullOrWhiteSpace(orderDto.StaffName))
+        {
+            orderDto.StaffName = orderDto.WaiterName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(orderDto.StaffName) && string.IsNullOrWhiteSpace(orderDto.WaiterName))
+        {
+            orderDto.WaiterName = orderDto.StaffName;
+        }
     }
 
     public async Task<VietQRResponseDto> GenerateVietQRAsync(int orderId, string bankCode, string account, CancellationToken ct = default)
@@ -367,7 +639,7 @@ public class PaymentService : IPaymentService
             var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
 
             // Cập nhật trạng thái order
-            order.Status = "Paid";
+            order.Status = OrderStatusConstants.Paid;
             await _unitOfWork.Payments.UpdateAsync(order);
             //await _unitOfWork.SaveChangesAsync(ct);
 
@@ -382,6 +654,44 @@ public class PaymentService : IPaymentService
                 null,
                 ct
             );
+
+            // 🔓 GIẢI PHÓNG BÀN SAU KHI THANH TOÁN THÀNH CÔNG
+            try
+            {
+                var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+                if (tables != null && tables.Any())
+                {
+                    foreach (var table in tables)
+                    {
+                        table.Status = "Available";
+                        await _unitOfWork.Tables.UpdateAsync(table);
+                        
+                        // Log table release
+                        await _auditLogService.LogEventAsync(
+                            eventType: "table_released",
+                            entityType: "Table",
+                            entityId: table.TableId,
+                            description: $"Bàn {table.TableNumber} được giải phóng sau thanh toán tiền mặt cho Order {request.OrderId}",
+                            userId: userId,
+                            ct: ct
+                        );
+                    }
+                    
+                    await _unitOfWork.Tables.SaveAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the payment - table release is secondary
+                await _auditLogService.LogEventAsync(
+                    eventType: "table_release_failed",
+                    entityType: "Order",
+                    entityId: request.OrderId,
+                    description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                    userId: userId,
+                    ct: ct
+                );
+            }
 
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
@@ -537,7 +847,7 @@ public class PaymentService : IPaymentService
             var order = await _unitOfWork.Payments.GetByIdAsync(transaction.OrderId);
             if (order != null)
             {
-                order.Status = "Paid";
+                order.Status = OrderStatusConstants.Paid;
                 await _unitOfWork.Payments.UpdateAsync(order);
             }
         }
@@ -724,11 +1034,11 @@ public class PaymentService : IPaymentService
             {
                 savedParent.Status = "Paid";
                 savedParent.CompletedAt = DateTime.UtcNow;
-                order.Status = "Paid";
+                order.Status = OrderStatusConstants.Paid;
             }
             else
             {
-                order.Status = "PartiallyPaid";
+                order.Status = OrderStatusConstants.PartiallyPaid;
             }
 
             await _unitOfWork.Payments.UpdateTransactionAsync(savedParent);
@@ -746,6 +1056,44 @@ public class PaymentService : IPaymentService
                 null,
                 ct
             );
+
+            // 🔓 GIẢI PHÓNG BÀN KHI BẮT ĐẦU SPLIT BILL
+            try
+            {
+                var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+                if (tables != null && tables.Any())
+                {
+                    foreach (var table in tables)
+                    {
+                        table.Status = "Available";
+                        await _unitOfWork.Tables.UpdateAsync(table);
+                        
+                        // Log table release
+                        await _auditLogService.LogEventAsync(
+                            eventType: "table_released",
+                            entityType: "Table",
+                            entityId: table.TableId,
+                            description: $"Bàn {table.TableNumber} được giải phóng khi bắt đầu split bill cho Order {request.OrderId}",
+                            userId: userId,
+                            ct: ct
+                        );
+                    }
+                    
+                    await _unitOfWork.Tables.SaveAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the payment - table release is secondary
+                await _auditLogService.LogEventAsync(
+                    eventType: "table_release_failed",
+                    entityType: "Order",
+                    entityId: request.OrderId,
+                    description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                    userId: userId,
+                    ct: ct
+                );
+            }
 
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
@@ -936,6 +1284,44 @@ public class PaymentService : IPaymentService
 
         // Trigger post-payment actions
         await TriggerPostPaymentActionsAsync(request.OrderId, transaction.TransactionId, ct);
+
+        // 🔓 GIẢI PHÓNG BÀN SAU KHI XÁC NHẬN THANH TOÁN THÀNH CÔNG
+        try
+        {
+            var tables = await _unitOfWork.Tables.GetTablesByOrderIdAsync(request.OrderId);
+            if (tables != null && tables.Any())
+            {
+                foreach (var table in tables)
+                {
+                    table.Status = "Available";
+                    await _unitOfWork.Tables.UpdateAsync(table);
+                    
+                    // Log table release
+                    await _auditLogService.LogEventAsync(
+                        eventType: "table_released",
+                        entityType: "Table",
+                        entityId: table.TableId,
+                        description: $"Bàn {table.TableNumber} được giải phóng sau xác nhận thanh toán cho Order {request.OrderId}",
+                        userId: userId,
+                        ct: ct
+                    );
+                }
+                
+                await _unitOfWork.Tables.SaveAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the payment - table release is secondary
+            await _auditLogService.LogEventAsync(
+                eventType: "table_release_failed",
+                entityType: "Order",
+                entityId: request.OrderId,
+                description: $"Lỗi khi giải phóng bàn cho Order {request.OrderId}: {ex.Message}",
+                userId: userId,
+                ct: ct
+            );
+        }
 
         // Unlock order
         await UnlockOrderAsync(request.OrderId, ct);

@@ -22,6 +22,8 @@ public partial class PurchaseOrderDetail
 
     public string? WarehouseName { get; set; }
 
+    public DateOnly? ExpiryDate { get; set; }
+
     public virtual PurchaseOrder PurchaseOrder { get; set; } = null!;
     public virtual Ingredient? Ingredient { get; set; }
 

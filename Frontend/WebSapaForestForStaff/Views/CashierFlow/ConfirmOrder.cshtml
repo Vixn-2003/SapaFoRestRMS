@@ -1,0 +1,421 @@
+@model WebSapaForestForStaff.DTOs.Payment.OrderDetailDto
+
+@using WebSapaForestForStaff.Controllers
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Xác nhận & Thanh toán";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+
+    var tables = Model.TableNumbers != null && Model.TableNumbers.Any()
+        ? string.Join(", ", Model.TableNumbers)
+        : Model.TableNumber ?? "—";
+
+    var normalizedStatus = Model.Status?.ToLowerInvariant();
+    var isConfirmed = normalizedStatus == "confirmed"
+                      || normalizedStatus == "pending-payment"
+                      || normalizedStatus == "paid"
+                      || normalizedStatus == "completed";
+    var isPaid = normalizedStatus == "paid" || normalizedStatus == "completed";
+    var canEdit = !isConfirmed && !isPaid;
+    var canUndoConfirm = isConfirmed && !isPaid;
+    var canProceedPayment = isConfirmed && !isPaid;
+    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+
+    string GetStatusBadgeClass() => normalizedStatus switch
+    {
+        "pending" => "bg-warning text-dark",
+        "confirmed" => "bg-primary",
+        "pending-payment" => "bg-info text-dark",
+        "paid" => "bg-success",
+        "completed" => "bg-success",
+        _ => "bg-secondary"
+    };
+
+    string GetStatusDisplayText() => normalizedStatus switch
+    {
+        "pending" => "Chờ xác nhận",
+        "confirmed" => "Đã xác nhận",
+        "pending-payment" => "Chờ thanh toán",
+        "paid" => "Đã thanh toán",
+        "completed" => "Hoàn tất",
+        _ => Model.Status ?? "Không rõ"
+    };
+}
+
+<style>
+    body {
+        background-color: #f5f7fa;
+    }
+
+    .cashier-shell {
+        padding: 32px 40px;
+    }
+
+    .cashier-card {
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 18px 50px rgba(15, 139, 131, 0.08);
+    }
+
+    .cashier-card .card-header {
+        border-bottom: 1px solid #f1f5f9;
+        background-color: #fff;
+    }
+
+    .readonly-value {
+        display: inline-block;
+        padding: 6px 0;
+        font-weight: 600;
+    }
+</style>
+
+<div class="cashier-shell">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+        <div>
+            <h2 class="mb-1">Đơn #@(Model.OrderCode ?? $"#{Model.OrderId}")</h2>
+            <div class="text-muted">Bàn: @tables</div>
+            @if (!string.IsNullOrEmpty(Model.CustomerName))
+            {
+                <div class="text-muted small">
+                    Khách: @Model.CustomerName
+                    @if (!string.IsNullOrEmpty(Model.CustomerPhone))
+                    {
+                        <span> - @Model.CustomerPhone</span>
+                    }
+                </div>
+            }
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            @if (!string.IsNullOrWhiteSpace(Model.Status))
+            {
+                <span class="badge @GetStatusBadgeClass() px-3 py-2">
+                    @GetStatusDisplayText()
+                </span>
+            }
+            <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")"
+               class="btn btn-outline-secondary">
+                ← Quay lại danh sách
+            </a>
+            <a href="@Url.Action(nameof(CashierPaymentFlowController.CustomerConfirm), "CashierPaymentFlow", new { orderId = Model.OrderId })"
+               class="btn btn-outline-primary">
+                Cập nhật đơn
+            </a>
+            @if (canEdit)
+            {
+                <a href="@Url.Action(nameof(CashierPaymentFlowController.CustomerConfirm), "CashierPaymentFlow", new { orderId = Model.OrderId })"
+                   class="btn btn-success">
+                    Khách xác nhận món
+                </a>
+            }
+        </div>
+    </div>
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-exclamation-circle fs-4"></i>
+            <span>@errorMessage</span>
+        </div>
+    }
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-check-circle fs-4"></i>
+            <span>@successMessage</span>
+        </div>
+    }
+
+    <div class="page-content">
+        <form asp-action="ConfirmOrder"
+              asp-controller="CashierPaymentFlow"
+              method="post"
+              id="confirmOrderForm"
+              class="cashier-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="OrderId" value="@Model.OrderId" />
+
+            <!-- Items table -->
+            <div class="card mb-3 cashier-card">
+                <div class="card-header fw-bold bg-white">
+                    Danh sách món / combo
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Tên món</th>
+                                    <th>SL đặt</th>
+                                    <th>SL dùng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Items == null || !Model.Items.Any())
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">Đơn hàng chưa có món.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    for (int i = 0; i < Model.Items.Count; i++)
+                                    {
+                                        var item = Model.Items[i];
+                                        var displayName = !string.IsNullOrEmpty(item.ComboName) ? item.ComboName : item.MenuItemName;
+                                        <tr>
+                                            <td class="text-center">@(i + 1)</td>
+                                            <td>
+                                                <div>@displayName</div>
+                                                @if (!string.IsNullOrEmpty(item.ComboName))
+                                                {
+                                                    <div class="text-muted small fst-italic">Combo</div>
+                                                }
+                                            </td>
+                                            <td class="text-center">@item.Quantity</td>
+                                            <td class="text-center" style="width: 140px;">
+                                                <input type="hidden" name="Items[@i].OrderDetailId" value="@item.OrderDetailId" />
+                                                <input type="hidden" name="Items[@i].Quantity" value="@item.Quantity" />
+                                                <input type="hidden" name="Items[@i].IsRemoved" value="false" />
+                                                @if (canEdit)
+                                                {
+                                                    <input type="number"
+                                                           class="form-control text-center"
+                                                           name="Items[@i].QuantityUsed"
+                                                           value="@(item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity)"
+                                                           min="0"
+                                                           max="@item.Quantity"
+                                                           data-max="@item.Quantity"
+                                                           required />
+                                                }
+                                                else
+                                                {
+                                                    <span class="readonly-value">@item.QuantityUsed</span>
+                                                    <input type="hidden" name="Items[@i].QuantityUsed" value="@item.QuantityUsed" />
+                                                }
+                                            </td>
+                                            <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
+                                            <td class="text-end">@item.TotalPrice.ToString("N0") ₫</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="5" class="fw-semibold ps-3">Tạm tính</td>
+                                    <td class="text-end fw-bold">@Model.Subtotal.ToString("N0") ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="fw-semibold ps-3">VAT</td>
+                                    <td class="text-end fw-bold">@Model.VatAmount.ToString("N0") ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="fw-semibold ps-3">Phí dịch vụ</td>
+                                    <td class="text-end fw-bold">@Model.ServiceFee.ToString("N0") ₫</td>
+                                </tr>
+                                @if (Model.DiscountAmount > 0)
+                                {
+                                    <tr>
+                                        <td colspan="5" class="fw-semibold ps-3">Giảm giá</td>
+                                        <td class="text-end fw-bold text-danger">-@Model.DiscountAmount.ToString("N0") ₫</td>
+                                    </tr>
+                                }
+                                <tr class="table-success">
+                                    <td colspan="5" class="fw-bold fs-5 ps-3">Tổng cộng thanh toán</td>
+                                    <td class="text-end fw-bold text-primary fs-4">@Model.TotalAmount.ToString("N0") ₫</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="card mb-3 cashier-card">
+                <div class="card-header fw-bold bg-white">Ghi chú</div>
+                <div class="card-body">
+                    <textarea class="form-control"
+                              name="Notes"
+                              rows="2"
+                              placeholder="Ví dụ: Khách bỏ món ... "
+                              @(canEdit ? "" : "disabled")></textarea>
+                </div>
+            </div>
+
+            <!-- Footer actions -->
+            <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
+              
+
+                @if (canUndoConfirm)
+                {
+                    <button type="button"
+                            class="btn btn-warning"
+                            data-bs-toggle="modal"
+                            data-bs-target="#undoConfirmModal">
+                        <i class="fa-solid fa-rotate-left me-1"></i> Hoàn tác xác nhận
+                    </button>
+                }
+
+                @if (canEdit)
+                {
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-2"></i>Khách đã xác nhận
+                    </button>
+                }
+                else if (canProceedPayment)
+                {
+                    <a href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = Model.OrderId })"
+                       class="btn btn-success">
+                        Thanh toán
+                    </a>
+                }
+                else if (!isConfirmed)
+                {
+                    <button type="button"
+                            class="btn btn-success"
+                            disabled
+                            title="Vui lòng yêu cầu khách xác nhận món trước khi thanh toán">
+                        Thanh toán
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (canUndoConfirm)
+{
+    <div class="modal fade" id="undoConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hoàn tác xác nhận đơn hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="undoConfirmForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Lý do hoàn tác</label>
+                            <textarea class="form-control" name="Reason" rows="3" required placeholder="Nhập lý do..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Xác nhận hoàn tác
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+    <div id="cashierToast" class="toast align-items-center text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="cashierToastMessage">Thông báo</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const toastElement = document.getElementById('cashierToast');
+        const toastBody = document.getElementById('cashierToastMessage');
+
+        function showToast(message, type = 'info') {
+            if (!toastElement || !toastBody) return;
+            toastElement.classList.remove('text-bg-primary', 'text-bg-success', 'text-bg-danger', 'text-bg-warning');
+            const typeClass = type === 'success'
+                ? 'text-bg-success'
+                : type === 'error'
+                    ? 'text-bg-danger'
+                    : type === 'warning'
+                        ? 'text-bg-warning'
+                        : 'text-bg-primary';
+            toastElement.classList.add(typeClass);
+            toastBody.textContent = message;
+            bootstrap.Toast.getOrCreateInstance(toastElement, { delay: 3500 }).show();
+        }
+
+        (() => {
+            const form = document.getElementById('confirmOrderForm');
+            if (!form) return;
+
+            form.addEventListener('submit', (event) => {
+                const inputs = form.querySelectorAll('input[name$=".QuantityUsed"][data-max]');
+                let isValid = true;
+                inputs.forEach(input => {
+                    const max = parseInt(input.dataset.max, 10) || 0;
+                    const value = parseInt(input.value, 10) || 0;
+                    if (value > max || value < 0) {
+                        isValid = false;
+                        input.classList.add('is-invalid');
+                    } else {
+                        input.classList.remove('is-invalid');
+                    }
+                });
+
+                if (!isValid) {
+                    event.preventDefault();
+                    showToast('Số lượng khách sử dụng phải nằm trong khoảng hợp lệ.', 'warning');
+                }
+            });
+        })();
+    </script>
+
+    @if (canUndoConfirm)
+    {
+        <script>
+            (() => {
+                const form = document.getElementById('undoConfirmForm');
+                if (!form) return;
+
+                const endpoint = '@Url.Content($"~/api/payment/orders/{Model.OrderId}/undo-confirm")';
+                const staffId = '@userIdClaim';
+                const modalEl = document.getElementById('undoConfirmModal');
+                const undoModal = modalEl ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+
+                form.addEventListener('submit', async (ev) => {
+                    ev.preventDefault();
+                    const reason = (form.querySelector('textarea[name="Reason"]')?.value || '').trim();
+
+                    if (!reason) {
+                        showToast('Vui lòng nhập lý do hoàn tác.', 'warning');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                staffId: parseInt(staffId, 10) || 0,
+                                reason
+                            })
+                        });
+
+                        if (response.ok) {
+                            undoModal?.hide();
+                            showToast('Đã hoàn tác xác nhận thành công!', 'success');
+                            setTimeout(() => window.location.reload(), 900);
+                        } else {
+                            const data = await response.json().catch(() => null);
+                            showToast(data?.message || 'Không thể hoàn tác xác nhận.', 'error');
+                        }
+                    } catch {
+                        showToast('Có lỗi xảy ra. Vui lòng thử lại sau.', 'error');
+                    }
+                });
+            })();
+        </script>
+    }
+}
+
