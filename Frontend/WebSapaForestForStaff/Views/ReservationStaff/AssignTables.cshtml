@@ -6,10 +6,13 @@
     var suggestedTableIdsByArea = ViewBag.SuggestedTableIdsByArea as Dictionary<int, List<int>>
                                  ?? new Dictionary<int, List<int>>();
 }
+@{
+    Layout = "_LayoutManager";
+}
 
 <link rel="stylesheet" href="~/css/assign-tables.css" />
 
-<h2>🌿 Xử lý xếp bàn</h2>
+<h2>🌿 Xếp bàn</h2>
 
 @if (TempData["Error"] != null)
 {
@@ -155,10 +158,16 @@
     </div>
 </form>
 
-<button id="viewDepositInvoicesBtn" class="btn btn-primary mt-3">
-    📄 Xem hóa đơn đặt cọc
-</button>
-<button id="addDepositBtn" class="btn btn-success">➕ Thêm hóa đơn</button>
+<div class="d-flex justify-content-start gap-2 mt-3">
+    <button id="viewDepositInvoicesBtn" class="btn btn-primary">
+        📄 Xem hóa đơn đặt cọc
+    </button>
+
+    <button id="addDepositBtn" class="btn btn-success">
+        ➕ Thêm hóa đơn
+    </button>
+</div>
+
 <div id="depositInvoicesContainer" style="margin-top:15px;">
     <!-- Danh sách hóa đơn sẽ hiển thị ở đây -->
 </div>
