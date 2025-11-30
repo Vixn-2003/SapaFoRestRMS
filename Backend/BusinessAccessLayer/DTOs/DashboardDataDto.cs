@@ -16,5 +16,7 @@ namespace BusinessAccessLayer.DTOs
         // Dữ liệu cho bộ lọc
         public List<string> AreaNames { get; set; } = new();
         public List<int?> Floors { get; set; } = new();
+
+
     }
 }

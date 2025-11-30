@@ -10,7 +10,7 @@ namespace DataAccessLayer.Repositories.Interfaces
         // giá trị mà không cần tạo DTO riêng cho Repository.
         Task<List<(Table Table, Reservation ActiveReservation)>> GetFilteredTablesWithStatusAsync(string? areaName, int? floor, string? searchString);
 
-        // Chuyển trạng thái đơn đặt bàn
+        // Chuyển trạng thái đơn đặt bàn danh sách
         Task<PagedList<Reservation>> GetPagedReservationsAsync(ReservationQueryParameters parameters);
 
         // Thay đổi: Guid -> int
@@ -34,6 +34,36 @@ namespace DataAccessLayer.Repositories.Interfaces
         // Lấy toàn bộ Combos
         Task<List<Combo>> GetActiveCombosAsync();
         Task<IEnumerable<MenuCategory>> GetCategoriesAsync();
+
+        /// <summary>
+        /// //////////////////
+        /// </summary> cập nhập POS
+        /// <param name="tableId"></param>
+        /// <returns></returns>
+        // 1. Tìm đơn đặt bàn (Reservation) đang hoạt động của bàn này
+        Task<Reservation?> GetActiveReservationByTableIdAsync(int tableId);
+
+        // 2. Tìm Hóa đơn (Order) gắn với Reservation này (Để biết đã có hóa đơn chưa)
+        Task<Order?> GetOrderByReservationIdAsync(int reservationId);
+
+        // 3. Tạo Hóa đơn mới (Nếu chưa có)
+        Task AddOrderAsync(Order order);
+
+        // 4. Lấy thông tin Món ăn / Combo (Để lấy giá gốc bảo mật)
+        Task<MenuItem?> GetMenuItemAsync(int id);
+        Task<Combo?> GetComboAsync(int id);
+
+        // 5. Lấy chi tiết món đã gọi (Để sửa/xóa)
+        Task<OrderDetail?> GetOrderDetailByIdAsync(int orderDetailId);
+
+        // 6. Thêm món ăn mới vào Hóa đơn
+        Task AddOrderDetailAsync(OrderDetail item);
+
+        // Thêm hàm này vào Interface
+        Task UpdateOrderDetailAsync(OrderDetail item);
+
+        // 7. Lưu tất cả thay đổi xuống DB
+        Task<bool> SaveChangesAsync();
 
     }
 }

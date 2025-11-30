@@ -11,5 +11,8 @@
         public DateTime CreatedAt { get; set; }
 
         public string? Notes { get; set; }
+
+        public decimal Price { get; set; }      // 🔥 THÊM DÒNG NÀY!
+
     }
 }

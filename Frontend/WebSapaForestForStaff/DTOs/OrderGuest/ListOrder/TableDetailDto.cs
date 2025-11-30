@@ -14,5 +14,8 @@ namespace WebSapaForestForStaff.DTOs.OrderGuest.ListOrder
         public string AreaName { get; set; }
         public int Floor { get; set; }
         public string Position => $"{AreaName} - {TableNumber}";
+
+        public decimal TotalAmount { get; set; }
+
     }
 }
