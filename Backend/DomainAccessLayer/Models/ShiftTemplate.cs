@@ -5,20 +5,15 @@ namespace DomainAccessLayer.Models;
 
 public partial class ShiftTemplate
 {
-    public int ShiftTemplateId { get; set; }
-
-    public string Name { get; set; } = null!;      // Ví dụ: "Ca Sáng", "Ca Tối"
-
-    public TimeOnly Start { get; set; }            // 08:00
-    public TimeOnly End { get; set; }              // 16:00
-
-    public string ShiftType { get; set; } = null!; // Sáng / Chiều / Tối / Full
-
+    public int Id { get; set; }
+    public int DayTypeId { get; set; }
     public int DepartmentId { get; set; }
+    public string Code { get; set; } = null!;
+    public TimeSpan StartTime { get; set; }
+    public TimeSpan EndTime { get; set; }
+    public int RequiredEmployees { get; set; }
 
+    public virtual DayType DayType { get; set; } = null!;
     public virtual Department Department { get; set; } = null!;
-
     public virtual ICollection<Shift> Shifts { get; set; } = new List<Shift>();
-
-    public virtual ICollection<WeeklyRecurringShift> WeeklyRecurringShifts { get; set; } = new List<WeeklyRecurringShift>();
 }

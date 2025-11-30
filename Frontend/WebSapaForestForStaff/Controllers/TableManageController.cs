@@ -45,6 +45,13 @@ namespace WebSapaForestForStaff.Controllers
                 : new List<AreaDto>();
 
             var result = await response.Content.ReadFromJsonAsync<TableResponse>();
+            var tables = result?.Data ?? new List<TableManageDto>();
+
+            // --- Tính tổng số bàn và theo trạng thái ---
+            ViewBag.TotalTables = tables.Count;
+            ViewBag.AvailableCount = tables.Count(t => t.Status == "Available");
+            ViewBag.MaintenanceCount = tables.Count(t => t.Status == "Maintenance");
+
             ViewBag.TotalCount = result?.TotalCount ?? 0;
             ViewBag.Page = page;
             ViewBag.PageSize = pageSize;

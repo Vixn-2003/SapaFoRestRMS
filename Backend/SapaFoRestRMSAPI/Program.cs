@@ -25,20 +25,20 @@ var builder = WebApplication.CreateBuilder(args);
 // -----------------------------
 // ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
 // -----------------------------
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins(
-            "http://localhost:5158",  // frontend chạy http
-            "https://localhost:5158", // phòng khi chạy https
-             "http://localhost:5054",  // module Staff
-            "https://localhost:5054"  // phòng khi chạy https
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials()
-    );
-});
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowFrontend", policy =>
+//        policy.WithOrigins(
+//            "http://localhost:5158",  // frontend chạy http
+//            "https://localhost:5158", // phòng khi chạy https
+//             "http://localhost:5054",  // module Staff
+//            "https://localhost:5054"  // phòng khi chạy https
+//        )
+//        .AllowAnyHeader()
+//        .AllowAnyMethod()
+//        .AllowCredentials()
+//    );
+//});
 
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
@@ -238,8 +238,21 @@ builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
 builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
-
-
+//daytype
+builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
+builder.Services.AddScoped<IDayTypeService, DayTypeService>();
+//shifttemplate
+builder.Services.AddScoped<IShiftTemplateRepository, ShiftTemplateRepository>();
+builder.Services.AddScoped<IShiftTemplateService, ShiftTemplateService>();
+//department
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+//shift 
+builder.Services.AddScoped<IShiftRepository, ShiftRepository>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+//shiftassignment
+builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
+builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -319,7 +332,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
         policy.WithOrigins(
-            "http://localhost:5054",    // 👈 Frontend bạn đang chạy
+            "http://localhost:5054",
+            "http://localhost:5158",// 👈 Frontend bạn đang chạy
             "http://localhost:5123",    // Razor nội bộ
             "http://192.168.1.47:5123", // IP Razor
             "http://192.168.1.47:5180"  // Swagger
@@ -341,7 +355,7 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
-// Bật CORS
+//// Bật CORS
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();

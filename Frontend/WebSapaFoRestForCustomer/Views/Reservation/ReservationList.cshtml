@@ -93,7 +93,8 @@
 @section Scripts {
     <script>
         const apiBase = "https://localhost:7096/api/Reservation";
-        const customerId = 6; // 👉 Thay bằng session thực tế
+        const customerId = parseInt('@ViewBag.CustomerId');
+// 👉 Thay bằng session thực tế
         let allData = [];
         let currentPage = 1;
         const pageSize = 5;

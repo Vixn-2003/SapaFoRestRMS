@@ -303,6 +303,47 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.DayCalendar", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DayTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("WorkDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DayTypeId");
+
+                    b.ToTable("DayCalendars");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.DayType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DayTypes");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Department", b =>
                 {
                     b.Property<int>("DepartmentId")
@@ -1392,55 +1433,69 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.Shift", b =>
                 {
-                    b.Property<int>("ShiftId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ShiftId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("datetime");
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time");
 
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("RecurringId")
+                    b.Property<int>("RequiredEmployees")
                         .HasColumnType("int");
 
-                    b.Property<int?>("RecurringShiftWeeklyRecurringShiftId")
+                    b.Property<int?>("StaffId")
                         .HasColumnType("int");
 
-                    b.Property<string>("ShiftType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time");
 
-                    b.Property<int>("StaffId")
+                    b.Property<int>("TemplateId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TemplateId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ShiftId")
-                        .HasName("PK__Shifts__C0A83881495D0B69");
+                    b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
-
-                    b.HasIndex("RecurringShiftWeeklyRecurringShiftId");
 
                     b.HasIndex("StaffId");
 
                     b.HasIndex("TemplateId");
 
                     b.ToTable("Shifts");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("StaffId");
+
+                    b.ToTable("ShiftAssignments");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.ShiftHistory", b =>
@@ -1476,30 +1531,34 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.ShiftTemplate", b =>
                 {
-                    b.Property<int>("ShiftTemplateId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ShiftTemplateId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DayTypeId")
+                        .HasColumnType("int");
 
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
-                    b.Property<TimeOnly>("End")
+                    b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("RequiredEmployees")
+                        .HasColumnType("int");
 
-                    b.Property<string>("ShiftType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<TimeOnly>("Start")
+                    b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
 
-                    b.HasKey("ShiftTemplateId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("DayTypeId");
 
                     b.HasIndex("DepartmentId");
 
@@ -2099,39 +2158,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Warehouses");
                 });
 
-            modelBuilder.Entity("DomainAccessLayer.Models.WeeklyRecurringShift", b =>
-                {
-                    b.Property<int>("WeeklyRecurringShiftId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WeeklyRecurringShiftId"));
-
-                    b.Property<string>("DaysOfWeek")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateOnly>("EndDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("StaffId")
-                        .HasColumnType("int");
-
-                    b.Property<DateOnly>("StartDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("TemplateId")
-                        .HasColumnType("int");
-
-                    b.HasKey("WeeklyRecurringShiftId");
-
-                    b.HasIndex("StaffId");
-
-                    b.HasIndex("TemplateId");
-
-                    b.ToTable("WeeklyRecurringShifts");
-                });
-
             modelBuilder.Entity("DomainAccessLayer.Models.ZaloMessage", b =>
                 {
                     b.Property<int>("MessageId")
@@ -2257,6 +2283,17 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK__Customers__UserI__245D67DE");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.DayCalendar", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.DayType", "DayType")
+                        .WithMany("DayCalendars")
+                        .HasForeignKey("DayTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DayType");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Event", b =>
@@ -2623,36 +2660,47 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("DomainAccessLayer.Models.Department", "Department")
                         .WithMany("Shifts")
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("DomainAccessLayer.Models.WeeklyRecurringShift", "RecurringShift")
+                    b.HasOne("DomainAccessLayer.Models.Staff", null)
                         .WithMany("Shifts")
-                        .HasForeignKey("RecurringShiftWeeklyRecurringShiftId");
-
-                    b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
-                        .WithMany("Shifts")
-                        .HasForeignKey("StaffId")
-                        .IsRequired()
-                        .HasConstraintName("FK__Shifts__StaffId__3D2915A8");
+                        .HasForeignKey("StaffId");
 
                     b.HasOne("DomainAccessLayer.Models.ShiftTemplate", "Template")
                         .WithMany("Shifts")
-                        .HasForeignKey("TemplateId");
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Department");
 
-                    b.Navigation("RecurringShift");
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftAssignment", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Shift", "Shift")
+                        .WithMany("ShiftAssignments")
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Shift");
 
                     b.Navigation("Staff");
-
-                    b.Navigation("Template");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.ShiftHistory", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Shift", "Shift")
-                        .WithMany("ShiftHistories")
+                        .WithMany()
                         .HasForeignKey("ShiftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2662,11 +2710,19 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.ShiftTemplate", b =>
                 {
+                    b.HasOne("DomainAccessLayer.Models.DayType", "DayType")
+                        .WithMany("ShiftTemplates")
+                        .HasForeignKey("DayTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("DomainAccessLayer.Models.Department", "Department")
                         .WithMany("ShiftTemplates")
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("DayType");
 
                     b.Navigation("Department");
                 });
@@ -2777,25 +2833,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("DomainAccessLayer.Models.WeeklyRecurringShift", b =>
-                {
-                    b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
-                        .WithMany()
-                        .HasForeignKey("StaffId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DomainAccessLayer.Models.ShiftTemplate", "Template")
-                        .WithMany("WeeklyRecurringShifts")
-                        .HasForeignKey("TemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Staff");
-
-                    b.Navigation("Template");
-                });
-
             modelBuilder.Entity("DomainAccessLayer.Models.ZaloMessage", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
@@ -2837,6 +2874,13 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("Reservations");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.DayType", b =>
+                {
+                    b.Navigation("DayCalendars");
+
+                    b.Navigation("ShiftTemplates");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Department", b =>
@@ -2932,14 +2976,12 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.Shift", b =>
                 {
-                    b.Navigation("ShiftHistories");
+                    b.Navigation("ShiftAssignments");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.ShiftTemplate", b =>
                 {
                     b.Navigation("Shifts");
-
-                    b.Navigation("WeeklyRecurringShifts");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Staff", b =>
@@ -3002,11 +3044,6 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("DomainAccessLayer.Models.Warehouse", b =>
                 {
                     b.Navigation("InventoryBatches");
-                });
-
-            modelBuilder.Entity("DomainAccessLayer.Models.WeeklyRecurringShift", b =>
-                {
-                    b.Navigation("Shifts");
                 });
 #pragma warning restore 612, 618
         }
