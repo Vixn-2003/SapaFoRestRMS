@@ -121,7 +121,16 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(d => d.MenuItemName, m => m.MapFrom(s => s.MenuItem != null ? s.MenuItem.Name : (s.Combo != null ? s.Combo.Name : "")))
                 .ForMember(d => d.ComboId, m => m.MapFrom(s => s.ComboId))
                 .ForMember(d => d.ComboName, m => m.MapFrom(s => s.Combo != null ? s.Combo.Name : null))
-                .ForMember(d => d.TotalPrice, m => m.MapFrom(s => s.UnitPrice * s.Quantity));
+                .ForMember(d => d.TotalPrice, m => m.MapFrom(s => s.UnitPrice * s.Quantity))
+                // NEW: Map BillingType and Kitchen Status
+                .ForMember(d => d.BillingType, m => m.MapFrom(s => s.MenuItem != null ? (int?)s.MenuItem.BillingType : null))
+                .ForMember(d => d.KitchenStatus, m => m.MapFrom(s => s.Status))
+                .ForMember(d => d.QuantityUsed, m => m.MapFrom(s => s.QuantityUsed ?? s.Quantity))
+                .ForMember(d => d.CanCancel, m => m.MapFrom(s => 
+                    s.MenuItem != null &&
+                    s.MenuItem.BillingType == DomainAccessLayer.Enums.ItemBillingType.KitchenPrepared &&
+                    (s.Status == "Pending" || s.Status == "Confirmed" || s.Status == null)));
+
 
             CreateMap<Transaction, TransactionDto>();
             CreateMap<Unit, UnitDTO>();
