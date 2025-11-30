@@ -164,7 +164,7 @@ namespace DataAccessLayer.Repositories
             return await _context.Reservations
                 .Include(r => r.Customer)
                     .ThenInclude(c => c.User)
-                .Where(r => r.CustomerId == customerId)
+                .Where(r => r.Customer.UserId == customerId)
                 .OrderByDescending(r => r.ReservationDate)
                 .ToListAsync();
         }

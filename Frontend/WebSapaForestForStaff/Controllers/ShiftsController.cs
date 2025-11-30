@@ -1,8 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using WebSapaForestForStaff.DTOs;
+using WebSapaForestForStaff.DTOs.Department;
+using WebSapaForestForStaff.DTOs.Shift;
+using WebSapaForestForStaff.DTOs.ShiftTemplateDTOs;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -10,121 +14,57 @@ namespace WebSapaForestForStaff.Controllers
     {
         private readonly HttpClient _http;
 
-        public ShiftsController(IHttpClientFactory httpFactory)
+        public ShiftsController(IHttpClientFactory factory)
         {
-            _http = httpFactory.CreateClient();
+            _http = factory.CreateClient();
+            _http.BaseAddress = new Uri("https://localhost:7096/");
         }
 
-        // Trang chính phân ca
-        public IActionResult Index()
+        // Hiển thị tuần
+        public async Task<IActionResult> Index(DateTime? week)
         {
-            return View();
+            DateTime startOfWeek = week ?? DateTime.Today;
+            while (startOfWeek.DayOfWeek != DayOfWeek.Monday)
+                startOfWeek = startOfWeek.AddDays(-1);
+
+            var shifts = await _http.GetFromJsonAsync<List<ShiftViewDTO>>("api/shift");
+
+            var data = shifts!
+                .Where(s => s.Date.Date >= startOfWeek.Date &&
+                            s.Date.Date <= startOfWeek.AddDays(6).Date)
+                .ToList();
+            // Lấy danh sách department
+            var departments = await _http.GetFromJsonAsync<List<DepartmentDTO>>("api/Departments");
+            ViewBag.Departments = departments;
+            // Lấy danh sách template từ API ShiftTemplate
+            var templates = await _http.GetFromJsonAsync<List<ShiftTemplateResponseDTO>>("api/ShiftTemplate");
+            ViewBag.Templates = templates;
+            ViewBag.WeekStart = startOfWeek;
+            return View(data);
         }
 
-        // Lấy ca cho FullCalendar
-        [HttpGet]
-        public async Task<IActionResult> GetShifts()
-        {
-            var res = await _http.GetAsync("https://localhost:7096/api/Shifts");
-            if (!res.IsSuccessStatusCode) return BadRequest();
-
-            var json = await res.Content.ReadAsStringAsync();
-            var shifts = JsonSerializer.Deserialize<List<ShiftDTO>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            var events = shifts.Select(s => new
-            {
-                id = s.ShiftId,
-                title = s.StaffName,
-                start = s.StartTime.ToString("yyyy-MM-ddTHH:mm:ss"),
-                end = s.EndTime.ToString("yyyy-MM-ddTHH:mm:ss"),
-                extendedProps = new
-                {
-                    staffId = s.StaffId,
-                    shiftType = s.ShiftType
-                }
-            });
-
-
-            return Json(events);
-        }
-
-        // Cập nhật ca khi kéo thả hoặc resize
-        [HttpPut]
-        public async Task<IActionResult> UpdateShift(int id, [FromBody] ShiftUpdateDTO dto)
-        {
-            var content = new StringContent(JsonSerializer.Serialize(dto), System.Text.Encoding.UTF8, "application/json");
-            var res = await _http.PutAsync($"https://localhost:7096/api/Shifts/{id}", content);
-            if (res.IsSuccessStatusCode) return Ok();
-            return BadRequest();
-        }
-        [Route("Shifts/DeleteShift/{id}")]
-        [HttpDelete]
-        public async Task<IActionResult> DeleteShift(int id)
-        {
-            var res = await _http.DeleteAsync($"https://localhost:7096/api/Shifts/{id}");
-            if (res.IsSuccessStatusCode) return Ok();
-            var body = await res.Content.ReadAsStringAsync();
-            return BadRequest(body);
-        }
-
-        // Lấy danh sách nhân viên
-        [HttpGet]
-        public async Task<IActionResult> GetStaffs()
-        {
-            var res = await _http.GetAsync("https://localhost:7096/api/Staffs");
-            if (!res.IsSuccessStatusCode) return BadRequest();
-
-            var json = await res.Content.ReadAsStringAsync();
-            var staffs = JsonSerializer.Deserialize<List<StaffDTO>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            return Json(staffs);
-        }
-
-        // Lấy danh sách template ca
-        [HttpGet]
-        public async Task<IActionResult> GetTemplates()
-        {
-            var res = await _http.GetAsync("https://localhost:7096/api/ShiftTemplates");
-            if (!res.IsSuccessStatusCode) return BadRequest();
-
-            var json = await res.Content.ReadAsStringAsync();
-            var templates = JsonSerializer.Deserialize<List<ShiftTemplateDTO>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            return Json(templates);
-        }
-
-        // Tạo ca lặp tuần
+        // POST: Tạo ca
         [HttpPost]
-        public async Task<IActionResult> CreateRecurringShift([FromBody] WeeklyRecurringShiftCreateDTO dto)
+        public async Task<IActionResult> Create(CreateShiftDTO dto)
         {
-            var content = new StringContent(JsonSerializer.Serialize(dto), System.Text.Encoding.UTF8, "application/json");
-            var res = await _http.PostAsync("https://localhost:7096/api/WeeklyRecurringShifts", content);
-            if (res.IsSuccessStatusCode) return Ok();
-            return BadRequest();
+            var res = await _http.PostAsJsonAsync("api/shift", dto);
+            return RedirectToAction("Index");
         }
+
+        // PUT: Sửa ca
         [HttpPost]
-        public async Task<IActionResult> CreateShiftWithRepeat([FromBody] ShiftCreateWithRepeatDTO dto)
+        public async Task<IActionResult> Update(int id, UpdateShiftDTO dto)
         {
-            var content = new StringContent(JsonSerializer.Serialize(dto), Encoding.UTF8, "application/json");
-            var res = await _http.PostAsync("https://localhost:7096/api/Shifts/CreateWithRepeat", content);
-
-            if (res.IsSuccessStatusCode) return Ok();
-            var body = await res.Content.ReadAsStringAsync();
-            return BadRequest(body);
-        }
-        [HttpGet]
-        public async Task<IActionResult> GetDepartments()
-        {
-            var res = await _http.GetAsync("https://localhost:7096/api/Departments");
-            if (!res.IsSuccessStatusCode) return BadRequest();
-
-            var json = await res.Content.ReadAsStringAsync();
-            var deps = JsonSerializer.Deserialize<List<DepartmentDTO>>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            return Json(deps);
+            var res = await _http.PutAsJsonAsync($"api/shift/{id}", dto);
+            return RedirectToAction("Index");
         }
 
-
+        // DELETE: Xóa ca
+        [HttpPost]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var res = await _http.DeleteAsync($"api/shift/{id}");
+            return RedirectToAction("Index");
+        }
     }
 }

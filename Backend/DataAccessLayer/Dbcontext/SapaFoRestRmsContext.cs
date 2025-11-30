@@ -86,7 +86,9 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<ShiftTemplate> ShiftTemplates { get; set; }
 
     public virtual DbSet<Staff> Staffs { get; set; }
-
+    public DbSet<DayType> DayTypes { get; set; }
+    public DbSet<DayCalendar> DayCalendars { get; set; }
+    public DbSet<ShiftAssignment> ShiftAssignments { get; set; }
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
 
     public virtual DbSet<Transaction> Transactions { get; set; }
@@ -109,7 +111,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public DbSet<Unit> Units { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
-    public virtual DbSet<WeeklyRecurringShift> WeeklyRecurringShifts { get; set; }
+  
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
  
 
@@ -135,6 +137,26 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK_Announcements_Users");
         });
+        // Shift - Department (tắt cascade)
+        modelBuilder.Entity<Shift>()
+            .HasOne(s => s.Department)
+            .WithMany(d => d.Shifts)
+            .HasForeignKey(s => s.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ShiftTemplate - Department (tắt cascade)
+        modelBuilder.Entity<ShiftTemplate>()
+            .HasOne(t => t.Department)
+            .WithMany(d => d.ShiftTemplates)
+            .HasForeignKey(t => t.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Shift - ShiftTemplate (tắt cascade)
+        modelBuilder.Entity<Shift>()
+            .HasOne(s => s.Template)
+            .WithMany(t => t.Shifts)
+            .HasForeignKey(s => s.TemplateId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Attendance>(entity =>
         {
@@ -886,18 +908,7 @@ public partial class SapaFoRestRmsContext : DbContext
         });
 
 
-        modelBuilder.Entity<Shift>(entity =>
-        {
-            entity.HasKey(e => e.ShiftId).HasName("PK__Shifts__C0A83881495D0B69");
-
-            entity.Property(e => e.EndTime).HasColumnType("datetime");
-            entity.Property(e => e.StartTime).HasColumnType("datetime");
-
-            entity.HasOne(d => d.Staff).WithMany(p => p.Shifts)
-                .HasForeignKey(d => d.StaffId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Shifts__StaffId__3D2915A8");
-        });
+     
 
         modelBuilder.Entity<Staff>(entity =>
         {

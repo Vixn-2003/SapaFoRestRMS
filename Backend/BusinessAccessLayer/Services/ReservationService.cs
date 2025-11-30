@@ -36,7 +36,8 @@ namespace BusinessAccessLayer.Services
                     Email = $"customer_{dto.Phone}@gmail.com",
                     PasswordHash = "666666",
                     Phone = dto.Phone,
-                    RoleId = 2
+                    RoleId = 5,
+                    Status=1
                 };
                 user = await _userRepository.CreateAsync(user);
             }
@@ -296,25 +297,57 @@ namespace BusinessAccessLayer.Services
             };
         }
         //Hủy đơn đặt bàn
+        //public async Task<object> CancelReservationAsync(int reservationId, bool refund)
+        //{
+        //    var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
+        //    if (reservation == null)
+        //        throw new Exception("Không tìm thấy đơn đặt bàn.");
+
+        //    if (reservation.Status == "Cancelled")
+        //        throw new Exception("Đơn này đã được hủy trước đó.");
+
+        //    // Xử lý hoàn cọc (nếu có)
+        //    if (refund && reservation.DepositPaid && reservation.DepositAmount.HasValue)
+        //    {
+        //        // Tùy hệ thống: có thể tích hợp thêm logic hoàn tiền hoặc gửi email xác nhận ở đây
+        //        reservation.DepositPaid = false; // đánh dấu là đã hoàn cọc
+        //    }
+
+        //    // Cập nhật trạng thái và giải phóng bàn
+        //    reservation.Status = "Cancelled";
+        //    reservation.ReservationTables.Clear();
+
+        //    await _reservationRepository.SaveChangesAsync();
+
+        //    return new
+        //    {
+        //        reservation.ReservationId,
+        //        reservation.Status,
+        //        reservation.DepositAmount,
+        //        reservation.DepositPaid,
+        //        Refunded = refund
+        //    };
+        //}
         public async Task<object> CancelReservationAsync(int reservationId, bool refund)
         {
             var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
             if (reservation == null)
                 throw new Exception("Không tìm thấy đơn đặt bàn.");
 
-            if (reservation.Status == "Cancelled")
-                throw new Exception("Đơn này đã được hủy trước đó.");
-
-            // Xử lý hoàn cọc (nếu có)
+            // Xử lý hoàn cọc nếu refund = true
             if (refund && reservation.DepositPaid && reservation.DepositAmount.HasValue)
             {
-                // Tùy hệ thống: có thể tích hợp thêm logic hoàn tiền hoặc gửi email xác nhận ở đây
-                reservation.DepositPaid = false; // đánh dấu là đã hoàn cọc
+                // đánh dấu đã hoàn cọc
+                reservation.DepositPaid = false;
+                // có thể thêm logic hoàn tiền/email ở đây
             }
 
-            // Cập nhật trạng thái và giải phóng bàn
-            reservation.Status = "Cancelled";
-            reservation.ReservationTables.Clear();
+            // Nếu đơn chưa hủy, hủy luôn
+            if (reservation.Status != "Cancelled")
+            {
+                reservation.Status = "Cancelled";
+                reservation.ReservationTables.Clear(); // giải phóng bàn
+            }
 
             await _reservationRepository.SaveChangesAsync();
 
@@ -327,6 +360,7 @@ namespace BusinessAccessLayer.Services
                 Refunded = refund
             };
         }
+
         // Lấy danh sách đặt bàn của khách hàng
         public async Task<object> GetReservationsByCustomerAsync(int customerId)
         {

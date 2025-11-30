@@ -10,5 +10,9 @@ namespace DataAccessLayer.Repositories.Interfaces
     public interface IEventRepository
     {
         Task<List<Event>> GetAllAsync();
+        Task<Event?> GetByIdAsync(int id);
+        Task AddAsync(Event ev);
+        Task UpdateAsync(Event ev);
+        Task DeleteAsync(Event ev);
     }
 }
