@@ -20,6 +20,7 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IStockTransactionRepository StockTransaction { get; }
         IManagerSupplierRepository Supplier { get; }
 
+        IAuditRepository AuditRepository { get; }
         IUnitRepository UnitRepository { get; }
         IWarehouseRepository Warehouse { get; }
         IManagerComboRepository Combo { get; }

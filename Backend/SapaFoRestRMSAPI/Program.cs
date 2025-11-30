@@ -21,6 +21,7 @@ using SapaFoRestRMSAPI.Services;
 using System.Text;
 using SapaFoRestRMSAPI.Hubs;
 using Microsoft.AspNetCore.Http.Features;
+using BusinessAccessLayer.Services.Inventory;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -191,8 +192,10 @@ builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
 builder.Services.AddScoped<IUnitService, UnitService>();
+builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService>();
+builder.Services.AddHostedService<ReorderLevelBackgroundJob>();
 
-
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 
 

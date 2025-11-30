@@ -167,16 +167,37 @@ body {
     font-weight: bold;
 }
 
-.status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
-    background-color: #fef3c7;
-    color: #b45309;
-    border-radius: 999px;
-    font-size: 14px;
-    font-weight: 500;
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            background-color: #fef3c7;
+            color: #b45309;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-pill.processing {
+    animation: pulseGlow 2s ease-in-out infinite;
+    border: 2px solid #fbbf24;
+    position: relative;
+}
+
+/* Hiệu ứng nháy viền */
+@@keyframes pulseGlow {
+    0%, 100% {
+        border-color: #fbbf24;
+        background-color: #fef3c7;
+        box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+    }
+    50% {
+        border-color: #f59e0b;
+        background-color: #fde68a;
+        box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.6),
+                    0 0 0 8px rgba(251, 191, 36, 0.2);
+    }
 }
 
 .creator-detail {
@@ -1366,7 +1387,14 @@ body.sidebar-open .container {
                             </div>
                             <div class="info-row">
                                 <span class="info-label">Trạng thái:</span>
-                                <span class="status-pill">@Model.Status</span>
+                                @if (Model.Status == "Processing")
+                                {
+                                    <span class="status-pill processing">Đang xử lý</span>
+                                }
+                                else
+                                {
+                                    <span class="status-pill">@Model.Status</span>
+                                }
                             </div>
                         </div>
                     </div>
@@ -1464,6 +1492,7 @@ body.sidebar-open .container {
                                 <th>Mã nguyên liệu</th>
                                 <th>Tên nguyên liệu</th>
                                 <th>Kho lưu trữ</th>
+                                <th>Hạn sử dụng</th>
                                 <th class="text-center">Số lượng</th>
                                 <th class="text-center">Đơn vị</th>
                                 <th class="text-right">Đơn giá</th>
@@ -1481,6 +1510,24 @@ body.sidebar-open .container {
                                         <td class="font-medium">@item.IngredientCode</td>
                                         <td>@item.IngredientName</td>
                                         <td>@item.WarehouseName</td>
+                                        <td>
+                                            @{
+                                                if (item.ExpiryDate != null)
+                                                {
+                                                    var expiry = item.ExpiryDate.Value;
+                                                    var daysLeft = (expiry.ToDateTime(TimeOnly.MinValue) - DateTime.Now).Days;
+                                                    string text = $"{expiry:dd/MM/yyyy} (còn {daysLeft} ngày)";
+                                                    @text
+                                                    ;
+                                                }
+                                                else
+                                                {
+                                                    @("Không có")
+                                                    ;
+                                                }
+                                            }
+                                        </td>
+
                                         <td class="text-center font-semibold">@item.Quantity</td>
                                         <td class="text-center">@item.Unit</td>
                                         <td class="text-right">@string.Format("{0:N0}₫", item.UnitPrice)</td>
