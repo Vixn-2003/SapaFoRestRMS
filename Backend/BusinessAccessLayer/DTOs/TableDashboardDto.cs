@@ -22,5 +22,17 @@ namespace BusinessAccessLayer.DTOs
 
         // (MỚI) Thêm trường này để đếm giờ
         public DateTime? GuestSeatedTime { get; set; }
+
+        public DateTime? ReservationTime { get; set; }
+
+        //  THÊM 2 TRƯỜNG NÀY 
+        public string? CustomerName { get; set; }
+        public string? CustomerPhone { get; set; }
+
+        public decimal TotalAmount { get; set; }
+
+        public decimal GrandTotal { get; set; }
+
+
     }
 }

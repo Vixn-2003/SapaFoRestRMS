@@ -177,30 +177,93 @@ $(document).ready(function () {
 
             // Đây là code HTML đầy đủ cho một món hàng
             cartHtml += `
-        <div class="cart-item mb-3 p-3" data-item-id="${item.id}" data-item-type="${itemType}" style="background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <div class="row g-3 align-items-start">
-                <div class="col-auto">
-                    <img src="${imageUrl}" alt="${itemName}" style="width:60px;height:60px;border-radius:6px;object-fit:cover;">
-                </div>
-                <div class="col">
-                    <h6 class="fw-bold mb-1" style="font-size:0.95rem;">${itemName}</h6>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="qty-selector">
-                            <button class="btn btn-outline-secondary btn-sm btn-cart-qty-minus py-0 px-2" data-item-id="${item.id}" data-item-type="${itemType}">-</button>
-                            <span class="mx-2 fw-bold" style="min-width:20px;text-align:center;">${item.quantity}</span>
-                            <button class="btn btn-outline-secondary btn-sm btn-cart-qty-plus py-0 px-2" data-item-id="${item.id}" data-item-type="${itemType}">+</button>
-                        </div>
-                    </div>
-                    <div class="cart-item-notes">
-                        <input type="text" class="form-control form-control-sm cart-item-notes-input" data-item-id="${item.id}" value="${notes}" placeholder="Ghi chú...">
-                    </div>
-                </div>
-                <div class="col-auto text-end d-flex flex-column align-items-end">
-                    <p class="fw-bold mb-1" style="color:var(--brand-green);font-size:0.9rem;">${itemPriceDisplay}đ</p>
-                    <a href="#" class="btn-cart-remove small mt-auto" data-item-id="${item.id}" data-item-type="${itemType}" style="color:#6c757d;text-decoration:none;">Xóa</a>
-                </div>
+<div class="cart-item mb-3 p-3" 
+     data-item-id="${item.id}" 
+     data-item-type="${itemType}"
+     style="background:#fff;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+
+    <div class="row g-3">
+        
+        <!-- Ảnh món -->
+        <div class="col-auto">
+            <img src="${imageUrl}" alt="${itemName}"
+                 style="width:65px;height:65px;border-radius:8px;object-fit:cover;">
+        </div>
+
+        <!-- Tên + số lượng -->
+        <div class="col">
+            <h6 class="fw-bold mb-1" style="font-size:1rem;">${itemName}</h6>
+
+            <!-- KHỐI SỐ LƯỢNG -->
+            <div class="d-flex align-items-center mb-2" style="gap:6px;">
+                <button class="btn-cart-qty-minus"
+                    data-item-id="${item.id}"
+                    data-item-type="${itemType}"
+                    style="width:32px;height:32px;border:1px solid #ccc;border-radius:6px;background:#f2f2f2;font-size:18px;font-weight:bold;">
+                    −
+                </button>
+<input type="number"
+       class="qty-input"
+       data-item-id="${item.id}"
+       data-item-type="${itemType}"
+       value="${item.quantity}"
+       min="1"
+       style="width:50px;text-align:center;padding:4px;border:1px solid #ccc;border-radius:6px;font-weight:bold;"
+       onfocus="this.select()">
+
+                <button class="btn-cart-qty-plus"
+                    data-item-id="${item.id}"
+                    data-item-type="${itemType}"
+                    style="width:32px;height:32px;border:1px solid #ccc;border-radius:6px;background:#f2f2f2;font-size:18px;font-weight:bold;">
+                    +
+                </button>
             </div>
-        </div>`;
+        </div>
+
+        <!-- Giá + Xóa -->
+       <div class="col-auto text-end d-flex flex-column align-items-end" style="position:relative; gap:6px;">
+
+    <!-- Giá -->
+    <p class="fw-bold mb-0"
+       style="font-size:1rem;color:#28a745;">
+       ${itemPriceDisplay}đ
+    </p>
+
+    <!-- Nút Xóa -->
+    <a href="#" 
+       class="btn-cart-remove small"
+       data-item-id="${item.id}"
+       data-item-type="${itemType}"
+       style="color:#dc3545;font-weight:600;text-decoration:none;">
+       Xóa
+    </a>
+
+    <!-- Icon mở ghi chú -->
+    <i class="fas fa-pen cart-item-notes-icon"
+       data-item-id="${item.id}" 
+       style="cursor:pointer;color:#6c757d;font-size:16px;"></i>
+
+</div>
+
+    </div>
+
+    <!-- GHI CHÚ: nằm riêng phía dưới -->
+    <div style="margin-top:10px;">
+        <div class="position-relative">
+            <!-- icon -->
+          
+            <!-- input -->
+            <input type="text"
+                class="form-control form-control-sm cart-item-notes-input d-none"
+                data-item-id="${item.id}"
+                value="${notes}"
+                placeholder="Ghi chú..."
+                style="padding-left:32px;border-radius:6px;">
+        </div>
+    </div>
+
+</div>`;
+
         }
         // === HẾT PHẦN SỬA LỖI ===
 
@@ -220,7 +283,27 @@ $(document).ready(function () {
         $cartPage.html(cartHtml);
     }
 
-    // === 4. SỰ KIỆN "GỌI MÓN" ===
+    // Khi click vào icon bút
+    $(document).on('click', '.cart-item-notes-icon', function () {
+        const itemId = $(this).data('item-id');
+        const $input = $(`.cart-item-notes-input[data-item-id='${itemId}']`);
+
+        // Hiển thị input và focus
+        $input.toggleClass('d-none').focus();
+
+        // Ẩn icon khi input đang hiển thị
+        $(this).toggleClass('d-none');
+    });
+
+    // Khi blur khỏi input, ẩn input và hiện lại icon
+    $(document).on('blur', '.cart-item-notes-input', function () {
+        const itemId = $(this).data('item-id');
+        const $icon = $(`.cart-item-notes-icon[data-item-id='${itemId}']`);
+
+        $(this).addClass('d-none'); // ẩn input
+        $icon.removeClass('d-none'); // hiện icon
+    });
+
     // === 4. SỰ KIỆN "GỌI MÓN" ===
     $(document).on('click', '.btn-add-to-cart', function () {
         const button = $(this);
@@ -347,32 +430,63 @@ $(document).ready(function () {
                     });
                 }
                 let detailsHtml = '';
-                if (orderedQty > 0) { detailsHtml += `<span class="item-ordered text-success fw-bold">Đã gọi: ${orderedQty}</span>`; }
+                if (orderedQty > 0) { detailsHtml += `<span class="item-ordered text-success">Đã gọi: ${orderedQty}</span>`; }
                 //if (processingQty > 0) { detailsHtml += `<span class="status-processing-text">Đang chế biến: ${processingQty}</span>`; }
 
                 // (MỚI) Thêm class và style nếu item vượt quá giới hạn
                 const isHiddenClass = (index >= initialShowCount) ? "menu-item-hidden" : "";
                 const style = (index >= initialShowCount) ? "display: none;" : "";
+                // Nếu đã gọi >=1 → bôi viền xanh
+                const borderStyle = (orderedQty > 0)
+                    ? "border: 1px solid #28a745;"
+                    : "border: 1px solid #e0e0e0;";
+
+                // Dòng trạng thái "Đã gọi"
+                const orderedLabel = (orderedQty > 0)
+                    ? `<span class="badge text-white" style="background:#28a745; font-size:10px; margin-left:6px;">Đã gọi: ${orderedQty}</span>`
+                    : "";
 
                 categoryListHtml += `
-                            <div class="menu-item-card ${isHiddenClass}" style="${style}">
-                                <img src="${imageUrl}" alt="${itemName}" />
-                                <div class="details">
-                                    <h5>${itemName}</h5>
-                                    <p>${itemPrice.toLocaleString('vi-VN')} VNĐ</p>
-                                    ${detailsHtml}
-                                </div>
-                                <div class="actions">
-                                    <a href="#" class="btn-details" data-item-id="${menuItemId}">Chi tiết</a>
-                                    <button class="btn-order btn-add-to-cart"
-                                            data-item-id="${menuItemId}"
-                                            data-item-name="${itemName}"
-                                            data-item-price="${itemPrice}"
-                                            data-item-image="${imageUrl}">
-                                        Gọi món
-                                    </button>
-                                </div>
-                            </div>`;
+<div class="menu-item-card ${isHiddenClass}" 
+     style="${style} ${borderStyle}; border-radius:10px; padding:10px;">
+
+    <!-- Ảnh click được -->
+    <img src="${imageUrl}" class="btn-details" alt="${itemName}" 
+         data-item-id="${menuItemId}" style="cursor:pointer;" />
+
+    <div class="details">
+        <!-- Tên món click được -->
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <h5 class="btn-details" style="margin:0; font-size:1rem;" 
+                data-item-id="${menuItemId}">
+                ${itemName}
+            </h5>
+
+            ${orderedQty > 0
+                        ? `<span class="badge text-white" 
+                     style="background:#28a745; font-size:11px; padding:4px 8px;font-weight:normal;">
+                        Đã gọi: ${orderedQty}
+                   </span>`
+                        : ""
+                    }
+        </div>
+
+        <p style="margin:4px 0;">${itemPrice.toLocaleString('vi-VN')} VNĐ</p>
+    </div>
+
+    <div class="actions">
+        <button class="btn-order btn-add-to-cart "
+                data-item-id="${menuItemId}"
+                data-item-name="${itemName}"
+                data-item-price="${itemPrice}"
+                data-item-image="${imageUrl}">
+        <i class="fas fa-shopping-cart" style="margin-right:5px;"></i> Gọi món
+        </button>
+    </div>
+</div>`;
+;
+
+
             });
 
             // (MỚI) Thêm nút "Hiển thị thêm" nếu cần
@@ -390,75 +504,125 @@ $(document).ready(function () {
 
     function renderCombos(combos) {
         let categoryTitleHtml = '<h3 class="category-title">Combos & Ưu Đãi</h3>';
-        let categoryListHtml = '<div class="menu-item-list mt-3">';
 
-        combos.forEach(combo => {
+        const initialShowCount = 5;
+        let categoryListHtml = `<div class="menu-item-list mt-3" data-show-count="${initialShowCount}">`;
+
+        combos.forEach((combo, index) => {
             const comboId = combo.comboId;
             const comboName = combo.name || 'Combo';
             const comboPrice = typeof combo.price === 'number' ? combo.price : 0;
             const imageUrl = combo.imageUrl || 'https://via.placeholder.com/100';
-            const description = combo.description || '';
-
-            // === PHẦN SỬA LẠI ===
-
-            // 1. Lấy giá trị mới từ API
             const originalPrice = typeof combo.originalPrice === 'number' ? combo.originalPrice : 0;
 
-            // 2. Tạo HTML cho giá
-            let priceHtml = `<p class="price-new" style="color:green">Giá ưu đãi: ${comboPrice.toLocaleString('vi-VN')} VNĐ</p>`;
-
-            // Nếu có giá gốc và nó cao hơn giá combo, thì hiển thị
-            if (originalPrice > 0 && originalPrice > comboPrice) {
-                priceHtml = `
-                ${priceHtml} 
-                <p class="price-old" style="color:red"> Giá cũ: <s>${originalPrice.toLocaleString('vi-VN')} VNĐ</s></p>
-            `;
-            }
-
-            // 3. Logic "Đã gọi" (Giữ nguyên)
+            // --- Tính đã gọi ---
             let orderedQty = 0;
             if (Array.isArray(initialOrderedItems)) {
                 initialOrderedItems.forEach(orderedItem => {
                     if (orderedItem && orderedItem.comboId === comboId) {
-                        const qty = typeof orderedItem.quantity === 'number' ? orderedItem.quantity : (typeof orderedItem.Quantity === 'number' ? orderedItem.Quantity : 0);
-                        orderedQty += qty;
+                        orderedQty += Number(orderedItem.quantity || orderedItem.Quantity || 0);
                     }
                 });
             }
-            let detailsHtml = '';
-            if (orderedQty > 0) {
-                detailsHtml += `<span class="item-ordered text-success fw-bold">Đã gọi: ${orderedQty}</span>`;
+
+            // Border xanh nếu đã gọi
+            const borderStyle = orderedQty > 0
+                ? "border:1px solid #28a745;"
+                : "border:1px solid #ddd;";
+
+            // Ẩn các combo sau 5 item
+            const hiddenClass = index >= initialShowCount ? "combo-hidden" : "";
+            const hiddenStyle = index >= initialShowCount ? "display:none;" : "";
+
+            // Giá
+            let priceHtml = `
+            <p style="color:green;margin:2px 0;">
+                Giá ưu đãi: ${comboPrice.toLocaleString('vi-VN')} VNĐ
+            </p>`;
+
+            if (originalPrice > comboPrice) {
+                priceHtml += `
+            <p style="color:red;margin:0;">
+                Giá cũ: <s>${originalPrice.toLocaleString('vi-VN')} VNĐ</s>
+            </p>`;
             }
 
-            // 4. Tạo HTML cho thẻ combo (Đã sửa)
+            // Badge đã gọi
+            const orderedHtml = orderedQty > 0
+                ? `<span style="background:#28a745;color:white;padding:4px 6px;border-radius:6px;font-size:10px;">Đã gọi: ${orderedQty}</span>`
+                : "";
+
+            // Build combo card
             categoryListHtml += `
-        <div class="menu-item-card">
-            <img src="${imageUrl}" alt="${comboName}" />
-            <div class="details">
-                <h5>${comboName}</h5>
-                
-                ${priceHtml} ${detailsHtml} 
+        <div class="menu-item-card ${hiddenClass}" 
+             style="padding:10px;border-radius:10px;${borderStyle};${hiddenStyle}">
+            
+            <img src="${imageUrl}" 
+                 alt="${comboName}" 
+                 class="btn-combo-details"
+                 data-combo-id="${comboId}"
+                 style="cursor:pointer;">
+
+            <div class="details" style="width:100%;">
+
+                <!-- Tên + badge đã gọi -->
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h5 class="btn-combo-details" 
+                        data-combo-id="${comboId}"
+                        style="margin:0;cursor:pointer;">
+                        ${comboName}
+                    </h5>
+                    ${orderedHtml}
+                </div>
+
+                ${priceHtml}
             </div>
+
             <div class="actions">
-                <a href="#" class="btn-details btn-combo-details" 
-                   data-combo-id="${comboId}">
-                   Chi tiết
-                </a>
-                
                 <button class="btn-order btn-add-combo-to-cart"
                         data-combo-id="${comboId}"
                         data-combo-name="${comboName}"
                         data-combo-price="${comboPrice}"
                         data-combo-image="${imageUrl}">
-                    Gọi combo
+        <i class="fas fa-shopping-cart" style="margin-right:5px;"></i> Gọi Combo
                 </button>
             </div>
         </div>`;
         });
 
-        categoryListHtml += '</div>'; // Đóng .menu-item-list
+        // Nếu > 5 combo → thêm nút "Hiển thị thêm"
+        if (combos.length > initialShowCount) {
+            categoryListHtml += `
+            <a href="#" class="btn-show-more-combos d-block text-center mt-2 fw-bold"
+               style="color:var(--brand-gold); text-decoration:none;">
+                Hiển thị thêm...
+            </a>
+        `;
+        }
+
+        categoryListHtml += `</div>`;
+
         $menuListContainer.append(categoryTitleHtml + categoryListHtml);
     }
+
+
+    $(document).on("click", ".btn-show-more-combos", function (e) {
+        e.preventDefault();
+        const $button = $(this);
+        const $list = $button.closest(".menu-item-list");
+        const $hiddenItems = $list.find(".combo-hidden");
+
+        if ($button.hasClass("expanded")) {
+            // Đang ở trạng thái hiển thị → ẩn bớt
+            $hiddenItems.slideUp(150);
+            $button.text("Hiển thị thêm...").removeClass("expanded");
+        } else {
+            // Đang ở trạng thái ẩn → hiện ra
+            $hiddenItems.slideDown(150);
+            $button.text("Ẩn bớt").addClass("expanded");
+        }
+    });
+
 
     function performFilter() {
         const searchString = $searchInput.val();
@@ -555,51 +719,102 @@ $(document).ready(function () {
     });
 
 
-    // === 6. CÁC SỰ KIỆN CŨ (Đã sửa nút Xóa) ===
-    $(document).on('click', '.btn-cart-qty-plus', function () {
-        const itemId = $(this).data('item-id');
-        const itemType = $(this).data('item-type'); // <-- LẤY TYPE
-        if (typeof itemId === 'undefined') return;
-        const item = cart.find(i => i.id === itemId && i.type === itemType);
-        if (item) {
-            item.quantity++;
-            saveCart(); // Gọi saveCart
-        }
-    });
-
+    // Trừ
     $(document).on('click', '.btn-cart-qty-minus', function () {
         const itemId = $(this).data('item-id');
-        const itemType = $(this).data('item-type'); // <-- LẤY TYPE
-        if (typeof itemId === 'undefined') return;
+        const itemType = $(this).data('item-type');
+        const $input = $(`.qty-input[data-item-id='${itemId}'][data-item-type='${itemType}']`);
+        let qty = parseInt($input.val()) || 1;
 
-        // TÌM CHÍNH XÁC BẰNG CẢ ID VÀ TYPE
-        const itemIndex = cart.findIndex(i => i.id === itemId && i.type === itemType);
-
-        if (itemIndex > -1) {
-            if (cart[itemIndex].quantity > 1) {
-                cart[itemIndex].quantity--;
-                saveCart();
-            } else {
-                showMobileConfirm('Xóa món này khỏi giỏ hàng?', function () {
-                    cart.splice(itemIndex, 1);
-                    saveCart();
-                });
-            }
+        if (qty > 1) {
+            qty--;
+            $input.val(qty);
+            updateCart(itemId, itemType, qty);
+        } else {
+            showMobileConfirm('Xóa món này khỏi giỏ hàng?', function () {
+                removeCartItem(itemId, itemType);
+            });
         }
     });
+
+    // Cộng
+    $(document).on('click', '.btn-cart-qty-plus', function () {
+        const itemId = $(this).data('item-id');
+        const itemType = $(this).data('item-type');
+        const $input = $(`.qty-input[data-item-id='${itemId}'][data-item-type='${itemType}']`);
+        let qty = parseInt($input.val()) || 1;
+        qty++;
+        $input.val(qty);
+        updateCart(itemId, itemType, qty);
+    });
+
+    // Nhập trực tiếp / thay đổi số lượng
+    // Khi thay đổi giá trị (rời ô hoặc Enter)
+    $(document).on('change', '.qty-input', function () {
+        let val = parseInt($(this).val());
+        if (isNaN(val) || val < 1) val = 1;
+        $(this).val(val);
+
+        const itemId = $(this).data('item-id');
+        const itemType = $(this).data('item-type');
+        updateCart(itemId, itemType, val);
+    });
+
+    // Ngăn Enter submit form, vẫn update khi nhấn Enter
+    $(document).on('keydown', '.qty-input', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();  // Không submit form
+            $(this).trigger('change'); // Trigger change để update giá
+        }
+    });
+
+
+
+
+    // Hàm cập nhật giỏ hàng
+    function updateCart(itemId, itemType, qty) {
+        // Cập nhật trong cart array
+        const itemIndex = cart.findIndex(i => i.id === itemId && i.type === itemType);
+        if (itemIndex === -1) return;
+
+        cart[itemIndex].quantity = qty;
+
+        // Cập nhật hiển thị giá tiền
+        const itemPrice = cart[itemIndex].price || 0;
+        const totalPrice = itemPrice * qty;
+        $(`.cart-item-price[data-item-id='${itemId}'][data-item-type='${itemType}']`).text(totalPrice.toLocaleString('vi-VN') + 'đ');
+
+        saveCart(); // nếu bạn vẫn muốn lưu vào localStorage
+    }
+
+
+    // Hàm xóa món
+    function removeCartItem(itemId, itemType) {
+        const index = cart.findIndex(i => i.id === itemId && i.type === itemType);
+        if (index > -1) {
+            cart.splice(index, 1);
+            saveCart();
+        }
+    }
     $(document).on('click', '.btn-cart-remove', function (e) {
         e.preventDefault();
-        const itemId = $(this).data('item-id');
-        const itemType = $(this).data('item-type'); // <-- LẤY TYPE
-        if (typeof itemId === 'undefined') return;
 
-        showMobileConfirm('Xóa món này khỏi giỏ hàng?', function () {
-            // TÌM CHÍNH XÁC BẰNG CẢ ID VÀ TYPE
-            const itemIndex = cart.findIndex(i => i.id === itemId && i.type === itemType);
-            if (itemIndex > -1) {
-                cart.splice(itemIndex, 1);
+        const itemId = $(this).data('item-id');
+        const itemType = $(this).data('item-type');
+
+        showMobileConfirm('Xóa món này khỏi giỏ hàng?', () => {
+
+            const index = cart.findIndex(i => i.id === itemId && i.type === itemType);
+
+            if (index > -1) {
+                cart.splice(index, 1);
                 saveCart();
             }
+
+            // XÓA LUÔN KHỎI HTML
+            $(`.cart-item[data-item-id='${itemId}'][data-item-type='${itemType}']`).remove();
+
+            renderCart(); // nếu bạn dùng render lại toàn bộ
         });
     });
 
@@ -1115,7 +1330,7 @@ $(document).ready(function () {
             success: function (item) {
 
                 // 3. Đổ dữ liệu MÓN ĂN vào Modal
-                $modal.find('.modal-title').text('Tên món: '+item.name);
+                $modal.find('.modal-title').text('Tên món: ' + item.name);
 
                 // Thêm ảnh (nếu có)
                 if (item.imageUrl) {

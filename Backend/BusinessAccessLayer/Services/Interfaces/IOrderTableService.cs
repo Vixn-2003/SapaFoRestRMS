@@ -1,4 +1,5 @@
-﻿using static BusinessAccessLayer.Services.OrderTableService;
+﻿using BusinessAccessLayer.DTOs;
+using static BusinessAccessLayer.Services.OrderTableService;
 
 namespace BusinessAccessLayer.Services.Interfaces
 {
@@ -44,5 +45,16 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<ComboDetailDto> GetComboDetailsAsync(int comboId);
 
         Task<MenuItemDetailDto> GetMenuItemDetailsAsync(int menuItemId);
+
+        /// <summary>
+        /// xử lý yêu vầu
+        /// </summary>
+        /// <param name="areaId"></param>
+        /// <param name="page"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
+        Task<DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>> GetStaffPendingRequestsAsync(
+             string? sort, int page, int pageSize);
+        Task CompleteAssistanceRequestAsync(int requestId);
     }
 }

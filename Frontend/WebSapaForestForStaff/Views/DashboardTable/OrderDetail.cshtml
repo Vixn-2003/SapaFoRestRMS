@@ -52,24 +52,73 @@
         color: var(--active-purple);
     }
 
-    /* --- Search Box --- */
-    .search-box-wrapper {
-        background: #fff;
-        border: 1px solid #eee;
-        border-radius: 20px;
-        padding: 5px 15px;
-        display: flex;
-        align-items: center;
-        width: 100%;
-        max-width: 400px;
-    }
+ /* Search box nhỏ gọn */
+.search-box-wrapper {
+    max-width: 350px;   /* 👈 thu ngắn chiều ngang */
+    width: 100%;        /* vẫn responsive */
+    background: #ffffff;
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #dcdcdc;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: 0.2s;
+    height: 38px;
+}
 
-        .search-box-wrapper input {
-            border: none;
-            outline: none;
-            width: 100%;
-            margin-left: 10px;
-        }
+
+/* Hover nhẹ */
+.search-box-wrapper:hover {
+    border-color: #bcbcbc;
+}
+
+/* Icon nhỏ hơn */
+.search-box-wrapper i {
+    color: #6c63ff;
+    font-size: 0.95rem;
+    transition: 0.2s;
+}
+
+/* Input gọn */
+.search-box-wrapper input {
+    border: none;
+    background: transparent;
+    width: 100%;
+    outline: none;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+/* Hiệu ứng focus */
+.search-box-wrapper:focus-within {
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.12); /* mỏng hơn */
+}
+
+.search-box-wrapper:focus-within i {
+    color: #564edb;
+}
+
+/* Avatar */
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    background: #6c63ff;
+    color: white;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+}
+
+/* User info */
+.user-info h6 {
+    font-size: 0.9rem;
+}
+
 
     /* --- Left Side: Menu --- */
     .category-nav {
@@ -337,6 +386,96 @@
         border-radius: 10px;
         font-weight: 600;
     }
+
+    /* Nút quay lại */
+.back-btn {
+    color: #555;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: 0.2s;
+}
+
+.back-btn i {
+    font-size: 1.2rem;
+}
+
+.back-btn:hover {
+    background: #f0f0f0;
+    color: #000;
+}
+
+
+/* Style cho món bị hủy */
+.item-cancelled {
+    background-color: #fff5f5 !important; /* Nền đỏ nhạt */
+    border: 1px solid #ffcccc !important; /* Viền đỏ nhạt */
+    opacity: 0.8;
+    pointer-events: none; /* Không cho bấm sửa xóa */
+}
+
+.item-cancelled .item-name, 
+.item-cancelled .item-price {
+    text-decoration: line-through; /* Gạch ngang */
+    color: #dc3545 !important; /* Màu đỏ đậm */
+}
+
+.badge-cancelled {
+    font-size: 10px;
+    background-color: #dc3545; /* Nền đỏ */
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* --- Thêm vào phần Style --- */
+
+/* Trạng thái Đang chế biến (Vàng) */
+.badge-processing {
+    background-color: #ffc107 !important; /* Màu vàng */
+    color: #000 !important;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+/* Trạng thái Đã xong (Xanh lá) */
+.badge-finished {
+    background-color: #198754 !important; /* Màu xanh lá */
+    color: #fff !important;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+/* (Tùy chọn) Viền màu để dễ nhận biết hơn */
+.border-processing { border-left: 4px solid #ffc107 !important; }
+.border-finished { border-left: 4px solid #198754 !important; }
+
+.toast.bg-success { background-color: #28a745 !important; }
+.toast.bg-danger { background-color: #dc3545 !important; }
+
+.toast.show {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+
+@@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 </style>
 
 <div class="container-fluid p-0">
@@ -350,30 +489,41 @@
         <div class="row g-0" style="height: 100vh; overflow: hidden;">
             <div class="col-md-8 col-lg-9 d-flex flex-column h-100">
 
-                <header class="top-header d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center gap-3 w-100">
-                        <i class="fa-solid fa-bars fs-4 text-secondary d-none d-md-block"></i>
+                <header class="top-header d-flex justify-content-between align-items-center px-3 py-2">
+    <div class="d-flex align-items-center gap-3 flex-grow-1">
 
-                        <form method="get" action="@Url.Action("OrderDetail", new { id = tableId })" class="flex-grow-1 me-4">
-                            @if (currentCategory.HasValue)
-                            {
-                                <input type="hidden" name="categoryId" value="@currentCategory" />
-                            }
-                            <div class="search-box-wrapper">
-                                <i class="fa-solid fa-magnifying-glass text-secondary"></i>
-                                <input type="text" name="searchString" placeholder="Tìm món ăn, combo..." value="@currentSearch">
-                            </div>
-                        </form>
+      <a href="/DashboardTable/Index" class="back-btn d-flex align-items-center" id="backButton">
+    <i class="fa-solid fa-arrow-left me-1"></i>
+    <span>Quay lại</span>
+</a>
 
-                        <div class="d-flex align-items-center">
-                            <div class="avatar-circle me-2">NV</div>
-                            <div class="user-info d-none d-sm-block">
-                                <h6>Staff</h6>
-                                <small class="text-muted">Nhân viên</small>
-                            </div>
-                        </div>
-                    </div>
-                </header>
+        <!-- Ô tìm kiếm -->
+        <form method="get" action="@Url.Action("OrderDetail", new { id = tableId })"
+              class="flex-grow-1 me-4">
+            @if (currentCategory.HasValue)
+            {
+                <input type="hidden" name="categoryId" value="@currentCategory" />
+            }
+            <div class="search-box-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" name="searchString"
+                       placeholder="Tìm món ăn, combo..."
+                       value="@currentSearch">
+            </div>
+        </form>
+
+        <!-- User -->
+        <div class="d-flex align-items-center">
+            <div class="avatar-circle me-2">NV</div>
+            <div class="user-info d-none d-sm-block">
+                <h6 class="mb-0 fw-semibold">Staff</h6>
+                <small class="text-muted">Nhân viên</small>
+            </div>
+        </div>
+
+    </div>
+</header>
+
 
                 <div class="flex-grow-1 p-3 overflow-auto bg-light">
 
@@ -412,23 +562,26 @@
                                 @foreach (var combo in Model.Combos)
                                 {
                                     <div class="col">
-                                        <div class="product-card h-100" onclick="addItemToOrder(@combo.ComboId, true)" style="cursor: pointer;">
-                                            <img src="@combo.ImageUrl" class="card-img-top" alt="@combo.Name" onerror="this.src='/images/default-food.png'">
-                                            <div class="card-body">
-                                                <h5 class="card-title">@combo.Name</h5>
-                                                <div class="price-row">
-                                                    <div>
-                                                        @if (combo.OriginalPrice > combo.Price)
-                                                        {
-                                                            <span class="old-price">@(((decimal)combo.OriginalPrice).ToString("N0"))</span>
-                                                        }
-                                                        <span class="price text-danger">@combo.Price.ToString("N0")</span>
-                                                    </div>
-                                                    <button type="button" class="btn-add"><i class="fa-solid fa-plus"></i></button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+    <div class="product-card h-100 btn-select-item" 
+         data-id="@combo.ComboId" 
+         data-iscombo="true" 
+         data-name="@combo.Name" 
+         data-price="@combo.Price"
+         style="cursor: pointer;">
+         
+        <img src="@combo.ImageUrl" class="card-img-top" alt="@combo.Name" onerror="this.src='/images/default-food.png'">
+        <div class="card-body">
+            <h5 class="card-title">@combo.Name</h5>
+            <div class="price-row">
+                <div>
+                    @if (combo.OriginalPrice > combo.Price) { <span class="old-price">@(((decimal)combo.OriginalPrice).ToString("N0")) đ</span> }
+                    <span class="price text-danger">@combo.Price.ToString("N0") đ</span>
+                </div>
+                <button type="button" class="btn-add"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
                                 }
                             </div>
                         }
@@ -439,18 +592,24 @@
                             <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-4">
                                 @foreach (var item in categoryGroup)
                                 {
-                                    <div class="col">
-                                        <div class="product-card h-100" onclick="addItemToOrder(@item.MenuItemId, false)" style="cursor: pointer;">
-                                            <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" onerror="this.src='/images/default-food.png'">
-                                            <div class="card-body">
-                                                <h5 class="card-title">@item.Name</h5>
-                                                <div class="price-row">
-                                                    <span class="price">@item.Price.ToString("N0")</span>
-                                                    <button type="button" class="btn-add"><i class="fa-solid fa-plus"></i></button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                   <div class="col">
+    <div class="product-card h-100 btn-select-item" 
+         data-id="@item.MenuItemId" 
+         data-iscombo="false" 
+         data-name="@item.Name" 
+         data-price="@item.Price"
+         style="cursor: pointer;">
+
+        <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" onerror="this.src='/images/default-food.png'">
+        <div class="card-body">
+            <h5 class="card-title">@item.Name</h5>
+            <div class="price-row">
+                <span class="price">@item.Price.ToString("N0") đ</span>
+                <button type="button" class="btn-add"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
                                 }
                             </div>
                         }
@@ -479,90 +638,140 @@
                     }
                 </div>
 
-                <div class="cart-items">
-                    @if (Model.OrderedItems.Any())
-                    {
-                        @foreach (var item in Model.OrderedItems)
-                        {
-                            <div class="cart-item">
-                                <div class="d-flex justify-content-between">
-                                    <div class="item-name">@item.ItemName</div>
-                                    <div class="item-price">@item.TotalPrice.ToString("N0")</div>
-                                </div>
+               <div class="cart-items" id="cartContainer">
+        <div class="text-center mt-5">
+            <div class="spinner-border text-secondary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
 
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="item-status">@item.Status</span>
-                                    <div>
-                                        <button class="btn btn-link text-danger p-0 me-2" style="font-size: 12px;"><i class="fa-solid fa-trash"></i></button>
-                                    </div>
-                                </div>
+               <div class="cart-footer">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="text-muted" style="font-size: 13px;">
+            Tạm tính (<span id="lblTotalQty">0</span> món)
+        </span>
+        <span class="fw-bold text-dark" style="font-size: 14px;" id="lblSubTotal">0</span>
+    </div>
 
-                                <textarea class="note-input" rows="1" placeholder="Ghi chú...">@item.Note</textarea>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="fw-bold fs-6">Tổng tiền</div>
+        <div class="fw-bold fs-4" style="color: var(--primary-orange)" id="lblGrandTotal">
+            0
+        </div>
+    </div>
 
-                                <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <div class="qty-control">
-                                        <div class="btn-qty btn-minus"><i class="fa-solid fa-minus"></i></div>
-                                        <div class="qty-val">@item.Quantity</div>
-                                        <div class="btn-qty btn-plus"><i class="fa-solid fa-plus"></i></div>
-                                    </div>
-                                    <div class="text-muted small" style="font-size: 11px;">
-                                        Đơn giá: @((item.TotalPrice / item.Quantity).ToString("N0"))
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <div class="text-center text-muted mt-5">
-                            <i class="fa-solid fa-utensils fs-1 mb-3 opacity-25"></i>
-                            <p>Chưa có món nào được gọi.</p>
-                        </div>
-                    }
-                </div>
-
-                <div class="cart-footer">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="fw-bold">Tổng tiền</div>
-                        <div class="fw-bold fs-4" style="color: var(--primary-orange)">
-                            @Model.GrandTotal.ToString("N0")
-                        </div>
-                    </div>
-
-                    <div class="d-flex gap-2">
-                        <button class="btn-save-order flex-fill">
-                            Lưu Order
-                        </button>
-                        @if (hasActiveOrder && !string.IsNullOrEmpty(checkoutUrl))
-                        {
-                            <button class="btn-checkout flex-fill" onclick="window.location='@checkoutUrl'">
-                                Thanh toán <i class="fa-solid fa-chevron-right ms-2"></i>
-                            </button>
-                        }
-                        else
-                        {
-                            <button class="btn-checkout flex-fill disabled" disabled title="Không tìm thấy đơn đang mở để thanh toán">
-                                Thanh toán <i class="fa-solid fa-chevron-right ms-2"></i>
-                            </button>
-                        }
-                    </div>
-                    @if (!hasActiveOrder)
-                    {
-                        <div class="text-muted small mt-2 text-end">Chưa có đơn hàng đang mở cho bàn này.</div>
-                    }
-                </div>
+    <div class="d-flex gap-2">
+        <button class="btn-save-order flex-fill" style="display:none">
+            Lưu Order
+        </button>
+        <button class="btn-checkout flex-fill">
+           Tạo đơn <i class="fa-solid fa-chevron-right ms-2"></i>
+        </button>
+    </div>
+</div>
 
             </div>
         </div>
     }
 </div>
+<div class="modal fade" id="confirmAddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">Xác nhận gọi món</h6>
+            </div>
+            <div class="modal-body text-center">
+                Bạn có chắc muốn thêm món <br /> <strong id="modalItemName" class="text-primary fs-5"></strong> ?
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <button type="button" class="btn btn-light btn-sm px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary btn-sm px-4" id="btnConfirmAdd">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center p-4">
+        <i class="fa-solid fa-trash text-danger fs-1 mb-3"></i>
+        <h5 id="deleteItemName">Xóa món?</h5>
+        <p class="text-muted small mb-3">Bạn có chắc muốn xóa món này khỏi order?</p>
+
+        <div class="d-flex justify-content-center gap-3">
+          <button class="btn btn-secondary px-4" data-bs-dismiss="modal">Hủy</button>
+          <button id="btnConfirmDelete" class="btn btn-danger px-4">Xóa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="modifyWarningModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-warning">
+            <div class="modal-header bg-warning bg-opacity-10 border-0 pb-0">
+                <h6 class="modal-title fw-bold text-warning-emphasis">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>Cảnh báo thay đổi
+                </h6>
+            </div>
+            <div class="modal-body text-center p-4">
+                <p class="mb-1">Món này do <strong>đã được gọi.</strong>.</p>
+                <p class="fw-bold fs-5 text-dark">Bạn có chắc chắn muốn thay đổi?</p>
+                <p class="text-muted small fst-italic mb-0">(Hành động này sẽ cập nhật trực tiếp vào đơn của khách)</p>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-warning px-4 fw-bold" id="btnConfirmModify">
+                    <i class="fa-solid fa-check me-2"></i>Đồng ý
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+@* Khởi tạo dữ liệu từ server *@
+<script>
+    window.__INITIAL_ORDER_DATA__ = JSON.parse('@Html.Raw(Json.Serialize(Model.OrderedItems.Select(x => new {
+        id = x.OrderDetailId,
+        itemId = x.MenuItemId ?? x.ComboId,
+        isCombo = x.ComboId != null,
+        name = x.ItemName,
+        price = x.UnitPrice,
+        quantity = x.Quantity,
+        note = x.Notes,
+        status = x.Status
+    })))');
+
+    window.__TABLE_ID__ = '@(ViewData["TableId"] ?? Model.TableId)';
+
+    
+</script>
+
+@* Gọi file JS riêng *@
+<script src="~/js/waiter/OrderDetail.js"></script>
 
 <script>
-    function addItemToOrder(itemId, isCombo) {
-        // TODO: Implement AJAX or Redirect logic here based on your Controller
-        console.log("Adding item: " + itemId + ", IsCombo: " + isCombo);
-        // Ví dụ: window.location.href = '/Order/Add?tableId=@tableId&itemId=' + itemId ...
-    }
+    // Khởi tạo biến JS từ Razor
+    cartItems = window.__INITIAL_ORDER_DATA__ || [];
+    tableId = window.__TABLE_ID__;
+
+    // Modal Bootstrap
+    var modalDelEl = document.getElementById('confirmDeleteModal');
+    if(modalDelEl) modalDelete = new bootstrap.Modal(modalDelEl);
+
+    var modalWarnEl = document.getElementById('modifyWarningModal');
+    if(modalWarnEl) modalWarning = new bootstrap.Modal(modalWarnEl);
+
+    var modalConfirmEl = document.getElementById('confirmAddModal');
+    if(modalConfirmEl) modalConfirm = new bootstrap.Modal(modalConfirmEl);
+
+    // Render giỏ hàng lần đầu
+    renderCart();
 </script>

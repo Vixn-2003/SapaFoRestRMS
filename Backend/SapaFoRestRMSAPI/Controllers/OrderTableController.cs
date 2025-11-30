@@ -67,9 +67,9 @@ namespace SapaFoRestRMSAPI.Controllers
         [HttpGet("reservation/{reservationId}")]
         public async Task<IActionResult> GetMenuForReservation(
             int reservationId,
-            [FromQuery] string status, 
-            [FromQuery] int? categoryId,      
-            [FromQuery] string? searchString) 
+            [FromQuery] string status,
+            [FromQuery] int? categoryId,
+            [FromQuery] string? searchString)
         {
             try
             {
@@ -155,7 +155,7 @@ namespace SapaFoRestRMSAPI.Controllers
         [HttpGet("MenuOrder/{tableId}")]
         public async Task<IActionResult> GetMenuForTable(int tableId,
             [FromQuery] int? categoryId,
-    [FromQuery] string? searchString) 
+    [FromQuery] string? searchString)
         {
             try
             {
@@ -227,7 +227,7 @@ namespace SapaFoRestRMSAPI.Controllers
         public async Task<IActionResult> RequestAssistance([FromBody] AssistanceRequestDto requestDto)
         {
             try
-            {                
+            {
                 await _orderTableService.RequestAssistanceAsync(requestDto);
                 return Ok(new { message = "Đã gửi yêu cầu hỗ trợ. Vui lòng chờ trong giây lát!" });
             }
@@ -268,6 +268,31 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 // Nếu không tìm thấy, Service sẽ throw Exception
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        // [GET] Lấy danh sách yêu cầu (Có lọc Area, Phân trang)
+        // URL: api/Assistance/Pending?areaId=1&page=1
+        [HttpGet("Pending")]
+        public async Task<IActionResult> GetPending([FromQuery] string? sort, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var result = await _orderTableService.GetStaffPendingRequestsAsync(sort, page, pageSize);
+            return Ok(result);
+        }
+
+        // [PUT] Hoàn thành yêu cầu
+        // URL: api/Assistance/{id}/Complete
+        [HttpPut("{id}/Complete")]
+        public async Task<IActionResult> CompleteRequest(int id)
+        {
+            try
+            {
+                await _orderTableService.CompleteAssistanceRequestAsync(id);
+                return Ok(new { message = "Đã xử lý xong!" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }
