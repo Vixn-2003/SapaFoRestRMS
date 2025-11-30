@@ -161,7 +161,8 @@ namespace BusinessAccessLayer.Services
 
                 // Kiểm tra status - chỉ có thể yêu cầu làm gấp khi chưa Done
                 var status = (orderDetail.Status ?? "Pending").Trim();
-                if (status == "Done" || status == "Hoàn thành" || status == "Xong")
+                var normalizedStatus = NormalizeStatus(status);
+                if (normalizedStatus == "Done")
                 {
                     return new RequestUrgentResponse
                     {
@@ -215,8 +216,8 @@ namespace BusinessAccessLayer.Services
 
                 // Kiểm tra status - chỉ có thể hủy khi chưa nấu
                 var status = (orderDetail.Status ?? "Pending").Trim();
-                if (status == "Cooking" || status == "Đang nấu" || status == "Ready" || status == "Sẵn sàng" || 
-                    status == "Done" || status == "Hoàn thành")
+                var normalizedStatus = NormalizeStatus(status);
+                if (normalizedStatus == "Cooking" || normalizedStatus == "Ready" || normalizedStatus == "Done")
                 {
                     return new CancelOrderDetailResponse
                     {
@@ -383,6 +384,42 @@ namespace BusinessAccessLayer.Services
                 }
             }
             return "N/A";
+        }
+
+        /// <summary>
+        /// Normalize status to English (handle both English and Vietnamese)
+        /// </summary>
+        private string NormalizeStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return "Pending";
+
+            var statusLower = status.Trim().ToLower();
+
+            // Handle Vietnamese statuses
+            if (statusLower.Contains("chờ") || statusLower.Contains("pending"))
+                return "Pending";
+            if (statusLower.Contains("đang nấu") || statusLower.Contains("chế biến") || statusLower.Contains("cooking"))
+                return "Cooking";
+            if (statusLower.Contains("trễ") || statusLower.Contains("late"))
+                return "Late";
+            if (statusLower.Contains("sẵn sàng") || statusLower.Contains("ready"))
+                return "Ready";
+            if (statusLower.Contains("hoàn thành") || statusLower.Contains("xong") || statusLower.Contains("done"))
+                return "Done";
+            if (statusLower.Contains("hủy") || statusLower.Contains("cancelled"))
+                return "Cancelled";
+
+            // Handle exact English matches (case-insensitive)
+            if (statusLower == "pending") return "Pending";
+            if (statusLower == "cooking") return "Cooking";
+            if (statusLower == "late") return "Late";
+            if (statusLower == "ready") return "Ready";
+            if (statusLower == "done") return "Done";
+            if (statusLower == "cancelled") return "Cancelled";
+
+            // Default: return as-is (capitalize first letter)
+            return char.ToUpper(statusLower[0]) + statusLower.Substring(1);
         }
     }
 }

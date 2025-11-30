@@ -447,7 +447,7 @@ namespace BusinessAccessLayer.Services
                         ComboId = null,
                         Quantity = cartItem.Quantity,
                         UnitPrice = price,
-                        Status = "Đã gửi",
+                        Status = "Pending",
                         CreatedAt = DateTime.Now,
                         Notes = cartItem.Notes,
                     });
@@ -466,7 +466,7 @@ namespace BusinessAccessLayer.Services
                         ComboId = cartCombo.ComboId,
                         Quantity = cartCombo.Quantity,
                         UnitPrice = price,
-                        Status = "Đã gửi",
+                        Status = "Pending",
                         CreatedAt = DateTime.UtcNow,
                         Notes = cartCombo.Notes,
                     });
@@ -547,7 +547,7 @@ namespace BusinessAccessLayer.Services
             }
 
             // 1. Kiểm tra trạng thái:
-            if (item.Status != "Đã gửi")
+            if (item.Status != "Pending")
             {
                 throw new Exception("Món ăn đang được chế biến, không thể hủy.");
             }
