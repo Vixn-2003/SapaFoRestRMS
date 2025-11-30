@@ -77,17 +77,18 @@ namespace BusinessAccessLayer.Services
                 CustomerPhone = data.ActiveReservation?.Customer?.User?.Phone ?? null,
 
                 GrandTotal = data.ActiveReservation == null
-            ? 0
-            : data.ActiveReservation.Orders
-                  .SelectMany(o => o.OrderDetails)
-                  .Sum(od => od.Quantity * od.UnitPrice),
+    ? 0
+    : data.ActiveReservation.Orders
+        .SelectMany(o => o.OrderDetails)
+        .Where(od => od.Status == "Đang chế biến" || od.Status == "Đã xong")
+        .Sum(od => od.Quantity * od.UnitPrice),
+
 
             }).ToList();
 
             // 3. Lọc theo Status (Cập nhật logic lọc nếu cần)
             if (!string.IsNullOrEmpty(status))
             {
-                // Nếu status gửi lên là "Available", bạn có muốn bao gồm cả "Reserved" không?
                 // Nếu muốn tách biệt hoàn toàn thì giữ nguyên:
                 allTableDtos = allTableDtos.Where(t => t.Status == status).ToList();
             }
@@ -369,6 +370,7 @@ namespace BusinessAccessLayer.Services
                 {
                     foreach (var od in order.OrderDetails)
                     {
+
                         string itemName = od.MenuItemId.HasValue
                                           ? od.MenuItem?.Name
                                           : (od.ComboId.HasValue ? od.Combo?.Name : "Lỗi dữ liệu");

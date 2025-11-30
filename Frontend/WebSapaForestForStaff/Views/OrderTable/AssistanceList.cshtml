@@ -561,6 +561,7 @@
         const floor = btn.data('floor');
         const note = btn.data('note');
         const time = btn.data('time');
+            const requestId = btn.data('id');  // <-- LẤY REQUEST ID
 
         $('#modalTableName').text(tableName);
 
@@ -569,6 +570,7 @@
 
         $('#modalRequestTime').text(time);
         $('#modalNote').text(note || "Khách cần hỗ trợ !");
+            $('#modalRequestId').val(requestId);  // <-- Gán vào input ẩn
 
         showModalUI();
     }

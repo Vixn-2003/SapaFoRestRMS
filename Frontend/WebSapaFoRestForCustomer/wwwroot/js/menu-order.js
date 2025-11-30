@@ -464,7 +464,7 @@ $(document).ready(function () {
 
             ${orderedQty > 0
                         ? `<span class="badge text-white" 
-                     style="background:#28a745; font-size:12px; padding:4px 8px;">
+                     style="background:#28a745; font-size:11px; padding:4px 8px;font-weight:normal;">
                         Đã gọi: ${orderedQty}
                    </span>`
                         : ""

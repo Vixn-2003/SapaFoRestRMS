@@ -251,7 +251,8 @@ namespace BusinessAccessLayer.Services
                     Quantity = od.Quantity,
                     Status = od.Status,
                     CreatedAt = od.CreatedAt,
-                    Notes = od.Notes
+                    Notes = od.Notes,
+                    Price = od.UnitPrice,
                 })
                 .OrderByDescending(od => od.CreatedAt)
                 .ToList();
@@ -588,6 +589,8 @@ namespace BusinessAccessLayer.Services
             // CHỐNG SPAM vẫn giữ nguyên
             bool alreadyPending = await _orderTableRepository.HasPendingAssistanceRequestAsync(requestDto.TableId);
             if (alreadyPending) throw new Exception("Bạn đã gửi yêu cầu trước đó. Nhân viên sẽ đến ngay!");
+            // Nếu Note rỗng hoặc null thì gán mặc định
+            var note = string.IsNullOrWhiteSpace(requestDto.Note) ? "Khách cần hỗ trợ !" : requestDto.Note;
 
             // Tạo yêu cầu mới (dù có reservation hay không)
             var newRequest = new AssistanceRequest
@@ -596,7 +599,7 @@ namespace BusinessAccessLayer.Services
                 ReservationId = reservation?.ReservationId, // null nếu không có reservation
                 RequestTime = DateTime.UtcNow,
                 Status = "Pending",
-                Note = requestDto.Note,
+                Note = note,
                 HandledTime = null
             };
 
@@ -845,6 +848,9 @@ namespace BusinessAccessLayer.Services
             public DateTime CreatedAt { get; set; }
 
             public string? Notes { get; set; }
+
+            public decimal Price { get; set; }      
+
         }
 
         //new DTO for menu and filter
