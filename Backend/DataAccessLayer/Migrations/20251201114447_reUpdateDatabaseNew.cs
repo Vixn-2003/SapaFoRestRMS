@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateDbVer01 : Migration
+    public partial class reUpdateDatabaseNew : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -284,6 +284,7 @@ namespace DataAccessLayer.Migrations
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CourseType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: true, defaultValue: true),
+                    IsAds = table.Column<bool>(type: "bit", nullable: true, defaultValue: false),
                     ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     TimeCook = table.Column<int>(type: "int", nullable: true),
                     BatchSize = table.Column<int>(type: "int", nullable: true, defaultValue: 1),
