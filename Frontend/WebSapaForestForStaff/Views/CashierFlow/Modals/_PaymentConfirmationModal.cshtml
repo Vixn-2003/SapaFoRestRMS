@@ -98,23 +98,29 @@
 </style>
 
 <script>
-    // Function to show payment confirmation modal
-    function showPaymentConfirmationModal(orderId, tableNumber, totalAmount, paymentUrl) {
-        // Update modal content
-        document.getElementById('modalOrderId').textContent = orderId;
-        document.getElementById('modalTableNumber').textContent = tableNumber;
-        document.getElementById('modalTotalAmount').textContent = totalAmount.toLocaleString('vi-VN') + ' ₫';
+    /**
+     * 1️⃣ CREATE ORDER FOR PAYMENT
+     * Shows confirmation before creating payment order
+     */
+    async function showPaymentConfirmationModal(orderId, tableNumber, totalAmount, paymentUrl) {
+        const confirmed = await showConfirmPopup(
+            "🧾 Xác nhận tạo đơn thanh toán",
+            `<p class="mb-3">Bạn có chắc muốn tạo hóa đơn thanh toán cho bàn <strong>${tableNumber}</strong> không?</p>
+            <div class="alert alert-info d-flex align-items-start gap-2 mb-0">
+                <i class="fa-solid fa-info-circle mt-1"></i>
+                <div class="small">
+                    <div class="mb-2"><strong>Mã đơn:</strong> #${orderId}</div>
+                    <div><strong>Tổng tiền:</strong> <span class="text-success fw-bold">${totalAmount.toLocaleString('vi-VN')} ₫</span></div>
+                </div>
+            </div>`,
+            "Tạo đơn",
+            "Hủy"
+        );
 
-        // Set up confirm button click handler
-        const confirmBtn = document.getElementById('confirmPaymentBtn');
-        confirmBtn.onclick = function() {
-            // Redirect to payment page
+        if (confirmed) {
+            // Redirect to ConfirmOrder page
             window.location.href = paymentUrl;
-        };
-
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('paymentConfirmationModal'));
-        modal.show();
+        }
     }
 </script>
 
