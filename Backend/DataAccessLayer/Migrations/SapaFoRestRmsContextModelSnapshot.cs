@@ -857,6 +857,11 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<bool?>("IsAds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<bool?>("IsAvailable")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")

@@ -237,30 +237,49 @@
     margin: 0;
 }
 
-.menu-list-actions {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-}
+    .menu-list-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
 
-.btn-add-menu {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: #3b82f6;
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
+    .ads-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fbbf24;
+    }
 
-.btn-add-menu:hover {
-    background-color: #2563eb;
-}
+        .ads-badge svg {
+            width: 0.75rem;
+            height: 0.75rem;
+        }
+    .btn-add-menu {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+        .btn-add-menu:hover {
+            background-color: #2563eb;
+        }
 
 .period-selector {
     display: flex;
@@ -312,12 +331,12 @@
 }
 
 /* ===== FILTER BUTTONS ===== */
-.filter-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
+    .filter-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        flex: 1;
+    }
 
 .filter-btn {
     padding: 0.375rem 0.75rem;
@@ -410,7 +429,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-height: calc(100vh - 480px);
+        max-height: 850px;
     overflow-y: auto;
 }
 
@@ -1436,14 +1455,117 @@
     font-size: 0.875rem;
 }
 
+.menu-modal-header .d-flex {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.menu-modal-header .btn-primary {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.menu-modal-header .btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.menu-modal-header .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
+    /* ===== AVAILABILITY STATUS BADGE ===== */
+    .availability-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+        border: 2px solid;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+        .availability-status.available {
+            background-color: #d1fae5;
+            color: #15803d;
+            border-color: #10b981;
+        }
+
+        .availability-status.unavailable {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border-color: #ef4444;
+        }
+
+    .availability-status-dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+    }
+
+    .availability-status.available .availability-status-dot {
+        background-color: #10b981;
+    }
+
+    .availability-status.unavailable .availability-status-dot {
+        background-color: #ef4444;
+    }
+
+    .filter-buttons-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn-filter-ads-inline {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 2px solid #fbbf24;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+        background-color: #fff;
+        color: #d97706;
+    }
+
+        .btn-filter-ads-inline:hover {
+            background-color: #fef3c7;
+        }
+
+        .btn-filter-ads-inline.active {
+            background-color: #fbbf24;
+            color: #78350f;
+            box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+        }
+
+        .btn-filter-ads-inline svg {
+            width: 0.875rem;
+            height: 0.875rem;
+        }
+
 </style>
 
 @{
     ViewData["Title"] = "Quản Lý Menu - Phân Tích Hiệu Suất";
-}
-
-@section Styles {
-    <link rel="stylesheet" href="~/css/menu-dashboard.css">
 }
 
 <div class="menu-dashboard-container">
@@ -1451,7 +1573,6 @@
         <!-- Header Section -->
         <div class="menu-dashboard-header">
             <h1 class="menu-dashboard-title">Quản Lý Menu Nhà Hàng</h1>
-            <p class="menu-dashboard-subtitle">Phân tích xu hướng và hiệu suất món ăn</p>
         </div>
 
         <!-- Category Stats Grid -->
@@ -1504,12 +1625,10 @@
                     <div class="menu-list-header">
                         <h2 class="menu-list-title">Danh Sách Món Ăn</h2>
                         <div class="menu-list-actions">
-                            <button class="btn-add-menu" onclick="handleAddMenu()">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                </svg>
-                                Thêm món mới
+                            <button class="btn-add-menu" onclick="location.href='/ManagerMenu/Create'">
+                                + Thêm Món Mới
                             </button>
+
                             <div class="period-selector">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1532,9 +1651,19 @@
                         <input type="text" class="menu-search-input" id="searchInput" placeholder="Tìm kiếm món ăn..." oninput="handleSearch()">
                     </div>
 
-                    <!-- Category Filter Buttons -->
-                    <div class="filter-buttons" id="categoryFilters">
-                        <!-- Will be populated by JavaScript -->
+                    <div class="filter-buttons-wrapper">
+                        <!-- Category Filter Buttons (bên trái) -->
+                        <div class="filter-buttons" id="categoryFilters">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+
+                        <!-- ✅ Button Món Đề Xuất (bên phải) -->
+                        <button class="btn-filter-ads-inline" id="btnFilterAdsInline" onclick="handleAdsFilter()">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                            <span id="adsFilterTextInline">Món Đề Xuất</span>
+                        </button>
                     </div>
 
                     <!-- Performance Filter Buttons -->
@@ -1543,21 +1672,12 @@
                             Tất cả hiệu suất
                         </button>
                         <button class="performance-filter-btn hot" data-filter="hot" onclick="handlePerformanceFilter('hot')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
                             Nhiều hơn bình thường
                         </button>
                         <button class="performance-filter-btn normal" data-filter="normal" onclick="handlePerformanceFilter('normal')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
                             Bình thường
                         </button>
                         <button class="performance-filter-btn low" data-filter="low" onclick="handlePerformanceFilter('low')">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                            </svg>
                             Ít hơn bình thường
                         </button>
                     </div>
@@ -1617,6 +1737,10 @@
             </div>
         </div>
     </div>
+
+    <form id="editMenuForm" method="get" action="@Url.Action("ManagerEditMenu", "ManagerMenu")" style="display: none;">
+        <input type="hidden" name="id" id="editMenuId" value="">
+    </form>
 </div>
 
 <!-- Modal for Item Details -->
@@ -1624,11 +1748,19 @@
     <div class="menu-modal-content" onclick="event.stopPropagation()">
         <div class="menu-modal-header">
             <h2 class="menu-modal-title">Chi Tiết Món Ăn</h2>
-            <button class="menu-modal-close-btn" onclick="closeModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary btn-sm" onclick="handleEditMenuFromModal()" id="btnEditMenuModal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Chỉnh sửa
+                </button>
+                <button class="menu-modal-close-btn" onclick="closeModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <div class="menu-modal-body">
@@ -1656,7 +1788,7 @@
                                     </div>
                                     <div class="modal-info-row">
                                         <span class="modal-info-label">Trạng thái:</span>
-                                        <span class="modal-status-badge">Đang phục vụ</span>
+                                        <span id="modalItemStatus"></span>
                                     </div>
                                 </div>
                             </div>
@@ -1706,210 +1838,63 @@
 </div>
 
 <script>
-    // ===== MOCK DATA =====
-    const categoryStats = [
-        { name: 'Món Chính', total: 13, active: 10, inactive: 3, color: 'blue' },
-        { name: 'Món Tráng Miệng', total: 12, active: 9, inactive: 3, color: 'purple' },
-        { name: 'Món Khai Vị', total: 8, active: 7, inactive: 1, color: 'green' },
-        { name: 'Đồ Uống', total: 15, active: 13, inactive: 2, color: 'orange' },
-    ];
+    // ===== DATA FROM SERVER =====
+    const menuItems = @Html.Raw(Json.Serialize(Model ?? new List<MenuItemDTO>()));
 
-    const menuItems = [
-        {
-            id: 1,
-            name: 'Phở Bò Đặc Biệt',
-            category: 'Món Chính',
-            price: '85.000đ',
-            status: 'active',
-            today: 18,
-            history: {
-                yesterday: 12,
-                avg7days: 14,
-                avg30days: 15,
-                avg90days: 13
-            },
-            ingredients: [
-                { name: 'Thịt bò', quantity: 200, unit: 'gram' },
-                { name: 'Bánh phở', quantity: 300, unit: 'gram' },
-                { name: 'Hành tây', quantity: 50, unit: 'gram' },
-                { name: 'Ngò gai', quantity: 20, unit: 'gram' },
-            ]
-        },
-        {
-            id: 2,
-            name: 'Bún Chả Hà Nội',
-            category: 'Món Chính',
-            price: '75.000đ',
-            status: 'active',
-            today: 15,
-            history: {
-                yesterday: 16,
-                avg7days: 15,
-                avg30days: 14,
-                avg90days: 15
-            },
-            ingredients: [
-                { name: 'Thịt lợn', quantity: 150, unit: 'gram' },
-                { name: 'Bún tươi', quantity: 250, unit: 'gram' },
-                { name: 'Rau sống', quantity: 100, unit: 'gram' },
-            ]
-        },
-        {
-            id: 3,
-            name: 'Gỏi Cuốn Tôm Thịt',
-            category: 'Món Khai Vị',
-            price: '45.000đ',
-            status: 'active',
-            today: 8,
-            history: {
-                yesterday: 14,
-                avg7days: 16,
-                avg30days: 15,
-                avg90days: 14
-            },
-            ingredients: [
-                { name: 'Tôm sú', quantity: 100, unit: 'gram' },
-                { name: 'Thịt ba chỉ', quantity: 80, unit: 'gram' },
-                { name: 'Bánh tráng', quantity: 5, unit: 'cái' },
-                { name: 'Bún tươi', quantity: 100, unit: 'gram' },
-            ]
-        },
-        {
-            id: 4,
-            name: 'Chả Giò Rế',
-            category: 'Món Khai Vị',
-            price: '50.000đ',
-            status: 'active',
-            today: 12,
-            history: {
-                yesterday: 11,
-                avg7days: 10,
-                avg30days: 11,
-                avg90days: 10
-            },
-            ingredients: [
-                { name: 'Thịt băm', quantity: 120, unit: 'gram' },
-                { name: 'Miến', quantity: 50, unit: 'gram' },
-                { name: 'Bánh đa nem', quantity: 10, unit: 'cái' },
-            ]
-        },
-        {
-            id: 5,
-            name: 'Cơm Tấm Sườn Bì',
-            category: 'Món Chính',
-            price: '70.000đ',
-            status: 'active',
-            today: 9,
-            history: {
-                yesterday: 10,
-                avg7days: 11,
-                avg30days: 10,
-                avg90days: 9
-            },
-            ingredients: [
-                { name: 'Gạo tấm', quantity: 200, unit: 'gram' },
-                { name: 'Sườn lợn', quantity: 150, unit: 'gram' },
-                { name: 'Bì', quantity: 50, unit: 'gram' },
-            ]
-        },
-        {
-            id: 6,
-            name: 'Chè Ba Màu',
-            category: 'Món Tráng Miệng',
-            price: '30.000đ',
-            status: 'active',
-            today: 22,
-            history: {
-                yesterday: 8,
-                avg7days: 9,
-                avg30days: 10,
-                avg90days: 8
-            },
-            ingredients: [
-                { name: 'Đậu đỏ', quantity: 50, unit: 'gram' },
-                { name: 'Đậu xanh', quantity: 50, unit: 'gram' },
-                { name: 'Thạch', quantity: 30, unit: 'gram' },
-                { name: 'Nước cốt dừa', quantity: 100, unit: 'ml' },
-            ]
-        },
-        {
-            id: 7,
-            name: 'Trà Đá Chanh',
-            category: 'Đồ Uống',
-            price: '15.000đ',
-            status: 'active',
-            today: 25,
-            history: {
-                yesterday: 23,
-                avg7days: 24,
-                avg30days: 22,
-                avg90days: 20
-            },
-            ingredients: [
-                { name: 'Trà', quantity: 10, unit: 'gram' },
-                { name: 'Chanh', quantity: 1, unit: 'quả' },
-                { name: 'Đường', quantity: 20, unit: 'gram' },
-            ]
-        },
-        {
-            id: 8,
-            name: 'Cà Phê Sữa Đá',
-            category: 'Đồ Uống',
-            price: '25.000đ',
-            status: 'active',
-            today: 20,
-            history: {
-                yesterday: 19,
-                avg7days: 21,
-                avg30days: 20,
-                avg90days: 19
-            },
-            ingredients: [
-                { name: 'Cà phê', quantity: 25, unit: 'gram' },
-                { name: 'Sữa đặc', quantity: 30, unit: 'ml' },
-            ]
-        },
-        {
-            id: 9,
-            name: 'Bánh Flan',
-            category: 'Món Tráng Miệng',
-            price: '25.000đ',
-            status: 'active',
-            today: 14,
-            history: {
-                yesterday: 13,
-                avg7days: 15,
-                avg30days: 14,
-                avg90days: 13
-            },
-            ingredients: [
-                { name: 'Trứng gà', quantity: 3, unit: 'quả' },
-                { name: 'Sữa tươi', quantity: 200, unit: 'ml' },
-                { name: 'Đường', quantity: 50, unit: 'gram' },
-            ]
-        },
-        {
-            id: 10,
-            name: 'Nem Rán',
-            category: 'Món Khai Vị',
-            price: '55.000đ',
-            status: 'active',
-            today: 11,
-            history: {
-                yesterday: 12,
-                avg7days: 13,
-                avg30days: 12,
-                avg90days: 11
-            },
-            ingredients: [
-                { name: 'Thịt lợn', quantity: 100, unit: 'gram' },
-                { name: 'Miến', quantity: 40, unit: 'gram' },
-                { name: 'Bánh đa nem', quantity: 10, unit: 'cái' },
-            ]
-        },
-    ];
+    console.log('Loaded menu items:', menuItems);
 
-    const categories = ['all', 'Món Chính', 'Món Khai Vị', 'Món Tráng Miệng', 'Đồ Uống'];
+    // ===== CALCULATE CATEGORY STATS =====
+    function calculateCategoryStats() {
+        const categories = {};
+
+        menuItems.forEach(item => {
+            const catName = item.courseType || 'Khác';
+            if (!categories[catName]) {
+                categories[catName] = {
+                    name: catName,
+                    total: 0,
+                    active: 0,
+                    inactive: 0,
+                    color: getCategoryColor(catName)
+                };
+            }
+
+            categories[catName].total++;
+            if (item.isAvailable) {
+                categories[catName].active++;
+            } else {
+                categories[catName].inactive++;
+            }
+        });
+
+        return Object.values(categories);
+    }
+
+    function getCategoryColor(categoryName) {
+        const colors = {
+            'Món chính': 'blue',
+            'Món khai vị': 'green',
+            'Món tráng miệng': 'purple',
+            'Đồ uống': 'orange',
+            'Món phụ': 'yellow'
+        };
+        return colors[categoryName] || 'gray';
+    }
+
+    const categoryStats = calculateCategoryStats();
+
+    // ===== TẠO DANH SÁCH CATEGORIES ĐỘNG =====
+    function getCategoriesList() {
+        const cats = new Set(['all']);
+        menuItems.forEach(item => {
+            if (item.courseType) {
+                cats.add(item.courseType);
+            }
+        });
+        return Array.from(cats);
+    }
+
+    const categories = getCategoriesList();
 
     const periods = [
         { value: 'yesterday', label: 'Hôm qua' },
@@ -1926,154 +1911,170 @@
         { value: '90days', label: '3 tháng gần đây' },
     ];
 
-    // ===== STATE MANAGEMENT =====
+    // ===== STATE MANAGEMENT (CHỈ KHAI BÁO 1 LẦN) =====
     let state = {
         searchTerm: '',
         selectedCategory: 'all',
         selectedPeriod: '7days',
         selectedPerformance: 'all',
         topPeriod: 'today',
-        selectedItem: null
+        selectedItem: null,
+        showAdsOnly: false  // ✅ THÊM FIELD MỚI
     };
 
     // ===== UTILITY FUNCTIONS =====
-
-    // Get performance of an item based on period
     function getPerformance(item, period) {
         let avgValue;
+        let comparison;
+
         switch (period) {
             case 'yesterday':
-                avgValue = item.history.yesterday;
+                avgValue = item.servedYesterday;
+                comparison = item.compareWithYesterday;
                 break;
             case '7days':
-                avgValue = item.history.avg7days;
+                avgValue = item.average7Days;
+                comparison = item.compareWith7Days;
                 break;
             case '30days':
-                avgValue = item.history.avg30days;
+                avgValue = item.average30Days;
+                comparison = item.compareWith30Days;
                 break;
             case '90days':
-                avgValue = item.history.avg90days;
+                avgValue = item.average90Days;
+                comparison = item.compareWith30Days;
                 break;
             default:
-                avgValue = item.history.avg7days;
+                avgValue = item.average7Days;
+                comparison = item.compareWith7Days;
         }
 
-        const difference = ((item.today - avgValue) / avgValue) * 100;
-
-        if (difference > 20) {
+        if (comparison > 20) {
             return {
                 status: 'hot',
                 label: 'Nhiều hơn',
-                color: 'text-green-600',
-                bgColor: 'bg-green-100',
-                percentage: `+${Math.round(difference)}%`
+                percentage: `+${Math.round(comparison)}%`
             };
-        } else if (difference < -20) {
+        } else if (comparison < -20) {
             return {
                 status: 'low',
                 label: 'Ít hơn',
-                color: 'text-red-600',
-                bgColor: 'bg-red-100',
-                percentage: `${Math.round(difference)}%`
+                percentage: `${Math.round(comparison)}%`
             };
         } else {
             return {
                 status: 'normal',
                 label: 'Bình thường',
-                color: 'text-blue-600',
-                bgColor: 'bg-blue-100',
-                percentage: `${difference > 0 ? '+' : ''}${Math.round(difference)}%`
+                percentage: `${comparison > 0 ? '+' : ''}${Math.round(comparison)}%`
             };
         }
     }
 
-    // Get filtered items based on current state
     function getFilteredItems() {
         return menuItems.filter(item => {
             const matchesSearch = item.name.toLowerCase().includes(state.searchTerm.toLowerCase());
-            const matchesCategory = state.selectedCategory === 'all' || item.category === state.selectedCategory;
+            const matchesCategory = state.selectedCategory === 'all' || item.courseType === state.selectedCategory;
             const performance = getPerformance(item, state.selectedPeriod);
             const matchesPerformance = state.selectedPerformance === 'all' || performance.status === state.selectedPerformance;
-            return matchesSearch && matchesCategory && matchesPerformance;
+
+            // ✅ THÊM FILTER MÓN QUẢNG CÁO
+            const matchesAds = !state.showAdsOnly || (item.isAds === true);
+
+            return matchesSearch && matchesCategory && matchesPerformance && matchesAds;
         });
     }
 
-    // Get top order value for an item based on period
+    function handleAdsFilter() {
+        state.showAdsOnly = !state.showAdsOnly;
+
+        const btn = document.getElementById('btnFilterAdsInline');
+
+        // ✅ CHỈ toggle class 'active', KHÔNG đổi text
+        if (state.showAdsOnly) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+
+        renderMenuItems();
+        updatePerformanceStats();
+    }
+
     function getTopOrderValue(item, period) {
         switch (period) {
             case 'today':
-                return item.today;
+                return item.servedToday;
             case 'yesterday':
-                return item.history.yesterday;
+                return item.servedYesterday;
             case '3days':
-                return Math.round((item.today + item.history.yesterday + item.history.avg7days) / 3);
+                return Math.round((item.servedToday + item.servedYesterday + item.average7Days) / 3);
             case '30days':
-                return item.history.avg30days;
+                return Math.round(item.average30Days);
             case '90days':
-                return item.history.avg90days;
+                return Math.round(item.average90Days);
             default:
-                return item.today;
+                return item.servedToday;
         }
     }
 
-    // Get performance icon SVG
     function getPerformanceIcon(status) {
         if (status === 'hot') {
             return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>`;
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>`;
         } else if (status === 'low') {
             return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-            </svg>`;
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                </svg>`;
         } else {
             return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>`;
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>`;
         }
     }
 
-    // ===== RENDER FUNCTIONS =====
+    function getCourseTypeDisplay(courseType) {
+        // Trả về nguyên gốc nếu đã là tiếng Việt
+        return courseType;
+    }
 
-    // Render category stats
+    // ===== RENDER FUNCTIONS =====
     function renderCategoryStats() {
         const container = document.getElementById('categoryStatsGrid');
         container.innerHTML = categoryStats.map(stat => `
-            <div class="category-stat-card">
-                <div class="category-stat-header">
-                    <h3 class="category-stat-title">${stat.name}</h3>
-                    <div class="category-stat-indicator ${stat.color}"></div>
-                </div>
-                <div class="category-stat-total">
-                    <span class="category-stat-number">${stat.total}</span>
-                    <span class="category-stat-unit">món</span>
-                </div>
-                <div class="category-stat-details">
-                    <div class="category-stat-row">
-                        <span class="category-stat-label">Đang phục vụ</span>
-                        <span class="category-stat-value active">${stat.active} món</span>
+                <div class="category-stat-card">
+                    <div class="category-stat-header">
+                        <h3 class="category-stat-title">${stat.name}</h3>
+                        <div class="category-stat-indicator ${stat.color}"></div>
                     </div>
-                    <div class="category-stat-row">
-                        <span class="category-stat-label">Không phục vụ</span>
-                        <span class="category-stat-value inactive">${stat.inactive} món</span>
+                    <div class="category-stat-total">
+                        <span class="category-stat-number">${stat.total}</span>
+                        <span class="category-stat-unit">món</span>
+                    </div>
+                    <div class="category-stat-details">
+                        <div class="category-stat-row">
+                            <span class="category-stat-label">Đang phục vụ</span>
+                            <span class="category-stat-value active">${stat.active} món</span>
+                        </div>
+                        <div class="category-stat-row">
+                            <span class="category-stat-label">Không phục vụ</span>
+                            <span class="category-stat-value inactive">${stat.inactive} món</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
     }
 
-    // Render category filter buttons
     function renderCategoryFilters() {
         const container = document.getElementById('categoryFilters');
         container.innerHTML = categories.map(cat => `
-            <button class="filter-btn ${state.selectedCategory === cat ? 'active' : ''}"
-                    onclick="handleCategoryFilter('${cat}')">
-                ${cat === 'all' ? 'Tất cả' : cat}
-            </button>
-        `).join('');
+                <button class="filter-btn ${state.selectedCategory === cat ? 'active' : ''}"
+                        onclick="handleCategoryFilter('${cat}')">
+                    ${cat === 'all' ? 'Tất cả' : cat}
+                </button>
+            `).join('');
     }
 
-    // Update performance stats
     function updatePerformanceStats() {
         const filteredItems = getFilteredItems();
         const hotCount = filteredItems.filter(item => getPerformance(item, state.selectedPeriod).status === 'hot').length;
@@ -2085,7 +2086,6 @@
         document.getElementById('lowCount').textContent = lowCount;
     }
 
-    // Render menu items list
     function renderMenuItems() {
         const container = document.getElementById('menuItemsList');
         const filteredItems = getFilteredItems();
@@ -2104,39 +2104,86 @@
 
         container.innerHTML = filteredItems.map(item => {
             const performance = getPerformance(item, state.selectedPeriod);
-            const avgValue = state.selectedPeriod === 'yesterday' ? item.history.yesterday :
-                state.selectedPeriod === '7days' ? item.history.avg7days :
-                    state.selectedPeriod === '30days' ? item.history.avg30days :
-                        item.history.avg90days;
+            let avgValue;
+            switch (state.selectedPeriod) {
+                case 'yesterday':
+                    avgValue = item.servedYesterday;
+                    break;
+                case '7days':
+                    avgValue = item.average7Days.toFixed(1);
+                    break;
+                case '30days':
+                    avgValue = item.average30Days.toFixed(1);
+                    break;
+                case '90days':
+                    avgValue = item.average90Days.toFixed(1);
+                    break;
+                default:
+                    avgValue = item.average7Days.toFixed(1);
+            }
+
+            const imageHtml = item.imageUrl
+                ? `<img src="${item.imageUrl}" alt="${item.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem;">`
+                : `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                   </svg>`;
+
+            // ✅ TẠO BADGES (HIỆU SUẤT + TRẠNG THÁI + ĐỀ XUẤT)
+            const performanceBadge = `
+                <span class="performance-badge ${performance.status}">
+                    ${getPerformanceIcon(performance.status)}
+                    ${performance.label}
+                </span>
+            `;
+
+            const availabilityBadge = item.isAvailable
+                ? `<span class="availability-status available">
+                        <span class="availability-status-dot"></span>
+                        Đang phục vụ
+                   </span>`
+                : `<span class="availability-status unavailable">
+                        <span class="availability-status-dot"></span>
+                        Tạm ngưng
+                   </span>`;
+
+            // ✅ THÊM BADGE MÓN ĐỀ XUẤT (CHỈ HIỂN THỊ NẾU isAds = true)
+            const adsBadge = item.isAds
+                ? `<span class="ads-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        Đang đề xuất
+                   </span>`
+                : '';
 
             return `
-                <div class="menu-item-card ${performance.status}" onclick="openModal(${item.id})">
+                <div class="menu-item-card ${performance.status}" onclick="openModal(${item.menuItemId})">
                     <div class="menu-item-content">
                         <div class="menu-item-image">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                            ${imageHtml}
                         </div>
                         <div class="menu-item-info">
                             <div class="menu-item-header">
                                 <h3 class="menu-item-name">${item.name}</h3>
-                                <span class="performance-badge ${performance.status}">
-                                    ${getPerformanceIcon(performance.status)}
-                                    ${performance.label}
-                                </span>
+                                <!-- ✅ ĐẶT TẤT CẢ BADGES Ở BÊN PHẢI -->
+                                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                    ${performanceBadge}
+                                    ${availabilityBadge}
+                                    ${adsBadge}
+                                </div>
                             </div>
                             <div class="menu-item-details">
                                 <div class="menu-item-detail-row">
                                     <span class="menu-item-detail-label">Loại:</span>
-                                    <span class="menu-item-detail-value">${item.category}</span>
+                                    <span class="menu-item-detail-value">${getCourseTypeDisplay(item.courseType)}</span>
                                 </div>
                                 <div class="menu-item-detail-row">
                                     <span class="menu-item-detail-label">Giá:</span>
-                                    <span class="menu-item-detail-value price">${item.price}</span>
+                                    <span class="menu-item-detail-value price">${item.priceFormatted}</span>
                                 </div>
                                 <div class="menu-item-detail-row">
                                     <span class="menu-item-detail-label">Hôm nay:</span>
-                                    <span class="menu-item-detail-value">${item.today} phần</span>
+                                    <span class="menu-item-detail-value">${item.servedToday} phần</span>
                                 </div>
                                 <div class="menu-item-detail-row">
                                     <span class="menu-item-detail-label">Trung bình:</span>
@@ -2148,9 +2195,10 @@
                                 </div>
                             </div>
                         </div>
-                        <button class="menu-item-edit-btn" onclick="handleEditMenu(event, ${item.id})" title="Chỉnh sửa món ăn">
+                        <button class="menu-item-edit-btn" onclick="event.stopPropagation(); openModal(${item.menuItemId})" title="Xem chi tiết món ăn">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                         </button>
                     </div>
@@ -2159,7 +2207,6 @@
         }).join('');
     }
 
-    // Render top ordered list
     function renderTopOrdered() {
         const topOrdered = [...menuItems]
             .map(item => ({ ...item, orderValue: getTopOrderValue(item, state.topPeriod) }))
@@ -2168,32 +2215,31 @@
 
         const container = document.getElementById('topOrderedList');
         container.innerHTML = topOrdered.map((item, index) => `
-            <div class="top-list-item" onclick="openModal(${item.id})">
-                <div class="top-list-item-content">
-                    <div class="top-list-rank">${index + 1}</div>
-                    <div class="top-list-item-info">
-                        <p class="top-list-item-name">${item.name}</p>
-                        <div class="top-list-item-details">
-                            <div class="top-list-detail-row">
-                                <span class="top-list-detail-label">Loại:</span>
-                                <span class="top-list-detail-value">${item.category}</span>
-                            </div>
-                            <div class="top-list-detail-row">
-                                <span class="top-list-detail-label">Giá:</span>
-                                <span class="top-list-detail-value price">${item.price}</span>
-                            </div>
-                            <div class="top-list-detail-row" style="grid-column: span 2;">
-                                <span class="top-list-detail-label">Số lượng:</span>
-                                <span class="top-list-detail-value quantity">${item.orderValue} phần</span>
+                <div class="top-list-item" onclick="openModal(${item.menuItemId})">
+                    <div class="top-list-item-content">
+                        <div class="top-list-rank">${index + 1}</div>
+                        <div class="top-list-item-info">
+                            <p class="top-list-item-name">${item.name}</p>
+                            <div class="top-list-item-details">
+                                <div class="top-list-detail-row">
+                                    <span class="top-list-detail-label">Loại:</span>
+                                    <span class="top-list-detail-value">${getCourseTypeDisplay(item.courseType)}</span>
+                                </div>
+                                <div class="top-list-detail-row">
+                                    <span class="top-list-detail-label">Giá:</span>
+                                    <span class="top-list-detail-value price">${item.priceFormatted}</span>
+                                </div>
+                                <div class="top-list-detail-row" style="grid-column: span 2;">
+                                    <span class="top-list-detail-label">Số lượng:</span>
+                                    <span class="top-list-detail-value quantity">${item.orderValue} phần</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
     }
 
-    // Render least ordered list
     function renderLeastOrdered() {
         const leastOrdered = [...menuItems]
             .map(item => ({ ...item, orderValue: getTopOrderValue(item, state.topPeriod) }))
@@ -2202,41 +2248,38 @@
 
         const container = document.getElementById('leastOrderedList');
         container.innerHTML = leastOrdered.map((item, index) => `
-            <div class="top-list-item" onclick="openModal(${item.id})">
-                <div class="top-list-item-content">
-                    <div class="top-list-rank">${index + 1}</div>
-                    <div class="top-list-item-info">
-                        <p class="top-list-item-name">${item.name}</p>
-                        <div class="top-list-item-details">
-                            <div class="top-list-detail-row">
-                                <span class="top-list-detail-label">Loại:</span>
-                                <span class="top-list-detail-value">${item.category}</span>
-                            </div>
-                            <div class="top-list-detail-row">
-                                <span class="top-list-detail-label">Giá:</span>
-                                <span class="top-list-detail-value price">${item.price}</span>
-                            </div>
-                            <div class="top-list-detail-row" style="grid-column: span 2;">
-                                <span class="top-list-detail-label">Số lượng:</span>
-                                <span class="top-list-detail-value quantity">${item.orderValue} phần</span>
+                <div class="top-list-item" onclick="openModal(${item.menuItemId})">
+                    <div class="top-list-item-content">
+                        <div class="top-list-rank">${index + 1}</div>
+                        <div class="top-list-item-info">
+                            <p class="top-list-item-name">${item.name}</p>
+                            <div class="top-list-item-details">
+                                <div class="top-list-detail-row">
+                                    <span class="top-list-detail-label">Loại:</span>
+                                    <span class="top-list-detail-value">${getCourseTypeDisplay(item.courseType)}</span>
+                                </div>
+                                <div class="top-list-detail-row">
+                                    <span class="top-list-detail-label">Giá:</span>
+                                    <span class="top-list-detail-value price">${item.priceFormatted}</span>
+                                </div>
+                                <div class="top-list-detail-row" style="grid-column: span 2;">
+                                    <span class="top-list-detail-label">Số lượng:</span>
+                                    <span class="top-list-detail-value quantity">${item.orderValue} phần</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `).join('');
     }
 
     // ===== EVENT HANDLERS =====
-
-    // Handle search input
     function handleSearch() {
         state.searchTerm = document.getElementById('searchInput').value;
         renderMenuItems();
         updatePerformanceStats();
     }
 
-    // Handle category filter
     function handleCategoryFilter(category) {
         state.selectedCategory = category;
         renderCategoryFilters();
@@ -2244,170 +2287,199 @@
         updatePerformanceStats();
     }
 
-    // Handle performance filter
     function handlePerformanceFilter(performance) {
         state.selectedPerformance = performance;
-
-        // Update button active states
         document.querySelectorAll('.performance-filter-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         document.querySelector(`.performance-filter-btn[data-filter="${performance}"]`).classList.add('active');
-
         renderMenuItems();
         updatePerformanceStats();
     }
 
-    // Handle period change
     function handlePeriodChange() {
         state.selectedPeriod = document.getElementById('periodSelector').value;
         renderMenuItems();
         updatePerformanceStats();
     }
 
-    // Handle top period change
     function handleTopPeriodChange() {
         state.topPeriod = document.getElementById('topPeriodSelector').value;
-        // Sync both selectors
         document.getElementById('leastPeriodSelector').value = state.topPeriod;
         renderTopOrdered();
         renderLeastOrdered();
     }
 
-    // Handle add menu
-    function handleAddMenu() {
-        alert('Chức năng thêm món mới sẽ được triển khai sau!');
-    }
-
-    // Handle edit menu
-    function handleEditMenu(event, itemId) {
-        event.stopPropagation();
-        const item = menuItems.find(i => i.id === itemId);
-        alert(`Chỉnh sửa món: ${item.name}`);
+    function handleEditMenuFromModal() {
+        if (!state.selectedItem) {
+            alert('Không có món ăn nào được chọn');
+            return;
+        }
+        document.getElementById('editMenuId').value = state.selectedItem.menuItemId;
+        document.getElementById('editMenuForm').submit();
     }
 
     // ===== MODAL FUNCTIONS =====
-
-    // Open modal
     function openModal(itemId) {
-        const item = menuItems.find(i => i.id === itemId);
+        const item = menuItems.find(i => i.menuItemId === itemId);
         if (!item) return;
 
         state.selectedItem = item;
 
-        // Populate modal content
-        document.getElementById('modalItemName').textContent = item.name;
-        document.getElementById('modalItemCategory').textContent = item.category;
-        document.getElementById('modalItemPrice').textContent = item.price;
-
-        // Render ingredients
-        const ingredientsList = document.getElementById('modalIngredientsList');
-        ingredientsList.innerHTML = item.ingredients.map(ing => `
-            <div class="ingredient-item">
-                <div class="ingredient-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                </div>
-                <div class="ingredient-details">
-                    <div class="ingredient-detail">
-                        <span class="ingredient-detail-label">Tên nguyên liệu</span>
-                        <span class="ingredient-detail-value">${ing.name}</span>
-                    </div>
-                    <div class="ingredient-detail">
-                        <span class="ingredient-detail-label">Số lượng</span>
-                        <span class="ingredient-detail-value">${ing.quantity}</span>
-                    </div>
-                    <div class="ingredient-detail">
-                        <span class="ingredient-detail-label">Đơn vị</span>
-                        <span class="ingredient-detail-value">${ing.unit}</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-
-        // Render history
-        const historyList = document.getElementById('modalHistoryList');
-        historyList.innerHTML = `
-            <div class="history-item today">
-                <span class="history-label">Hôm nay</span>
-                <span class="history-value">${item.today} phần</span>
-            </div>
-            <div class="history-item">
-                <span class="history-label">Hôm qua</span>
-                <span class="history-value">${item.history.yesterday} phần</span>
-            </div>
-            <div class="history-item">
-                <span class="history-label">Trung bình 7 ngày</span>
-                <span class="history-value">${item.history.avg7days} phần</span>
-            </div>
-            <div class="history-item">
-                <span class="history-label">Trung bình 1 tháng</span>
-                <span class="history-value">${item.history.avg30days} phần</span>
-            </div>
-            <div class="history-item">
-                <span class="history-label">Trung bình 3 tháng</span>
-                <span class="history-value">${item.history.avg90days} phần</span>
-            </div>
-        `;
-
-        // Render performance
-        const performanceList = document.getElementById('modalPerformanceList');
-        performanceList.innerHTML = periods.map(period => {
-            const perf = getPerformance(item, period.value);
-            return `
-                <div class="performance-item ${perf.status}">
-                    <div class="performance-item-left">
-                        ${getPerformanceIcon(perf.status)}
-                        <span class="performance-item-label">vs ${period.label}</span>
-                    </div>
-                    <span class="performance-percentage">${perf.percentage}</span>
-                        </div>
-            `;
-        }).join('');
-
-        // Render strategy
-        const currentPerf = getPerformance(item, state.selectedPeriod);
-        const strategyBox = document.getElementById('modalStrategyBox');
-
-        if (currentPerf.status === 'hot') {
-            strategyBox.innerHTML = `
-                <div class="strategy-box hot">
-                    <p>✓ Món đang bán rất tốt! Đảm bảo đủ nguyên liệu và có thể tăng giá nhẹ để tối ưu lợi nhuận.</p>
-                </div>
-            `;
-        } else if (currentPerf.status === 'low') {
-            strategyBox.innerHTML = `
-                <div class="strategy-box low">
-                    <p>⚠ Món bán chậm hơn bình thường. Xem xét giảm giá, cải tiến món hoặc tăng cường marketing.</p>
-                </div>
+        // ✅ CẬP NHẬT HIỂN THỊ HÌNH ẢNH TRONG MODAL
+        const modalImageContainer = document.querySelector('.modal-item-image');
+        if (item.imageUrl && item.imageUrl.trim() !== '') {
+            // Nếu có ảnh, hiển thị ảnh
+            modalImageContainer.innerHTML = `
+                <img src="${item.imageUrl}"
+                     alt="${item.name}"
+                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem;"
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='<svg xmlns=\\'http://www.w3.org/2000/svg\\' fill=\\'none\\' viewBox=\\'0 0 24 24\\' stroke=\\'currentColor\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'2\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\' /></svg>';">
             `;
         } else {
-            strategyBox.innerHTML = `
-                <div class="strategy-box normal">
-                    <p>ⓘ Món đang bán ổn định. Duy trì chất lượng và theo dõi xu hướng.</p>
-                </div>
+            // Nếu không có ảnh, hiển thị icon placeholder
+            modalImageContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
             `;
         }
 
-        // Show modal
+        document.getElementById('modalItemName').textContent = item.name;
+        document.getElementById('modalItemCategory').textContent = getCourseTypeDisplay(item.courseType);
+        document.getElementById('modalItemPrice').textContent = item.priceFormatted;
+
+        // ✅ Tạo badge trạng thái phục vụ
+        const availabilityBadge = item.isAvailable
+            ? `<span class="availability-status available">
+            <span class="availability-status-dot"></span>
+            Đang phục vụ
+       </span>`
+            : `<span class="availability-status unavailable">
+            <span class="availability-status-dot"></span>
+            Tạm ngưng
+       </span>`;
+
+        // ✅ Tạo badge đang đề xuất (nếu có)
+        const adsBadgeModal = item.isAds
+            ? `<span class="ads-badge" style="margin-left: 0.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            Đang đề xuất
+       </span>`
+            : '';
+
+        // ✅ Gộp cả 2 badges trong 1 div flex để nằm trên 1 hàng
+        const statusHtml = `
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            ${availabilityBadge}
+            ${adsBadgeModal}
+        </div>
+    `;
+        document.getElementById('modalItemStatus').innerHTML = statusHtml;
+
+        const ingredientsList = document.getElementById('modalIngredientsList');
+        if (item.recipes && item.recipes.length > 0) {
+            ingredientsList.innerHTML = item.recipes.map(recipe => `
+                    <div class="ingredient-item">
+                        <div class="ingredient-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                        </div>
+                        <div class="ingredient-details">
+                            <div class="ingredient-detail">
+                                <span class="ingredient-detail-label">Tên nguyên liệu</span>
+                                <span class="ingredient-detail-value">${recipe.ingredient.name}</span>
+                            </div>
+                            <div class="ingredient-detail">
+                                <span class="ingredient-detail-label">Số lượng cần</span>
+                                <span class="ingredient-detail-value">${recipe.quantityNeeded}</span>
+                            </div>
+                            <div class="ingredient-detail">
+                                <span class="ingredient-detail-label">Đơn vị</span>
+                                <span class="ingredient-detail-value">${recipe.ingredient.unit.unitName}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+        } else {
+            ingredientsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;"><p>Món này chưa có công thức nguyên liệu</p></div>';
+        }
+
+        const historyList = document.getElementById('modalHistoryList');
+        historyList.innerHTML = `
+                <div class="history-item today">
+                    <span class="history-label">Hôm nay</span>
+                    <span class="history-value">${item.servedToday} phần</span>
+                </div>
+                <div class="history-item">
+                    <span class="history-label">Hôm qua</span>
+                    <span class="history-value">${item.servedYesterday} phần</span>
+                </div>
+                <div class="history-item">
+                    <span class="history-label">Trung bình 7 ngày</span>
+                    <span class="history-value">${item.average7Days.toFixed(1)} phần</span>
+                </div>
+                <div class="history-item">
+                    <span class="history-label">Trung bình 1 tháng</span>
+                    <span class="history-value">${item.average30Days.toFixed(1)} phần</span>
+                </div>
+                <div class="history-item">
+                    <span class="history-label">Trung bình 3 tháng</span>
+                    <span class="history-value">${item.average90Days.toFixed(1)} phần</span>
+                </div>
+            `;
+
+        const performanceList = document.getElementById('modalPerformanceList');
+        performanceList.innerHTML = `
+                <div class="performance-item ${item.compareWithYesterday > 20 ? 'hot' : item.compareWithYesterday < -20 ? 'low' : 'normal'}">
+                    <div class="performance-item-left">
+                        ${getPerformanceIcon(item.compareWithYesterday > 20 ? 'hot' : item.compareWithYesterday < -20 ? 'low' : 'normal')}
+                        <span class="performance-item-label">vs Hôm qua</span>
+                    </div>
+                    <span class="performance-percentage">${item.compareYesterdayFormatted}</span>
+                </div>
+                <div class="performance-item ${item.compareWith7Days > 20 ? 'hot' : item.compareWith7Days < -20 ? 'low' : 'normal'}">
+                    <div class="performance-item-left">
+                        ${getPerformanceIcon(item.compareWith7Days > 20 ? 'hot' : item.compareWith7Days < -20 ? 'low' : 'normal')}
+                        <span class="performance-item-label">vs 7 ngày</span>
+                    </div>
+                    <span class="performance-percentage">${item.compare7DaysFormatted}</span>
+                </div>
+                <div class="performance-item ${item.compareWith30Days > 20 ? 'hot' : item.compareWith30Days < -20 ? 'low' : 'normal'}">
+                    <div class="performance-item-left">
+                        ${getPerformanceIcon(item.compareWith30Days > 20 ? 'hot' : item.compareWith30Days < -20 ? 'low' : 'normal')}
+                        <span class="performance-item-label">vs 30 ngày</span>
+                    </div>
+                    <span class="performance-percentage">${(item.compareWith30Days > 0 ? '+' : '') + item.compareWith30Days.toFixed(2)}%</span>
+                </div>
+            `;
+
+        const currentPerf = getPerformance(item, state.selectedPeriod);
+        const strategyBox = document.getElementById('modalStrategyBox');
+        if (currentPerf.status === 'hot') {
+            strategyBox.innerHTML = '<div class="strategy-box hot"><p>✓ Món đang bán rất tốt! Đảm bảo đủ nguyên liệu và có thể tăng giá nhẹ để tối ưu lợi nhuận.</p></div>';
+        } else if (currentPerf.status === 'low') {
+            strategyBox.innerHTML = '<div class="strategy-box low"><p>⚠ Món bán chậm hơn bình thường. Xem xét giảm giá, cải tiến món hoặc tăng cường marketing.</p></div>';
+        } else {
+            strategyBox.innerHTML = '<div class="strategy-box normal"><p>ⓘ Món đang bán ổn định. Duy trì chất lượng và theo dõi xu hướng.</p></div>';
+        }
+
         document.getElementById('menuModal').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     }
 
-    // Close modal
     function closeModal(event) {
-        // If event is passed and target is not the overlay, don't close
         if (event && event.target.classList.contains('menu-modal-content')) {
             return;
         }
-
         document.getElementById('menuModal').classList.add('hidden');
         document.body.style.overflow = 'auto';
         state.selectedItem = null;
     }
 
-    // Handle escape key to close modal
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             closeModal();
@@ -2416,364 +2488,21 @@
 
     // ===== INITIALIZATION =====
     function init() {
-        // Render initial data
         renderCategoryStats();
         renderCategoryFilters();
         renderMenuItems();
         updatePerformanceStats();
         renderTopOrdered();
         renderLeastOrdered();
-
-        // Sync period selectors
         document.getElementById('topPeriodSelector').value = state.topPeriod;
         document.getElementById('leastPeriodSelector').value = state.topPeriod;
     }
 
-    // Initialize when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
-
-    // ===== ADDITIONAL FEATURES =====
-
-    // Export data to CSV (bonus feature)
-    function exportToCSV() {
-        const filteredItems = getFilteredItems();
-        const csvContent = [
-            ['Tên món', 'Loại', 'Giá', 'Hôm nay', 'Trung bình', 'Hiệu suất'].join(','),
-            ...filteredItems.map(item => {
-                const performance = getPerformance(item, state.selectedPeriod);
-                const avgValue = state.selectedPeriod === 'yesterday' ? item.history.yesterday :
-                    state.selectedPeriod === '7days' ? item.history.avg7days :
-                        state.selectedPeriod === '30days' ? item.history.avg30days :
-                            item.history.avg90days;
-
-                return [
-                    `"${item.name}"`,
-                    `"${item.category}"`,
-                    `"${item.price}"`,
-                    item.today,
-                    avgValue,
-                    `"${performance.label} (${performance.percentage})"`
-                ].join(',');
-            })
-        ].join('\n');
-
-        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-
-        link.setAttribute('href', url);
-        link.setAttribute('download', `menu_report_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    // Print report (bonus feature)
-    function printReport() {
-        window.print();
-    }
-
-    // Refresh data (for future API integration)
-    function refreshData() {
-        // Show loading state
-        const container = document.getElementById('menuItemsList');
-        container.innerHTML = `
-            <div class="loading-spinner">
-                <div class="spinner"></div>
-            </div>
-        `;
-
-        // Simulate API call
-        setTimeout(() => {
-            renderMenuItems();
-            updatePerformanceStats();
-            renderTopOrdered();
-            renderLeastOrdered();
-
-            // Show success message (using toastr if available)
-            if (typeof toastr !== 'undefined') {
-                toastr.success('Dữ liệu đã được làm mới!');
-            } else {
-                alert('Dữ liệu đã được làm mới!');
-            }
-        }, 1000);
-    }
-
-    // Filter by date range (bonus feature for future implementation)
-    function filterByDateRange(startDate, endDate) {
-        console.log('Filter by date range:', startDate, endDate);
-        // This will be implemented when connecting to real API
-    }
-
-    // Sort items (bonus feature)
-    function sortItems(sortBy, order = 'desc') {
-        const filteredItems = getFilteredItems();
-
-        const sortedItems = [...filteredItems].sort((a, b) => {
-            let aValue, bValue;
-
-            switch (sortBy) {
-                case 'name':
-                    aValue = a.name.toLowerCase();
-                    bValue = b.name.toLowerCase();
-                    return order === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-
-                case 'price':
-                    aValue = parseInt(a.price.replace(/\D/g, ''));
-                    bValue = parseInt(b.price.replace(/\D/g, ''));
-                    return order === 'asc' ? aValue - bValue : bValue - aValue;
-
-                case 'today':
-                    return order === 'asc' ? a.today - b.today : b.today - a.today;
-
-                case 'performance':
-                    const perfA = getPerformance(a, state.selectedPeriod);
-                    const perfB = getPerformance(b, state.selectedPeriod);
-                    const valueA = parseFloat(perfA.percentage);
-                    const valueB = parseFloat(perfB.percentage);
-                    return order === 'asc' ? valueA - valueB : valueB - valueA;
-
-                default:
-                    return 0;
-            }
-        });
-
-        // Re-render with sorted items
-        const container = document.getElementById('menuItemsList');
-        container.innerHTML = sortedItems.map(item => {
-            const performance = getPerformance(item, state.selectedPeriod);
-            const avgValue = state.selectedPeriod === 'yesterday' ? item.history.yesterday :
-                state.selectedPeriod === '7days' ? item.history.avg7days :
-                    state.selectedPeriod === '30days' ? item.history.avg30days :
-                        item.history.avg90days;
-
-            return `
-                <div class="menu-item-card ${performance.status}" onclick="openModal(${item.id})">
-                    <div class="menu-item-content">
-                        <div class="menu-item-image">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div class="menu-item-info">
-                            <div class="menu-item-header">
-                                <h3 class="menu-item-name">${item.name}</h3>
-                                <span class="performance-badge ${performance.status}">
-                                    ${getPerformanceIcon(performance.status)}
-                                    ${performance.label}
-                                </span>
-                            </div>
-                            <div class="menu-item-details">
-                                <div class="menu-item-detail-row">
-                                    <span class="menu-item-detail-label">Loại:</span>
-                                    <span class="menu-item-detail-value">${item.category}</span>
-                                </div>
-                                <div class="menu-item-detail-row">
-                                    <span class="menu-item-detail-label">Giá:</span>
-                                    <span class="menu-item-detail-value price">${item.price}</span>
-                                </div>
-                                <div class="menu-item-detail-row">
-                                    <span class="menu-item-detail-label">Hôm nay:</span>
-                                    <span class="menu-item-detail-value">${item.today} phần</span>
-                                </div>
-                                <div class="menu-item-detail-row">
-                                    <span class="menu-item-detail-label">Trung bình:</span>
-                                    <span class="menu-item-detail-value">${avgValue} phần</span>
-                                </div>
-                                <div class="menu-item-detail-row" style="grid-column: span 2;">
-                                    <span class="menu-item-detail-label">So sánh:</span>
-                                    <span class="menu-item-detail-value comparison ${performance.status}">${performance.percentage}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="menu-item-edit-btn" onclick="handleEditMenu(event, ${item.id})" title="Chỉnh sửa món ăn">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // ===== API INTEGRATION HELPERS (for future use) =====
-
-    // Fetch menu data from API
-    async function fetchMenuData() {
-        try {
-            // Example API call structure
-            // const response = await fetch('/api/menu/dashboard');
-            // const data = await response.json();
-            // return data;
-
-            // For now, return mock data
-            return {
-                categoryStats: categoryStats,
-                menuItems: menuItems
-            };
-        } catch (error) {
-            console.error('Error fetching menu data:', error);
-            if (typeof toastr !== 'undefined') {
-                toastr.error('Không thể tải dữ liệu menu!');
-            }
-            return null;
-        }
-    }
-
-    // Update menu item via API
-    async function updateMenuItem(itemId, updatedData) {
-        try {
-            // Example API call structure
-            // const response = await fetch(`/api/menu/${itemId}`, {
-            //     method: 'PUT',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify(updatedData)
-            // });
-            // const result = await response.json();
-
-            console.log('Update item:', itemId, updatedData);
-
-            if (typeof toastr !== 'undefined') {
-                toastr.success('Cập nhật món ăn thành công!');
-            }
-
-            // Refresh data after update
-            refreshData();
-
-            return true;
-        } catch (error) {
-            console.error('Error updating menu item:', error);
-            if (typeof toastr !== 'undefined') {
-                toastr.error('Không thể cập nhật món ăn!');
-            }
-            return false;
-        }
-    }
-
-    // Delete menu item via API
-    async function deleteMenuItem(itemId) {
-        if (!confirm('Bạn có chắc chắn muốn xóa món ăn này?')) {
-            return false;
-        }
-
-        try {
-            // Example API call structure
-            // const response = await fetch(`/api/menu/${itemId}`, {
-            //     method: 'DELETE'
-            // });
-
-            console.log('Delete item:', itemId);
-
-            if (typeof toastr !== 'undefined') {
-                toastr.success('Xóa món ăn thành công!');
-            }
-
-            // Refresh data after delete
-            refreshData();
-
-            return true;
-        } catch (error) {
-            console.error('Error deleting menu item:', error);
-            if (typeof toastr !== 'undefined') {
-                toastr.error('Không thể xóa món ăn!');
-            }
-            return false;
-        }
-    }
-
-    // Add new menu item via API
-    async function addMenuItem(newItemData) {
-        try {
-            // Example API call structure
-            // const response = await fetch('/api/menu', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify(newItemData)
-            // });
-            // const result = await response.json();
-
-            console.log('Add new item:', newItemData);
-
-            if (typeof toastr !== 'undefined') {
-                toastr.success('Thêm món ăn mới thành công!');
-            }
-
-            // Refresh data after add
-            refreshData();
-
-            return true;
-        } catch (error) {
-            console.error('Error adding menu item:', error);
-            if (typeof toastr !== 'undefined') {
-                toastr.error('Không thể thêm món ăn mới!');
-            }
-            return false;
-        }
-    }
-
-    // ===== UTILITY FUNCTIONS FOR DEBUGGING =====
-
-    // Log current state (for debugging)
-    function logCurrentState() {
-        console.log('Current State:', state);
-        console.log('Filtered Items:', getFilteredItems());
-    }
-
-    // Get statistics summary
-    function getStatsSummary() {
-        const filteredItems = getFilteredItems();
-        const totalOrders = filteredItems.reduce((sum, item) => sum + item.today, 0);
-        const avgOrders = totalOrders / filteredItems.length;
-
-        const performanceBreakdown = {
-            hot: filteredItems.filter(item => getPerformance(item, state.selectedPeriod).status === 'hot').length,
-            normal: filteredItems.filter(item => getPerformance(item, state.selectedPeriod).status === 'normal').length,
-            low: filteredItems.filter(item => getPerformance(item, state.selectedPeriod).status === 'low').length,
-        };
-
-        return {
-            totalItems: filteredItems.length,
-            totalOrders: totalOrders,
-            avgOrders: avgOrders.toFixed(1),
-            performanceBreakdown: performanceBreakdown
-        };
-    }
-
-    // ===== EXPORT FUNCTIONS FOR GLOBAL ACCESS =====
-    window.MenuDashboard = {
-        init,
-        handleSearch,
-        handleCategoryFilter,
-        handlePerformanceFilter,
-        handlePeriodChange,
-        handleTopPeriodChange,
-        handleAddMenu,
-        handleEditMenu,
-        openModal,
-        closeModal,
-        exportToCSV,
-        printReport,
-        refreshData,
-        sortItems,
-        getStatsSummary,
-        logCurrentState,
-        // API functions
-        fetchMenuData,
-        updateMenuItem,
-        deleteMenuItem,
-        addMenuItem
-    };
 
     console.log('Menu Dashboard initialized successfully!');
 </script>

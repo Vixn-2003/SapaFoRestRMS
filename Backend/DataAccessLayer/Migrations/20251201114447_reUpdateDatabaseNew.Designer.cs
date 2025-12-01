@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    [Migration("20251130144537_UpdateDbVer01")]
-    partial class UpdateDbVer01
+    [Migration("20251201114447_reUpdateDatabaseNew")]
+    partial class reUpdateDatabaseNew
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -859,6 +859,11 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool?>("IsAds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool?>("IsAvailable")
                         .ValueGeneratedOnAdd()
