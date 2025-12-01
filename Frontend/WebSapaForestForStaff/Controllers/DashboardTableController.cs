@@ -73,47 +73,50 @@ namespace WebSapaForestForStaff.Controllers
             return View(dashboardData);
         }
 
-        // ⭐️⭐️ BẮT ĐẦU ACTION MỚI CHO DANH SÁCH ĐẶT BÀN ⭐️⭐️
 
         // Action này sẽ xử lý URL: /DashboardTable/ListOrder
         public async Task<IActionResult> ListOrder(
-            string? searchTerm,
-            string? status,
-            int page = 1)
+     string? searchTerm,
+     string? status,
+     DateTime? filterDate, 
+     string? filterSlot,   
+     int page = 1)
         {
             var httpClient = _httpClientFactory.CreateClient("BackendApi");
-            int pageSize = 10; // Đặt pageSize cho trang này
+            int pageSize = 10;
 
-            // --- Xây dựng URL động cho API Reservations ---
+            // --- Xây dựng URL động ---
             var queryParams = new Dictionary<string, string>();
+
             if (!string.IsNullOrEmpty(searchTerm)) queryParams.Add("searchTerm", searchTerm);
+
+            // Logic Status
             if (!string.IsNullOrEmpty(status)) queryParams.Add("status", status);
-            else queryParams.Add("status", "all"); // Luôn gửi "all" nếu không chọn
+            else queryParams.Add("status", "all");
+
+            // ⭐️ THÊM THAM SỐ NGÀY & SLOT VÀO URL ⭐️
+            if (filterDate.HasValue)
+                queryParams.Add("reservationDate", filterDate.Value.ToString("yyyy-MM-dd")); 
+
+            if (!string.IsNullOrEmpty(filterSlot))
+                queryParams.Add("timeSlot", filterSlot); // Tên param phải khớp với API Backend
 
             queryParams.Add("pageNumber", page.ToString());
             queryParams.Add("pageSize", pageSize.ToString());
 
             var queryString = string.Join("&", queryParams.Select(kv => $"{kv.Key}={Uri.EscapeDataString(kv.Value)}"));
-            var apiUrl = $"https://localhost:7096/api/DashboardTable?{queryString}"; // ⭐️ Dùng API Reservations
+            var apiUrl = $"https://localhost:7096/api/DashboardTable?{queryString}";
 
             var viewModel = new ReservationListViewModel();
 
             try
             {
                 var response = await httpClient.GetAsync(apiUrl);
-
                 if (response.IsSuccessStatusCode)
                 {
-                    // Tùy chọn để đọc JSON (giống hệt code của bạn)
-                    var options = new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    };
-
-                    // 1. Đọc Body (chứa List<ReservationListDto>)
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                     viewModel.Reservations = await response.Content.ReadFromJsonAsync<List<ReservationListDto>>(options);
 
-                    // 2. Đọc Header "X-Pagination"
                     if (response.Headers.TryGetValues("X-Pagination", out var headerValues))
                     {
                         var paginationJson = headerValues.FirstOrDefault();
@@ -125,28 +128,26 @@ namespace WebSapaForestForStaff.Controllers
                 }
                 else
                 {
-                    // Xử lý lỗi nếu API trả về 500, 404...
                     viewModel.Reservations = new List<ReservationListDto>();
-                    // Bạn có thể thêm TempData
                     TempData["ErrorMessage"] = "Không thể tải dữ liệu từ API.";
                 }
             }
             catch (Exception ex)
             {
-                // Xử lý lỗi (API không chạy, v.v.)
                 TempData["ErrorMessage"] = $"Lỗi kết nối: {ex.Message}";
             }
 
-            // Gửi các giá trị filter về View để giữ
+            // Gửi lại View để fill vào input
             ViewData["CurrentSearch"] = searchTerm;
             ViewData["CurrentStatus"] = status ?? "all";
+            ViewData["CurrentDate"] = filterDate?.ToString("yyyy-MM-dd"); // ✨ Để fill vào input date
+            ViewData["CurrentSlot"] = filterSlot; // ✨ Để fill vào dropdown
             ViewData["CurrentPage"] = page;
 
-            return View(viewModel); // ⭐️ Trả về View() với Model
+            return View(viewModel);
         }
 
         // Action này sẽ nhận 'id' (chính là tableId) từ link ở Bước 1
-        // Sửa lại Action OrderDetail
         public async Task<IActionResult> OrderDetail(int id, int? categoryId, string? searchString)
         {
             var httpClient = _httpClientFactory.CreateClient("BackendApi");
@@ -168,7 +169,6 @@ namespace WebSapaForestForStaff.Controllers
             string queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
 
             // 2. Ghép vào URL API (Lưu ý: Đảm bảo đúng đường dẫn API của bạn)
-            // API của bạn có dạng: .../GetStaffOrder/{id}?categoryId=1&searchString=abc
             var apiUrl = $"https://localhost:7096/api/DashboardTable/MenuOrder/{id}{queryString}";
 
             StaffOrderScreenDto model = new StaffOrderScreenDto();
@@ -222,5 +222,10 @@ namespace WebSapaForestForStaff.Controllers
 
             return View(model);
         }
+
+
+
+
+
     }
 }

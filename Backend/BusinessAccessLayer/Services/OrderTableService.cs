@@ -1,9 +1,11 @@
 ﻿using BusinessAccessLayer.DTOs;
+using BusinessAccessLayer.Hubs;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using Google;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Configuration;
@@ -17,15 +19,19 @@ namespace BusinessAccessLayer.Services
         private readonly IConfiguration _config; //  KHAI BÁO _config
         private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
         private readonly IInventoryIngredientService _inventoryService;
+        private readonly IHubContext<RestaurantHub> _hubContext;
         public OrderTableService(
              IOrderTableRepository orderTableRepository,
              IConfiguration config, SapaFoRestRmsContext context,
-             IInventoryIngredientService inventoryService)
+             IInventoryIngredientService inventoryService,
+        
+             IHubContext<RestaurantHub> hubContext)
         {
             _orderTableRepository = orderTableRepository;
             _config = config;
             _context = context;
             _inventoryService = inventoryService;
+            _hubContext = hubContext;
         }
 
         public async Task<IEnumerable<TableOrderDto>> GetTablesByReservationStatusAsync(string status)
@@ -249,7 +255,8 @@ namespace BusinessAccessLayer.Services
                     Quantity = od.Quantity,
                     Status = od.Status,
                     CreatedAt = od.CreatedAt,
-                    Notes = od.Notes
+                    Notes = od.Notes,
+                    Price = od.UnitPrice,
                 })
                 .OrderByDescending(od => od.CreatedAt)
                 .ToList();
@@ -422,7 +429,7 @@ namespace BusinessAccessLayer.Services
                 // Vì CustomerId là 'int', chúng ta gán thẳng
                 CustomerId = reservation.CustomerId,
 
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 OrderType = "Tại bàn",
                 Status = "Pending",
                 TotalAmount = 0,
@@ -440,8 +447,8 @@ namespace BusinessAccessLayer.Services
                         ComboId = null,
                         Quantity = cartItem.Quantity,
                         UnitPrice = price,
-                        Status = "Đã gửi",
-                        CreatedAt = DateTime.UtcNow,
+                        Status = "Pending",
+                        CreatedAt = DateTime.Now,
                         Notes = cartItem.Notes,
                     });
                     newOrder.TotalAmount += (price * cartItem.Quantity);
@@ -459,7 +466,7 @@ namespace BusinessAccessLayer.Services
                         ComboId = cartCombo.ComboId,
                         Quantity = cartCombo.Quantity,
                         UnitPrice = price,
-                        Status = "Đã gửi",
+                        Status = "Pending",
                         CreatedAt = DateTime.UtcNow,
                         Notes = cartCombo.Notes,
                     });
@@ -528,9 +535,6 @@ namespace BusinessAccessLayer.Services
             return result; // Trả về DTO
         }
 
-
-        // (Trong file BusinessAccessLayer/Services/OrderTableService.cs)
-
         public async Task<bool> CancelOrderItemAsync(int orderDetailId)
         {
             var item = await _context.OrderDetails
@@ -543,7 +547,7 @@ namespace BusinessAccessLayer.Services
             }
 
             // 1. Kiểm tra trạng thái:
-            if (item.Status != "Đã gửi")
+            if (item.Status != "Pending")
             {
                 throw new Exception("Món ăn đang được chế biến, không thể hủy.");
             }
@@ -580,43 +584,57 @@ namespace BusinessAccessLayer.Services
 
             return true;
         }
-
-
-        // Gọi xử lý sự cố
-        // 
-
+       
         public async Task RequestAssistanceAsync(AssistanceRequestDto requestDto)
         {
-            // 1. Kiểm tra Reservation
-            var reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(requestDto.TableId);
-            if (reservation == null)
+            Reservation? reservation = null;
+
+            if (requestDto.UseReservation)
             {
-                throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
+                reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(requestDto.TableId);
+                if (reservation == null)
+                {
+                    throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
+                }
             }
 
-            // 2. (CHỐNG SPAM) Kiểm tra 
-            bool alreadyPending = await _orderTableRepository.
-                HasPendingAssistanceRequestAsync(requestDto.TableId);
-            if (alreadyPending)
-            {
-                throw new Exception("Bạn đã gửi yêu cầu trước đó. Nhân viên sẽ đến ngay!");
-            }
+            // CHỐNG SPAM vẫn giữ nguyên
+            bool alreadyPending = await _orderTableRepository.HasPendingAssistanceRequestAsync(requestDto.TableId);
+            if (alreadyPending) throw new Exception("Bạn đã gửi yêu cầu trước đó. Nhân viên sẽ đến ngay!");
+            // Nếu Note rỗng hoặc null thì gán mặc định
+            var note = string.IsNullOrWhiteSpace(requestDto.Note) ? "Khách cần hỗ trợ !" : requestDto.Note;
 
-            // 3. Tạo yêu cầu mới
+            // Tạo yêu cầu mới (dù có reservation hay không)
             var newRequest = new AssistanceRequest
             {
                 TableId = requestDto.TableId,
-                ReservationId = reservation.ReservationId,
+                ReservationId = reservation?.ReservationId, // null nếu không có reservation
                 RequestTime = DateTime.UtcNow,
                 Status = "Pending",
-                Note = requestDto.Note,
+                Note = note,
                 HandledTime = null
             };
 
             await _orderTableRepository.CreateAssistanceRequestAsync(newRequest);
             await _context.SaveChangesAsync();
 
-            // (SignalR logic...)
+            // SIGNALR vẫn gửi thông báo bình thường
+            var tableInfo = await _context.Tables
+                .Include(t => t.Area)
+                .FirstOrDefaultAsync(t => t.TableId == requestDto.TableId);
+
+            var tableName = tableInfo?.TableNumber.ToString() ?? requestDto.TableId.ToString();
+            var areaName = tableInfo?.Area?.AreaName ?? "Không xác định";
+
+            await _hubContext.Clients.Group("Employees").SendAsync("ReceiveNewRequest", new
+            {
+                requestId = newRequest.RequestId,
+                tableId = newRequest.TableId,
+                tableName = $"Bàn {tableName}",
+                areaName = areaName,
+                note = newRequest.Note,
+                time = newRequest.RequestTime.ToLocalTime().ToString("HH:mm")
+            });
         }
 
         public async Task<ComboDetailDto> GetComboDetailsAsync(int comboId)
@@ -685,9 +703,75 @@ namespace BusinessAccessLayer.Services
                 CategoryName = menuItem.Category?.CategoryName ?? "Không xác định"
             };
         }
+
+
+
+        // 1. HÀM LẤY DANH SÁCH (Cho màn hình nhân viên)
+        public async Task<DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>> GetStaffPendingRequestsAsync(
+     string? sort, int page, int pageSize)
+        {
+            // Bỏ areaId, dùng sort (newest/oldest)
+            var (items, totalCount) = await _orderTableRepository.GetPendingRequestsForStaffAsync(
+                sort, page, pageSize);
+
+            var dtos = items.Select(x => new AssistanceResponseDto
+            {
+                RequestId = x.RequestId,
+                TableName = x.Table != null ? $"Bàn {x.Table.TableNumber}" : "Bàn ?",
+                AreaName = x.Table?.Area?.AreaName ?? "N/A",
+                Floor = x.Table?.Area?.Floor ?? 0,
+                Note = x.Note,
+                RequestTime = x.RequestTime,
+                TimeAgo = CalculateTimeAgo(x.RequestTime) // Hàm phụ tính thời gian
+            }).ToList();
+
+            return new BusinessAccessLayer.DTOs.OrderAssitance.PagedResult<AssistanceResponseDto>
+            {
+                Items = dtos,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+
+        // 2. HÀM XỬ LÝ YÊU CẦU (Nhân viên ấn "Xong")
+        public async Task CompleteAssistanceRequestAsync(int requestId)
+        {
+            // a. Lấy yêu cầu từ DB
+            var request = await _orderTableRepository.GetRequestByIdAsync(requestId);
+            if (request == null) throw new Exception("Yêu cầu không tồn tại hoặc đã bị xóa.");
+
+            // b. Cập nhật trạng thái
+            request.Status = "Completed";
+            request.HandledTime = DateTime.UtcNow; // Lưu thời gian xử lý
+
+            // c. Lưu DB
+            await _context.SaveChangesAsync();
+
+            // d. SIGNALR: Bắn sự kiện "Đã xong"
+            // -> Để xóa dòng đó khỏi màn hình của TẤT CẢ nhân viên khác ngay lập tức
+            await _hubContext.Clients.Group("Employees").SendAsync("RequestCompleted", requestId);
+
+            // (Tùy chọn) Báo cho khách biết nhân viên đang tới
+            // await _hubContext.Clients.Group($"Table-{request.TableId}").SendAsync("StaffArrived", "Nhân viên đã tiếp nhận!");
+        }
+
+        // Hàm phụ tính thời gian
+        private string CalculateTimeAgo(DateTime created)
+        {
+            var diff = DateTime.UtcNow - created;
+            if (diff.TotalMinutes < 1) return "Vừa xong";
+            if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} phút trước";
+            return $"{(int)diff.TotalHours} giờ trước";
+        }
+
+      
+
         // (Trong BusinessAccessLayer/Services/OrderTableService.cs, lồng bên trong)
 
         // 3. DTO tổng hợp (Đây là thứ mà API sẽ nhận)
+
 
         // DTO cho chi tiết món ăn 
         public class MenuItemDetailDto
@@ -749,6 +833,9 @@ namespace BusinessAccessLayer.Services
 
             [StringLength(500)]
             public string? Note { get; set; }
+
+            public bool UseReservation { get; set; } = true; // mặc định là true
+
         }
         // DTO này chứa toàn bộ dữ liệu cho trang Menu
         public class MenuPageViewModel
@@ -773,6 +860,9 @@ namespace BusinessAccessLayer.Services
             public DateTime CreatedAt { get; set; }
 
             public string? Notes { get; set; }
+
+            public decimal Price { get; set; }      
+
         }
 
         //new DTO for menu and filter
@@ -807,7 +897,7 @@ namespace BusinessAccessLayer.Services
         {
             public int MenuItemId { get; set; }
             public int Quantity { get; set; }
-            public string? Notes { get; set; } 
+            public string? Notes { get; set; }
         }
         public class OrderSubmissionDto
         {

@@ -1,6 +1,6 @@
 ﻿using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.DTOs.OrderGuest;
-using BusinessAccessLayer.DTOs.OrderGuest.ListOrder; 
+using BusinessAccessLayer.DTOs.OrderGuest.ListOrder;
 using BusinessAccessLayer.Hubs;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Common;
@@ -11,6 +11,7 @@ using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using static BusinessAccessLayer.Services.Interfaces.IDashboardTableService;
 using static BusinessAccessLayer.Services.OrderTableService;
 using ComboDto = BusinessAccessLayer.DTOs.OrderGuest.ComboDto;
 
@@ -20,7 +21,7 @@ namespace BusinessAccessLayer.Services
     {
         private readonly IDashboardTableRepository _dashboardRepo;
         private readonly IOrderTableRepository _orderTableRepo;
-        private readonly IUnitOfWork _unitOfWork; 
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IHubContext<ReservationHub> _hubContext;
         private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
 
@@ -55,16 +56,40 @@ namespace BusinessAccessLayer.Services
                 AreaName = data.Table.Area.AreaName,
                 Floor = data.Table.Area.Floor,
                 Capacity = data.Table.Capacity,
-                Status = (data.ActiveReservation != null) ? "Active" : "Available",
-                GuestCount = data.ActiveReservation?.NumberOfGuests ?? 0,
 
-                // ⭐️ SỬA LỖI LOGIC 4: Phải lấy 'ArrivalAt' (giờ khách ngồi) thay vì 'ReservationTime' (giờ đặt)
-                GuestSeatedTime = data.ActiveReservation?.ArrivalAt
+                // Nếu không có đơn -> Available
+                // Nếu có đơn nhưng chưa có giờ ngồi (ArrivalAt null) -> Reserved 
+                // Nếu có đơn VÀ đã có giờ ngồi -> Active (để UI hiện màu cam + đồng hồ chạy)
+                Status = (data.ActiveReservation == null)
+                         ? "Available"
+                         : (data.ActiveReservation.ArrivalAt != null ? "Active" : "Reserved"),
+
+                GuestCount = data.ActiveReservation?.NumberOfGuests ?? 0,
+                GuestSeatedTime = data.ActiveReservation?.ArrivalAt,
+
+                // map thêm ReservationTime để hiển thị "Khách đến lúc..." ở trạng thái Reserved
+                ReservationTime = data.ActiveReservation?.ReservationTime,
+                // Logic: Nếu có ActiveReservation thì mới lấy tên, ngược lại là null
+                CustomerName = data.ActiveReservation != null
+            ? (data.ActiveReservation.Customer?.User?.FullName ?? data.ActiveReservation.CustomerNameReservation)
+            : null,
+
+                CustomerPhone = data.ActiveReservation?.Customer?.User?.Phone ?? null,
+
+                GrandTotal = data.ActiveReservation == null
+    ? 0
+    : data.ActiveReservation.Orders
+        .SelectMany(o => o.OrderDetails)
+        .Where(od => od.Status == "Cooking" || od.Status == "Ready" || od.Status == "Done")
+        .Sum(od => od.Quantity * od.UnitPrice),
+
+
             }).ToList();
 
-            // 3. Lọc theo Status
+            // 3. Lọc theo Status (Cập nhật logic lọc nếu cần)
             if (!string.IsNullOrEmpty(status))
             {
+                // Nếu muốn tách biệt hoàn toàn thì giữ nguyên:
                 allTableDtos = allTableDtos.Where(t => t.Status == status).ToList();
             }
 
@@ -85,7 +110,7 @@ namespace BusinessAccessLayer.Services
         }
 
 
-        // (1) Lấy danh sách - MAP THỦ CÔNG
+        // (1) Lấy danh sách 
         public async Task<PagedList<ReservationListDto>> GetReservationsAsync(ReservationQueryParameters parameters)
         {
             var pagedReservations = await _dashboardRepo.GetPagedReservationsAsync(parameters);
@@ -141,12 +166,8 @@ namespace BusinessAccessLayer.Services
                 CustomerEmail = reservation.Customer?.User?.Email,
                 ReservationDate = reservation.ReservationDate,
                 TimeSlot = reservation.TimeSlot,
-
-                // ⭐️ SỬA LỖI 3: Chuyển đổi DateTime -> TimeSpan
                 ReservationTime = reservation.ReservationTime.TimeOfDay,
                 NumberOfGuests = reservation.NumberOfGuests,
-
-                // ⭐️ SỬA LỖI 4: Chuyển đổi decimal? -> decimal
                 DepositAmount = reservation.DepositAmount ?? 0m,
                 DepositPaid = reservation.DepositPaid,
 
@@ -164,29 +185,39 @@ namespace BusinessAccessLayer.Services
         }
 
         // (3) Đổi trạng thái
-        public async Task SeatGuestAsync(int reservationId)
+        // Đổi signature từ Task sang Task<Reservation>
+        public async Task<Reservation> SeatGuestAsync(int reservationId)
         {
+            // 1. Lấy dữ liệu (Lưu ý: Repo cần Include ReservationTables để lấy được TableId sau này)
             var reservation = await _dashboardRepo.GetReservationForUpdateAsync(reservationId);
 
             if (reservation == null)
                 throw new Exception("Reservation not found.");
-            if (reservation.Status != "Confirmed")
-                throw new InvalidOperationException("Reservation status must be 'Confirmed'.");
+
+            // Kiểm tra trạng thái (Giữ nguyên logic cũ của bạn)
+            // Lưu ý: Nếu logic của bạn cho phép chuyển từ "Available" -> "Active" luôn thì bỏ check Confirmed
+            if (reservation.Status != "Confirmed" && reservation.Status != "Available")
+                // Tùy vào luồng nghiệp vụ, đoạn này bạn tự cân nhắc bỏ hay giữ
+                throw new InvalidOperationException("Reservation status is invalid.");
+
             if (reservation.ReservationTables == null || !reservation.ReservationTables.Any())
                 throw new InvalidOperationException("No tables are assigned.");
 
+            // 2. Cập nhật thông tin
             var now = DateTime.Now;
-            reservation.Status = "Guest Seated";
+            reservation.Status = "Guest Seated"; // Sửa thành "Active" để khớp với logic hiển thị màu cam ở Frontend
             reservation.ArrivalAt = now;
             reservation.StatusUpdatedAt = now;
 
+            // 3. Lưu xuống DB
             _dashboardRepo.Update(reservation);
-
-            // ⭐️ SỬA LỖI 1: Giờ _unitOfWork đã tồn tại
             await _unitOfWork.SaveChangesAsync();
 
-            // ⭐️ SỬA LỖI 2: Giờ _hubContext đã tồn tại
+            // 4. Bắn SignalR (Realtime cho các máy khác)
             await NotifyClientsOfUpdate(reservation);
+
+            // ⭐️ QUAN TRỌNG: Trả về đối tượng Reservation đã update
+            return reservation;
         }
 
         // Hàm SignalR
@@ -345,6 +376,7 @@ namespace BusinessAccessLayer.Services
 
                     foreach (var od in latestOrder.OrderDetails)
                     {
+
                         string itemName = od.MenuItemId.HasValue
                                           ? od.MenuItem?.Name
                                           : (od.ComboId.HasValue ? od.Combo?.Name : "Lỗi dữ liệu");
@@ -394,6 +426,7 @@ namespace BusinessAccessLayer.Services
 
             return screenDto;
         }
+
         // Trong Implementation
         public async Task<List<CategoryDto>> GetAllCategoriesAsync()
         {
@@ -415,5 +448,123 @@ namespace BusinessAccessLayer.Services
 
             return categoriesDto;
         }
+
+
+        // Lấy danh sách món đã gọi của khách
+        // Lấy danh sách OrderDetail hiện tại của bàn
+
+        public async Task SaveOrderChangesAsync(SaveOrderRequest request)
+        {
+            // BƯỚC 1: TÌM RESERVATION
+            var activeReservation = await _dashboardRepo.GetActiveReservationByTableIdAsync(request.TableId);
+            if (activeReservation == null)
+            {
+                throw new Exception($"Bàn {request.TableId} chưa có khách check-in.");
+            }
+
+            // BƯỚC 2: TÌM HOẶC TẠO ORDER (VỎ HÓA ĐƠN)
+            // Đây là bước sửa lỗi "Foreign Key": Phải có Order thì mới thêm OrderDetail được
+            var currentOrder = await _dashboardRepo.GetOrderByReservationIdAsync(activeReservation.ReservationId);
+
+            if (currentOrder == null)
+            {
+                // Nếu chưa có hóa đơn -> Tạo mới
+                currentOrder = new Order
+                {
+                    ReservationId = activeReservation.ReservationId,
+                    CreatedAt = DateTime.Now,
+                    TotalAmount = 0,    // Tạm tính là 0
+                    Status = "Pending",  // Trạng thái chờ,
+                    OrderType = "Tại bàn"
+                };
+
+                await _dashboardRepo.AddOrderAsync(currentOrder);
+                // Lưu ngay lập tức để DB sinh ra OrderId (VD: 501)
+                await _dashboardRepo.SaveChangesAsync();
+            }
+
+            // BƯỚC 3: XỬ LÝ TỪNG MÓN ĂN
+            foreach (var itemDto in request.Items)
+            {
+                switch (itemDto.Action)
+                {
+                    // --- CASE ADD: THÊM MÓN MỚI ---
+                    case "Add":
+                        decimal price = 0;
+
+                        // Lấy giá chuẩn từ DB
+                        if (itemDto.MenuItemId.HasValue)
+                        {
+                            var menu = await _dashboardRepo.GetMenuItemAsync(itemDto.MenuItemId.Value);
+                            price = menu?.Price ?? 0;
+                        }
+                        else if (itemDto.ComboId.HasValue)
+                        {
+                            var combo = await _dashboardRepo.GetComboAsync(itemDto.ComboId.Value);
+                            price = (decimal)(combo?.Price ?? 0);
+                        }
+
+                        var newDetail = new OrderDetail
+                        {
+                            // Quan trọng: Gán vào OrderId vừa tìm/tạo được ở trên
+                            OrderId = currentOrder.OrderId,
+
+                            // Xử lý Logic ID: Chỉ 1 trong 2 được có giá trị, cái kia phải null
+                            MenuItemId = (itemDto.ComboId.HasValue && itemDto.ComboId > 0) ? null : itemDto.MenuItemId,
+                            ComboId = (itemDto.ComboId.HasValue && itemDto.ComboId > 0) ? itemDto.ComboId : null,
+
+                            Quantity = itemDto.Quantity,
+                            UnitPrice = price,       // Tên đúng trong Model của bạn
+                            Notes = itemDto.Note,    // Tên đúng trong Model của bạn
+                            Status = "Pending",   // Trạng thái mặc định: Pending (sau khi gọi món)
+                            CreatedAt = DateTime.Now // Tên đúng trong Model của bạn
+                        };
+
+                        await _dashboardRepo.AddOrderDetailAsync(newDetail);
+                        break;
+
+                    // ⭐️ SỬA PHẦN NÀY ⭐️
+                    case "Update":
+                        // Tìm món trong DB theo ID gửi lên
+                        var existingItem = await _dashboardRepo.GetOrderDetailByIdAsync(itemDto.OrderItemId);
+
+                        // Kiểm tra: Có món này + Thuộc đúng hóa đơn này + Chưa bị hủy/thanh toán
+                        if (existingItem != null && existingItem.Order.ReservationId == activeReservation.ReservationId)
+                        {
+                            // Kiểm tra trạng thái (Đảm bảo khớp với DB của bạn: "Cancelled" hay "Đã hủy")
+                            if (existingItem.Status != "Đã hủy" && existingItem.Status != "Cancelled" && existingItem.Status != "Paid")
+                            {
+                                // 1. Cập nhật giá trị mới
+                                existingItem.Quantity = itemDto.Quantity;
+                                existingItem.Notes = itemDto.Note;
+
+                                // 2. GỌI HÀM UPDATE REPO (QUAN TRỌNG)
+                                await _dashboardRepo.UpdateOrderDetailAsync(existingItem);
+                            }
+                        }
+                        break;
+
+                    // ⭐️ SỬA PHẦN NÀY ⭐️
+                    case "Delete":
+                        var itemToDelete = await _dashboardRepo.GetOrderDetailByIdAsync(itemDto.OrderItemId);
+
+                        if (itemToDelete != null && itemToDelete.Order.ReservationId == activeReservation.ReservationId)
+                        {
+                            // Soft Delete: Đổi trạng thái
+                            itemToDelete.Status = "Đã hủy"; // Hoặc "Cancelled" tùy DB
+
+                            // GỌI HÀM UPDATE REPO
+                            await _dashboardRepo.UpdateOrderDetailAsync(itemToDelete);
+                        }
+                        break;
+                }
+            }
+
+
+            // BƯỚC 4: LƯU CÁC THAY ĐỔI CỦA MÓN ĂN
+            await _dashboardRepo.SaveChangesAsync();
+        }
     }
+
+
 }

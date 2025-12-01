@@ -834,6 +834,8 @@
             <div class="main-panel">
                 <div class="content-wrapper">
                     @RenderBody()
+                    @RenderSection("Scripts", required: false)
+
                 </div>
 
                 <!-- partial:partials/_footer.html -->
@@ -918,8 +920,6 @@
 <script src="~/js/vouchers.js"></script>
 <script src="~/js/print-qr.js"></script>
 
-<!-- Render page-specific scripts AFTER jQuery is loaded -->
-@RenderSection("Scripts", required: false)
 
 
 </body>

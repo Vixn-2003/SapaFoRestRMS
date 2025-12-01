@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DomainAccessLayer.Models;
 
@@ -31,7 +32,7 @@ public partial class OrderDetail
     // === THÊM CÁC DÒNG NÀY ===
     // Thêm cột ComboId (nullable)
     public int? ComboId { get; set; }
-    public Combo Combo { get; set; }
+    public Combo? Combo { get; set; }
 
     public string? Notes { get; set; } // Thêm ? để cho phép null
     
@@ -49,6 +50,9 @@ public partial class OrderDetail
     /// Thời gian bắt đầu nấu (khi status chuyển sang "Cooking")
     /// </summary>
     public DateTime? StartedAt { get; set; }
+
+    [NotMapped] // Nếu không muốn lưu vào DB
+    public bool IsCustomerOrder { get; set; }
 
     public virtual ICollection<KitchenTicketDetail> KitchenTicketDetails { get; set; } = new List<KitchenTicketDetail>();
 

@@ -83,7 +83,6 @@ public class MenuOrderController : Controller
                 ViewBag.CurrentSearchString = searchString;
 
                 // 5. (ĐÃ SỬA) Gửi TOÀN BỘ viewModel sang View
-                // File Index.cshtml của bạn phải có @model MenuPageViewModel
                 return View(viewModel);
             }
             else // API /MenuOrder/ trả về lỗi (ví dụ: "Bàn không có khách")
@@ -104,6 +103,8 @@ public class MenuOrderController : Controller
                 catch { /* Bỏ qua nếu đọc lỗi thất bại */ }
 
                 ViewBag.Error = errorMsg;
+                ViewBag.TableId = tableId;        // thêm
+                ViewBag.ApiBaseUrl = _apiBaseUrl; // thêm
                 return View("ErrorPage", new ErrorViewModel // Đảm bảo bạn có View "ErrorPage"
                 {
                     RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
@@ -113,6 +114,8 @@ public class MenuOrderController : Controller
         catch (Exception ex) // Lỗi kết nối API
         {
             ViewBag.Error = $"Không thể kết nối đến API: {ex.Message}";
+            ViewBag.TableId = tableId;        // thêm
+            ViewBag.ApiBaseUrl = _apiBaseUrl; // thêm
             return View("ErrorPage", new ErrorViewModel
             {
                 RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier

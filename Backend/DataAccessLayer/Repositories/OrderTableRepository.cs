@@ -203,5 +203,51 @@ namespace DataAccessLayer.Repositories
                 .AsNoTracking() // Dùng AsNoTracking vì đây là thao tác đọc
                 .FirstOrDefaultAsync(m => m.MenuItemId == menuItemId);
         }
+
+        // [CHO NHÂN VIÊN] Lấy danh sách
+        public async Task<(IEnumerable<AssistanceRequest> Items, int TotalCount)>
+    GetPendingRequestsForStaffAsync(string? sort, int pageIndex, int pageSize)
+        {
+            DateTime today = DateTime.Today;
+            DateTime tomorrow = today.AddDays(1);
+
+            var query = _context.AssistanceRequests
+                .Include(r => r.Table)
+                    .ThenInclude(t => t.Area) // để staff xem "Bàn A1-05 - Khu A1"
+                .Where(r => r.Status == "Pending"
+                         && r.RequestTime >= today
+                         && r.RequestTime < tomorrow)
+                .AsNoTracking();
+
+            // ⭐ Sắp xếp theo yêu cầu
+            sort = sort?.ToLower();
+
+            query = sort switch
+            {
+                "oldest" => query.OrderBy(r => r.RequestTime),
+                _ => query.OrderByDescending(r => r.RequestTime) // default = newest
+            };
+
+            // ⭐ Tổng số dòng
+            int totalCount = await query.CountAsync();
+
+            // ⭐ Phân trang
+            var items = await query
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+
+        // [CHO NHÂN VIÊN] Lấy chi tiết
+        public async Task<AssistanceRequest> GetRequestByIdAsync(int requestId)
+        {
+            return await _context.AssistanceRequests
+                .Include(r => r.Table) // Include để lấy TableId khi bắn SignalR
+                .FirstOrDefaultAsync(r => r.RequestId == requestId);
+        }
+
     }
 }

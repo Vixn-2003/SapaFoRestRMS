@@ -23,6 +23,7 @@
 
       //"applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.105.100:7096;http://192.168.105.100:5180",
       //"applicationUrl": "https://localhost:7096;http://localhost:5180",
+     // "applicationUrl": "https://localhost:7096;http://localhost:5180",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -44,7 +45,9 @@
 
       // ===========================================
 
+
       "applicationUrl": "https://localhost:7096;http://localhost:5180",
+
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
