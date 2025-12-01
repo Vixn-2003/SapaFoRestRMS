@@ -10,7 +10,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chỉnh sửa món ăn</title>
+    <title>Thêm món ăn mới</title>
     <style>
         * {
             margin: 0;
@@ -358,43 +358,10 @@
     color: #718096;
 }
 
-.form-group.error input,
-.form-group.error select,
-.form-group.error textarea {
-    border-color: #f56565 !important;
-    background-color: #fff5f5;
-}
-
-.form-group.error label {
-    color: #e53e3e;
-}
-
-.error-message {
-    color: #e53e3e;
-    font-size: 12px;
-    margin-top: 4px;
-    display: none;
-    animation: fadeIn 0.3s;
-}
-
-.form-group.error .error-message {
-    display: block;
-}
-
-@@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
     </style>
 </head>
 <body>
+
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-content">
             <div class="spinner"></div>
@@ -406,24 +373,22 @@
 
     <div class="container">
         <div class="header">
-            <h1>✏️ Chỉnh sửa món ăn</h1>
+            <h1>➕ Thêm món ăn mới</h1>
         </div>
 
         <div class="form-content">
             <form id="foodForm">
                 <!-- Hidden input cho MenuItemId -->
-                <input type="hidden" id="menuItemId" name="ProductsMenu.MenuItemId" value="@Model.ProductsMenu.MenuItemId">
 
                 <div class="form-grid">
-                    <div class="form-group" id="foodNameGroup">
+                    <div class="form-group">
                         <label for="foodName">Tên món ăn *</label>
                         <input type="text" id="foodName" name="foodName" required placeholder="Nhập tên món ăn" asp-for="ProductsMenu.Name">
-                        <span class="error-message" id="foodNameError">Vui lòng nhập tên món ăn</span>
                     </div>
 
-                    <div class="form-group" id="categoryGroup">
+                    <div class="form-group">
                         <label for="menuType">Loại thực đơn *</label>
-                        <select asp-for="ProductsMenu.CategoryId" class="form-control" id="categoryId">
+                        <select asp-for="ProductsMenu.CategoryId" class="form-control">
                             @foreach (var cat in Model.ProductsCategory)
                             {
                                 if (Model.ProductsMenu.CategoryId == cat.CategoryId)
@@ -436,24 +401,13 @@
                                 }
                             }
                         </select>
-                        <span class="error-message" id="categoryError">Vui lòng chọn loại thực đơn</span>
                     </div>
 
-                    <div class="form-group" id="priceGroup">
+                    <div class="form-group">
                         <label for="price">Giá (đ) *</label>
                         <input type="number" id="price" name="price"
                                required placeholder="0" min="0"
-                               value="@Model.ProductsMenu.Price.ToString("0.##")" />
-                        <span class="error-message" id="priceError">Vui lòng nhập giá hợp lệ</span>
-                    </div>
-
-                    <div class="form-group" id="isAvailableGroup">
-                        <label for="IsAvailable">Tình trạng *</label>
-                        <select asp-for="ProductsMenu.IsAvailable" class="form-control" id="isAvailable">
-                            <option value="true">Đang phục vụ</option>
-                            <option value="false">Tạm ngưng</option>
-                        </select>
-                        <span class="error-message" id="isAvailableError">Vui lòng chọn tình trạng</span>
+                               value="" />
                     </div>
 
                     <div class="form-group">
@@ -477,7 +431,7 @@
                     </div>
 
                     <!-- 2. Cần chế biến (BillingType) -->
-                    <div class="form-group" id="billingTypeGroup">
+                    <div class="form-group">
                         <label for="billingType">Cần chế biến *</label>
                         <select id="billingType"
                                 name="billingType"
@@ -487,11 +441,10 @@
                             <option value="2">Có</option>
                             <option value="1">Không</option>
                         </select>
-                        <span class="error-message" id="billingTypeError">Vui lòng chọn trạng thái chế biến</span>
                     </div>
 
                     <!-- 3. Hiển thị trên trang chính (IsAds) -->
-                    <div class="form-group" id="isAdsGroup">
+                    <div class="form-group">
                         <label for="isAds">Hiển thị trên trang chính *</label>
                         <select id="isAds"
                                 name="isAds"
@@ -501,19 +454,17 @@
                             <option value="true">Hiển thị</option>
                             <option value="false">Không hiển thị</option>
                         </select>
-                        <span class="error-message" id="isAdsError">Vui lòng chọn trạng thái hiển thị</span>
                     </div>
 
 
-                    <div class="form-group" id="courseTypeGroup">
-                        <label for="CourseType">Kiểu món *</label>
-                        <select asp-for="ProductsMenu.CourseType" class="form-control" id="courseType">
+                    <div class="form-group">
+                        <label for="CourseType">Kiểu món</label>
+                        <select asp-for="ProductsMenu.CourseType" class="form-control">
                             <option value="Drink">Nước uống</option>
                             <option value="Dessert">Món tráng miệng</option>
                             <option value="MainDish">Món chính</option>
                             <option value="Appetizer">Món khai vị</option>
                         </select>
-                        <span class="error-message" id="courseTypeError">Vui lòng chọn kiểu món</span>
                     </div>
 
                     <div class="form-group" style="display: contents;align-items: center;gap: 10px;">
@@ -559,29 +510,28 @@
                                     </thead>
                                     <tbody id="availableIngredientsBody">
                                         <!-- TÌM ĐOẠN NÀY (khoảng dòng 430-450) -->
-                                                @foreach (var ingredient in Model.Ingredient)
-                                                {
-                                                  var isSelected = Model.Recipe != null && Model.Recipe.Any(r => r.IngredientId == ingredient.IngredientId);
-                                                     var unitName = ingredient.Unit?.UnitName ?? "";
-                                                  var unitType = (int)(ingredient.Unit?.UnitType ?? 0); 
-    
-                                                  <tr data-ingredient-id="@ingredient.IngredientId"
+                                        @foreach (var ingredient in Model.Ingredient)
+                                        {
+                                            var isSelected = Model.Recipe != null && Model.Recipe.Any(r => r.IngredientId == ingredient.IngredientId);
+                                            var unitName = ingredient.Unit?.UnitName ?? "";
+                                            var unitType = (int)(ingredient.Unit?.UnitType ?? 0);
+
+                                            <tr data-ingredient-id="@ingredient.IngredientId"
                                                 data-ingredient-name="@ingredient.Name"
-                                                   data-ingredient-unit="@unitName"
-                                                  data-ingredient-unit-type="@unitType">
-                                                      <td style="text-align: center;">
+                                                data-ingredient-unit="@unitName"
+                                                data-ingredient-unit-type="@unitType">
+                                                <td style="text-align: center;">
                                                     <input type="checkbox"
                                                            class="ingredient-checkbox"
                                                            value="@ingredient.IngredientId"
                                                            data-name="@ingredient.Name"
                                                            data-unit="@unitName"
-                                                           data-unit-type="@unitType"
-                                                    @(isSelected ? "checked" : "")>
-                                                     </td>
-                                                  <td>@ingredient.Name</td>
-                                                  <td>@(ingredient.Unit?.UnitName ?? "N/A")</td>
-                                                     </tr>
-                                                    }
+                                                           data-unit-type="@unitType">
+                                                </td>
+                                                <td>@ingredient.Name</td>
+                                                <td>@(ingredient.Unit?.UnitName ?? "N/A")</td>
+                                            </tr>
+                                        }
                                     </tbody>
                                 </table>
                             </div>
@@ -603,49 +553,13 @@
                                         </tr>
                                     </thead>
                                     <tbody id="selectedIngredientsBody">
-                                        @if (Model.Recipe != null && Model.Recipe.Any())
-                                        {
-                                            foreach (var recipe in Model.Recipe)
-                                            {
-                                                var ingredient = Model.Ingredient.FirstOrDefault(i => i.IngredientId == recipe.IngredientId);
-                                                if (ingredient != null)
-                                                {
-                                                    var unitName = ingredient.Unit?.UnitName ?? "";
-
-                                                    <tr data-ingredient-id="@ingredient.IngredientId"
-                                                        data-ingredient-name="@ingredient.Name"
-                                                        data-ingredient-unit="@unitName">
-                                                        <td>@ingredient.Name</td>
-                                                        <td>
-                                                            <input type="number"
-                                                                   value="@recipe.QuantityNeeded"
-                                                                   min="0"
-                                                                   step="0.01"
-                                                                   style="width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;"
-                                                                   onchange="updateQuantityFromTable(@ingredient.IngredientId, this.value)"
-                                                                   required>
-                                                        </td>
-                                                        <td>@unitName</td>
-                                                        <td style="text-align: center;">
-                                                            <button type="button"
-                                                                    class="btn btn-danger"
-                                                                    onclick="removeIngredient(@ingredient.IngredientId, event)"
-                                                                    style="padding: 4px 8px; font-size: 12px;">
-                                                                ✕
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
+                                        
                                             <tr>
                                                 <td colspan="4" class="empty-state">
                                                     Chưa chọn nguyên liệu nào
                                                 </td>
                                             </tr>
-                                        }
+                                        
                                     </tbody>
                                 </table>
                             </div>
@@ -702,16 +616,6 @@
             }, duration);
         }
 
-        function closeToast(button) {
-            const toast = button.closest('.toast');
-            if (toast) {
-                toast.classList.add('hiding');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }
-        }
-
         function showLoading(text = 'Đang xử lý...', subtext = 'Vui lòng chờ trong giây lát') {
             const overlay = document.getElementById('loadingOverlay');
             const loadingText = overlay.querySelector('.loading-text');
@@ -728,6 +632,16 @@
             const overlay = document.getElementById('loadingOverlay');
             overlay.classList.remove('active');
             document.body.style.overflow = ''; // Cho phép scroll lại
+        }
+
+        function closeToast(button) {
+            const toast = button.closest('.toast');
+            if (toast) {
+                toast.classList.add('hiding');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }
         }
 
         // ===== TOGGLE INGREDIENT (phải khai báo global) =====
@@ -786,7 +700,6 @@
         // ===== RENDER SELECTED INGREDIENTS =====
         function renderSelectedIngredients() {
             const tbody = document.getElementById('selectedIngredientsBody');
-            const menuItemId = document.getElementById('menuItemId').value;
 
             console.log('Rendering selected ingredients:', selectedIngredients);
 
@@ -797,12 +710,12 @@
 
             if (selectedIngredients.length === 0) {
                 tbody.innerHTML = `
-                        <tr>
-                            <td colspan="4" class="empty-state">
-                                Chưa chọn nguyên liệu nào
-                            </td>
-                        </tr>
-                    `;
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            Chưa chọn nguyên liệu nào
+                        </td>
+                    </tr>
+                `;
                 return;
             }
 
@@ -812,31 +725,31 @@
                 const min = isInteger ? '1' : '0.01';
 
                 return `
-                        <tr data-ingredient-id="${ing.id}">
-                            <td>${ing.name}</td>
-                            <td>
-                                <input type="number"
-                                       value="${ing.quantity}"
-                                       min="${min}"
-                                       step="${step}"
-                                       style="width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;"
-                                       onchange="updateQuantity(${index}, this.value)"
-                                       required>
-                                <input type="hidden" name="MenuRecipes[${index}].IngredientId" value="${ing.id}">
-                                <input type="hidden" name="MenuRecipes[${index}].MenuItemId" value="${menuItemId}">
-                                <input type="hidden" name="MenuRecipes[${index}].QuantityNeeded" value="${ing.quantity}" id="hidden_quantity_${index}">
-                            </td>
-                            <td>${ing.unit || 'N/A'}</td>
-                            <td style="text-align: center;">
-                                <button type="button"
-                                        class="btn btn-danger"
-                                        onclick="removeIngredient(${ing.id}, event)"
-                                        style="padding: 4px 8px; font-size: 12px;">
-                                    ✕
-                                </button>
-                            </td>
-                        </tr>
-                    `;
+                    <tr data-ingredient-id="${ing.id}">
+                        <td>${ing.name}</td>
+                        <td>
+                            <input type="number"
+                                   value="${ing.quantity}"
+                                   min="${min}"
+                                   step="${step}"
+                                   style="width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;"
+                                   onchange="updateQuantity(${index}, this.value)"
+                                   required>
+                            <input type="hidden" name="MenuRecipes[${index}].IngredientId" value="${ing.id}">
+                            <!-- ❌ XÓA dòng MenuItemId vì menu mới chưa có ID -->
+                            <input type="hidden" name="MenuRecipes[${index}].QuantityNeeded" value="${ing.quantity}" id="hidden_quantity_${index}">
+                        </td>
+                        <td>${ing.unit || 'N/A'}</td>
+                        <td style="text-align: center;">
+                            <button type="button"
+                                    class="btn btn-danger"
+                                    onclick="removeIngredient(${ing.id}, event)"
+                                    style="padding: 4px 8px; font-size: 12px;">
+                                ✕
+                            </button>
+                        </td>
+                    </tr>
+                `;
             }).join('');
         }
 
@@ -936,36 +849,18 @@
         document.addEventListener('DOMContentLoaded', function () {
             console.log('DOM Content Loaded');
 
-            // Load dữ liệu có sẵn
-            selectedIngredients = [
-        @if (Model.Recipe != null && Model.Recipe.Any())
-        {
-            foreach (var recipe in Model.Recipe)
-            {
-                var ingredient = Model.Ingredient.FirstOrDefault(i => i.IngredientId == recipe.IngredientId);
-                if (ingredient != null)
-                {
-                    @:{
-                    @:id: @ingredient.IngredientId,
-                    @:name: "@ingredient.Name",
-                    @:unit: "@(ingredient.Unit?.UnitName ?? "")",
-                    @:unitType: @((int)(ingredient.Unit?.UnitType ?? 0)),
-                    @:quantity: @recipe.QuantityNeeded
-                    @:},
-                }
+            // ✅ Khởi tạo mảng rỗng cho món mới
+            selectedIngredients = [];
+
+            console.log('Creating new menu - no existing ingredients');
+
+            // Khởi tạo Toast Container
+            if (!document.getElementById('toastContainer')) {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
             }
-        }
-                ];
-
-        console.log('Loaded existing ingredients:', selectedIngredients);
-
-        // Khởi tạo Toast Container
-        if (!document.getElementById('toastContainer')) {
-            const container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.className = 'toast-container';
-            document.body.appendChild(container);
-        }
 
         // Gắn event cho search
         const searchInput = document.getElementById('searchIngredient');
@@ -998,141 +893,15 @@
         console.log('All events attached successfully');
             });
 
-        // ===== VALIDATION HELPERS =====
-        function showFieldError(fieldId, groupId, message) {
-            const group = document.getElementById(groupId);
-            const errorSpan = document.getElementById(fieldId + 'Error');
-
-            if (group) {
-                group.classList.add('error');
-            }
-
-            if (errorSpan && message) {
-                errorSpan.textContent = message;
-            }
-
-            // Focus vào field lỗi đầu tiên
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.focus();
-            }
-        }
-
-        function clearFieldError(groupId) {
-            const group = document.getElementById(groupId);
-            if (group) {
-                group.classList.remove('error');
-            }
-        }
-
-        function clearAllErrors() {
-            const errorGroups = document.querySelectorAll('.form-group.error');
-            errorGroups.forEach(group => {
-                group.classList.remove('error');
-            });
-        }
-
-        // Thêm event listeners để xóa lỗi khi người dùng nhập
-        function setupValidationListeners() {
-            const fields = [
-                { id: 'foodName', group: 'foodNameGroup' },
-                { id: 'categoryId', group: 'categoryGroup' },
-                { id: 'price', group: 'priceGroup' },
-                { id: 'isAvailable', group: 'isAvailableGroup' },
-                { id: 'billingType', group: 'billingTypeGroup' },
-                { id: 'isAds', group: 'isAdsGroup' },
-                { id: 'courseType', group: 'courseTypeGroup' }
-            ];
-
-            fields.forEach(field => {
-                const element = document.getElementById(field.id);
-                if (element) {
-                    element.addEventListener('input', () => clearFieldError(field.group));
-                    element.addEventListener('change', () => clearFieldError(field.group));
-                }
-            });
-        }
-
         // ===== FORM SUBMIT =====
         async function handleFormSubmit(e) {
             e.preventDefault();
 
-            // Xóa tất cả lỗi cũ
-            clearAllErrors();
-
-            let isValid = true;
-            let firstErrorField = null;
-
-            // ===== VALIDATION CÁC TRƯỜNG BẮT BUỘC =====
-
-            // 1. Kiểm tra tên món ăn
-            const foodName = document.getElementById('foodName').value.trim();
-            if (!foodName) {
-                showFieldError('foodName', 'foodNameGroup', 'Vui lòng nhập tên món ăn');
-                isValid = false;
-                if (!firstErrorField) firstErrorField = 'foodName';
-            }
-
-            // 2. Kiểm tra loại thực đơn
-            const categoryId = document.getElementById('categoryId').value;
-            if (!categoryId) {
-                showFieldError('categoryId', 'categoryGroup', 'Vui lòng chọn loại thực đơn');
-                isValid = false;
-                if (!firstErrorField) firstErrorField = 'categoryId';
-            }
-
-            // 3. Kiểm tra giá
-            const price = document.getElementById('price').value;
-            if (!price || parseFloat(price) < 0) {
-                showFieldError('price', 'priceGroup', 'Vui lòng nhập giá hợp lệ (>= 0)');
-                isValid = false;
-                if (!firstErrorField) firstErrorField = 'price';
-            }
-
-            // 4. Kiểm tra tình trạng
-            const isAvailable = document.getElementById('isAvailable').value;
-            if (isAvailable === null || isAvailable === undefined || isAvailable === '') {
-                showFieldError('isAvailable', 'isAvailableGroup', 'Vui lòng chọn tình trạng');
-                isValid = false;
-                if (!firstErrorField) firstErrorField = 'isAvailable';
-            }
-
-            // 5. Kiểm tra cần chế biến
-            const billingType = document.getElementById('billingType').value;
-            if (!billingType) {
-                showFieldError('billingType', 'billingTypeGroup', 'Vui lòng chọn trạng thái chế biến');
-                isValid = false;
-                if (!firstErrorField) firstErrorField = 'billingType';
-            }
-
-            // 6. Kiểm tra hiển thị trên trang chính
-            const isAds = document.getElementById('isAds').value;
-            if (isAds === null || isAds === undefined || isAds === '') {
-                showFieldError('isAds', 'isAdsGroup', 'Vui lòng chọn trạng thái hiển thị');
-                isValid = false;
-                if (!firstErrorField) firstErrorField = 'isAds';
-            }
-
-            // 7. Kiểm tra kiểu món
-            const courseType = document.getElementById('courseType').value;
-            if (!courseType) {
-                showFieldError('courseType', 'courseTypeGroup', 'Vui lòng chọn kiểu món');
-                isValid = false;
-                if (!firstErrorField) firstErrorField = 'courseType';
-            }
-
-            // 8. Kiểm tra nguyên liệu
             if (selectedIngredients.length === 0) {
                 showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn ít nhất một nguyên liệu!');
-                isValid = false;
-                // Scroll đến phần nguyên liệu
-                const ingredientsSection = document.querySelector('.ingredients-section');
-                if (ingredientsSection) {
-                    ingredientsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                return;
             }
 
-            // 9. Kiểm tra số lượng nguyên liệu
             let hasInvalidQuantity = false;
             let invalidMessage = '';
 
@@ -1150,88 +919,99 @@
 
             if (hasInvalidQuantity) {
                 showToast('warning', 'Số lượng không hợp lệ', invalidMessage);
-                isValid = false;
-            }
-
-            // Nếu có lỗi, dừng lại và focus vào field lỗi đầu tiên
-            if (!isValid) {
-                if (firstErrorField) {
-                    const firstField = document.getElementById(firstErrorField);
-                    if (firstField) {
-                        firstField.focus();
-                        firstField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }
-                showToast('error', 'Thông tin chưa đầy đủ', 'Vui lòng kiểm tra lại các trường bắt buộc!');
                 return;
             }
 
-            // ===== TẠO FORM DATA =====
             const formData = new FormData();
 
-            formData.append('ProductsMenu.MenuItemId', document.getElementById('menuItemId').value);
-            formData.append('ProductsMenu.Name', foodName);
-            formData.append('ProductsMenu.CategoryId', categoryId);
-            formData.append('ProductsMenu.Price', price);
-            formData.append('ProductsMenu.IsAvailable', isAvailable);
-            formData.append('ProductsMenu.CourseType', courseType);
-            formData.append('ProductsMenu.BillingType', billingType);
-            formData.append('ProductsMenu.IsAds', isAds);
+            formData.append('ProductsMenu.Name', document.getElementById('foodName').value);
+            formData.append('ProductsMenu.CategoryId', document.querySelector('[name="ProductsMenu.CategoryId"]').value);
+            formData.append('ProductsMenu.Price', document.getElementById('price').value);
+            formData.append('ProductsMenu.IsAvailable', document.querySelector('[name="ProductsMenu.IsAvailable"]').value);
+            formData.append('ProductsMenu.CourseType', document.querySelector('[name="ProductsMenu.CourseType"]').value);
+            formData.append('ProductsMenu.Description', document.getElementById('description').value);
 
-            // Mô tả (có thể để trống)
-            const description = document.getElementById('description').value.trim();
-            formData.append('ProductsMenu.Description', description);
-
-            // Thời gian nấu (có thể để trống)
             const timeCook = document.getElementById('timeCook').value;
             if (timeCook && timeCook.trim() !== '') {
                 formData.append('ProductsMenu.TimeCook', timeCook);
             }
 
-            // Hình ảnh (có thể để trống nếu đã có ảnh cũ)
+            formData.append('ProductsMenu.BillingType', document.getElementById('billingType').value);
+            formData.append('ProductsMenu.IsAds', document.getElementById('isAds').value);
+
             const imageFile = document.getElementById('imageFile').files[0];
             if (imageFile) {
                 formData.append('ImageFile', imageFile);
             }
 
-            // Nguyên liệu
             selectedIngredients.forEach((ingredient, index) => {
                 formData.append(`MenuRecipes[${index}].IngredientId`, ingredient.id);
-                formData.append(`MenuRecipes[${index}].MenuItemId`, document.getElementById('menuItemId').value);
                 formData.append(`MenuRecipes[${index}].QuantityNeeded`, ingredient.quantity);
             });
 
-            // ===== GỬI REQUEST =====
+            console.log('=== Form Data Being Sent ===');
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+            }
+
             try {
                 // ✅ HIỂN THỊ LOADING
-                showLoading('Đang cập nhật món ăn...', 'Vui lòng chờ trong giây lát');
+                showLoading('Đang tạo món ăn mới...', 'Vui lòng chờ trong giây lát');
 
                 const submitBtn = document.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.disabled = true;
 
-                const response = await fetch('/ManagerMenu/UpdateMenu', {
+                const response = await fetch('/ManagerMenu/CreateMenu', {
                     method: 'POST',
                     body: formData
                 });
 
+                console.log('Response status:', response.status);
+
                 // ✅ ẨN LOADING TRƯỚC KHI HIỂN THỊ KẾT QUẢ
                 hideLoading();
 
-                const result = await response.json();
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
 
-                if (response.ok) {
-                    showToast('success', 'Thành công', result.message || 'Cập nhật món ăn thành công!');
-                    setTimeout(() => {
-                        window.location.href = '/ManagerMenu/DisplayMenu';
-                    }, 1500);
-                } else {
-                    showToast('error', 'Có lỗi xảy ra', result.message || 'Không thể cập nhật món ăn');
+                    try {
+                        const errorJson = JSON.parse(errorText);
+
+                        if (errorJson.details) {
+                            try {
+                                const detailsObj = JSON.parse(errorJson.details);
+
+                                if (detailsObj.message) {
+                                    showToast('error', 'Lỗi', detailsObj.message);
+                                } else {
+                                    showToast('error', 'Có lỗi xảy ra', errorJson.message || 'Không thể tạo món ăn');
+                                }
+                            } catch (parseError) {
+                                showToast('error', 'Có lỗi xảy ra', errorJson.message || errorJson.details);
+                            }
+                        } else {
+                            showToast('error', 'Có lỗi xảy ra', errorJson.message || 'Không thể tạo món ăn');
+                        }
+                    } catch (jsonError) {
+                        showToast('error', 'Có lỗi xảy ra', `Lỗi ${response.status}: ${errorText}`);
+                    }
+
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
+                    return;
                 }
+
+                const result = await response.json();
+                showToast('success', 'Thành công', result.message || 'Tạo món ăn mới thành công!');
+
+                setTimeout(() => {
+                    window.location.href = '/ManagerMenu/DisplayMenu';
+                }, 1500);
+
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Fetch error:', error);
 
                 // ✅ ẨN LOADING KHI CÓ LỖI
                 hideLoading();
@@ -1240,7 +1020,7 @@
 
                 const submitBtn = document.querySelector('button[type="submit"]');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Lưu thay đổi';
+                submitBtn.innerHTML = originalText;
             }
         }
 

@@ -59,6 +59,7 @@ namespace BusinessAccessLayer.Mapping
             CreateMap<Ingredient, IngredientDTO>();
             CreateMap<IngredientDTO, Ingredient>();
 
+
             //BatchIngredient 
             CreateMap<InventoryBatch, BatchIngredientDTO>()
                 .ForMember(dest => dest.IngredientName, opt => opt.MapFrom(src => src.Ingredient.Name))
@@ -82,7 +83,51 @@ namespace BusinessAccessLayer.Mapping
             .ForMember(d => d.AuditStatus, opt => opt.MapFrom(src => src.AuditStatus));
 
             CreateMap<AuditInventory, AuditInventoryResponseDTO>();
-        
+
+
+            CreateMap<BestSellerDto, MenuItem>();
+            CreateMap<MenuItem, BestSellerDto>();
+
+
+            CreateMap<MenuItem, MenuItemStatisticsDto>()
+        .ForMember(dest => dest.CategoryId,
+            opt => opt.MapFrom(src => src.CategoryId))
+        .ForMember(dest => dest.Description,
+            opt => opt.MapFrom(src => src.Description ?? ""))
+        .ForMember(dest => dest.CourseType,
+            opt => opt.MapFrom(src => src.CourseType))
+        .ForMember(dest => dest.ImageUrl,
+            opt => opt.MapFrom(src => src.ImageUrl ?? ""))
+        .ForMember(dest => dest.IsAvailable,
+            opt => opt.MapFrom(src => src.IsAvailable ?? false))
+        .ForMember(dest => dest.IsAds,
+            opt => opt.MapFrom(src => src.IsAds ?? false))
+        .ForMember(dest => dest.TimeCook,
+            opt => opt.MapFrom(src => src.TimeCook))
+        .ForMember(dest => dest.BillingType,
+            opt => opt.MapFrom(src => src.BillingType))
+        .ForMember(dest => dest.Recipes,  // 🔥 QUAN TRỌNG
+            opt => opt.MapFrom(src => src.Recipes))
+        // Statistics fields
+        .ForMember(dest => dest.ServedToday, opt => opt.Ignore())
+        .ForMember(dest => dest.ServedYesterday, opt => opt.Ignore())
+        .ForMember(dest => dest.Average7Days, opt => opt.Ignore())
+        .ForMember(dest => dest.Average30Days, opt => opt.Ignore())
+        .ForMember(dest => dest.Average90Days, opt => opt.Ignore())
+        .ForMember(dest => dest.CompareWithYesterday, opt => opt.Ignore())
+        .ForMember(dest => dest.CompareWith7Days, opt => opt.Ignore())
+        .ForMember(dest => dest.CompareWith30Days, opt => opt.Ignore());
+
+
+            CreateMap<MenuItem, MenuItemDto>()
+                .ForMember(dest => dest.CategoryName,
+                    opt => opt.MapFrom(src => src.Category != null ? src.Category.CategoryName : string.Empty))
+                .ForMember(dest => dest.IsAvailable,
+                    opt => opt.MapFrom(src => src.IsAvailable ?? false))
+                .ForMember(dest => dest.ImageUrl,
+                    opt => opt.MapFrom(src => src.ImageUrl ?? string.Empty))
+                .ForMember(dest => dest.Description,
+                    opt => opt.MapFrom(src => src.Description ?? string.Empty));
 
 
             // User mappings

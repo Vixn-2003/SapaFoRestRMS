@@ -39,21 +39,13 @@ namespace DataAccessLayer.Repositories
             throw new NotImplementedException();
         }
 
-        public async Task<IEnumerable<(MenuItem MenuItem, int TotalQuantity)>> GetTopBestSellersAsync(int top = 10)
+        public async Task<IEnumerable<MenuItem>> GetTopBestSellersAsync()
         {
-            var result = await _context.OrderDetails
-                .Include(od => od.MenuItem)
-                .GroupBy(od => od.MenuItem)
-                .Select(g => new
-                {
-                    MenuItem = g.Key,
-                    TotalQuantity = g.Sum(od => od.Quantity)
-                })
-                .OrderByDescending(x => x.TotalQuantity)
-                .Take(top)
+            return await _context.MenuItems
+                .Where(m => m.IsAds == true && m.IsAvailable == true)
+                .Include(m => m.Category)
+                .OrderBy(m => m.Name) // Sắp xếp theo tên
                 .ToListAsync();
-
-            return result.Select(x => (x.MenuItem, x.TotalQuantity));
         }
 
         public Task SaveChangesAsync()

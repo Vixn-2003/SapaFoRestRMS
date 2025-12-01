@@ -391,6 +391,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CourseType).HasMaxLength(20);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+            entity.Property(e => e.IsAds).HasDefaultValue(false);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
