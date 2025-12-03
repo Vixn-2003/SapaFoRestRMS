@@ -89,9 +89,15 @@ namespace BusinessAccessLayer.Services
             {
                 // Get order detail with menu item and recipes
                 var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(orderDetailId);
-                if (orderDetail == null || orderDetail.MenuItem == null)
+                if (orderDetail == null)
                 {
                     return (false, "Không tìm thấy món ăn");
+                }
+
+                // Nếu OrderDetail không gắn với MenuItem (ví dụ: dòng combo), bỏ qua inventory
+                if (orderDetail.MenuItem == null)
+                {
+                    return (true, "Món này không cần nguyên liệu");
                 }
 
                 // Get recipes for this menu item
@@ -152,9 +158,15 @@ namespace BusinessAccessLayer.Services
             {
                 // Get order detail with menu item and recipes
                 var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(orderDetailId);
-                if (orderDetail == null || orderDetail.MenuItem == null)
+                if (orderDetail == null)
                 {
                     return (false, "Không tìm thấy món ăn");
+                }
+
+                // Nếu OrderDetail không gắn với MenuItem (ví dụ: dòng combo), bỏ qua inventory
+                if (orderDetail.MenuItem == null)
+                {
+                    return (true, "Món này không cần nguyên liệu");
                 }
 
                 // Get recipes for this menu item

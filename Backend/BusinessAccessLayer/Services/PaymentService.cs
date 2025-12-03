@@ -24,13 +24,15 @@ public class PaymentService : IPaymentService
     private readonly IMapper _mapper;
     private readonly IAuditLogService _auditLogService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IKitchenDisplayService _kitchenDisplayService;
 
-    public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, IAuditLogService auditLogService, IServiceProvider serviceProvider)
+    public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, IAuditLogService auditLogService, IServiceProvider serviceProvider, IKitchenDisplayService kitchenDisplayService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _auditLogService = auditLogService;
         _serviceProvider = serviceProvider;
+        _kitchenDisplayService = kitchenDisplayService;
     }
 
     private static readonly HashSet<string> PendingStatuses = new(StringComparer.OrdinalIgnoreCase)
@@ -115,8 +117,65 @@ public class PaymentService : IPaymentService
         // Tính toán các khoản tiền
         CalculateOrderAmounts(order, orderDto);
         PopulateOrderMetadata(order, orderDto);
+        
+        // Cập nhật lại Status của combo dựa trên trạng thái các món con trong combo (từ KDS)
+        await UpdateComboStatusesFromKitchenAsync(orderDto, ct);
 
         return orderDto;
+    }
+
+    /// <summary>
+    /// Cập nhật status của các dòng combo trong màn thanh toán
+    /// dựa trên trạng thái thực tế của các món con trong combo ở KDS.
+    /// </summary>
+    private async Task UpdateComboStatusesFromKitchenAsync(OrderDto orderDto, CancellationToken ct)
+    {
+        if (orderDto == null || orderDto.OrderItems == null || orderDto.OrderItems.Count == 0)
+        {
+            return;
+        }
+
+        // Lấy toàn bộ items của order từ KDS (bao gồm món lẻ + món trong combo)
+        var kitchenCard = await _kitchenDisplayService.GetOrderDetailsWithAllItemsAsync(orderDto.OrderId);
+        if (kitchenCard == null || kitchenCard.Items == null || kitchenCard.Items.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var item in orderDto.OrderItems.Where(i => i.ComboId.HasValue))
+        {
+            // Các KitchenOrderItemDto tương ứng với combo này: cùng OrderDetailId
+            var relatedKitchenItems = kitchenCard.Items
+                .Where(k => k.OrderDetailId == item.OrderDetailId)
+                .ToList();
+
+            if (!relatedKitchenItems.Any())
+            {
+                continue;
+            }
+
+            var statuses = relatedKitchenItems
+                .Select(k => (k.Status ?? "Pending").Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+
+            if (!statuses.Any())
+            {
+                continue;
+            }
+
+            // Quy tắc tổng hợp:
+            // - Tất cả Done  -> Done
+            // - Tất cả Cooking -> Cooking
+            // - Tất cả Ready -> Ready
+            // - Tất cả Pending -> Pending
+            // - Trường hợp mix: giữ nguyên Status gốc (không override để tránh hiểu nhầm)
+            var distinct = statuses.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (distinct.Count == 1)
+            {
+                item.Status = distinct[0];
+            }
+        }
     }
 
     public async Task<OrderDto> ApplyDiscountAsync(DiscountRequestDto request, CancellationToken ct = default)
