@@ -372,28 +372,30 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
         policy.WithOrigins(
-            "http://localhost:5054",    // 👈 Frontend bạn đang chạy 
-            "http://localhost:5123",    // Razor nội bộ
-            "https://localhost:7096",   // 👈 Backend HTTPS localhost
-            "http://localhost:5180",    // Backend HTTP localhost
-            "http://192.168.1.47:5123", // IP Razor Wifi nhà
-            "http://192.168.1.47:5180",  // Swagger wifi nhà
-            "http://192.168.1.97:5054",  // 👈 Frontend IP mới
-            "http://192.168.1.97:5180",  // 👈 Backend HTTP IP mới
-            "https://192.168.1.97:7096", // 👈 Backend HTTPS IP mới (PORT CHÍNH)
-            "http://192.168.1.97:7096",  // 👈 Backend HTTP IP mới (nếu dùng HTTP)
-            "http://192.168.1.97:5123"   // 👈 Razor IP mới
-                                        //   "http://192.168.105.100:5123", // IP Razor
-                                        //  "http://192.168.105.100:5180"  // Swagger
+            // Frontend local
+            "http://localhost:5054",
+            "https://localhost:7097",
 
-        // "http://10.33.8.77:5123", // IP Razor
-        //"http://10.33.8.77:5180"  // Swagger
+            // Razor / backend localhost
+            "http://localhost:5123",
+            "http://localhost:5180",
+            "https://localhost:7096",
+
+            // IP nội bộ / mạng Wifi nhà
+            "http://192.168.1.47:5123",
+            "http://192.168.1.47:5180",
+            "http://192.168.1.97:5054",
+            "http://192.168.1.97:5180",
+            "https://192.168.1.97:7096",
+            "http://192.168.1.97:7096",
+            "http://192.168.1.97:5123"
         )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials(); // 👈 Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
+        .AllowAnyHeader()     // Cho phép mọi header
+        .AllowAnyMethod()     // Cho phép mọi method: GET, POST, PUT, DELETE
+        .AllowCredentials();  // Bắt buộc nếu dùng cookies, fetch, SignalR
     });
 });
+
 
 var app = builder.Build();
 
