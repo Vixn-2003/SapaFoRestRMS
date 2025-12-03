@@ -9,6 +9,6 @@ namespace DataAccessLayer.Repositories.Interfaces
 {
     public interface IMenuItemRepository : IRepository<MenuItem>
     {
-        Task<IEnumerable<(MenuItem MenuItem, int TotalQuantity)>> GetTopBestSellersAsync(int top = 10);
+        Task<IEnumerable<MenuItem>> GetTopBestSellersAsync();
     }
 }

@@ -1,6 +1,8 @@
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using DomainAccessLayer.Models;
 
@@ -11,6 +13,14 @@ namespace DataAccessLayer.Repositories.Interfaces;
 /// </summary>
 public interface IShiftRepository : IRepository<Shift>
 {
+    public interface IShiftRepository
+    {
+        Task<IEnumerable<Shift>> GetAllAsync();
+        Task<Shift?> GetByIdAsync(int id);
+        Task AddAsync(Shift shift);
+        void Update(Shift shift);
+        void Delete(Shift shift);
+        Task<bool> SaveChangesAsync();
     /// <summary>
     /// Lấy ca làm việc đang mở (chưa kết thúc)
     /// </summary>
@@ -46,9 +56,11 @@ public interface IShiftRepository : IRepository<Shift>
     /// </summary>
     Task<decimal> GetShiftRevenueAsync(int shiftId, CancellationToken ct = default);
 
+        Task<bool> IsConflictAsync(int departmentId, DateTime date, TimeSpan start, TimeSpan end, int? excludeId = null);
     /// <summary>
     /// Lấy số lượng đơn hàng theo ca
     /// </summary>
     Task<int> GetShiftOrderCountAsync(int shiftId, CancellationToken ct = default);
-}
+    }
 
+}

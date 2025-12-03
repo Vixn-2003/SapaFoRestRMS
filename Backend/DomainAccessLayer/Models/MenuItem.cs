@@ -19,6 +19,7 @@ public partial class MenuItem
     public string CourseType { get; set; } = null!;
 
     public bool? IsAvailable { get; set; }
+    public bool? IsAds { get; set; }
 
     public string? ImageUrl { get; set; }
 

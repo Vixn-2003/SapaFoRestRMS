@@ -257,8 +257,21 @@ builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
 
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
-
-
+//daytype
+builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
+builder.Services.AddScoped<IDayTypeService, DayTypeService>();
+//shifttemplate
+builder.Services.AddScoped<IShiftTemplateRepository, ShiftTemplateRepository>();
+builder.Services.AddScoped<IShiftTemplateService, ShiftTemplateService>();
+//department
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+//shift 
+builder.Services.AddScoped<IShiftRepository, ShiftRepository>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+//shiftassignment
+builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
+builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
@@ -387,7 +400,7 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
-// Bật CORS
+//// Bật CORS
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();

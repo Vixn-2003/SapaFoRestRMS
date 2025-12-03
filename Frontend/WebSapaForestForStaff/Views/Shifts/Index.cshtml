@@ -1,0 +1,198 @@
+﻿@using WebSapaForestForStaff.DTOs.Department
+@using WebSapaForestForStaff.DTOs.Shift
+@using WebSapaForestForStaff.DTOs.ShiftTemplateDTOs
+@model List<ShiftViewDTO>
+@{
+    DateTime weekStart = (DateTime)ViewBag.WeekStart;
+    var weekEnd = weekStart.AddDays(6);
+}
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<div class="p-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <a href="/Shifts?week=@weekStart.AddDays(-7)"
+           class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+            ⬅ Tuần trước
+        </a>
+
+        <div class="text-center">
+            <h1 class="text-2xl font-bold">Lịch Ca Trong Tuần</h1>
+            <p class="text-gray-600">
+                Tuần @weekStart.ToString("MM/yyyy")
+                ( @weekStart.ToString("dd/MM") - @weekEnd.ToString("dd/MM") )
+            </p>
+        </div>
+
+        <a href="/Shifts?week=@weekStart.AddDays(7)"
+           class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+            Tuần sau ➡
+        </a>
+    </div>
+
+    <!-- Hiển thị các ngày -->
+    @for (int i = 0; i < 7; i++)
+    {
+        var day = weekStart.AddDays(i);
+        var shifts = Model.Where(s => s.Date.Date == day.Date).ToList();
+
+        <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-semibold">Thứ @(i + 2)</h2>
+
+                <button onclick="openCreate('@day.ToString("yyyy-MM-dd")')"
+                        class="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600 transition">
+                    + Tạo Ca
+                </button>
+            </div>
+
+            <!-- Timeline -->
+            <div class="relative border rounded-lg h-16 bg-gray-50 flex overflow-hidden">
+
+                <!-- Hours grid -->
+                @for (int h = 0; h < 24; h++)
+                {
+                    <div class="border-r w-16 flex items-end justify-center text-xs text-gray-400">
+                        @h h
+                    </div>
+                }
+
+                <!-- Các ca -->
+                @foreach (var sh in shifts)
+                {
+                    var left = sh.StartTime.TotalHours * 64;  // 64px = mỗi 1 giờ rộng 64px
+                    var width = (sh.EndTime - sh.StartTime).TotalHours * 64;
+
+                    <div class="absolute top-2 h-12 bg-blue-500 text-white flex items-center px-3 rounded-lg shadow cursor-pointer hover:bg-blue-600 transition"
+                         style="left:@($"{left}px"); width:@($"{width}px");">
+                        <div class="flex-1">@sh.Code</div>
+
+                        <button onclick="openEdit(@sh.Id)"
+                                class="text-yellow-300 hover:text-yellow-200 mr-2">
+                            ✏
+                        </button>
+
+                        <form method="post" action="/Shifts/Delete/@sh.Id">
+                            <button class="text-red-300 hover:text-red-200">🗑</button>
+                        </form>
+                    </div>
+                }
+
+            </div>
+        </div>
+    }
+</div>
+<!-- Modal chung cho Create / Edit -->
+<div id="modal"
+     class="fixed inset-0 hidden flex justify-center items-center bg-black bg-opacity-50 z-50 transition-opacity duration-300">
+    <div class="bg-white rounded-2xl shadow-2xl w-96 max-w-full p-6 transform scale-95 opacity-0 transition-all duration-300" id="modalContent">
+        <h2 id="modalTitle" class="text-2xl font-bold mb-4 text-gray-800"></h2>
+
+        <form id="modalForm" method="post">
+            <input type="hidden" name="Id" id="modalId" />
+            <input type="hidden" name="Date" id="modalDate" />
+
+            <div class="mb-4">
+                <label class="block mb-1 text-gray-700 font-medium">Template</label>
+                <select name="TemplateId" id="modalTemplate" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+                    <option value="">-- Chọn template --</option>
+                    @{
+                        var templates = ViewBag.Templates as List<ShiftTemplateResponseDTO>;
+                        if (templates != null)
+                        {
+                            foreach (var t in templates)
+                            {
+                                <option value="@t.Id">@t.Code (@t.StartTime.Hours:@t.StartTime.Minutes - @t.EndTime.Hours:@t.EndTime.Minutes)</option>
+                            }
+                        }
+                    }
+                </select>
+
+            </div>
+
+            <div class="mb-4">
+                <label class="block mb-1 text-gray-700 font-medium">Department</label>
+                <select name="DepartmentId" id="modalDepartment"
+                        class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 focus:outline-none">
+                    <option value="">-- Chọn phòng ban --</option>
+                    @{
+                        var departments = ViewBag.Departments as List<DepartmentDTO>;
+                        if (departments != null)
+                        {
+                            foreach (var dep in departments)
+                            {
+                                <option value="@dep.DepartmentId">@dep.Name</option>
+                            }
+                        }
+                    }
+                </select>
+
+            </div>
+
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition">
+                    Hủy
+                </button>
+                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    Lưu
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openCreate(date) {
+        document.getElementById("modalTitle").innerText = "Tạo Ca";
+        document.getElementById("modalForm").action = "/Shifts/Create";
+        document.getElementById("modalDate").value = date;
+        document.getElementById("modalId").value = "";
+        document.getElementById("modalTemplate").value = "1";
+        document.getElementById("modalDepartment").value = "";
+
+        const modal = document.getElementById("modal");
+        const content = document.getElementById("modalContent");
+        modal.classList.remove("hidden");
+        setTimeout(() => {
+            content.classList.remove("scale-95", "opacity-0");
+        }, 10);
+    }
+
+    async function openEdit(id) {
+        try {
+            let res = await fetch(`https://localhost:7096/api/shift/${id}`);
+            if (!res.ok) throw new Error("API Error");
+            let data = await res.json();
+
+            document.getElementById("modalTitle").innerText = "Sửa Ca";
+            document.getElementById("modalForm").action = "/Shifts/Update";
+            document.getElementById("modalId").value = id;
+            document.getElementById("modalDate").value = data.date.substring(0,10);
+           document.getElementById("modalTemplate").value = data.templateId;
+
+            document.getElementById("modalDepartment").value = data.departmentId;
+
+            const modal = document.getElementById("modal");
+            const content = document.getElementById("modalContent");
+            modal.classList.remove("hidden");
+            setTimeout(() => {
+                content.classList.remove("scale-95", "opacity-0");
+            }, 10);
+        } catch (err) {
+            console.error(err);
+            alert("Không thể tải dữ liệu!");
+        }
+    }
+
+    function closeModal() {
+        const modal = document.getElementById("modal");
+        const content = document.getElementById("modalContent");
+        content.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+            modal.classList.add("hidden");
+        }, 200);
+    }
+</script>

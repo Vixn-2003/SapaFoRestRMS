@@ -37,29 +37,30 @@ namespace BusinessAccessLayer.Services
                 // ✅ HIỂN THỊ TẤT CẢ: Bao gồm cả Ready và Done
                 // Map OrderDetail to KitchenOrderItemDto với tính toán trạng thái
                 var items = orderDetails
+                    .Where(od => od.MenuItem != null) // Chỉ lấy items có MenuItem (bỏ qua Combo hoặc items không hợp lệ)
                     .Select(od =>
                     {
                         var currentStatus = od.Status ?? "Pending";
                         var (calculatedStatus, lateMinutes) = CalculateItemStatus(
                             currentStatus,
                             od.StartedAt,
-                            od.MenuItem.TimeCook,
+                            od.MenuItem?.TimeCook ?? 0,
                             now);
 
                         return new KitchenOrderItemDto
                         {
                             OrderDetailId = od.OrderDetailId,
-                            MenuItemName = od.MenuItem.Name,
+                            MenuItemName = od.MenuItem?.Name ?? "Unknown",
                             Quantity = od.Quantity,
                             Status = calculatedStatus, // Sử dụng trạng thái đã tính toán
                             Notes = od.Notes,
-                            CourseType = od.MenuItem.CourseType ?? "Other",
+                            CourseType = od.MenuItem?.CourseType ?? "Other",
                             StartedAt = od.StartedAt,
                             CompletedAt = od.Status == "Done" ? od.CreatedAt : null,
                             ReadyAt = od.ReadyAt,
                             IsUrgent = od.IsUrgent,
-                            TimeCook = od.MenuItem.TimeCook, // Thời gian nấu (phút)
-                            BatchSize = od.MenuItem.BatchSize,
+                            TimeCook = od.MenuItem?.TimeCook ?? 0, // Thời gian nấu (phút)
+                            BatchSize = od.MenuItem?.BatchSize ?? 0,
                             LateMinutes = lateMinutes
                         };
                     })
@@ -908,7 +909,8 @@ namespace BusinessAccessLayer.Services
                 {
                     // ✅ BỎ: Filter Done items - Bếp không cần nhìn Done
                     var status = (orderDetail.Status ?? "Pending").Trim();
-                    if (status == "Done" || status == "Hoàn thành" || status == "Xong")
+                    var normalizedStatus = NormalizeStatus(status);
+                    if (normalizedStatus == "Done")
                     {
                         continue; // Bỏ qua Done items
                     }
@@ -922,7 +924,7 @@ namespace BusinessAccessLayer.Services
                     DateTime? startedAt = null;
                     
                     // Nếu status = "Cooking", lấy StartedAt (thời gian bắt đầu nấu)
-                    if (status == "Cooking" || status == "Đang chế biến")
+                    if (normalizedStatus == "Cooking")
                     {
                         // Dùng StartedAt nếu có, nếu không thì dùng CreatedAt
                         startedAt = orderDetail.StartedAt ?? orderDetail.CreatedAt;
@@ -1046,7 +1048,7 @@ namespace BusinessAccessLayer.Services
             {
                 // Lấy tất cả items Done trong order này
                 var doneItems = order.OrderDetails
-                    .Where(od => od.Status == "Done" || od.Status == "Hoàn thành")
+                    .Where(od => od.Status == "Done")
                     .ToList();
 
                 if (!doneItems.Any()) continue;
@@ -1055,9 +1057,8 @@ namespace BusinessAccessLayer.Services
                 var allItemsDone = order.OrderDetails.All(od =>
                 {
                     var status = (od.Status ?? string.Empty).Trim();
-                    return status.Equals("Done", StringComparison.OrdinalIgnoreCase) ||
-                           status.Equals("Hoàn thành", StringComparison.OrdinalIgnoreCase) ||
-                           status.Equals("Xong", StringComparison.OrdinalIgnoreCase);
+                    var normalizedStatus = NormalizeStatus(status);
+                    return normalizedStatus == "Done";
                 });
 
                 if (!allItemsDone)
@@ -1077,19 +1078,21 @@ namespace BusinessAccessLayer.Services
                     PriorityLevel = GetPriorityLevel((int)((now - (order.CreatedAt ?? now)).TotalMinutes)),
                     TotalItems = order.OrderDetails.Count,
                     CompletedItems = doneItems.Count,
-                    Items = doneItems.Select(od => new KitchenOrderItemDto
-                    {
-                        OrderDetailId = od.OrderDetailId,
-                        MenuItemName = od.MenuItem.Name,
-                        Quantity = od.Quantity,
-                        Status = od.Status ?? "Done",
-                        Notes = od.Notes,
-                        CourseType = od.MenuItem.CourseType ?? "Other",
-                        IsUrgent = od.IsUrgent,
-                        CompletedAt = od.CreatedAt, // Dùng CreatedAt làm proxy (không chính xác 100%)
-                        TimeCook = od.MenuItem.TimeCook, // Thời gian nấu (phút)
-                        BatchSize = od.MenuItem.BatchSize
-                    }).ToList()
+                    Items = doneItems
+                        .Where(od => od.MenuItem != null) // Chỉ lấy items có MenuItem
+                        .Select(od => new KitchenOrderItemDto
+                        {
+                            OrderDetailId = od.OrderDetailId,
+                            MenuItemName = od.MenuItem?.Name ?? "Unknown",
+                            Quantity = od.Quantity,
+                            Status = od.Status ?? "Done",
+                            Notes = od.Notes,
+                            CourseType = od.MenuItem?.CourseType ?? "Other",
+                            IsUrgent = od.IsUrgent,
+                            CompletedAt = od.CreatedAt, // Dùng CreatedAt làm proxy (không chính xác 100%)
+                            TimeCook = od.MenuItem?.TimeCook ?? 0, // Thời gian nấu (phút)
+                            BatchSize = od.MenuItem?.BatchSize ?? 0
+                        }).ToList()
                 };
 
                 result.Add(orderCard);
@@ -1127,7 +1130,7 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                if (orderDetail.Status != "Done" && orderDetail.Status != "Hoàn thành")
+                if (orderDetail.Status != "Done")
                 {
                     return new StatusUpdateResponse
                     {
@@ -1194,7 +1197,9 @@ namespace BusinessAccessLayer.Services
             if (!orderDetails.Any()) return null;
 
             // Map ALL OrderDetail to KitchenOrderItemDto (including Done items)
+            // Chỉ lấy items có MenuItem (bỏ qua Combo hoặc items không hợp lệ)
             var items = orderDetails
+                .Where(od => od.MenuItem != null)
                 .Select(od =>
                 {
                     var currentStatus = od.Status ?? "Pending";

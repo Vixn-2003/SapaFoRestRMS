@@ -1,26 +1,23 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace DataAccessLayer.Repositories;
-
-/// <summary>
-/// Repository cho Shift operations
-/// </summary>
-public class ShiftRepository : IShiftRepository
+namespace DataAccessLayer.Repositories
 {
-    private readonly SapaFoRestRmsContext _context;
-
-    public ShiftRepository(SapaFoRestRmsContext context)
+    public class ShiftRepository : IShiftRepository
     {
-        _context = context;
-    }
+        private readonly SapaFoRestRmsContext _context;
+
+        public ShiftRepository(SapaFoRestRmsContext context)
+        {
+            _context = context;
+        }
 
     public async Task<Shift?> GetByIdAsync(int id)
     {
@@ -32,17 +29,16 @@ public class ShiftRepository : IShiftRepository
             .FirstOrDefaultAsync(s => s.ShiftId == id);
     }
 
-    public async Task<IEnumerable<Shift>> GetAllAsync()
-    {
-        return await _context.Shifts
-            .Include(s => s.Staff)
-                .ThenInclude(st => st.User)
-            .OrderByDescending(s => s.StartTime)
-            .ToListAsync();
-    }
+        public async Task<IEnumerable<Shift>> GetAllAsync()
+        {
+            return await _context.Shifts
+                .Include(x => x.Template)
+                .Include(x => x.Department)
+                .ToListAsync();
+        }
 
-    public async Task AddAsync(Shift entity)
-    {
+        public async Task<Shift?> GetByIdAsync(int id)
+        {
         await _context.Shifts.AddAsync(entity);
     }
 
@@ -69,62 +65,42 @@ public class ShiftRepository : IShiftRepository
 
     public async Task<Shift?> GetCurrentOpenShiftAsync(int staffId, CancellationToken ct = default)
     {
-        return await _context.Shifts
-            .Include(s => s.Staff)
-                .ThenInclude(st => st.User)
-            .Include(s => s.HandoverToStaff)
-                .ThenInclude(st => st.User)
-            .Where(s => s.StaffId == staffId && s.Status == "Open")
-            .OrderByDescending(s => s.StartTime)
-            .FirstOrDefaultAsync(ct);
-    }
+            return await _context.Shifts
+                .Include(x => x.Template)
+                .Include(x => x.Department)
+                .FirstOrDefaultAsync(x => x.Id == id);
+        }
 
-    public async Task<IEnumerable<Shift>> GetShiftsByDateAndStaffAsync(DateOnly date, int staffId, CancellationToken ct = default)
-    {
-        return await _context.Shifts
-            .Include(s => s.Staff)
-                .ThenInclude(st => st.User)
-            .Where(s => s.Date == date && s.StaffId == staffId)
-            .OrderBy(s => s.StartTime)
-            .ToListAsync(ct);
-    }
+        public async Task AddAsync(Shift shift)
+        {
+            await _context.Shifts.AddAsync(shift);
+        }
 
-    public async Task<Shift?> GetShiftWithDetailsAsync(int shiftId, CancellationToken ct = default)
-    {
-        return await _context.Shifts
-            .Include(s => s.Staff)
-                .ThenInclude(st => st.User)
-            .Include(s => s.HandoverToStaff)
-                .ThenInclude(st => st.User)
-            .FirstOrDefaultAsync(s => s.ShiftId == shiftId, ct);
-    }
+        public void Update(Shift shift)
+        {
+            _context.Shifts.Update(shift);
+        }
 
-    public async Task<IEnumerable<Shift>> GetAllOpenShiftsAsync(CancellationToken ct = default)
-    {
-        return await _context.Shifts
-            .Include(s => s.Staff)
-                .ThenInclude(st => st.User)
-            .Where(s => s.Status == "Open")
-            .OrderByDescending(s => s.StartTime)
-            .ToListAsync(ct);
-    }
+        public void Delete(Shift shift)
+        {
+            _context.Shifts.Remove(shift);
+        }
 
-    public async Task<IEnumerable<Shift>> GetShiftHistoryAsync(int staffId, DateOnly fromDate, DateOnly toDate, CancellationToken ct = default)
-    {
-        return await _context.Shifts
-            .Include(s => s.Staff)
-                .ThenInclude(st => st.User)
-            .Where(s => s.StaffId == staffId && s.Date >= fromDate && s.Date <= toDate)
-            .OrderByDescending(s => s.Date)
-            .ThenByDescending(s => s.StartTime)
-            .ToListAsync(ct);
-    }
+        public async Task<bool> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync() > 0;
+        }
 
-    public async Task<bool> HasOpenShiftAsync(int staffId, CancellationToken ct = default)
-    {
-        return await _context.Shifts
-            .AnyAsync(s => s.StaffId == staffId && s.Status == "Open", ct);
-    }
+        public async Task<bool> IsConflictAsync(int departmentId, DateTime date, TimeSpan start, TimeSpan end, int? excludeId = null)
+        {
+            return await _context.Shifts.AnyAsync(s =>
+                s.DepartmentId == departmentId &&
+                s.Date.Date == date.Date &&
+                (excludeId == null || s.Id != excludeId) &&
+                start < s.EndTime &&
+                end > s.StartTime
+            );
+        }
 
     public async Task<decimal> GetShiftRevenueAsync(int shiftId, CancellationToken ct = default)
     {

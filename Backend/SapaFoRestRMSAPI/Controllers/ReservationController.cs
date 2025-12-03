@@ -93,6 +93,30 @@ namespace SapaFoRestRMSAPI.Controllers
         [HttpPost("confirm")]
         public async Task<IActionResult> ConfirmReservation([FromBody] ReservationCreateDto dto)
         {
+            // Validate ModelState (DataAnnotations)
+            if (!ModelState.IsValid)
+            {
+                var error = ModelState.Values
+                                      .SelectMany(v => v.Errors)
+                                      .FirstOrDefault()?.ErrorMessage;
+
+                return BadRequest(new { success = false, message = error });
+            }
+
+            // Validate ngày trong quá khứ
+            if (dto.ReservationDate.Date < DateTime.Today)
+                return BadRequest(new { success = false, message = "Ngày đặt bàn không được ở trong quá khứ." });
+
+            // Validate giờ trong quá khứ (nếu đặt hôm nay)
+            if (dto.ReservationDate.Date == DateTime.Today &&
+                dto.ReservationTime < DateTime.Now)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Giờ đặt bàn không hợp lệ. Không thể đặt giờ đã qua."
+                });
+            }
             if (!_otpCache.ContainsKey(dto.Phone))
                 return BadRequest(new { message = "Chưa gửi OTP đến số này." });
 

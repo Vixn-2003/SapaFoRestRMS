@@ -570,13 +570,18 @@ async function loadOrdersByTable() {
             // ✅ Backend đã filter Done items rồi, không cần filter ở frontend nữa
             // Lưu orders vào currentOrders để modal có thể tìm thấy
             currentOrders = orders;
-            // Group orders by table number
-            const groupedByTable = groupOrdersByTable(orders);
+            
+            // ✅ SỬA: Sắp xếp tất cả orders theo thời gian order (CreatedAt), không group theo bàn
+            const sortedOrders = orders.sort((a, b) => {
+                const timeA = new Date(a.createdAt || 0).getTime();
+                const timeB = new Date(b.createdAt || 0).getTime();
+                return timeA - timeB; // Sắp xếp từ cũ đến mới
+            });
             
             // Double check view mode before rendering
             if (currentViewMode === 'theo-ban') {
-                renderOrdersByTable(groupedByTable);
-                updateOrderCount(groupedByTable.length);
+                renderOrdersByTable(sortedOrders);
+                updateOrderCount(sortedOrders.length);
             }
         } else {
             if (currentViewMode === 'theo-ban') {
@@ -640,11 +645,11 @@ function groupOrdersByTable(orders) {
     return Object.values(grouped);
 }
 
-// Render orders grouped by table
-function renderOrdersByTable(groupedByTable) {
+// Render orders sorted by time (not grouped by table)
+function renderOrdersByTable(orders) {
     const grid = document.getElementById('ordersGrid');
     
-    if (!groupedByTable || groupedByTable.length === 0) {
+    if (!orders || orders.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="mdi mdi-food-off" style="font-size: 48px;"></i>
@@ -654,9 +659,16 @@ function renderOrdersByTable(groupedByTable) {
         return;
     }
     
-    const renderedGroups = groupedByTable.map(group => createTableGroupCard(group)).filter(html => html.trim() !== '').join('');
+    // Tính tổng số đơn và số món đã hoàn thành của TẤT CẢ orders
+    const totalOrders = orders.length;
+    const totalItems = orders.reduce((sum, order) => sum + (order.totalItems || 0), 0);
+    const totalCompletedItems = orders.reduce((sum, order) => sum + (order.completedItems || 0), 0);
+    const totalLateItems = orders.reduce((sum, order) => sum + (order.lateItems || 0), 0);
     
-    if (renderedGroups.trim() === '') {
+    // Render từng order card
+    const renderedOrders = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '').join('');
+    
+    if (renderedOrders.trim() === '') {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="mdi mdi-filter-off" style="font-size: 48px;"></i>
@@ -666,7 +678,19 @@ function renderOrdersByTable(groupedByTable) {
         return;
     }
     
-    grid.innerHTML = renderedGroups;
+    // ✅ Tạo header tổng hợp cho TẤT CẢ orders - đặt ở trên cùng, chiếm toàn bộ chiều rộng
+    const summaryHeader = `
+        <div class="table-group-header" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px; grid-column: 1 / -1;">
+            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <i class="mdi mdi-silverware-fork-knife"></i> 
+                <span>${totalOrders} đơn | ${totalCompletedItems}/${totalItems} món đã hoàn thành</span>
+                ${totalLateItems > 0 ? `<span style="color: #dc3545; margin-left: 10px;"><i class="mdi mdi-alert-circle"></i> Món đã trễ: ${totalLateItems}</span>` : ''}
+                ${totalCompletedItems > 0 ? `<span style="color: #28a745; margin-left: 10px;"><i class="mdi mdi-check-circle"></i> Món đã hoàn thành: ${totalCompletedItems}</span>` : ''}
+            </h3>
+        </div>
+    `;
+    
+    grid.innerHTML = summaryHeader + renderedOrders;
     
     // Attach click handlers
     setTimeout(() => {
