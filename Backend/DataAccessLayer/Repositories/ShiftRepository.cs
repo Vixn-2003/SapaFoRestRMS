@@ -19,16 +19,6 @@ namespace DataAccessLayer.Repositories
             _context = context;
         }
 
-    public async Task<Shift?> GetByIdAsync(int id)
-    {
-        return await _context.Shifts
-            .Include(s => s.Staff)
-                .ThenInclude(st => st.User)
-            .Include(s => s.HandoverToStaff)
-                .ThenInclude(st => st.User)
-            .FirstOrDefaultAsync(s => s.ShiftId == id);
-    }
-
         public async Task<IEnumerable<Shift>> GetAllAsync()
         {
             return await _context.Shifts
@@ -39,32 +29,6 @@ namespace DataAccessLayer.Repositories
 
         public async Task<Shift?> GetByIdAsync(int id)
         {
-        await _context.Shifts.AddAsync(entity);
-    }
-
-    public async Task UpdateAsync(Shift entity)
-    {
-        _context.Shifts.Update(entity);
-        await Task.CompletedTask;
-    }
-
-    public async Task DeleteAsync(int id)
-    {
-        var shift = await GetByIdAsync(id);
-        if (shift != null)
-        {
-            _context.Shifts.Remove(shift);
-        }
-        await Task.CompletedTask;
-    }
-
-    public async Task SaveChangesAsync()
-    {
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task<Shift?> GetCurrentOpenShiftAsync(int staffId, CancellationToken ct = default)
-    {
             return await _context.Shifts
                 .Include(x => x.Template)
                 .Include(x => x.Department)
@@ -101,37 +65,6 @@ namespace DataAccessLayer.Repositories
                 end > s.StartTime
             );
         }
-
-    public async Task<decimal> GetShiftRevenueAsync(int shiftId, CancellationToken ct = default)
-    {
-        var shift = await _context.Shifts.FindAsync(new object[] { shiftId }, ct);
-        if (shift == null) return 0;
-
-        // Tính tổng doanh thu từ các đơn hàng trong ca
-        var dayStart = shift.StartTime ?? DateTime.MinValue;
-        var dayEnd = shift.EndTime ?? DateTime.MaxValue;
-
-        var revenue = await _context.Transactions
-            .Where(t => t.CreatedAt >= dayStart && t.CreatedAt <= dayEnd &&
-                       (t.Status == "Paid" || t.Status == "Success"))
-            .SumAsync(t => t.Amount, ct);
-
-        return revenue;
     }
 
-    public async Task<int> GetShiftOrderCountAsync(int shiftId, CancellationToken ct = default)
-    {
-        var shift = await _context.Shifts.FindAsync(new object[] { shiftId }, ct);
-        if (shift == null) return 0;
-
-        var dayStart = shift.StartTime ?? DateTime.MinValue;
-        var dayEnd = shift.EndTime ?? DateTime.MaxValue;
-
-        var count = await _context.Orders
-            .Where(o => o.CreatedAt >= dayStart && o.CreatedAt <= dayEnd)
-            .CountAsync(ct);
-
-        return count;
-    }
 }
-

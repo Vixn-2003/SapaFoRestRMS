@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class reUpdateDatabaseNew : Migration
+    public partial class VinxUpdateDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -931,6 +931,17 @@ namespace DataAccessLayer.Migrations
                     StartTime = table.Column<TimeSpan>(type: "time", nullable: false),
                     EndTime = table.Column<TimeSpan>(type: "time", nullable: false),
                     RequiredEmployees = table.Column<int>(type: "int", nullable: false),
+                    OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ClosingBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    OpeningDenominations = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClosingDenominations = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Difference = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HandoverToStaffId = table.Column<int>(type: "int", nullable: true),
+                    HandoverNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HandoverTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PinCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StaffId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>

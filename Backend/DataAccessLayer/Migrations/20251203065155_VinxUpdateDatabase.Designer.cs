@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    [Migration("20251128124339_AddShiftManagementFields")]
-    partial class AddShiftManagementFields
+    [Migration("20251203065155_VinxUpdateDatabase")]
+    partial class VinxUpdateDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -155,6 +155,129 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("StaffId");
 
                     b.ToTable("Attendance", (string)null);
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.AuditInventory", b =>
+                {
+                    b.Property<string>("AuditId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("AdjustmentQuantity")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("AuditStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("BatchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<int?>("ConfirmerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConfirmerName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ConfirmerPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ConfirmerPosition")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<int>("CreatorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreatorPhone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CreatorPosition")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("IngredientCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("IngredientStatus")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsAddition")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("OriginalQuantity")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("PurchaseOrderId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ingredientName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("AuditId")
+                        .HasName("PK__AuditInventory__AuditId");
+
+                    b.HasIndex("AuditStatus")
+                        .HasDatabaseName("IX_AuditInventory_AuditStatus");
+
+                    b.HasIndex("ConfirmerId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_AuditInventory_CreatedAt");
+
+                    b.HasIndex("CreatorId")
+                        .HasDatabaseName("IX_AuditInventory_CreatorId");
+
+                    b.HasIndex("IngredientCode")
+                        .HasDatabaseName("IX_AuditInventory_IngredientCode");
+
+                    b.HasIndex("PurchaseOrderId")
+                        .HasDatabaseName("IX_AuditInventory_PurchaseOrderId");
+
+                    b.ToTable("AuditInventory", (string)null);
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.AuditLog", b =>
@@ -344,6 +467,67 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Customers");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.DayCalendar", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DayTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("WorkDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DayTypeId");
+
+                    b.ToTable("DayCalendars");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.DayType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DayTypes");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Department", b =>
+                {
+                    b.Property<int>("DepartmentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DepartmentId"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("DepartmentId");
+
+                    b.ToTable("Departments");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Event", b =>
                 {
                     b.Property<int>("EventId")
@@ -443,6 +627,11 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<int>("IngredientId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<int?>("PurchaseOrderDetailId")
                         .HasColumnType("int");
@@ -670,6 +859,11 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool?>("IsAds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<bool?>("IsAvailable")
                         .ValueGeneratedOnAdd()
@@ -1084,6 +1278,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PurchaseOrderDetailId"));
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("IngredientCode")
                         .HasMaxLength(50)
@@ -1526,11 +1723,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.Shift", b =>
                 {
-                    b.Property<int>("ShiftId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ShiftId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("ClosingBalance")
                         .HasColumnType("decimal(18,2)");
@@ -1538,14 +1735,21 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("ClosingDenominations")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("Difference")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("datetime");
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time");
 
                     b.Property<string>("HandoverNotes")
                         .HasColumnType("nvarchar(max)");
@@ -1568,23 +1772,120 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("PinCode")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("StaffId")
+                    b.Property<int>("RequiredEmployees")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("datetime");
+                    b.Property<int?>("StaffId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time");
 
                     b.Property<string>("Status")
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("ShiftId")
-                        .HasName("PK__Shifts__C0A83881495D0B69");
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
 
-                    b.HasIndex("HandoverToStaffId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("StaffId");
 
+                    b.HasIndex("TemplateId");
+
                     b.ToTable("Shifts");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StaffId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShiftId");
+
+                    b.HasIndex("StaffId");
+
+                    b.ToTable("ShiftAssignments");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftHistory", b =>
+                {
+                    b.Property<int>("ShiftHistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ShiftHistoryId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ActionAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ActionBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ShiftHistoryId");
+
+                    b.HasIndex("ShiftId");
+
+                    b.ToTable("ShiftHistorys");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DayTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DepartmentId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<int>("RequiredEmployees")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DayTypeId");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.ToTable("ShiftTemplates");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Staff", b =>
@@ -1594,6 +1895,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StaffId"));
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int");
 
                     b.Property<DateOnly>("HireDate")
                         .HasColumnType("date");
@@ -1611,6 +1915,8 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("StaffId")
                         .HasName("PK__Staffs__96D4AB17BB2B00FA");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("UserId");
 
@@ -2268,6 +2574,26 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.AuditInventory", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.User", "Confirmer")
+                        .WithMany()
+                        .HasForeignKey("ConfirmerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("FK__AuditInventory__ConfirmerId");
+
+                    b.HasOne("DomainAccessLayer.Models.User", "Creator")
+                        .WithMany()
+                        .HasForeignKey("CreatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK__AuditInventory__CreatorId");
+
+                    b.Navigation("Confirmer");
+
+                    b.Navigation("Creator");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.AuditLog", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.User", "User")
@@ -2317,6 +2643,17 @@ namespace DataAccessLayer.Migrations
                         .HasConstraintName("FK__Customers__UserI__245D67DE");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.DayCalendar", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.DayType", "DayType")
+                        .WithMany("DayCalendars")
+                        .HasForeignKey("DayTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DayType");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Event", b =>
@@ -2719,28 +3056,91 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("DomainAccessLayer.Models.Shift", b =>
                 {
-                    b.HasOne("DomainAccessLayer.Models.Staff", "HandoverToStaff")
-                        .WithMany()
-                        .HasForeignKey("HandoverToStaffId");
+                    b.HasOne("DomainAccessLayer.Models.Department", "Department")
+                        .WithMany("Shifts")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
                         .WithMany("Shifts")
-                        .HasForeignKey("StaffId")
-                        .IsRequired()
-                        .HasConstraintName("FK__Shifts__StaffId__3D2915A8");
+                        .HasForeignKey("StaffId");
 
-                    b.Navigation("HandoverToStaff");
+                    b.HasOne("DomainAccessLayer.Models.ShiftTemplate", "Template")
+                        .WithMany("Shifts")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Staff");
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftAssignment", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Shift", "Shift")
+                        .WithMany("ShiftAssignments")
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Shift");
 
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftHistory", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.Shift", "Shift")
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Shift");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftTemplate", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.DayType", "DayType")
+                        .WithMany("ShiftTemplates")
+                        .HasForeignKey("DayTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DomainAccessLayer.Models.Department", "Department")
+                        .WithMany("ShiftTemplates")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DayType");
+
+                    b.Navigation("Department");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Staff", b =>
                 {
+                    b.HasOne("DomainAccessLayer.Models.Department", "Department")
+                        .WithMany("Staffs")
+                        .HasForeignKey("DepartmentId");
+
                     b.HasOne("DomainAccessLayer.Models.User", "User")
                         .WithMany("Staff")
                         .HasForeignKey("UserId")
                         .IsRequired()
                         .HasConstraintName("FK__Staffs__UserId__3E1D39E1");
+
+                    b.Navigation("Department");
 
                     b.Navigation("User");
                 });
@@ -2879,6 +3279,22 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Reservations");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.DayType", b =>
+                {
+                    b.Navigation("DayCalendars");
+
+                    b.Navigation("ShiftTemplates");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Department", b =>
+                {
+                    b.Navigation("ShiftTemplates");
+
+                    b.Navigation("Shifts");
+
+                    b.Navigation("Staffs");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.Ingredient", b =>
                 {
                     b.Navigation("InventoryBatches");
@@ -2961,6 +3377,16 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("DomainAccessLayer.Models.Role", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.Shift", b =>
+                {
+                    b.Navigation("ShiftAssignments");
+                });
+
+            modelBuilder.Entity("DomainAccessLayer.Models.ShiftTemplate", b =>
+                {
+                    b.Navigation("Shifts");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Staff", b =>

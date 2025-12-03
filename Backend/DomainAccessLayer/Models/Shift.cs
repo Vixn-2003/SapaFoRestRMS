@@ -28,10 +28,10 @@ public partial class Shift
     public string? HandoverNotes { get; set; }
     public DateTime? HandoverTime { get; set; }
     public string? PinCode { get; set; } // Mã PIN xác nhận (encrypted)
+    public int? StaffId { get; set; }
 
     // Navigation properties
     public virtual Staff Staff { get; set; } = null!;
-    public virtual Staff? HandoverToStaff { get; set; }
     public virtual ShiftTemplate Template { get; set; } = null!;
     public virtual Department Department { get; set; } = null!;
     public virtual ICollection<ShiftAssignment> ShiftAssignments { get; set; } = new List<ShiftAssignment>();

@@ -33,7 +33,7 @@ public class ShiftManagementService : IShiftManagementService
 
     public async Task<ShiftDashboardDto?> GetCurrentShiftAsync(int staffId, CancellationToken ct = default)
     {
-        var shift = await _unitOfWork.Shifts.GetCurrentOpenShiftAsync(staffId, ct);
+        var shift = await _unitOfWork.ShiftCounters.GetCurrentOpenShiftAsync(staffId, ct);
         
         if (shift == null)
         {
@@ -49,7 +49,7 @@ public class ShiftManagementService : IShiftManagementService
         try
         {
             // Validate: Kiểm tra xem staff có ca nào đang mở không
-            var hasOpenShift = await _unitOfWork.Shifts.HasOpenShiftAsync(request.StaffId, ct);
+            var hasOpenShift = await _unitOfWork.ShiftCounters.HasOpenShiftAsync(request.StaffId, ct);
             if (hasOpenShift)
             {
                 return new ShiftResponseDto
@@ -63,22 +63,22 @@ public class ShiftManagementService : IShiftManagementService
             var now = DateTime.Now;
             var shift = new Shift
             {
-                StaffId = request.StaffId,
-                StartTime = now,
-                Date = DateOnly.FromDateTime(now),
-                OpeningBalance = request.OpeningBalance,
-                OpeningDenominations = JsonSerializer.Serialize(request.Denominations),
-                Status = "Open"
+                //StaffId = request.StaffId,
+                //StartTime = now,
+                //Date = DateOnly.FromDateTime(now),
+                //OpeningBalance = request.OpeningBalance,
+                //OpeningDenominations = JsonSerializer.Serialize(request.Denominations),
+                //Status = "Open"
             };
 
-            await _unitOfWork.Shifts.AddAsync(shift);
+            await _unitOfWork.ShiftCounters.AddAsync(shift);
             await _unitOfWork.SaveChangesAsync();
 
             // Log audit
             await _auditLogService.LogEventAsync(
                 eventType: "shift_opened",
                 entityType: "Shift",
-                entityId: shift.ShiftId,
+                entityId: shift.Id,
                 description: $"Mở ca làm việc mới với số dư đầu ca: {request.OpeningBalance:N0} VND",
                 userId: request.StaffId,
                 ct: ct
@@ -107,7 +107,7 @@ public class ShiftManagementService : IShiftManagementService
     {
         try
         {
-            var shift = await _unitOfWork.Shifts.GetShiftWithDetailsAsync(request.ShiftId, ct);
+            var shift = await _unitOfWork.ShiftCounters.GetShiftWithDetailsAsync(request.ShiftId, ct);
             
             if (shift == null)
             {
@@ -128,23 +128,23 @@ public class ShiftManagementService : IShiftManagementService
             }
 
             // Cập nhật thông tin kết ca
-            shift.EndTime = DateTime.Now;
+            //shift.EndTime = DateTime.Now;
             shift.ClosingBalance = request.ClosingBalance;
             shift.ClosingDenominations = JsonSerializer.Serialize(request.Denominations);
             shift.Difference = request.Difference;
             shift.Notes = request.Notes;
             shift.Status = "Closed";
 
-            await _unitOfWork.Shifts.UpdateAsync(shift);
+            await _unitOfWork.ShiftCounters.UpdateAsync(shift);
             await _unitOfWork.SaveChangesAsync();
 
             // Log audit
             await _auditLogService.LogEventAsync(
                 eventType: "shift_closed",
                 entityType: "Shift",
-                entityId: shift.ShiftId,
+                entityId: shift.Id,
                 description: $"Kết ca làm việc. Số dư cuối ca: {request.ClosingBalance:N0} VND. Chênh lệch: {request.Difference:N0} VND",
-                userId: shift.StaffId,
+                userId: shift.Staff.StaffId,
                 ct: ct
             );
 
@@ -171,7 +171,7 @@ public class ShiftManagementService : IShiftManagementService
     {
         try
         {
-            var shift = await _unitOfWork.Shifts.GetShiftWithDetailsAsync(request.ShiftId, ct);
+            var shift = await _unitOfWork.ShiftCounters.GetShiftWithDetailsAsync(request.ShiftId, ct);
             
             if (shift == null)
             {
@@ -192,7 +192,7 @@ public class ShiftManagementService : IShiftManagementService
             }
 
             // Validate: Nhân viên tiếp nhận không có ca đang mở
-            var hasOpenShift = await _unitOfWork.Shifts.HasOpenShiftAsync(request.HandoverToStaffId, ct);
+            var hasOpenShift = await _unitOfWork.ShiftCounters.HasOpenShiftAsync(request.HandoverToStaffId, ct);
             if (hasOpenShift)
             {
                 return new ShiftResponseDto
@@ -208,31 +208,31 @@ public class ShiftManagementService : IShiftManagementService
             shift.HandoverTime = DateTime.Now;
             shift.PinCode = HashPinCode(request.PinCode); // Encrypt PIN
             shift.Status = "Handover";
-            shift.EndTime = DateTime.Now;
+            //shift.EndTime = DateTime.Now;
 
-            await _unitOfWork.Shifts.UpdateAsync(shift);
+            await _unitOfWork.ShiftCounters.UpdateAsync(shift);
 
             // Tạo ca mới cho nhân viên tiếp nhận
             var newShift = new Shift
             {
-                StaffId = request.HandoverToStaffId,
-                StartTime = DateTime.Now,
-                Date = DateOnly.FromDateTime(DateTime.Now),
-                OpeningBalance = shift.OpeningBalance, // Số dư đầu ca = số dư ca trước
-                OpeningDenominations = shift.OpeningDenominations,
-                Status = "Open"
+                //StaffId = request.HandoverToStaffId,
+                //StartTime = DateTime.Now,
+                //Date = DateOnly.FromDateTime(DateTime.Now),
+                //OpeningBalance = shift.OpeningBalance, // Số dư đầu ca = số dư ca trước
+                //OpeningDenominations = shift.OpeningDenominations,
+                //Status = "Open"
             };
 
-            await _unitOfWork.Shifts.AddAsync(newShift);
+            await _unitOfWork.ShiftCounters.AddAsync(newShift);
             await _unitOfWork.SaveChangesAsync();
 
             // Log audit
             await _auditLogService.LogEventAsync(
                 eventType: "shift_handover",
                 entityType: "Shift",
-                entityId: shift.ShiftId,
-                description: $"Giao ca từ Staff {shift.StaffId} cho Staff {request.HandoverToStaffId}",
-                userId: shift.StaffId,
+                entityId: shift.Id,
+                description: $"Giao ca từ Staff {shift.Staff.StaffId} cho Staff {request.HandoverToStaffId}",
+                userId: shift.Staff.StaffId,
                 ct: ct
             );
 
@@ -257,7 +257,7 @@ public class ShiftManagementService : IShiftManagementService
 
     public async Task<List<ShiftDto>> GetShiftHistoryAsync(int staffId, DateOnly fromDate, DateOnly toDate, CancellationToken ct = default)
     {
-        var shifts = await _unitOfWork.Shifts.GetShiftHistoryAsync(staffId, fromDate, toDate, ct);
+        var shifts = await _unitOfWork.ShiftCounters.GetShiftHistoryAsync(staffId, fromDate, toDate, ct);
         var shiftDtos = new List<ShiftDto>();
 
         foreach (var shift in shifts)
@@ -265,8 +265,8 @@ public class ShiftManagementService : IShiftManagementService
             var dto = _mapper.Map<ShiftDto>(shift);
             
             // Thêm thông tin tính toán
-            dto.TotalRevenue = await _unitOfWork.Shifts.GetShiftRevenueAsync(shift.ShiftId, ct);
-            dto.TotalOrders = await _unitOfWork.Shifts.GetShiftOrderCountAsync(shift.ShiftId, ct);
+            dto.TotalRevenue = await _unitOfWork.ShiftCounters.GetShiftRevenueAsync(shift.Id, ct);
+            dto.TotalOrders = await _unitOfWork.ShiftCounters.GetShiftOrderCountAsync(shift.Id, ct);
             
             shiftDtos.Add(dto);
         }
@@ -276,7 +276,7 @@ public class ShiftManagementService : IShiftManagementService
 
     public async Task<ShiftDto?> GetShiftDetailsAsync(int shiftId, CancellationToken ct = default)
     {
-        var shift = await _unitOfWork.Shifts.GetShiftWithDetailsAsync(shiftId, ct);
+        var shift = await _unitOfWork.ShiftCounters.GetShiftWithDetailsAsync(shiftId, ct);
         
         if (shift == null)
         {
@@ -286,15 +286,15 @@ public class ShiftManagementService : IShiftManagementService
         var dto = _mapper.Map<ShiftDto>(shift);
         
         // Thêm thông tin tính toán
-        dto.TotalRevenue = await _unitOfWork.Shifts.GetShiftRevenueAsync(shiftId, ct);
-        dto.TotalOrders = await _unitOfWork.Shifts.GetShiftOrderCountAsync(shiftId, ct);
+        dto.TotalRevenue = await _unitOfWork.ShiftCounters.GetShiftRevenueAsync(shiftId, ct);
+        dto.TotalOrders = await _unitOfWork.ShiftCounters.GetShiftOrderCountAsync(shiftId, ct);
 
         return dto;
     }
 
     public async Task<bool> HasOpenShiftAsync(int staffId, CancellationToken ct = default)
     {
-        return await _unitOfWork.Shifts.HasOpenShiftAsync(staffId, ct);
+        return await _unitOfWork.ShiftCounters.HasOpenShiftAsync(staffId, ct);
     }
 
     // Helper Methods
@@ -306,10 +306,10 @@ public class ShiftManagementService : IShiftManagementService
 
         return new ShiftDashboardDto
         {
-            ShiftId = shift.ShiftId,
-            Id = $"CA{shift.Date:yyyyMMdd}-{shift.ShiftId:D3}",
+            ShiftId = shift.Id,
+            Id = $"CA{shift.Date:yyyyMMdd}-{shift.Id:D3}",
             Cashier = shift.Staff?.User?.FullName ?? "N/A",
-            StartTime = shift.StartTime?.ToString("HH:mm") ?? "N/A",
+            //StartTime = shift.StartTime?.ToString("HH:mm") ?? "N/A",
             CurrentTime = DateTime.Now.ToString("HH:mm"),
             StartDate = shift.Date.ToString("dd/MM/yyyy"),
             OpeningBalance = shift.OpeningBalance ?? 0,
@@ -330,17 +330,19 @@ public class ShiftManagementService : IShiftManagementService
 
     private async Task<(decimal Total, decimal Cash, decimal Card, decimal QR)> CalculateShiftRevenueAsync(Shift shift, CancellationToken ct = default)
     {
-        var dayStart = shift.StartTime ?? DateTime.MinValue;
-        var dayEnd = shift.EndTime ?? DateTime.MaxValue;
+        //var dayStart = shift.StartTime ?? DateTime.MinValue;
+        //var dayEnd = shift.EndTime ?? DateTime.MaxValue;
 
         // Lấy tất cả transactions trong khoảng thời gian ca
         var transactions = await _unitOfWork.Payments.GetTransactionsByOrderIdAsync(0); // TODO: Fix this
         
-        var shiftTransactions = transactions.Where(t => 
-            t.CreatedAt >= dayStart && 
-            t.CreatedAt <= dayEnd &&
-            (t.Status == "Paid" || t.Status == "Success")
-        ).ToList();
+        var shiftTransactions = transactions
+        //    .Where(t => 
+        //    t.CreatedAt >= dayStart && 
+        //    t.CreatedAt <= dayEnd &&
+        //    (t.Status == "Paid" || t.Status == "Success")
+        //)
+            .ToList();
 
         var cash = shiftTransactions.Where(t => t.PaymentMethod == "Cash").Sum(t => t.Amount);
         var card = shiftTransactions.Where(t => t.PaymentMethod == "Card" || t.PaymentMethod == "BankTransfer").Sum(t => t.Amount);
