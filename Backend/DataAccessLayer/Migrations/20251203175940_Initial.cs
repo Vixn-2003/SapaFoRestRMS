@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -46,21 +46,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Ingredients",
-                columns: table => new
-                {
-                    IngredientId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Unit = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    ReorderLevel = table.Column<decimal>(type: "decimal(18,2)", nullable: true, defaultValue: 0m)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Ingredie__BEAEB25ACD112DE2", x => x.IngredientId);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "MenuCategories",
                 columns: table => new
                 {
@@ -81,7 +66,8 @@ namespace DataAccessLayer.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PositionName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: false, defaultValue: 0)
+                    Status = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    BaseSalary = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m)
                 },
                 constraints: table =>
                 {
@@ -128,11 +114,26 @@ namespace DataAccessLayer.Migrations
                     ContactInfo = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Address = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true)
+                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    CodeSupplier = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Supplier__4BE666B426C1529C", x => x.SupplierId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Units",
+                columns: table => new
+                {
+                    UnitId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UnitName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    UnitType = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Units", x => x.UnitId);
                 });
 
             migrationBuilder.CreateTable(
@@ -155,6 +156,20 @@ namespace DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Vouchers__3AEE7921766B4882", x => x.VoucherId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Warehouses",
+                columns: table => new
+                {
+                    WarehouseId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Warehouse__ID", x => x.WarehouseId);
                 });
 
             migrationBuilder.CreateTable(
@@ -191,7 +206,10 @@ namespace DataAccessLayer.Migrations
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CourseType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: true, defaultValue: true),
-                    ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                    ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TimeCook = table.Column<int>(type: "int", nullable: true),
+                    BatchSize = table.Column<int>(type: "int", nullable: true, defaultValue: 1),
+                    BillingType = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -214,6 +232,7 @@ namespace DataAccessLayer.Migrations
                     Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     PasswordHash = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     RoleId = table.Column<int>(type: "int", nullable: false),
+                    AvatarUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     CreatedAt = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
                     CreatedBy = table.Column<int>(type: "int", nullable: true),
@@ -234,23 +253,25 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PurchaseOrders",
+                name: "Ingredients",
                 columns: table => new
                 {
-                    PurchaseOrderId = table.Column<int>(type: "int", nullable: false)
+                    IngredientId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    SupplierId = table.Column<int>(type: "int", nullable: false),
-                    OrderDate = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
-                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending")
+                    IngredientCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UnitId = table.Column<int>(type: "int", nullable: false),
+                    ReorderLevel = table.Column<decimal>(type: "decimal(18,2)", nullable: true, defaultValue: 0m)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Purchase__036BACA49E3BAAAB", x => x.PurchaseOrderId);
+                    table.PrimaryKey("PK__Ingredie__BEAEB25ACD112DE2", x => x.IngredientId);
                     table.ForeignKey(
-                        name: "FK__PurchaseO__Suppl__3587F3E0",
-                        column: x => x.SupplierId,
-                        principalTable: "Suppliers",
-                        principalColumn: "SupplierId");
+                        name: "FK_Ingredients_Units_UnitId",
+                        column: x => x.UnitId,
+                        principalTable: "Units",
+                        principalColumn: "UnitId",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -280,32 +301,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Recipes",
-                columns: table => new
-                {
-                    RecipeId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    MenuItemId = table.Column<int>(type: "int", nullable: false),
-                    IngredientId = table.Column<int>(type: "int", nullable: false),
-                    QuantityNeeded = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Recipes__FDD988B0DF0083A6", x => x.RecipeId);
-                    table.ForeignKey(
-                        name: "FK__Recipes__Ingredi__367C1819",
-                        column: x => x.IngredientId,
-                        principalTable: "Ingredients",
-                        principalColumn: "IngredientId");
-                    table.ForeignKey(
-                        name: "FK__Recipes__MenuIte__37703C52",
-                        column: x => x.MenuItemId,
-                        principalTable: "MenuItems",
-                        principalColumn: "MenuItemId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Announcements",
                 columns: table => new
                 {
@@ -323,6 +318,77 @@ namespace DataAccessLayer.Migrations
                     table.ForeignKey(
                         name: "FK_Announcements_Users",
                         column: x => x.CreatedBy,
+                        principalTable: "Users",
+                        principalColumn: "UserId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AuditInventory",
+                columns: table => new
+                {
+                    AuditId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    BatchId = table.Column<int>(type: "int", nullable: false),
+                    PurchaseOrderId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IngredientCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ingredientName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    unit = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OriginalQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ExpiryDate = table.Column<DateTime>(type: "date", nullable: true),
+                    CreatorId = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())"),
+                    CreatorName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatorPosition = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatorPhone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    AdjustmentQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    IsAddition = table.Column<bool>(type: "bit", nullable: false),
+                    IngredientStatus = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    AuditStatus = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    ImagePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ConfirmerId = table.Column<int>(type: "int", nullable: true),
+                    ConfirmedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    ConfirmerName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ConfirmerPosition = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ConfirmerPhone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__AuditInventory__AuditId", x => x.AuditId);
+                    table.ForeignKey(
+                        name: "FK__AuditInventory__ConfirmerId",
+                        column: x => x.ConfirmerId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK__AuditInventory__CreatorId",
+                        column: x => x.CreatorId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AuditLogs",
+                columns: table => new
+                {
+                    AuditLogId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EventType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    EntityType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    EntityId = table.Column<int>(type: "int", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    Metadata = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserId = table.Column<int>(type: "int", nullable: true),
+                    IpAddress = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__AuditLogs__AuditLogId", x => x.AuditLogId);
+                    table.ForeignKey(
+                        name: "FK__AuditLogs__UserId",
+                        column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "UserId");
                 });
@@ -432,6 +498,41 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PurchaseOrders",
+                columns: table => new
+                {
+                    PurchaseOrderId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    SupplierId = table.Column<int>(type: "int", nullable: false),
+                    OrderDate = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
+                    TimeConfirm = table.Column<DateTime>(type: "datetime", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
+                    IdCreator = table.Column<int>(type: "int", nullable: true),
+                    IdConfirm = table.Column<int>(type: "int", nullable: true),
+                    UrlImg = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Purchase__036BACA49E3BAAAB", x => x.PurchaseOrderId);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrders_Users_Confirmer",
+                        column: x => x.IdConfirm,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrders_Users_Creator",
+                        column: x => x.IdCreator,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK__PurchaseO__Suppl__3587F3E0",
+                        column: x => x.SupplierId,
+                        principalTable: "Suppliers",
+                        principalColumn: "SupplierId");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Regulations",
                 columns: table => new
                 {
@@ -475,6 +576,46 @@ namespace DataAccessLayer.Migrations
                         column: x => x.CreatedBy,
                         principalTable: "Users",
                         principalColumn: "UserId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SalaryChangeRequests",
+                columns: table => new
+                {
+                    RequestId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PositionId = table.Column<int>(type: "int", nullable: false),
+                    CurrentBaseSalary = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ProposedBaseSalary = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    RequestedBy = table.Column<int>(type: "int", nullable: false),
+                    ApprovedBy = table.Column<int>(type: "int", nullable: true),
+                    OwnerNotes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())"),
+                    ReviewedAt = table.Column<DateTime>(type: "datetime", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__SalaryChangeRequest__RequestId", x => x.RequestId);
+                    table.ForeignKey(
+                        name: "FK__SalaryChangeRequest__ApprovedBy",
+                        column: x => x.ApprovedBy,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK__SalaryChangeRequest__Position",
+                        column: x => x.PositionId,
+                        principalTable: "Positions",
+                        principalColumn: "PositionId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK__SalaryChangeRequest__RequestedBy",
+                        column: x => x.RequestedBy,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -546,29 +687,28 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PurchaseOrderDetails",
+                name: "Recipes",
                 columns: table => new
                 {
-                    PurchaseOrderDetailId = table.Column<int>(type: "int", nullable: false)
+                    RecipeId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PurchaseOrderId = table.Column<int>(type: "int", nullable: false),
+                    MenuItemId = table.Column<int>(type: "int", nullable: false),
                     IngredientId = table.Column<int>(type: "int", nullable: false),
-                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    QuantityNeeded = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Purchase__5026B698B2854271", x => x.PurchaseOrderDetailId);
+                    table.PrimaryKey("PK__Recipes__FDD988B0DF0083A6", x => x.RecipeId);
                     table.ForeignKey(
-                        name: "FK__PurchaseO__Ingre__339FAB6E",
+                        name: "FK__Recipes__Ingredi__367C1819",
                         column: x => x.IngredientId,
                         principalTable: "Ingredients",
                         principalColumn: "IngredientId");
                     table.ForeignKey(
-                        name: "FK__PurchaseO__Purch__3493CFA7",
-                        column: x => x.PurchaseOrderId,
-                        principalTable: "PurchaseOrders",
-                        principalColumn: "PurchaseOrderId",
+                        name: "FK__Recipes__MenuIte__37703C52",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItems",
+                        principalColumn: "MenuItemId",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -589,9 +729,12 @@ namespace DataAccessLayer.Migrations
                     RequireDeposit = table.Column<bool>(type: "bit", nullable: false),
                     DepositAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     DepositPaid = table.Column<bool>(type: "bit", nullable: false),
+                    TotalDepositPaid = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
                     Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ZaloMessageId = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    ZaloMessageId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ArrivalAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    StatusUpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -606,6 +749,40 @@ namespace DataAccessLayer.Migrations
                         column: x => x.CustomerId,
                         principalTable: "Customers",
                         principalColumn: "CustomerId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PurchaseOrderDetails",
+                columns: table => new
+                {
+                    PurchaseOrderDetailId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PurchaseOrderId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IngredientId = table.Column<int>(type: "int", nullable: true),
+                    IngredientCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IngredientName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    Unit = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Quantity = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(15,2)", nullable: false),
+                    Subtotal = table.Column<decimal>(type: "decimal(15,2)", nullable: false),
+                    WarehouseName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    ExpiryDate = table.Column<DateTime>(type: "date", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PurchaseOrderDetails", x => x.PurchaseOrderDetailId);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrderDetails_Ingredients",
+                        column: x => x.IngredientId,
+                        principalTable: "Ingredients",
+                        principalColumn: "IngredientId",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrderDetails_PurchaseOrders",
+                        column: x => x.PurchaseOrderId,
+                        principalTable: "PurchaseOrders",
+                        principalColumn: "PurchaseOrderId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -702,33 +879,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "InventoryBatches",
-                columns: table => new
-                {
-                    BatchId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IngredientId = table.Column<int>(type: "int", nullable: false),
-                    PurchaseOrderDetailId = table.Column<int>(type: "int", nullable: true),
-                    QuantityRemaining = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    ExpiryDate = table.Column<DateOnly>(type: "date", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Inventor__5D55CE5868089E90", x => x.BatchId);
-                    table.ForeignKey(
-                        name: "FK__Inventory__Ingre__2645B050",
-                        column: x => x.IngredientId,
-                        principalTable: "Ingredients",
-                        principalColumn: "IngredientId");
-                    table.ForeignKey(
-                        name: "FK__Inventory__Purch__2739D489",
-                        column: x => x.PurchaseOrderDetailId,
-                        principalTable: "PurchaseOrderDetails",
-                        principalColumn: "PurchaseOrderDetailId");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AssistanceRequests",
                 columns: table => new
                 {
@@ -768,11 +918,19 @@ namespace DataAccessLayer.Migrations
                     OrderType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true, defaultValue: 0m),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
+                    ConfirmedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    ConfirmedByStaffId = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())")
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Orders__C3905BCF098341D1", x => x.OrderId);
+                    table.ForeignKey(
+                        name: "FK_Orders_Staffs_ConfirmedByStaffId",
+                        column: x => x.ConfirmedByStaffId,
+                        principalTable: "Staffs",
+                        principalColumn: "StaffId",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK__Orders__Customer__2EDAF651",
                         column: x => x.CustomerId,
@@ -783,6 +941,31 @@ namespace DataAccessLayer.Migrations
                         column: x => x.ReservationId,
                         principalTable: "Reservations",
                         principalColumn: "ReservationId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReservationDeposits",
+                columns: table => new
+                {
+                    DepositId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ReservationId = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    DepositCode = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    DepositDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReceiptImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ReservationDeposits", x => x.DepositId);
+                    table.ForeignKey(
+                        name: "FK_ReservationDeposits_Reservations_ReservationId",
+                        column: x => x.ReservationId,
+                        principalTable: "Reservations",
+                        principalColumn: "ReservationId",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -835,31 +1018,40 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "StockTransactions",
+                name: "InventoryBatches",
                 columns: table => new
                 {
-                    TransactionId = table.Column<int>(type: "int", nullable: false)
+                    BatchId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     IngredientId = table.Column<int>(type: "int", nullable: false),
-                    Type = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    TransactionDate = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
-                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    BatchId = table.Column<int>(type: "int", nullable: true)
+                    PurchaseOrderDetailId = table.Column<int>(type: "int", nullable: true),
+                    WarehouseId = table.Column<int>(type: "int", nullable: false),
+                    QuantityRemaining = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    QuantityReserved = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
+                    Available = table.Column<decimal>(type: "decimal(18,2)", nullable: false, computedColumnSql: "([QuantityRemaining] - [QuantityReserved])", stored: true),
+                    ExpiryDate = table.Column<DateOnly>(type: "date", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__StockTra__55433A6BCADEE2CE", x => x.TransactionId);
+                    table.PrimaryKey("PK__Inventor__5D55CE5868089E90", x => x.BatchId);
                     table.ForeignKey(
-                        name: "FK_StockTransactions_Batch",
-                        column: x => x.BatchId,
-                        principalTable: "InventoryBatches",
-                        principalColumn: "BatchId");
+                        name: "FK_InventoryBatch_Warehouses",
+                        column: x => x.WarehouseId,
+                        principalTable: "Warehouses",
+                        principalColumn: "WarehouseId",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK__StockTran__Ingre__3F115E1A",
+                        name: "FK__Inventory__Ingre__2645B050",
                         column: x => x.IngredientId,
                         principalTable: "Ingredients",
                         principalColumn: "IngredientId");
+                    table.ForeignKey(
+                        name: "FK__Inventory__Purch__2739D489",
+                        column: x => x.PurchaseOrderDetailId,
+                        principalTable: "PurchaseOrderDetails",
+                        principalColumn: "PurchaseOrderDetailId");
                 });
 
             migrationBuilder.CreateTable(
@@ -891,16 +1083,27 @@ namespace DataAccessLayer.Migrations
                     OrderDetailId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     OrderId = table.Column<int>(type: "int", nullable: false),
-                    MenuItemId = table.Column<int>(type: "int", nullable: false),
+                    MenuItemId = table.Column<int>(type: "int", nullable: true),
                     Quantity = table.Column<int>(type: "int", nullable: false),
+                    QuantityUsed = table.Column<int>(type: "int", nullable: true),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())"),
+                    ComboId = table.Column<int>(type: "int", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsUrgent = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    ReadyAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    StartedAt = table.Column<DateTime>(type: "datetime", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__OrderDet__D3B9D36CA2DB7F7A", x => x.OrderDetailId);
+                    table.ForeignKey(
+                        name: "FK_OrderDetails_Combos_ComboId",
+                        column: x => x.ComboId,
+                        principalTable: "Combos",
+                        principalColumn: "ComboId",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK__OrderDeta__MenuI__2CF2ADDF",
                         column: x => x.MenuItemId,
@@ -908,6 +1111,64 @@ namespace DataAccessLayer.Migrations
                         principalColumn: "MenuItemId");
                     table.ForeignKey(
                         name: "FK__OrderDeta__Order__2DE6D218",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "OrderId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "OrderHistories",
+                columns: table => new
+                {
+                    OrderHistoryId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    Action = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    StaffId = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getutcdate())")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderHistories", x => x.OrderHistoryId);
+                    table.ForeignKey(
+                        name: "FK_OrderHistories_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "OrderId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_OrderHistories_Staffs_StaffId",
+                        column: x => x.StaffId,
+                        principalTable: "Staffs",
+                        principalColumn: "StaffId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "OrderLocks",
+                columns: table => new
+                {
+                    OrderLockId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    LockedByUserId = table.Column<int>(type: "int", nullable: false),
+                    SessionId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false, defaultValue: "Payment in progress"),
+                    LockedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())"),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__OrderLocks__OrderLockId", x => x.OrderLockId);
+                    table.ForeignKey(
+                        name: "FK__OrderLocks__LockedByUserId",
+                        column: x => x.LockedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId");
+                    table.ForeignKey(
+                        name: "FK__OrderLocks__OrderId",
                         column: x => x.OrderId,
                         principalTable: "Orders",
                         principalColumn: "OrderId",
@@ -946,17 +1207,102 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Transactions",
+                columns: table => new
+                {
+                    TransactionId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderId = table.Column<int>(type: "int", nullable: false),
+                    TransactionCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AmountReceived = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    RefundAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())"),
+                    CompletedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    SessionId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    GatewayReference = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    GatewayErrorCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    GatewayErrorMessage = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    RetryCount = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    LastRetryAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ParentTransactionId = table.Column<int>(type: "int", nullable: true),
+                    IsManualConfirmed = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    ConfirmedByUserId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Transact__55433A6B", x => x.TransactionId);
+                    table.ForeignKey(
+                        name: "FK__Transacti__Order__Transaction_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "OrderId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK__Transactions__ConfirmedByUserId",
+                        column: x => x.ConfirmedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId");
+                    table.ForeignKey(
+                        name: "FK__Transactions__ParentTransactionId",
+                        column: x => x.ParentTransactionId,
+                        principalTable: "Transactions",
+                        principalColumn: "TransactionId");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "StockTransactions",
+                columns: table => new
+                {
+                    TransactionId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IngredientId = table.Column<int>(type: "int", nullable: false),
+                    Type = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TransactionDate = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    BatchId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__StockTra__55433A6BCADEE2CE", x => x.TransactionId);
+                    table.ForeignKey(
+                        name: "FK_StockTransactions_Batch",
+                        column: x => x.BatchId,
+                        principalTable: "InventoryBatches",
+                        principalColumn: "BatchId");
+                    table.ForeignKey(
+                        name: "FK__StockTran__Ingre__3F115E1A",
+                        column: x => x.IngredientId,
+                        principalTable: "Ingredients",
+                        principalColumn: "IngredientId");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "KitchenTicketDetails",
                 columns: table => new
                 {
                     TicketDetailId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TicketId = table.Column<int>(type: "int", nullable: false),
-                    OrderDetailId = table.Column<int>(type: "int", nullable: false)
+                    OrderDetailId = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    StartedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    CompletedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    AssignedUserId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__KitchenT__39BFBDE6C33E07F4", x => x.TicketDetailId);
+                    table.ForeignKey(
+                        name: "FK_KitchenTicketDetails_Users_AssignedUserId",
+                        column: x => x.AssignedUserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK__KitchenTi__Order__282DF8C2",
                         column: x => x.OrderDetailId,
@@ -970,6 +1316,39 @@ namespace DataAccessLayer.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "OrderComboItems",
+                columns: table => new
+                {
+                    OrderComboItemId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderDetailId = table.Column<int>(type: "int", nullable: false),
+                    MenuItemId = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
+                    Quantity = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    StartedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    ReadyAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsUrgent = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__OrderComboItem__OrderComboItemId", x => x.OrderComboItemId);
+                    table.ForeignKey(
+                        name: "FK__OrderComboItem__MenuItem__MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItems",
+                        principalColumn: "MenuItemId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK__OrderComboItem__OrderDetail__OrderDetailId",
+                        column: x => x.OrderDetailId,
+                        principalTable: "OrderDetails",
+                        principalColumn: "OrderDetailId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.InsertData(
                 table: "Roles",
                 columns: new[] { "RoleId", "RoleName" },
@@ -980,6 +1359,26 @@ namespace DataAccessLayer.Migrations
                     { 3, "Manager" },
                     { 4, "Staff" },
                     { 5, "Customer" }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Units",
+                columns: new[] { "UnitId", "UnitName", "UnitType" },
+                values: new object[,]
+                {
+                    { 1, "quả", 1 },
+                    { 2, "cái", 1 },
+                    { 3, "hộp", 1 },
+                    { 4, "chai", 1 },
+                    { 5, "gói", 1 },
+                    { 6, "bịch", 1 },
+                    { 7, "bó", 1 },
+                    { 8, "con", 1 },
+                    { 9, "túi", 1 },
+                    { 10, "kg", 2 },
+                    { 11, "gram", 2 },
+                    { 12, "lít", 2 },
+                    { 13, "ml", 2 }
                 });
 
             migrationBuilder.CreateIndex(
@@ -1001,6 +1400,56 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Attendance_StaffId",
                 table: "Attendance",
                 column: "StaffId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditInventory_AuditStatus",
+                table: "AuditInventory",
+                column: "AuditStatus");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditInventory_ConfirmerId",
+                table: "AuditInventory",
+                column: "ConfirmerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditInventory_CreatedAt",
+                table: "AuditInventory",
+                column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditInventory_CreatorId",
+                table: "AuditInventory",
+                column: "CreatorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditInventory_IngredientCode",
+                table: "AuditInventory",
+                column: "IngredientCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditInventory_PurchaseOrderId",
+                table: "AuditInventory",
+                column: "PurchaseOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_CreatedAt",
+                table: "AuditLogs",
+                column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_EntityType_EntityId",
+                table: "AuditLogs",
+                columns: new[] { "EntityType", "EntityId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_EventType",
+                table: "AuditLogs",
+                column: "EventType");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_UserId",
+                table: "AuditLogs",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BrandBanners_CreatedBy",
@@ -1028,6 +1477,11 @@ namespace DataAccessLayer.Migrations
                 column: "CreatedBy");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Ingredients_UnitId",
+                table: "Ingredients",
+                column: "UnitId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_InventoryBatches_IngredientId",
                 table: "InventoryBatches",
                 column: "IngredientId");
@@ -1036,6 +1490,16 @@ namespace DataAccessLayer.Migrations
                 name: "IX_InventoryBatches_PurchaseOrderDetailId",
                 table: "InventoryBatches",
                 column: "PurchaseOrderDetailId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_InventoryBatches_WarehouseId",
+                table: "InventoryBatches",
+                column: "WarehouseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_KitchenTicketDetails_AssignedUserId",
+                table: "KitchenTicketDetails",
+                column: "AssignedUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_KitchenTicketDetails_OrderDetailId",
@@ -1068,6 +1532,21 @@ namespace DataAccessLayer.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OrderComboItems_MenuItemId",
+                table: "OrderComboItems",
+                column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderComboItems_OrderDetailId",
+                table: "OrderComboItems",
+                column: "OrderDetailId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderDetails_ComboId",
+                table: "OrderDetails",
+                column: "ComboId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OrderDetails_MenuItemId",
                 table: "OrderDetails",
                 column: "MenuItemId");
@@ -1076,6 +1555,36 @@ namespace DataAccessLayer.Migrations
                 name: "IX_OrderDetails_OrderId",
                 table: "OrderDetails",
                 column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderHistories_OrderId",
+                table: "OrderHistories",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderHistories_StaffId",
+                table: "OrderHistories",
+                column: "StaffId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderLocks_ExpiresAt",
+                table: "OrderLocks",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderLocks_LockedByUserId",
+                table: "OrderLocks",
+                column: "LockedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderLocks_OrderId",
+                table: "OrderLocks",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Orders_ConfirmedByStaffId",
+                table: "Orders",
+                column: "ConfirmedByStaffId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Orders_CustomerId",
@@ -1113,6 +1622,16 @@ namespace DataAccessLayer.Migrations
                 column: "PurchaseOrderId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrders_IdConfirm",
+                table: "PurchaseOrders",
+                column: "IdConfirm");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrders_IdCreator",
+                table: "PurchaseOrders",
+                column: "IdCreator");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PurchaseOrders_SupplierId",
                 table: "PurchaseOrders",
                 column: "SupplierId");
@@ -1131,6 +1650,11 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Regulations_CreatedBy",
                 table: "Regulations",
                 column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReservationDeposits_ReservationId",
+                table: "ReservationDeposits",
+                column: "ReservationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reservations_CustomerId",
@@ -1163,6 +1687,26 @@ namespace DataAccessLayer.Migrations
                 table: "Roles",
                 column: "RoleName",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SalaryChangeRequests_ApprovedBy",
+                table: "SalaryChangeRequests",
+                column: "ApprovedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SalaryChangeRequests_PositionId",
+                table: "SalaryChangeRequests",
+                column: "PositionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SalaryChangeRequests_RequestedBy",
+                table: "SalaryChangeRequests",
+                column: "RequestedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SalaryChangeRequests_Status",
+                table: "SalaryChangeRequests",
+                column: "Status");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Shifts_StaffId",
@@ -1198,6 +1742,31 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Tables_AreaId",
                 table: "Tables",
                 column: "AreaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_ConfirmedByUserId",
+                table: "Transactions",
+                column: "ConfirmedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_OrderId",
+                table: "Transactions",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_ParentTransactionId",
+                table: "Transactions",
+                column: "ParentTransactionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_SessionId",
+                table: "Transactions",
+                column: "SessionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_Status",
+                table: "Transactions",
+                column: "Status");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_RoleId",
@@ -1241,6 +1810,12 @@ namespace DataAccessLayer.Migrations
                 name: "Attendance");
 
             migrationBuilder.DropTable(
+                name: "AuditInventory");
+
+            migrationBuilder.DropTable(
+                name: "AuditLogs");
+
+            migrationBuilder.DropTable(
                 name: "BrandBanners");
 
             migrationBuilder.DropTable(
@@ -1256,6 +1831,15 @@ namespace DataAccessLayer.Migrations
                 name: "MarketingCampaigns");
 
             migrationBuilder.DropTable(
+                name: "OrderComboItems");
+
+            migrationBuilder.DropTable(
+                name: "OrderHistories");
+
+            migrationBuilder.DropTable(
+                name: "OrderLocks");
+
+            migrationBuilder.DropTable(
                 name: "Payments");
 
             migrationBuilder.DropTable(
@@ -1268,10 +1852,16 @@ namespace DataAccessLayer.Migrations
                 name: "Regulations");
 
             migrationBuilder.DropTable(
+                name: "ReservationDeposits");
+
+            migrationBuilder.DropTable(
                 name: "ReservationTables");
 
             migrationBuilder.DropTable(
                 name: "RestaurantIntro");
+
+            migrationBuilder.DropTable(
+                name: "SalaryChangeRequests");
 
             migrationBuilder.DropTable(
                 name: "SalaryRules");
@@ -1289,19 +1879,19 @@ namespace DataAccessLayer.Migrations
                 name: "SystemLogos");
 
             migrationBuilder.DropTable(
+                name: "Transactions");
+
+            migrationBuilder.DropTable(
                 name: "VerificationCodes");
 
             migrationBuilder.DropTable(
                 name: "ZaloMessages");
 
             migrationBuilder.DropTable(
-                name: "Combos");
+                name: "KitchenTickets");
 
             migrationBuilder.DropTable(
                 name: "OrderDetails");
-
-            migrationBuilder.DropTable(
-                name: "KitchenTickets");
 
             migrationBuilder.DropTable(
                 name: "Vouchers");
@@ -1313,10 +1903,10 @@ namespace DataAccessLayer.Migrations
                 name: "Positions");
 
             migrationBuilder.DropTable(
-                name: "Staffs");
+                name: "InventoryBatches");
 
             migrationBuilder.DropTable(
-                name: "InventoryBatches");
+                name: "Combos");
 
             migrationBuilder.DropTable(
                 name: "MenuItems");
@@ -1328,10 +1918,16 @@ namespace DataAccessLayer.Migrations
                 name: "Areas");
 
             migrationBuilder.DropTable(
+                name: "Warehouses");
+
+            migrationBuilder.DropTable(
                 name: "PurchaseOrderDetails");
 
             migrationBuilder.DropTable(
                 name: "MenuCategories");
+
+            migrationBuilder.DropTable(
+                name: "Staffs");
 
             migrationBuilder.DropTable(
                 name: "Reservations");
@@ -1344,6 +1940,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "Customers");
+
+            migrationBuilder.DropTable(
+                name: "Units");
 
             migrationBuilder.DropTable(
                 name: "Suppliers");
