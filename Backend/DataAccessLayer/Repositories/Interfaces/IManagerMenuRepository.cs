@@ -22,5 +22,9 @@ namespace DataAccessLayer.Repositories.Interfaces
 
         Task<List<string>> GetCourseTypesAsync();
 
+        Task<List<MenuItem>> GetAllMenuItemsWithOrderDetailsAsync(DateTime fromDate);
+
+        Task<int> CreateManagerMenuRe(MenuItem menuDTO);
+        Task<MenuItem?> GetMenuByNameRe(string name);
     }
 }

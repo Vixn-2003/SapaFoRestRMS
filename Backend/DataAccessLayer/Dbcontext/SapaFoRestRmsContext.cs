@@ -67,6 +67,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<OrderDetail> OrderDetails { get; set; }
 
+    public virtual DbSet<OrderComboItem> OrderComboItems { get; set; }
+
     public virtual DbSet<Payment> Payments { get; set; }
 
     public virtual DbSet<Payroll> Payrolls { get; set; }
@@ -418,6 +420,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CourseType).HasMaxLength(20);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+            entity.Property(e => e.IsAds).HasDefaultValue(false);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
@@ -522,6 +525,47 @@ public partial class SapaFoRestRmsContext : DbContext
                 .WithMany(c => c.OrderDetails)
                 .HasForeignKey(od => od.ComboId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrderComboItem>(entity =>
+        {
+            entity.HasKey(e => e.OrderComboItemId).HasName("PK__OrderComboItem__OrderComboItemId");
+
+            entity.ToTable("OrderComboItems");
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            
+            entity.Property(e => e.Quantity)
+                .HasDefaultValue(1)
+                .IsRequired();
+            
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("(getdate())");
+            
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            
+            entity.Property(e => e.IsUrgent).HasDefaultValue(false);
+            
+            entity.Property(e => e.StartedAt).HasColumnType("datetime");
+            
+            entity.Property(e => e.ReadyAt).HasColumnType("datetime");
+
+            // Foreign key to OrderDetail
+            entity.HasOne(d => d.OrderDetail)
+                .WithMany(od => od.OrderComboItems)
+                .HasForeignKey(d => d.OrderDetailId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__OrderComboItem__OrderDetail__OrderDetailId");
+
+            // Foreign key to MenuItem
+            entity.HasOne(d => d.MenuItem)
+                .WithMany()
+                .HasForeignKey(d => d.MenuItemId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__OrderComboItem__MenuItem__MenuItemId");
         });
 
         modelBuilder.Entity<Payment>(entity =>

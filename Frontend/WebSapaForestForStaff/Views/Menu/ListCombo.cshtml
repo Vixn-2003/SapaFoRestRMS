@@ -15,11 +15,6 @@
                 Tạo Combo Mới
             </button>
         </div>
-
-<<<<<<< HEAD
-=======
-        <!-- View: List Combos -->
->>>>>>> parent of ed7a7b6 (Revert "Merge branch 'develop' into Tuanlmhe")
         <div id="viewList" class="row">
             <!-- Left: Combo List -->
             <div class="col-lg-8">
@@ -222,6 +217,17 @@
     #comboApp .selected-ring {
         box-shadow: 0 0 0 3px #ffc107;
     }
+    /* ✅ FIX: Đảm bảo sidebar không bị ẩn bởi Tailwind */
+    .sidebar {
+        display: block !important;
+    }
+
+        .sidebar .collapse.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
 </style>
 
 <script>
@@ -565,4 +571,22 @@
     // Initialize
     renderComboList();
     renderStatistics();
+
+    $(document).ready(function () {
+        // Mở menu "Thực đơn - Combo"
+        $('#menuComboSubMenu').addClass('show');
+        $('a[href="#menuComboSubMenu"]').addClass('active').attr('aria-expanded', 'true');
+
+        // Highlight menu item "Danh sách Combo"
+        $('a[asp-controller="ManagerCombo"][asp-action="Index"]').addClass('active');
+
+        // Ngăn menu tự đóng khi click trong trang
+        $('.sidebar .collapse').on('hide.bs.collapse', function (e) {
+            var currentPath = window.location.pathname.toLowerCase();
+            if (currentPath.includes('/managercombo') && this.id === 'menuComboSubMenu') {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
 </script>

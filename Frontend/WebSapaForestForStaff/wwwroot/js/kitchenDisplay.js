@@ -438,12 +438,12 @@ async function completeOrder(orderId) {
         }
 
         // Chuyển tất cả items có status Cooking hoặc Late sang Ready
+        // Với món trong combo: dùng cả orderDetailId + orderComboItemId để backend cập nhật đúng OrderComboItem
         const itemsToMarkReady = order.items
             .filter(item => {
                 const status = (item.status || 'Pending').trim();
                 return status === 'Cooking' || status === 'Đang nấu' || status === 'Late' || status === 'Trễ';
-            })
-            .map(item => item.orderDetailId);
+            });
 
         if (itemsToMarkReady.length === 0) {
             showError('Không có món nào đang nấu hoặc trễ để đánh dấu sẵn sàng');
@@ -451,8 +451,8 @@ async function completeOrder(orderId) {
         }
 
         // Gọi API để chuyển từng item sang Ready
-        const promises = itemsToMarkReady.map(orderDetailId =>
-            updateItemStatusAPI(orderDetailId, 'Ready')
+        const promises = itemsToMarkReady.map(item =>
+            updateItemStatusAPI(item.orderDetailId, 'Ready', item.orderComboItemId)
         );
 
         await Promise.all(promises);
@@ -570,13 +570,18 @@ async function loadOrdersByTable() {
             // ✅ Backend đã filter Done items rồi, không cần filter ở frontend nữa
             // Lưu orders vào currentOrders để modal có thể tìm thấy
             currentOrders = orders;
-            // Group orders by table number
-            const groupedByTable = groupOrdersByTable(orders);
+            
+            // ✅ SỬA: Sắp xếp tất cả orders theo thời gian order (CreatedAt), không group theo bàn
+            const sortedOrders = orders.sort((a, b) => {
+                const timeA = new Date(a.createdAt || 0).getTime();
+                const timeB = new Date(b.createdAt || 0).getTime();
+                return timeA - timeB; // Sắp xếp từ cũ đến mới
+            });
             
             // Double check view mode before rendering
             if (currentViewMode === 'theo-ban') {
-                renderOrdersByTable(groupedByTable);
-                updateOrderCount(groupedByTable.length);
+                renderOrdersByTable(sortedOrders);
+                updateOrderCount(sortedOrders.length);
             }
         } else {
             if (currentViewMode === 'theo-ban') {
@@ -640,11 +645,11 @@ function groupOrdersByTable(orders) {
     return Object.values(grouped);
 }
 
-// Render orders grouped by table
-function renderOrdersByTable(groupedByTable) {
+// Render orders sorted by time (not grouped by table)
+function renderOrdersByTable(orders) {
     const grid = document.getElementById('ordersGrid');
     
-    if (!groupedByTable || groupedByTable.length === 0) {
+    if (!orders || orders.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="mdi mdi-food-off" style="font-size: 48px;"></i>
@@ -654,9 +659,16 @@ function renderOrdersByTable(groupedByTable) {
         return;
     }
     
-    const renderedGroups = groupedByTable.map(group => createTableGroupCard(group)).filter(html => html.trim() !== '').join('');
+    // Tính tổng số đơn và số món đã hoàn thành của TẤT CẢ orders
+    const totalOrders = orders.length;
+    const totalItems = orders.reduce((sum, order) => sum + (order.totalItems || 0), 0);
+    const totalCompletedItems = orders.reduce((sum, order) => sum + (order.completedItems || 0), 0);
+    const totalLateItems = orders.reduce((sum, order) => sum + (order.lateItems || 0), 0);
     
-    if (renderedGroups.trim() === '') {
+    // Render từng order card
+    const renderedOrders = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '').join('');
+    
+    if (renderedOrders.trim() === '') {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="mdi mdi-filter-off" style="font-size: 48px;"></i>
@@ -666,7 +678,19 @@ function renderOrdersByTable(groupedByTable) {
         return;
     }
     
-    grid.innerHTML = renderedGroups;
+    // ✅ Tạo header tổng hợp cho TẤT CẢ orders - đặt ở trên cùng, chiếm toàn bộ chiều rộng
+    const summaryHeader = `
+        <div class="table-group-header" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px; grid-column: 1 / -1;">
+            <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <i class="mdi mdi-silverware-fork-knife"></i> 
+                <span>${totalOrders} đơn | ${totalCompletedItems}/${totalItems} món đã hoàn thành</span>
+                ${totalLateItems > 0 ? `<span style="color: #dc3545; margin-left: 10px;"><i class="mdi mdi-alert-circle"></i> Món đã trễ: ${totalLateItems}</span>` : ''}
+                ${totalCompletedItems > 0 ? `<span style="color: #28a745; margin-left: 10px;"><i class="mdi mdi-check-circle"></i> Món đã hoàn thành: ${totalCompletedItems}</span>` : ''}
+            </h3>
+        </div>
+    `;
+    
+    grid.innerHTML = summaryHeader + renderedOrders;
     
     // Attach click handlers
     setTimeout(() => {
@@ -1288,52 +1312,63 @@ function closeOrderModal() {
 }
 
 // Render modal items
+// Render danh sách món trong modal
 function renderModalItems(items) {
     const itemsList = document.getElementById('modalOrderItems');
-    if (!itemsList) return;
+    if (!itemsList || !items || items.length === 0) {
+        itemsList.innerHTML = '<li class="order-modal-item empty">Không có món nào trong đơn hàng này</li>';
+        return;
+    }
 
-    // Hiển thị tất cả items được truyền vào (bao gồm cả Done/Ready nếu có)
-    // Sử dụng tham số items được truyền vào, không dùng currentModalOrder.items
-    const cookableItems = items || [];
+    // Món có thể thao tác (không lấy Done), Ready vẫn cho phép chọn để hủy sẵn sàng
+    const cookableItems = items.filter(item => {
+        const status = (item.status || '').toLowerCase().trim();
+        const isDone = status.includes('done') || status.includes('hoàn thành') || status.includes('xong');
+        return !isDone;
+    });
 
     itemsList.innerHTML = cookableItems.map(item => {
-        const itemId = item.orderDetailId;
-        const selectedQuantity = selectedModalItems.get(itemId) || 0;
+        // Với món trong combo: dùng OrderComboItemId làm khóa duy nhất; món lẻ: dùng OrderDetailId
+        const itemKey = item.orderComboItemId || item.orderDetailId;
+        const selectedQuantity = selectedModalItems.get(itemKey) || 0;
         const isSelected = selectedQuantity > 0;
         const itemQuantity = item.quantity || 1;
-        
-        // Kiểm tra xem món đã Done chưa
+
         const status = (item.status || '').toLowerCase().trim();
         const isDone = status.includes('done') || status.includes('hoàn thành') || status.includes('xong');
         const isReady = status.includes('ready') || status.includes('sẵn sàng');
-        const isDisabled = isDone; // ✅ Chỉ disable Done, Ready vẫn cho phép chọn (để hủy sẵn sàng)
+        const isDisabled = isDone; // Ready vẫn cho phép thao tác (để hủy sẵn sàng)
 
         return `
             <li class="order-modal-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}" 
-                data-item-id="${itemId}">
+                data-item-id="${itemKey}"
+                data-order-detail-id="${item.orderDetailId}"
+                data-order-combo-item-id="${item.orderComboItemId ?? ''}">
                 <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
                     <input type="checkbox" 
                            ${isSelected ? 'checked' : ''} 
                            ${isDisabled ? 'disabled' : ''}
-                           onchange="toggleModalItemCheckbox(${itemId}, ${itemQuantity}, event)"
+                           onchange="toggleModalItemCheckbox(${itemKey}, ${itemQuantity}, event)"
                            onclick="event.stopPropagation()">
                     <span class="order-modal-item-text" style="flex: 1; ${isDisabled ? 'opacity: 0.6;' : ''}">
                         <strong>${item.menuItemName}</strong>
                         ${isDone ? '<span style="color: #1b5e20; font-size: 12px; margin-left: 8px; font-weight: 600;">(Đã hoàn thành)</span>' : ''}
                         ${isReady && !isDone ? '<span style="color: #2e7d32; font-size: 12px; margin-left: 8px;">(Sẵn sàng)</span>' : ''}
                         ${item.specialInstructions || item.notes ?
-                        `<span style="color: #d32f2f; font-size: 14px; display: block; margin-top: 4px;"> (${item.specialInstructions || item.notes})</span>` : ''}
+                `<span style="color: #d32f2f; font-size: 14px; display: block; margin-top: 4px;"> (${item.specialInstructions || item.notes})</span>` : ''}
                     </span>
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <input type="number" 
                                class="modal-quantity-input" 
-                               data-order-detail-id="${itemId}"
+                               data-item-id="${itemKey}"
+                               data-order-detail-id="${item.orderDetailId}"
+                               data-order-combo-item-id="${item.orderComboItemId ?? ''}"
                                min="0" 
                                max="${itemQuantity}" 
                                value="${selectedQuantity}"
                                ${isDisabled ? 'disabled' : ''}
                                style="width: 50px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; ${isDisabled ? 'opacity: 0.6; background: #f5f5f5;' : ''}"
-                               onchange="updateModalQuantity(${itemId}, this.value, ${itemQuantity}, event)"
+                               onchange="updateModalQuantity(${itemKey}, this.value, ${itemQuantity}, event)"
                                onclick="event.stopPropagation()">
                         <span style="color: #999; font-size: 14px;">/ ${itemQuantity}</span>
                     </div>
@@ -1344,49 +1379,29 @@ function renderModalItems(items) {
 }
 
 // Update modal quantity when user changes input
-function updateModalQuantity(orderDetailId, newValue, maxQuantity, event) {
+// orderKey = itemId (OrderComboItemId nếu có, ngược lại OrderDetailId)
+function updateModalQuantity(orderKey, newValue, maxQuantity, event) {
     if (event) {
         event.stopPropagation();
     }
-    
+
     const quantity = parseInt(newValue) || 0;
     const maxQty = parseInt(maxQuantity) || 0;
-    
-    // Validate quantity
+
     let validQuantity = quantity;
-    if (validQuantity < 0) {
-        validQuantity = 0;
-    }
-    if (validQuantity > maxQty) {
-        validQuantity = maxQty;
-    }
-    
-    // Update the input value if it was corrected
+    if (validQuantity < 0) validQuantity = 0;
+    if (validQuantity > maxQty) validQuantity = maxQty;
+
+    // Đồng bộ lại giá trị input nếu bị chỉnh
     if (event && event.target) {
         event.target.value = validQuantity;
     }
-    
-    // Update selectedModalItems Map
+
+    // Lưu vào Map theo itemKey (mỗi món combo riêng)
     if (validQuantity > 0) {
-        selectedModalItems.set(orderDetailId, validQuantity);
+        selectedModalItems.set(orderKey, validQuantity);
     } else {
-        selectedModalItems.delete(orderDetailId);
-    }
-    
-    // Update checkbox state
-    const checkbox = document.querySelector(`input[type="checkbox"][onchange*="${orderDetailId}"]`);
-    if (checkbox) {
-        checkbox.checked = validQuantity > 0;
-    }
-    
-    // Update item row selected state
-    const itemRow = document.querySelector(`.order-modal-item[data-item-id="${orderDetailId}"]`);
-    if (itemRow) {
-        if (validQuantity > 0) {
-            itemRow.classList.add('selected');
-        } else {
-            itemRow.classList.remove('selected');
-        }
+        selectedModalItems.delete(orderKey);
     }
 }
 
@@ -1509,11 +1524,13 @@ async function fireSelectedItems() {
     
     quantityInputs.forEach(input => {
         const orderDetailId = parseInt(input.getAttribute('data-order-detail-id'));
+        const ociAttr = input.getAttribute('data-order-combo-item-id');
+        const orderComboItemId = ociAttr ? parseInt(ociAttr) : null;
         const quantity = parseInt(input.value) || 0;
         const maxQuantity = parseInt(input.getAttribute('max')) || 0;
         
         if (quantity > 0 && quantity <= maxQuantity) {
-            selectedItems.push({ orderDetailId, quantity });
+            selectedItems.push({ orderDetailId, orderComboItemId, quantity });
         }
     });
 
@@ -1526,17 +1543,20 @@ async function fireSelectedItems() {
         const promises = [];
         const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
         
-        selectedItems.forEach(({ orderDetailId, quantity }) => {
+        selectedItems.forEach(({ orderDetailId, orderComboItemId, quantity }) => {
             // Tìm detail để lấy tổng số lượng
-            const detail = currentModalOrder?.items?.find(d => d.orderDetailId === orderDetailId);
+            const detail = currentModalOrder?.items?.find(d => 
+                (orderComboItemId && d.orderComboItemId === orderComboItemId) ||
+                (!orderComboItemId && d.orderDetailId === orderDetailId)
+            );
             const totalQty = detail?.quantity || quantity;
             
-            // Nếu quantity < totalQuantity, gọi API split
-            if (quantity < totalQty) {
+            // Nếu quantity < totalQuantity, gọi API split (chỉ áp dụng cho món lẻ, không áp dụng cho combo items)
+            if (!orderComboItemId && quantity < totalQty) {
                 promises.push(startCookingWithQuantityAPI(orderDetailId, quantity));
             } else {
-                // Nếu quantity = totalQuantity, chỉ cần update status
-                promises.push(updateItemStatusAPI(orderDetailId, 'Cooking'));
+                // Nếu quantity = totalQuantity hoặc là combo item, chỉ cần update status
+                promises.push(updateItemStatusAPI(orderDetailId, 'Cooking', orderComboItemId));
             }
         });
 
@@ -1942,9 +1962,11 @@ async function unfulfillSelectedItems() {
     
     quantityInputs.forEach(input => {
         const orderDetailId = parseInt(input.getAttribute('data-order-detail-id'));
+        const orderComboItemIdAttr = input.getAttribute('data-order-combo-item-id');
+        const orderComboItemId = orderComboItemIdAttr ? parseInt(orderComboItemIdAttr) : null;
         const quantity = parseInt(input.value) || 0;
         if (quantity > 0) {
-            selectedItems.push({ orderDetailId, quantity });
+            selectedItems.push({ orderDetailId, orderComboItemId, quantity });
         }
     });
 
@@ -1958,17 +1980,20 @@ async function unfulfillSelectedItems() {
         return;
     }
 
-    const promises = selectedItems.map(({ orderDetailId }) => {
+    const promises = selectedItems.map(({ orderDetailId, orderComboItemId }) => {
         const item = currentModalOrder.items.find(i => 
-            i.orderDetailId === orderDetailId || 
-            i.OrderDetailId === orderDetailId ||
-            parseInt(i.orderDetailId) === parseInt(orderDetailId) ||
-            parseInt(i.OrderDetailId) === parseInt(orderDetailId)
+            (orderComboItemId && i.orderComboItemId === orderComboItemId) ||
+            (!orderComboItemId && (
+                i.orderDetailId === orderDetailId || 
+                i.OrderDetailId === orderDetailId ||
+                parseInt(i.orderDetailId) === parseInt(orderDetailId) ||
+                parseInt(i.OrderDetailId) === parseInt(orderDetailId)
+            ))
         );
         
         if (!item) {
-            console.error('Item not found:', orderDetailId, 'in items:', currentModalOrder.items);
-            throw new Error(`Không tìm thấy món với ID ${orderDetailId}`);
+            console.error('Item not found:', orderDetailId, orderComboItemId, 'in items:', currentModalOrder.items);
+            throw new Error(`Không tìm thấy món với ID ${orderComboItemId || orderDetailId}`);
         }
         
         // ✅ SỬA: Chuyển từ Ready về Cooking thay vì Done về Cooking
@@ -1979,9 +2004,9 @@ async function unfulfillSelectedItems() {
                        status === 'Ready' || status === 'Sẵn sàng';
         
         const newStatus = isReady ? 'Cooking' : item.status;
-        console.log(`Hủy sẵn sàng: Item ${orderDetailId}, status: ${status} -> ${newStatus}`);
+        console.log(`Hủy sẵn sàng: Item ${orderComboItemId || orderDetailId}, status: ${status} -> ${newStatus}`);
         
-        return updateItemStatusAPI(orderDetailId, newStatus);
+        return updateItemStatusAPI(orderDetailId, newStatus, orderComboItemId);
     });
 
     try {
@@ -2004,16 +2029,19 @@ async function unfulfillSelectedItems() {
 // FULFILL FUNCTION - FIXED VERSION
 // ===========================
 
+// Đánh dấu các món đã chọn là "Sẵn sàng" (Ready)
 async function fulfillSelectedItems() {
     // Lấy giá trị trực tiếp từ các input
     const quantityInputs = document.querySelectorAll('.modal-quantity-input');
     const selectedItems = [];
-    
+
     quantityInputs.forEach(input => {
         const orderDetailId = parseInt(input.getAttribute('data-order-detail-id'));
+        const ociAttr = input.getAttribute('data-order-combo-item-id');
+        const orderComboItemId = ociAttr ? parseInt(ociAttr) : null;
         const quantity = parseInt(input.value) || 0;
         if (quantity > 0) {
-            selectedItems.push({ orderDetailId, quantity });
+            selectedItems.push({ orderDetailId, orderComboItemId, quantity });
         }
     });
 
@@ -2030,70 +2058,52 @@ async function fulfillSelectedItems() {
 
     const pendingItems = [];
     const cookingItems = []; // Cooking items
-    const lateItems = []; // Late items - ✅ THÊM: Cho phép Late chuyển sang Ready
-    const readyItems = []; // Đã Ready rồi
-    const doneItems = []; // Đã Done rồi
+    const lateItems = [];    // Late items
+    const readyItems = [];
+    const doneItems = [];
 
-    selectedItems.forEach(({ orderDetailId }) => {
-        const item = currentModalOrder.items.find(i => i.orderDetailId === orderDetailId);
+    // Phân loại theo trạng thái thực tế
+    selectedItems.forEach(({ orderDetailId, orderComboItemId }) => {
+        const item = currentModalOrder.items.find(i =>
+            (orderComboItemId && i.orderComboItemId === orderComboItemId) ||
+            (!orderComboItemId && i.orderDetailId === orderDetailId)
+        );
 
-        if (!item) {
-            return;
-        }
+        if (!item) return;
 
         const rawStatus = item.status;
         const status = (rawStatus || 'Pending').trim();
 
-        // So sánh chính xác với backend format
         if (status === 'Pending' || status === 'Chờ') {
             pendingItems.push({
-                orderDetailId: orderDetailId,
+                orderDetailId,
+                orderComboItemId,
                 name: item.menuItemName || `Món ${orderDetailId}`,
-                status: status
+                status
             });
         } else if (status === 'Cooking' || status === 'Đang nấu') {
-            cookingItems.push(orderDetailId);
+            cookingItems.push({ orderDetailId, orderComboItemId });
         } else if (status === 'Late' || status === 'Trễ') {
-            // ✅ THÊM: Late items cũng có thể chuyển sang Ready
-            lateItems.push(orderDetailId);
+            lateItems.push({ orderDetailId, orderComboItemId });
         } else if (status === 'Ready' || status === 'Sẵn sàng') {
-            readyItems.push({
-                orderDetailId: orderDetailId,
-                name: item.menuItemName || `Món ${orderDetailId}`,
-                status: status
-            });
-        } else if (status === 'Ready' || status === 'Sẵn sàng') {
-            // ✅ SỬA: Đã Ready rồi, không cần làm gì
-            readyItems.push({
-                orderDetailId: orderDetailId,
-                name: item.menuItemName || `Món ${orderDetailId}`,
-                status: status
-            });
+            readyItems.push({ orderDetailId, orderComboItemId, name: item.menuItemName || `Món ${orderDetailId}`, status });
         } else if (status === 'Done' || status === 'Hoàn thành' || status === 'Xong') {
-            doneItems.push({
-                orderDetailId: orderDetailId,
-                name: item.menuItemName || `Món ${orderDetailId}`,
-                status: status
-            });
+            doneItems.push({ orderDetailId, orderComboItemId, name: item.menuItemName || `Món ${orderDetailId}`, status });
         } else {
-            pendingItems.push({
-                orderDetailId: orderDetailId,
-                name: item.menuItemName || `Món ${orderDetailId}`,
-                status: status
-            });
+            pendingItems.push({ orderDetailId, orderComboItemId, name: item.menuItemName || `Món ${orderDetailId}`, status });
         }
     });
 
-    // CRITICAL CHECK - Phải return nếu có pending
+    // Không cho phép đánh dấu Ready cho món vẫn Pending
     if (pendingItems.length > 0) {
         const itemNames = pendingItems.map(i => i.name).join(', ');
         showError(`Các món sau chưa nấu: ${itemNames}. Vui lòng bắt đầu nấu trước!`);
-        return; // ❌ DỪNG NGAY
+        return;
     }
 
-    // ✅ SỬA: Cho phép cả Cooking và Late chuyển sang Ready
+    // Cho phép Cooking + Late chuyển sang Ready
     const itemsToMarkReady = [...cookingItems, ...lateItems];
-    
+
     if (itemsToMarkReady.length === 0) {
         if (readyItems.length > 0) {
             showError('Các món đã chọn đã sẵn sàng rồi');
@@ -2105,18 +2115,19 @@ async function fulfillSelectedItems() {
         return;
     }
 
-    // ✅ SỬA: Chuyển sang Ready thay vì Done
-    const promises = itemsToMarkReady.map(orderDetailId => {
-        return updateItemStatusAPI(orderDetailId, 'Ready');
-    });
+    // Gọi API update từng món
+    const promises = itemsToMarkReady.map(key =>
+        updateItemStatusAPI(key.orderDetailId, 'Ready', key.orderComboItemId)
+    );
 
     try {
         await Promise.all(promises);
 
-        // Cập nhật trạng thái local cho các món vừa đánh dấu sẵn sàng
-        itemsToMarkReady.forEach(orderDetailId => {
+        // Cập nhật local state đúng từng món
+        itemsToMarkReady.forEach(key => {
             const item = currentModalOrder.items.find(i =>
-                i.orderDetailId === orderDetailId || i.OrderDetailId === orderDetailId
+                (key.orderComboItemId && i.orderComboItemId === key.orderComboItemId) ||
+                (!key.orderComboItemId && i.orderDetailId === key.orderDetailId)
             );
             if (item) {
                 item.status = 'Ready';
@@ -2125,6 +2136,7 @@ async function fulfillSelectedItems() {
 
         showSuccess(`Đã đánh dấu ${itemsToMarkReady.length} món sẵn sàng`);
         selectedModalItems.clear();
+        renderModalItems(currentModalOrder.items);
         reloadCurrentView();
         closeOrderModal();
     } catch (error) {
@@ -2137,11 +2149,14 @@ async function fulfillSelectedItems() {
 // UPDATE ITEM STATUS API
 // ===========================
 
-async function updateItemStatusAPI(orderDetailId, newStatus) {
+// orderComboItemId: null/undefined = món lẻ (OrderDetail), có giá trị = món trong combo (OrderComboItem)
+async function updateItemStatusAPI(orderDetailId, newStatus, orderComboItemId = null) {
     try {
         const payload = {
             orderDetailId: parseInt(orderDetailId),
             newStatus: newStatus.trim(),
+            // Nếu là món trong combo sẽ gửi thêm orderComboItemId để backend cập nhật đúng record
+            orderComboItemId: orderComboItemId ? parseInt(orderComboItemId) : null,
             userId: 1
         };
 

@@ -1,0 +1,52 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+
+  "Jwt": {
+    "Issuer": "SapaFoRestRMS",
+    "Audience": "SapaFoRestRMSClients",
+    "Key": "replace-with-a-very-strong-secret-key",
+    "ExpireMinutes": 60
+  },
+  "AdminAccount": {
+    "Email": "vinxnguyen0310@gmail.com",
+    "Password": "C=Nt1,qu@F16oX86"
+  },
+  "ReceiptSettings": {
+    "RestaurantName": "SAPA FO REST",
+    "RestaurantAddress": "123 Đường ABC, Quận XYZ, TP.HCM",
+    "RestaurantPhone": "0123 456 789"
+  },
+
+  "CorsSettings": {
+    "AllowedOrigins": [
+      "http://localhost:5054",
+      "http://localhost:5123",
+      "http://localhost:5180",
+      "https://localhost:7096",
+      
+      // ================================
+      // 🔧 THÊM IP CỦA BẠN Ở ĐÂY
+      // ================================
+      // Cách lấy IP của bạn:
+      // 1. Mở CMD hoặc PowerShell
+      // 2. Chạy lệnh: ipconfig
+      // 3. Tìm "IPv4 Address" trong mạng WiFi/LAN
+      // 4. Thêm vào đây theo format: "http://YOUR_IP:PORT"
+      
+      // VÍ DỤ:
+      // "http://192.168.1.10:5123",
+      // "https://192.168.1.10:5123",
+      // "http://192.168.1.10:5054",
+      // "https://192.168.1.10:5054"
+
+      // 👆 Uncomment và thay YOUR_IP bằng IP của bạn
+      "http://YOUR_IP_HERE:5123"
+    ]
+  }
+}
+

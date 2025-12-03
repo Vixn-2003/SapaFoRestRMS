@@ -59,6 +59,7 @@ namespace BusinessAccessLayer.Mapping
             CreateMap<Ingredient, IngredientDTO>();
             CreateMap<IngredientDTO, Ingredient>();
 
+
             //BatchIngredient 
             CreateMap<InventoryBatch, BatchIngredientDTO>()
                 .ForMember(dest => dest.IngredientName, opt => opt.MapFrom(src => src.Ingredient.Name))
@@ -82,7 +83,51 @@ namespace BusinessAccessLayer.Mapping
             .ForMember(d => d.AuditStatus, opt => opt.MapFrom(src => src.AuditStatus));
 
             CreateMap<AuditInventory, AuditInventoryResponseDTO>();
-        
+
+
+            CreateMap<BestSellerDto, MenuItem>();
+            CreateMap<MenuItem, BestSellerDto>();
+
+
+            CreateMap<MenuItem, MenuItemStatisticsDto>()
+        .ForMember(dest => dest.CategoryId,
+            opt => opt.MapFrom(src => src.CategoryId))
+        .ForMember(dest => dest.Description,
+            opt => opt.MapFrom(src => src.Description ?? ""))
+        .ForMember(dest => dest.CourseType,
+            opt => opt.MapFrom(src => src.CourseType))
+        .ForMember(dest => dest.ImageUrl,
+            opt => opt.MapFrom(src => src.ImageUrl ?? ""))
+        .ForMember(dest => dest.IsAvailable,
+            opt => opt.MapFrom(src => src.IsAvailable ?? false))
+        .ForMember(dest => dest.IsAds,
+            opt => opt.MapFrom(src => src.IsAds ?? false))
+        .ForMember(dest => dest.TimeCook,
+            opt => opt.MapFrom(src => src.TimeCook))
+        .ForMember(dest => dest.BillingType,
+            opt => opt.MapFrom(src => src.BillingType))
+        .ForMember(dest => dest.Recipes,  // 🔥 QUAN TRỌNG
+            opt => opt.MapFrom(src => src.Recipes))
+        // Statistics fields
+        .ForMember(dest => dest.ServedToday, opt => opt.Ignore())
+        .ForMember(dest => dest.ServedYesterday, opt => opt.Ignore())
+        .ForMember(dest => dest.Average7Days, opt => opt.Ignore())
+        .ForMember(dest => dest.Average30Days, opt => opt.Ignore())
+        .ForMember(dest => dest.Average90Days, opt => opt.Ignore())
+        .ForMember(dest => dest.CompareWithYesterday, opt => opt.Ignore())
+        .ForMember(dest => dest.CompareWith7Days, opt => opt.Ignore())
+        .ForMember(dest => dest.CompareWith30Days, opt => opt.Ignore());
+
+
+            CreateMap<MenuItem, MenuItemDto>()
+                .ForMember(dest => dest.CategoryName,
+                    opt => opt.MapFrom(src => src.Category != null ? src.Category.CategoryName : string.Empty))
+                .ForMember(dest => dest.IsAvailable,
+                    opt => opt.MapFrom(src => src.IsAvailable ?? false))
+                .ForMember(dest => dest.ImageUrl,
+                    opt => opt.MapFrom(src => src.ImageUrl ?? string.Empty))
+                .ForMember(dest => dest.Description,
+                    opt => opt.MapFrom(src => src.Description ?? string.Empty));
 
 
             // User mappings
@@ -121,7 +166,16 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(d => d.MenuItemName, m => m.MapFrom(s => s.MenuItem != null ? s.MenuItem.Name : (s.Combo != null ? s.Combo.Name : "")))
                 .ForMember(d => d.ComboId, m => m.MapFrom(s => s.ComboId))
                 .ForMember(d => d.ComboName, m => m.MapFrom(s => s.Combo != null ? s.Combo.Name : null))
-                .ForMember(d => d.TotalPrice, m => m.MapFrom(s => s.UnitPrice * s.Quantity));
+                .ForMember(d => d.TotalPrice, m => m.MapFrom(s => s.UnitPrice * s.Quantity))
+                // NEW: Map BillingType and Kitchen Status
+                .ForMember(d => d.BillingType, m => m.MapFrom(s => s.MenuItem != null ? (int?)s.MenuItem.BillingType : null))
+                .ForMember(d => d.KitchenStatus, m => m.MapFrom(s => s.Status))
+                .ForMember(d => d.QuantityUsed, m => m.MapFrom(s => s.QuantityUsed ?? s.Quantity))
+                .ForMember(d => d.CanCancel, m => m.MapFrom(s => 
+                    s.MenuItem != null &&
+                    s.MenuItem.BillingType == DomainAccessLayer.Enums.ItemBillingType.KitchenPrepared &&
+                    (s.Status == "Pending" || s.Status == "Confirmed" || s.Status == null)));
+
 
             CreateMap<Transaction, TransactionDto>();
             CreateMap<Unit, UnitDTO>();

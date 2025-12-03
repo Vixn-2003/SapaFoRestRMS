@@ -34,6 +34,7 @@ builder.Services.AddHttpClient<IUserApiService, UserApiService>();
 builder.Services.AddHttpClient<IProfileApiService, ProfileApiService>();
 builder.Services.AddHttpClient<IPositionApiService, PositionApiService>();
 builder.Services.AddHttpClient<IPaymentApiService, PaymentApiService>();
+builder.Services.AddHttpClient<IShiftManagementApiService, ShiftManagementApiService>();
 
 // Keep backward compatibility with old ApiService (can be removed after migration)
 builder.Services.AddHttpClient<ApiService>();

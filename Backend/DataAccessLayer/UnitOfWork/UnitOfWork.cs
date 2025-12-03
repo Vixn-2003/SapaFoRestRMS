@@ -76,6 +76,10 @@ namespace DataAccessLayer.UnitOfWork
 
         public IOrderDetailRepository OrderDetails => _orderDetails ??= new OrderDetailRepository(_context);
 
+        private IOrderComboItemRepository _orderComboItems;
+
+        public IOrderComboItemRepository OrderComboItems => _orderComboItems ??= new OrderComboItemRepository(_context);
+
         private IAuditLogRepository _auditLogs;
 
         public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(_context);
@@ -87,6 +91,18 @@ namespace DataAccessLayer.UnitOfWork
         private ITableRepository _tables;
 
         public ITableRepository Tables => _tables ??= new TableRepository(_context);
+
+        private IShiftRepository _shifts;
+
+        public IShiftRepository Shifts => _shifts ??= new ShiftRepository(_context);
+        private IShiftCounterRepository  _shiftCounters;
+
+
+        public IShiftCounterRepository ShiftCounters => _shiftCounters ??= new ShiftCounterRepository(_context);
+
+        private IReservationRepository _reservations;
+
+        public IReservationRepository Reservations => _reservations ??= new ReservationRepository(_context);
 
         public UnitOfWork(SapaFoRestRmsContext context)
         {

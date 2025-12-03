@@ -56,6 +56,11 @@ public partial class OrderDetail
 
     public virtual ICollection<KitchenTicketDetail> KitchenTicketDetails { get; set; } = new List<KitchenTicketDetail>();
 
+    /// <summary>
+    /// Các món con trong combo (nếu OrderDetail này là một Combo)
+    /// </summary>
+    public virtual ICollection<OrderComboItem> OrderComboItems { get; set; } = new List<OrderComboItem>();
+
     public virtual MenuItem MenuItem { get; set; } = null!;
 
     public virtual Order Order { get; set; } = null!;
