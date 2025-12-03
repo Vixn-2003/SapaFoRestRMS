@@ -65,5 +65,13 @@ namespace DataAccessLayer.Repositories.Interfaces
         // 7. Lưu tất cả thay đổi xuống DB
         Task<bool> SaveChangesAsync();
 
+
+        // 1. Hàm lấy danh sách món con trong Combo cấu hình
+        Task<List<ComboItem>> GetComboItemsByComboIdAsync(int comboId);
+
+        // 2. Hàm thêm món con vào hóa đơn thực tế
+        Task AddOrderComboItemAsync(OrderComboItem item);
+        // Lấy danh sách OrderComboItems thuộc về một OrderDetail cụ thể
+        Task<List<OrderComboItem>> GetOrderComboItemsByOrderDetailIdAsync(int orderDetailId);
     }
 }

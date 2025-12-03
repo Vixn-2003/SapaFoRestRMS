@@ -248,7 +248,8 @@ namespace DataAccessLayer.Repositories
                 .Include(rt => rt.Reservation)
                     // 3. Từ 'Reservation', ThenInclude 'Orders' -> 'OrderDetails' -> 'MenuItem'
                     .ThenInclude(r => r.Orders)
-                        .ThenInclude(o => o.OrderDetails)
+                        .ThenInclude(o => o.OrderDetails).
+                           ThenInclude(t=>t.OrderComboItems)
                             .ThenInclude(od => od.MenuItem)
                 .Include(rt => rt.Reservation)
                     // 4. Từ 'Reservation', ThenInclude 'Orders' -> 'OrderDetails' -> 'Combo'
@@ -353,7 +354,26 @@ namespace DataAccessLayer.Repositories
         }
 
 
+        public async Task<List<ComboItem>> GetComboItemsByComboIdAsync(int comboId)
+        {
+            // Truy vấn bảng ComboItems, lọc theo ComboId
+            var items = await _context.ComboItems
+                                      .Where(x => x.ComboId == comboId)
+                                      .ToListAsync();
+            return items;
+        }
 
-
+        // Hàm 2: Thêm mới một dòng vào bảng OrderComboItems
+        public async Task AddOrderComboItemAsync(OrderComboItem item)
+        {
+            // Chỉ thêm vào context, chưa SaveChanges (vì SaveChanges gọi ở Service để đồng bộ)
+            await _context.OrderComboItems.AddAsync(item);
+        }
+        public async Task<List<OrderComboItem>> GetOrderComboItemsByOrderDetailIdAsync(int orderDetailId)
+        {
+            return await _context.OrderComboItems
+                                 .Where(x => x.OrderDetailId == orderDetailId)
+                                 .ToListAsync();
+        }
     }
 }
