@@ -484,6 +484,20 @@ namespace BusinessAccessLayer.Services
             _context.Orders.Add(newOrder);
             await _context.SaveChangesAsync();
 
+            // 8.1. Reserve inventory cho các OrderDetail có MenuItemId (status = Pending)
+            foreach (var orderDetail in newOrder.OrderDetails)
+            {
+                if (orderDetail.MenuItemId.HasValue && orderDetail.Status == "Pending")
+                {
+                    var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(orderDetail.OrderDetailId);
+                    if (!reserveResult.success)
+                    {
+                        // Log warning nhưng không fail order creation
+                        Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {orderDetail.OrderDetailId}: {reserveResult.message}");
+                    }
+                }
+            }
+
             // 9. Trả về DTO kết quả (Giữ nguyên bản sửa lỗi an toàn)
             var result = new OrderResultDto
             {

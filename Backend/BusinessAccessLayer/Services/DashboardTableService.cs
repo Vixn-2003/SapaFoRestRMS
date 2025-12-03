@@ -24,6 +24,7 @@ namespace BusinessAccessLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHubContext<ReservationHub> _hubContext;
         private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
+        private readonly IInventoryIngredientService _inventoryService;
 
         // ⭐️ SỬA LỖI 1 & 2: Cập nhật Constructor
         public DashboardTableService(
@@ -31,7 +32,8 @@ namespace BusinessAccessLayer.Services
             IOrderTableRepository orderTableRepo,
             IUnitOfWork unitOfWork,
             IHubContext<ReservationHub> hubContext,
-            SapaFoRestRmsContext context
+            SapaFoRestRmsContext context,
+            IInventoryIngredientService inventoryService
             )
         {
             _dashboardRepo = dashboardRepo;
@@ -39,6 +41,7 @@ namespace BusinessAccessLayer.Services
             _unitOfWork = unitOfWork;
             _hubContext = hubContext;
             _context = context;
+            _inventoryService = inventoryService;
         }
 
         public async Task<DashboardDataDto> GetDashboardDataAsync(string? areaName, int? floor, string? status, string? searchString, int page, int pageSize)
@@ -521,6 +524,19 @@ namespace BusinessAccessLayer.Services
                         };
 
                         await _dashboardRepo.AddOrderDetailAsync(newDetail);
+                        // Cần save ngay để có OrderDetailId (identity) trước khi reserve
+                        await _dashboardRepo.SaveChangesAsync();
+
+                        // Reserve inventory cho OrderDetail có MenuItemId (status = Pending)
+                        if (newDetail.MenuItemId.HasValue && newDetail.Status == "Pending")
+                        {
+                            var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(newDetail.OrderDetailId);
+                            if (!reserveResult.success)
+                            {
+                                // Log warning nhưng không fail
+                                Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {newDetail.OrderDetailId}: {reserveResult.message}");
+                            }
+                        }
                         break;
 
                     // ⭐️ SỬA PHẦN NÀY ⭐️
