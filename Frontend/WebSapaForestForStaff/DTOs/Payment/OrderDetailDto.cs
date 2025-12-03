@@ -28,6 +28,8 @@ namespace WebSapaForestForStaff.DTOs.Payment
         public decimal VatAmount { get; set; }
         public decimal ServiceFee { get; set; }
         public decimal DiscountAmount { get; set; }
+        public decimal? DepositAmount { get; set; }
+        public bool? DepositPaid { get; set; }
         public decimal TotalAmount { get; set; }
 
         // Legacy alias

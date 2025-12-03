@@ -1726,6 +1726,12 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal?>("ClosingBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ClosingDenominations")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1736,8 +1742,32 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("Difference")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
+
+                    b.Property<string>("HandoverNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("HandoverTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("HandoverToStaffId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("OpeningBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("OpeningDenominations")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PinCode")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RequiredEmployees")
                         .HasColumnType("int");
@@ -1747,6 +1777,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TemplateId")
                         .HasColumnType("int");
@@ -3026,7 +3059,7 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("DomainAccessLayer.Models.Staff", null)
+                    b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
                         .WithMany("Shifts")
                         .HasForeignKey("StaffId");
 
@@ -3037,6 +3070,8 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Department");
+
+                    b.Navigation("Staff");
 
                     b.Navigation("Template");
                 });

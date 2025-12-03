@@ -7,7 +7,6 @@ using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.Models;
 namespace WebSapaForestForStaff.Controllers
 {
-    [Authorize(Roles = "Manager")]
     public class ReservationStaffController : Controller
     {
         private readonly HttpClient _client;
@@ -80,6 +79,8 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> AssignTables(int id)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!resResponse.IsSuccessStatusCode)
                 return NotFound();
@@ -183,6 +184,8 @@ namespace WebSapaForestForStaff.Controllers
         [HttpPost]
         public async Task<IActionResult> ResetTables(int reservationId)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var res = await _client.PostAsync($"ReservationStaff/reset-tables/{reservationId}", null);
 
             if (!res.IsSuccessStatusCode)
@@ -201,6 +204,8 @@ namespace WebSapaForestForStaff.Controllers
         [HttpPost]
         public async Task<IActionResult> CancelReservation(int id, bool refund)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var response = await _client.PutAsync(
                 $"ReservationStaff/cancel/{id}?refund={refund.ToString().ToLower()}",
                 null
@@ -234,6 +239,8 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            SetAuthorizationHeader(); // Add auth token
+            
             // Gửi đúng API "ReservationStaff/add"
             var dto = new
             {
@@ -276,6 +283,8 @@ namespace WebSapaForestForStaff.Controllers
         [HttpGet]
         public async Task<IActionResult> EditReservation(int id)
         {
+            SetAuthorizationHeader(); // Add auth token
+            
             var response = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!response.IsSuccessStatusCode)
                 return NotFound();
@@ -305,6 +314,8 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View("EditReservation", model);
 
+            SetAuthorizationHeader(); // Add auth token
+            
             var dto = new
             {
                 model.ReservationDate,
@@ -347,6 +358,8 @@ namespace WebSapaForestForStaff.Controllers
             if (dto.DepositAmount <= 0)
                 return Json(new { success = false, message = "Số tiền đặt cọc không hợp lệ." });
 
+            SetAuthorizationHeader(); // Add auth token
+            
             // Lấy thông tin đặt bàn
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{dto.ReservationId}");
             if (!resResponse.IsSuccessStatusCode)

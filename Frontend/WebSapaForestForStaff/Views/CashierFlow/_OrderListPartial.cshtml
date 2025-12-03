@@ -103,13 +103,16 @@ else
                                 <span class="badge bg-warning text-dark">Chờ thanh toán</span>
                             </td>
                             <td class="text-end">
-                                <a class="btn btn-success btn-sm me-2"
-                                   href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = order.OrderId })">
+                                <button type="button"
+                                        class="btn btn-success btn-sm me-2"
+                                        onclick="showPaymentConfirmationModal(@order.OrderId, '@tableName', @order.Total, '@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = order.OrderId })')">
+                                    <i class="fa-solid fa-credit-card me-1"></i>
                                     Thanh toán
-                                </a>
+                                </button>
                                 <a class="btn btn-outline-secondary btn-sm"
                                    href="@Url.Action(nameof(CashierPaymentFlowController.OrderDetail), "CashierPaymentFlow", new { id = order.OrderId })">
-                                    Xem chi tiết
+                                    <i class="fa-solid fa-eye me-1"></i>
+                                    Chi tiết
                                 </a>
                             </td>
                         }

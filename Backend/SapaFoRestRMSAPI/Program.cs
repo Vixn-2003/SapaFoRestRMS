@@ -26,24 +26,6 @@ using BusinessAccessLayer.Services.Inventory;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -----------------------------
-// ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
-// -----------------------------
-//builder.Services.AddCors(options =>
-//{
-//    options.AddPolicy("AllowFrontend", policy =>
-//        policy.WithOrigins(
-//            "http://localhost:5158",  // frontend chạy http
-//            "https://localhost:5158", // phòng khi chạy https
-//             "http://localhost:5054",  // module Staff
-//            "https://localhost:5054"  // phòng khi chạy https
-//        )
-//        .AllowAnyHeader()
-//        .AllowAnyMethod()
-//        .AllowCredentials()
-//    );
-//});
-
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase"), sqlOptions =>
@@ -297,6 +279,8 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 // AuditLog Service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
+builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
+
 // Receipt Service - Pass WebRootPath from IWebHostEnvironment
 builder.Services.AddScoped<IReceiptService>(sp =>
 {
@@ -376,36 +360,32 @@ builder.Services
         };
     });
 
+// ================================
+// ✅ CORS CONFIGURATION (Centralized)
+// ================================
+// Đọc danh sách origins từ appsettings.json
+// Mỗi dev chỉ cần chỉnh sửa appsettings.Development.json với IP của mình
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-// === 1. THÊM DỊCH VỤ CORS ===
-// === THAY THẾ TOÀN BỘ KHỐI NÀY ===
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:5054",
-            "http://localhost:5158",// 👈 Frontend bạn đang chạy
-            "http://localhost:5123",    // Razor nội bộ
-            "https://localhost:7096",   // 👈 Backend HTTPS localhost
-            "http://localhost:5180",    // Backend HTTP localhost
-            "http://192.168.1.47:5123", // IP Razor Wifi nhà
-            "http://192.168.1.47:5180",  // Swagger wifi nhà
-            "http://192.168.1.97:5054",  // 👈 Frontend IP mới
-            "http://192.168.1.97:5180",  // 👈 Backend HTTP IP mới
-            "https://192.168.1.97:7096", // 👈 Backend HTTPS IP mới (PORT CHÍNH)
-            "http://192.168.1.97:7096",  // 👈 Backend HTTP IP mới (nếu dùng HTTP)
-            "http://192.168.1.97:5123"   // 👈 Razor IP mới
-                                        //   "http://192.168.105.100:5123", // IP Razor
-                                        //  "http://192.168.105.100:5180"  // Swagger
+        // Đọc từ appsettings.json hoặc appsettings.Development.json
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>() 
+            ?? new[] { "http://localhost:5123" }; // Fallback mặc định nếu không có config
 
-        // "http://10.33.8.77:5123", // IP Razor
-        //"http://10.33.8.77:5180"  // Swagger
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials(); // 👈 Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
+        // Log để dễ debug
+        Console.WriteLine("🔒 CORS Allowed Origins:");
+        foreach (var origin in allowedOrigins)
+        {
+            Console.WriteLine($"   ✅ {origin}");
+        }
+
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
     });
 });
 
