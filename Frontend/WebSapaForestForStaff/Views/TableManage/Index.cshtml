@@ -7,6 +7,11 @@
 }
 
 <h2 class="mb-3">Danh sách bàn</h2>
+<h5 class="mb-3">
+    Tổng số bàn: <strong>@ViewBag.TotalTables</strong> |
+    Available: <span class="badge bg-success">@ViewBag.AvailableCount</span> |
+    Maintenance: <span class="badge bg-warning text-dark">@ViewBag.MaintenanceCount</span>
+</h5>
 
 <!-- Nút thêm bàn -->
 <a class="btn btn-primary mb-3" href="@Url.Action("Create")">Thêm bàn mới</a>

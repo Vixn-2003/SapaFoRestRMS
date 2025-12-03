@@ -527,6 +527,7 @@ namespace SapaFoRestRMSAPI.Services
             }
 
             // 3. Seed Combos with ComboItems
+            // Luôn đảm bảo mỗi combo có ít nhất 2 món (không phụ thuộc vào tên MenuItem cụ thể)
             var combo1 = await context.Combos
                 .FirstOrDefaultAsync(c => c.Name.Contains("Steak Dinner"));
 
@@ -542,31 +543,25 @@ namespace SapaFoRestRMSAPI.Services
                 };
                 await context.Combos.AddAsync(combo1);
                 await context.SaveChangesAsync();
+            }
 
-                // Add ComboItems
-                var steakItem = menuItems.FirstOrDefault(m => m.Name.Contains("Steak") || m.Name.Contains("Bò"));
-                var teaItem = menuItems.FirstOrDefault(m => m.Name.Contains("Trà") || m.Name.Contains("Tea"));
-
-                if (steakItem != null)
+            // Đảm bảo combo1 luôn có ComboItems
+            var existingCombo1Items = await context.ComboItems
+                .Where(ci => ci.ComboId == combo1.ComboId)
+                .ToListAsync();
+            if (!existingCombo1Items.Any())
+            {
+                // Lấy 2 món đầu tiên trong menu làm ví dụ
+                var firstTwoItems = menuItems.Take(2).ToList();
+                foreach (var mi in firstTwoItems)
                 {
                     await context.ComboItems.AddAsync(new ComboItem
                     {
                         ComboId = combo1.ComboId,
-                        MenuItemId = steakItem.MenuItemId,
+                        MenuItemId = mi.MenuItemId,
                         Quantity = 1
                     });
                 }
-
-                if (teaItem != null)
-                {
-                    await context.ComboItems.AddAsync(new ComboItem
-                    {
-                        ComboId = combo1.ComboId,
-                        MenuItemId = teaItem.MenuItemId,
-                        Quantity = 1
-                    });
-                }
-
                 await context.SaveChangesAsync();
             }
 
@@ -585,196 +580,36 @@ namespace SapaFoRestRMSAPI.Services
                 };
                 await context.Combos.AddAsync(combo2);
                 await context.SaveChangesAsync();
+            }
 
-                // Add ComboItems
-                var hotpotItem = menuItems.FirstOrDefault(m => m.Name.Contains("Lẩu") || m.Name.Contains("Hotpot"));
-                var vegetableItem = menuItems.FirstOrDefault(m => m.Name.Contains("Rau") || m.Name.Contains("Vegetable"));
-                var drinkItem = menuItems.FirstOrDefault(m => m.Name.Contains("Trà") || m.Name.Contains("Nước"));
+            // Đảm bảo combo2 luôn có ComboItems
+            var existingCombo2Items = await context.ComboItems
+                .Where(ci => ci.ComboId == combo2.ComboId)
+                .ToListAsync();
+            if (!existingCombo2Items.Any())
+            {
+                // Lấy 3 món tiếp theo trong menu (hoặc loop lại nếu ít hơn)
+                var itemsForCombo2 = menuItems.Skip(2).Take(3).ToList();
+                if (!itemsForCombo2.Any())
+                {
+                    itemsForCombo2 = menuItems.Take(2).ToList();
+                }
 
-                if (hotpotItem != null)
+                foreach (var mi in itemsForCombo2)
                 {
                     await context.ComboItems.AddAsync(new ComboItem
                     {
                         ComboId = combo2.ComboId,
-                        MenuItemId = hotpotItem.MenuItemId,
+                        MenuItemId = mi.MenuItemId,
                         Quantity = 1
                     });
                 }
-
-                if (vegetableItem != null)
-                {
-                    await context.ComboItems.AddAsync(new ComboItem
-                    {
-                        ComboId = combo2.ComboId,
-                        MenuItemId = vegetableItem.MenuItemId,
-                        Quantity = 1
-                    });
-                }
-
-                if (drinkItem != null)
-                {
-                    await context.ComboItems.AddAsync(new ComboItem
-                    {
-                        ComboId = combo2.ComboId,
-                        MenuItemId = drinkItem.MenuItemId,
-                        Quantity = 1
-                    });
-                }
-
                 await context.SaveChangesAsync();
             }
 
-            // 4. Create Order 1: Only menu items (no combo)
-            // Status should be "waiting-confirmation" for cashier workflow testing
-            var order1 = new Order
-            {
-                ReservationId = reservation.ReservationId,
-                CustomerId = customer.CustomerId,
-                OrderType = "DineIn",
-                Status = OrderStatusConstants.WaitingConfirmation,
-                CreatedAt = DateTime.UtcNow.AddMinutes(-30),
-                TotalAmount = 0m // Will be calculated later
-            };
-            await context.Orders.AddAsync(order1);
-            await context.SaveChangesAsync();
-            ordersCreated++;
-            Console.WriteLine("✅ Created Order 1 (menu items only).");
-
-            // Add OrderDetails for Order 1
-            // Status should be "Pending" (not "Served") because order is waiting confirmation
-            var order1Details = new List<OrderDetail>();
-            var item1 = menuItems[0];
-            var item2 = menuItems[1];
-            var item3 = menuItems.Count > 2 ? menuItems[2] : menuItems[1];
-
-            order1Details.Add(new OrderDetail
-            {
-                OrderId = order1.OrderId,
-                MenuItemId = item1.MenuItemId,
-                ComboId = null,
-                Quantity = 2,
-                UnitPrice = item1.Price,
-                Status = "Pending",
-                CreatedAt = DateTime.UtcNow.AddMinutes(-29)
-            });
-
-            order1Details.Add(new OrderDetail
-            {
-                OrderId = order1.OrderId,
-                MenuItemId = item2.MenuItemId,
-                ComboId = null,
-                Quantity = 1,
-                UnitPrice = item2.Price,
-                Status = "Pending",
-                CreatedAt = DateTime.UtcNow.AddMinutes(-29)
-            });
-
-            order1Details.Add(new OrderDetail
-            {
-                OrderId = order1.OrderId,
-                MenuItemId = item3.MenuItemId,
-                ComboId = null,
-                Quantity = 1,
-                UnitPrice = item3.Price,
-                Status = "Pending",
-                CreatedAt = DateTime.UtcNow.AddMinutes(-29)
-            });
-
-            await context.OrderDetails.AddRangeAsync(order1Details);
-            await context.SaveChangesAsync();
-
-            // Calculate totals for Order 1
-            var subtotal1 = order1Details.Sum(od => od.UnitPrice * od.Quantity);
-            var vat1 = subtotal1 * 0.1m;
-            var serviceFee1 = subtotal1 * 0.05m;
-            var total1 = subtotal1 + vat1 + serviceFee1;
-
-            order1.TotalAmount = total1;
-            context.Orders.Update(order1);
-            await context.SaveChangesAsync();
-
-            // 5. Create Order 2: Has combo + individual items
-            // This order is already confirmed by customer, ready for payment
-            var order2 = new Order
-            {
-                ReservationId = reservation.ReservationId,
-                CustomerId = customer.CustomerId,
-                OrderType = "DineIn",
-                Status = OrderStatusConstants.Confirmed,
-                ConfirmedAt = DateTime.UtcNow.AddMinutes(-5),
-                CreatedAt = DateTime.UtcNow.AddMinutes(-10),
-                TotalAmount = 0m // Will be calculated later
-            };
-            await context.Orders.AddAsync(order2);
-            await context.SaveChangesAsync();
-            ordersCreated++;
-            Console.WriteLine("✅ Created Order 2 (combos + items).");
-
-            // Add OrderDetails for Order 2 (with combo)
-            // Order is confirmed, so items should be "Confirmed" status
-            var order2Details = new List<OrderDetail>();
-
-            // Add combo order details
-            order2Details.Add(new OrderDetail
-            {
-                OrderId = order2.OrderId,
-                MenuItemId = null,
-                ComboId = combo1.ComboId,
-                Quantity = 1,
-                UnitPrice = combo1.Price,
-                Status = "Confirmed",
-                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
-            });
-
-            order2Details.Add(new OrderDetail
-            {
-                OrderId = order2.OrderId,
-                MenuItemId = null,
-                ComboId = combo2.ComboId,
-                Quantity = 1,
-                UnitPrice = combo2.Price,
-                Status = "Confirmed",
-                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
-            });
-
-            // Add individual items (no combo)
-            var item4 = menuItems.Count > 3 ? menuItems[3] : menuItems[0];
-            var item5 = menuItems.Count > 4 ? menuItems[4] : menuItems[1];
-
-            order2Details.Add(new OrderDetail
-            {
-                OrderId = order2.OrderId,
-                MenuItemId = item4.MenuItemId,
-                ComboId = null,
-                Quantity = 1,
-                UnitPrice = item4.Price,
-                Status = "Confirmed",
-                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
-            });
-
-            order2Details.Add(new OrderDetail
-            {
-                OrderId = order2.OrderId,
-                MenuItemId = item5.MenuItemId,
-                ComboId = null,
-                Quantity = 2,
-                UnitPrice = item5.Price,
-                Status = "Confirmed",
-                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
-            });
-
-            await context.OrderDetails.AddRangeAsync(order2Details);
-            await context.SaveChangesAsync();
-
-            // Calculate totals for Order 2
-            var subtotal2 = order2Details.Sum(od => od.UnitPrice * od.Quantity);
-            var vat2 = subtotal2 * 0.1m;
-            var serviceFee2 = subtotal2 * 0.05m;
-            var total2 = subtotal2 + vat2 + serviceFee2;
-
-            order2.TotalAmount = total2;
-            context.Orders.Update(order2);
-            await context.SaveChangesAsync();
+            // NOTE: TẠM THỜI BỎ SEED DEMO ORDERS (Order 1, Order 2)
+            // Để tránh ảnh hưởng tới logic tồn kho & QuantityReserved.
+            // Nếu sau này cần lại dữ liệu demo, có thể khôi phục block code tạo Order 1 & Order 2 tại đây.
 
             // 7. Create Order 3: Another waiting-confirmation order (different table)
             var table2 = await context.Tables
@@ -1035,6 +870,59 @@ namespace SapaFoRestRMSAPI.Services
                 }
             };
             await context.OrderDetails.AddRangeAsync(order7Details);
+            await context.SaveChangesAsync();
+
+            // 11.1. Seed Order 8: ACTIVE order with combo + OrderComboItems for kitchen testing
+            // Status dùng chuỗi "Processing" để KitchenDisplay (đang filter Pending/Processing/Preparing) thấy được.
+            var order8 = new Order
+            {
+                ReservationId = reservation.ReservationId,
+                CustomerId = customer.CustomerId,
+                OrderType = "DineIn",
+                Status = "Processing",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-10),
+                TotalAmount = 0m
+            };
+            await context.Orders.AddAsync(order8);
+            await context.SaveChangesAsync();
+            ordersCreated++;
+            Console.WriteLine("✅ Created Order 8 (processing with combo for kitchen test).");
+
+            // Dòng combo cho Order 8
+            var order8Detail = new OrderDetail
+            {
+                OrderId = order8.OrderId,
+                ComboId = combo1.ComboId,
+                Quantity = 1,
+                UnitPrice = combo1.Price,
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-9)
+            };
+            await context.OrderDetails.AddAsync(order8Detail);
+            await context.SaveChangesAsync();
+
+            // Tạo OrderComboItems cho tất cả món trong combo1
+            var combo1ItemsForOrder8 = await context.ComboItems
+                .Where(ci => ci.ComboId == combo1.ComboId)
+                .ToListAsync();
+
+            foreach (var ci in combo1ItemsForOrder8)
+            {
+                await context.OrderComboItems.AddAsync(new OrderComboItem
+                {
+                    OrderDetailId = order8Detail.OrderDetailId,
+                    MenuItemId = ci.MenuItemId,
+                    Quantity = ci.Quantity,
+                    Status = "Pending",
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-9),
+                    IsUrgent = false
+                });
+            }
+            await context.SaveChangesAsync();
+
+            // Cập nhật tổng tiền cho Order 8
+            order8.TotalAmount = order8Detail.UnitPrice * order8Detail.Quantity;
+            context.Orders.Update(order8);
             await context.SaveChangesAsync();
 
             var subtotal7 = order7Details.Sum(od => od.UnitPrice * od.Quantity);

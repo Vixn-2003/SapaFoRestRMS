@@ -26,24 +26,6 @@ using BusinessAccessLayer.Services.Inventory;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -----------------------------
-// ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
-// -----------------------------
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins(
-            "http://localhost:5158",  // frontend chạy http
-            "https://localhost:5158", // phòng khi chạy https
-             "http://localhost:5054",  // module Staff
-            "https://localhost:5054"  // phòng khi chạy https
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials()
-    );
-});
-
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase"), sqlOptions =>
@@ -275,14 +257,29 @@ builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
 
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
-
-
+//daytype
+builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
+builder.Services.AddScoped<IDayTypeService, DayTypeService>();
+//shifttemplate
+builder.Services.AddScoped<IShiftTemplateRepository, ShiftTemplateRepository>();
+builder.Services.AddScoped<IShiftTemplateService, ShiftTemplateService>();
+//department
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+//shift 
+builder.Services.AddScoped<IShiftRepository, ShiftRepository>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+//shiftassignment
+builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
+builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // AuditLog Service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
 
 // Receipt Service - Pass WebRootPath from IWebHostEnvironment
 builder.Services.AddScoped<IReceiptService>(sp =>
@@ -363,36 +360,32 @@ builder.Services
         };
     });
 
+// ================================
+// ✅ CORS CONFIGURATION (Centralized)
+// ================================
+// Đọc danh sách origins từ appsettings.json
+// Mỗi dev chỉ cần chỉnh sửa appsettings.Development.json với IP của mình
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-// === 1. THÊM DỊCH VỤ CORS ===
-// === THAY THẾ TOÀN BỘ KHỐI NÀY ===
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
-        policy.WithOrigins(
-            // Frontend local
-            "http://localhost:5054",
-            "https://localhost:7097",
+        // Đọc từ appsettings.json hoặc appsettings.Development.json
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>() 
+            ?? new[] { "http://localhost:5123" }; // Fallback mặc định nếu không có config
 
-            // Razor / backend localhost
-            "http://localhost:5123",
-            "http://localhost:5180",
-            "https://localhost:7096",
+        // Log để dễ debug
+        Console.WriteLine("🔒 CORS Allowed Origins:");
+        foreach (var origin in allowedOrigins)
+        {
+            Console.WriteLine($"   ✅ {origin}");
+        }
 
-            // IP nội bộ / mạng Wifi nhà
-            "http://192.168.1.47:5123",
-            "http://192.168.1.47:5180",
-            "http://192.168.1.97:5054",
-            "http://192.168.1.97:5180",
-            "https://192.168.1.97:7096",
-            "http://192.168.1.97:7096",
-            "http://192.168.1.97:5123"
-        )
-        .AllowAnyHeader()     // Cho phép mọi header
-        .AllowAnyMethod()     // Cho phép mọi method: GET, POST, PUT, DELETE
-        .AllowCredentials();  // Bắt buộc nếu dùng cookies, fetch, SignalR
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
     });
 });
 
@@ -408,7 +401,7 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
-// Bật CORS
+//// Bật CORS
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
@@ -421,13 +414,7 @@ app.MapControllers();
 
 await app.EnsureSeededAsync();
 
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
-    
-}
-
-// Upsert Admin from configuration (Development)
+// Upsert Admin + seed demo data for development/testing
 using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
@@ -438,6 +425,9 @@ using (var scope = app.Services.CreateScope())
     await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
     await MenuDataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
     await MenuDataSeeder.SeedKitchenOrdersAsync(ctx);
+    
+    // 🔹 Seed thêm dữ liệu workflow thu ngân + combo cho bếp (gồm Order 3–8)
+    await DataSeeder.SeedCashierWorkflowTestAsync(ctx);
     await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];

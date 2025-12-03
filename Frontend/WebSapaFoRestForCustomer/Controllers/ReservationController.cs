@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Security.Claims;
 using System.Text;
 using WebSapaFoRestForCustomer.Models;
 
@@ -14,8 +16,18 @@ namespace WebSapaFoRestForCustomer.Controllers
         {
             _client = httpClientFactory.CreateClient();
         }
+
+        [Authorize(Roles = "Customer")]
         public IActionResult ReservationList()
         {
+            // Lấy customerId từ claim
+            var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(customerIdClaim))
+                return RedirectToAction("Login", "Auth"); // chưa login thì chuyển tới login
+
+            ViewBag.CustomerId = customerIdClaim; // truyền xuống view
+            Console.WriteLine(ViewBag.CustomerId);
             return View();
         }
         // Gửi OTP

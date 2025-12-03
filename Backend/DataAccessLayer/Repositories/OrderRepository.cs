@@ -57,6 +57,13 @@ namespace DataAccessLayer.Repositories
             return await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.OrderComboItems)
+                        .ThenInclude(oci => oci.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Combo)
+                        .ThenInclude(c => c.ComboItems)
+                            .ThenInclude(ci => ci.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User)
                 .Include(o => o.Reservation)
@@ -82,6 +89,13 @@ namespace DataAccessLayer.Repositories
             return await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.OrderComboItems)
+                        .ThenInclude(oci => oci.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Combo)
+                        .ThenInclude(c => c.ComboItems)
+                            .ThenInclude(ci => ci.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User)
                 .Include(o => o.Reservation)
@@ -92,7 +106,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Pending" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -125,6 +139,10 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.MenuItem)
                         .ThenInclude(mi => mi.Category)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Combo)
+                        .ThenInclude(c => c.ComboItems)
+                            .ThenInclude(ci => ci.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User)
                 .Include(o => o.Reservation)
@@ -148,6 +166,10 @@ namespace DataAccessLayer.Repositories
             return await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Combo)
+                        .ThenInclude(c => c.ComboItems)
+                            .ThenInclude(ci => ci.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User)
                 .Include(o => o.Reservation)
@@ -158,7 +180,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -168,6 +190,13 @@ namespace DataAccessLayer.Repositories
             return await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.OrderComboItems)
+                        .ThenInclude(oci => oci.MenuItem)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Combo)
+                        .ThenInclude(c => c.ComboItems)
+                            .ThenInclude(ci => ci.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User)
                 .Include(o => o.Reservation)
@@ -176,7 +205,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .ToListAsync();
         }
 
@@ -186,6 +215,14 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.MenuItem)
                         .ThenInclude(mi => mi.Category)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.OrderComboItems)
+                        .ThenInclude(oci => oci.MenuItem)
+                            .ThenInclude(mi => mi.Category)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Combo)
+                        .ThenInclude(c => c.ComboItems)
+                            .ThenInclude(ci => ci.MenuItem)
                 .Include(o => o.Customer)
                     .ThenInclude(c => c.User)
                 .Include(o => o.Reservation)
@@ -194,7 +231,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .ToListAsync();
         }
     }

@@ -21,6 +21,11 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<bool> DeleteRecipeByMenuItemId(int menuItemId);
 
         Task<bool> AddRecipe(RecipeDTO dto);
+        Task<List<MenuItemStatisticsDto>> GetMenuItemsWithStatisticsAsync();
+
+
+        Task<int> CreateManagerMenu(ManagerMenuDTO menuDTO); 
+        Task<ManagerMenuDTO?> GetMenuByName(string name);
 
 
     }

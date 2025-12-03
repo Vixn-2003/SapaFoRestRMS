@@ -43,6 +43,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<ComboItem> ComboItems { get; set; }
 
     public virtual DbSet<Customer> Customers { get; set; }
+    public virtual DbSet<Department> Departments { get; set; }
 
     public virtual DbSet<Event> Events { get; set; }
 
@@ -65,6 +66,8 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<OrderHistory> OrderHistories { get; set; }
 
     public virtual DbSet<OrderDetail> OrderDetails { get; set; }
+
+    public virtual DbSet<OrderComboItem> OrderComboItems { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
 
@@ -92,8 +95,13 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Shift> Shifts { get; set; }
 
-    public virtual DbSet<Staff> Staffs { get; set; }
+    public virtual DbSet<ShiftHistory> ShiftHistorys { get; set; }
+    public virtual DbSet<ShiftTemplate> ShiftTemplates { get; set; }
 
+    public virtual DbSet<Staff> Staffs { get; set; }
+    public DbSet<DayType> DayTypes { get; set; }
+    public DbSet<DayCalendar> DayCalendars { get; set; }
+    public DbSet<ShiftAssignment> ShiftAssignments { get; set; }
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
 
     public virtual DbSet<Transaction> Transactions { get; set; }
@@ -116,6 +124,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public DbSet<Unit> Units { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
+  
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
 
     // Thêm bảng mới
@@ -146,6 +155,26 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK_Announcements_Users");
         });
+        // Shift - Department (tắt cascade)
+        modelBuilder.Entity<Shift>()
+            .HasOne(s => s.Department)
+            .WithMany(d => d.Shifts)
+            .HasForeignKey(s => s.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ShiftTemplate - Department (tắt cascade)
+        modelBuilder.Entity<ShiftTemplate>()
+            .HasOne(t => t.Department)
+            .WithMany(d => d.ShiftTemplates)
+            .HasForeignKey(t => t.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Shift - ShiftTemplate (tắt cascade)
+        modelBuilder.Entity<Shift>()
+            .HasOne(s => s.Template)
+            .WithMany(t => t.Shifts)
+            .HasForeignKey(s => s.TemplateId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Attendance>(entity =>
         {
@@ -391,6 +420,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CourseType).HasMaxLength(20);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+            entity.Property(e => e.IsAds).HasDefaultValue(false);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
@@ -495,6 +525,47 @@ public partial class SapaFoRestRmsContext : DbContext
                 .WithMany(c => c.OrderDetails)
                 .HasForeignKey(od => od.ComboId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrderComboItem>(entity =>
+        {
+            entity.HasKey(e => e.OrderComboItemId).HasName("PK__OrderComboItem__OrderComboItemId");
+
+            entity.ToTable("OrderComboItems");
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            
+            entity.Property(e => e.Quantity)
+                .HasDefaultValue(1)
+                .IsRequired();
+            
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("(getdate())");
+            
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            
+            entity.Property(e => e.IsUrgent).HasDefaultValue(false);
+            
+            entity.Property(e => e.StartedAt).HasColumnType("datetime");
+            
+            entity.Property(e => e.ReadyAt).HasColumnType("datetime");
+
+            // Foreign key to OrderDetail
+            entity.HasOne(d => d.OrderDetail)
+                .WithMany(od => od.OrderComboItems)
+                .HasForeignKey(d => d.OrderDetailId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__OrderComboItem__OrderDetail__OrderDetailId");
+
+            // Foreign key to MenuItem
+            entity.HasOne(d => d.MenuItem)
+                .WithMany()
+                .HasForeignKey(d => d.MenuItemId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__OrderComboItem__MenuItem__MenuItemId");
         });
 
         modelBuilder.Entity<Payment>(entity =>
@@ -983,18 +1054,7 @@ public partial class SapaFoRestRmsContext : DbContext
         });
 
 
-        modelBuilder.Entity<Shift>(entity =>
-        {
-            entity.HasKey(e => e.ShiftId).HasName("PK__Shifts__C0A83881495D0B69");
-
-            entity.Property(e => e.EndTime).HasColumnType("datetime");
-            entity.Property(e => e.StartTime).HasColumnType("datetime");
-
-            entity.HasOne(d => d.Staff).WithMany(p => p.Shifts)
-                .HasForeignKey(d => d.StaffId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Shifts__StaffId__3D2915A8");
-        });
+     
 
         modelBuilder.Entity<Staff>(entity =>
         {

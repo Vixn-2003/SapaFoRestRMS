@@ -49,6 +49,8 @@
         Vat = Model.VatAmount,
         ServiceFee = Model.ServiceFee,
         Discount = Model.DiscountAmount,
+        DepositAmount = Model.DepositAmount,
+        DepositPaid = Model.DepositPaid,
         Total = Model.TotalAmount,
         Items = (Model.Items ?? new List<WebSapaForestForStaff.DTOs.Payment.OrderItemDto>()).Select(i => new
         {
@@ -235,6 +237,16 @@
                                 <tr>
                                     <td colspan="4" class="fw-semibold ps-3">Giảm giá</td>
                                     <td class="text-end fw-bold text-danger">-@Model.DiscountAmount.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                            {
+                                <tr class="table-info">
+                                    <td colspan="4" class="fw-semibold ps-3">
+                                        <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+                                        Đã đặt cọc
+                                    </td>
+                                    <td class="text-end fw-bold text-success">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
                                 </tr>
                             }
                             <tr class="table-success">

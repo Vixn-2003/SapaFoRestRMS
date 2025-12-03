@@ -126,5 +126,17 @@ public interface IPaymentService
     /// Retry các transaction đang pending (background job)
     /// </summary>
     Task<List<TransactionDto>> RetryPendingTransactionsAsync(CancellationToken ct = default);
+
+    // ========== ORDER CONFIRMATION METHODS (Merged from IOrderConfirmationService) ==========
+
+    /// <summary>
+    /// Hủy món (chỉ cho Kitchen items ở trạng thái NotStarted)
+    /// </summary>
+    Task<bool> CancelItemAsync(int orderDetailId, string reason, int? staffId = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Validate xem món có thể hủy không
+    /// </summary>
+    Task<(bool CanCancel, string Reason)> ValidateCanCancelItemAsync(int orderDetailId, CancellationToken ct = default);
 }
 
