@@ -60,7 +60,7 @@ namespace WebSapaForestForStaff.Controllers
                 }
                 if (User.IsInRole("Manager"))
                 {
-                    return RedirectToAction("Index", "TableManage");
+                    return RedirectToAction("Index", "HomeManager");
                 }
                 if (User.IsInRole("Staff"))
                 {
@@ -161,7 +161,7 @@ namespace WebSapaForestForStaff.Controllers
                         {
                             1 => returnUrl ?? Url.Action("Index", "Admin"),
                             2 => returnUrl ?? Url.Action("Index", "Admin"),
-                            3 => returnUrl ?? Url.Action("Index", "TableManage"),
+                            3 => returnUrl ?? Url.Action("Index", "HomeManager"),
                             4 => returnUrl ?? Url.Action("Index", "TableManage"),
                             5 => returnUrl ?? Url.Action("Index", "Home"),
                             _ => returnUrl ?? Url.Action("Index", "Home")

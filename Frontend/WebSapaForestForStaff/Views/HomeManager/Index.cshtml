@@ -1,0 +1,92 @@
+﻿@{
+    ViewData["Title"] = "Trang Quản Lý";
+    Layout = ""; // nếu bạn có layout riêng, nếu không thì bỏ dòng này
+}
+
+<div class="dashboard-container">
+    <h1 class="dashboard-title">Trang Quản Lý</h1>
+
+    <div class="card-grid">
+
+        <!-- Quản lý đơn đặt bàn -->
+        <a href="/ReservationStaff" class="card">
+            <div class="card-icon">
+                <i class="fas fa-concierge-bell"></i>
+            </div>
+            <h3>Quản lý đơn đặt bàn</h3>
+            <p>Xem, xác nhận, sắp xếp và quản lý thông tin đặt bàn của khách hàng.</p>
+        </a>
+
+        <!-- Quản lý nhân viên -->
+        <a href="/Employee" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản lý nhân viên</h3>
+            <p>Quản lý hồ sơ, lương, phân quyền và ca làm của nhân viên.</p>
+        </a>
+
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+<style>
+    body {
+        background: #f4f6f9;
+        font-family: "Segoe UI", sans-serif;
+    }
+
+    .dashboard-container {
+        padding: 40px 50px;
+    }
+
+    .dashboard-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 30px;
+        color: #2c3e50;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+    }
+
+    .card {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        text-decoration: none;
+        color: #2c3e50;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.07);
+        transition: 0.3s;
+        border-left: 6px solid #27ae60;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.12);
+        }
+
+    .card-icon {
+        font-size: 40px;
+        color: #27ae60;
+        margin-bottom: 15px;
+    }
+
+    .card h3 {
+        margin-bottom: 10px;
+        font-size: 22px;
+        font-weight: 700;
+    }
+
+    .card p {
+        font-size: 15px;
+        color: #555;
+        line-height: 1.5;
+    }
+</style>
