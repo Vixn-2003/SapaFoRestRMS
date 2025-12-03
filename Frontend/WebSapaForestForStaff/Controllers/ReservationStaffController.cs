@@ -242,7 +242,8 @@ namespace WebSapaForestForStaff.Controllers
                 ReservationDate = model.ReservationDate,
                 ReservationTime = model.ReservationTime,
                 NumberOfGuests = model.NumberOfGuests,
-                Notes = model.Notes
+                Notes = model.Notes,
+                OtpCode = "0000"
             };
 
             var jsonContent = JsonConvert.SerializeObject(dto);

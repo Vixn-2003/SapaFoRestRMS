@@ -1,6 +1,6 @@
 ﻿@model ReservationListViewModel
 @{
-    Layout = "_LayoutManager";
+    Layout = "_LayoutReservation";
     ViewData["Title"] = "Quản lý đặt bàn - Nhà hàng Sapa Forest";
 }
 
@@ -142,7 +142,7 @@
                         }
                     </td>
                     <td class="text-center">
-                        @if (r.TotalDepositPaid.HasValue && r.TotalDepositPaid.Value > 0)
+                        @if (r.DepositAmount.HasValue && r.DepositAmount.Value > 0)
                         {
                             <span>
                                 @String.Format("{0:N0}", r.TotalDepositPaid)
