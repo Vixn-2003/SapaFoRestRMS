@@ -108,6 +108,25 @@
         font-weight: 500;
     }
 
+    .status-card .label .fa-bell {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .status-card .label .fa-bell.ringing {
+        animation: bell-ring 1s infinite;
+        transform-origin: top center;
+    }
+
+    @@keyframes bell-ring {
+        0% { transform: rotate(0deg); }
+        15% { transform: rotate(15deg); }
+        30% { transform: rotate(-15deg); }
+        45% { transform: rotate(10deg); }
+        60% { transform: rotate(-10deg); }
+        75% { transform: rotate(5deg); }
+        100% { transform: rotate(0deg); }
+    }
+
     /* Filter Buttons - Đơn giản */
     .filter-btn {
         border: none;
@@ -308,13 +327,13 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        padding: 20px;
-        margin-bottom: 12px;
+        padding: 14px 16px;
+        margin-bottom: 8px;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
         background: #ffffff;
-        gap: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        gap: 12px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06);
         transition: all 0.2s;
     }
 
@@ -341,13 +360,13 @@
     }
 
     .item-name {
-        font-weight: 700;
-        font-size: 20px;
+        font-weight: 500;
+        font-size: 16px;
         color: #1f2937;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         flex-wrap: wrap;
     }
 
@@ -356,21 +375,21 @@
         color: #374151;
         padding: 0;
         border-radius: 0;
-        font-size: 18px;
-        font-weight: 700;
+        font-size: 15px;
+        font-weight: 500;
     }
 
     .item-notes {
         font-size: 13px;
         color: #6b7280;
-        margin: 8px 0;
+        margin: 6px 0;
         padding: 0;
         background: transparent;
         border: none;
         display: flex;
         align-items: center;
         gap: 6px;
-        font-weight: 500;
+        font-weight: 400;
     }
 
     .item-notes i {
@@ -380,20 +399,20 @@
 
     .item-notes strong {
         color: #374151;
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .item-time {
-        font-size: 14px;
+        font-size: 13px;
         color: #6b7280;
-        margin-top: 8px;
+        margin-top: 4px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
     }
 
     .item-time.waiting-long {
-        color: #dc2626;
+        /* Bỏ màu đỏ, chỉ nhấn nhẹ bằng font đậm nếu chờ lâu */
         font-weight: 700;
     }
 
@@ -585,7 +604,10 @@
                 <div class="col-3">
                     <div class="status-card">
                         <div class="count" id="readyCount">@Model.ReadyCount</div>
-                        <div class="label">Sẵn sàng lấy <i class="fas fa-bell"></i></div>
+                        <div class="label">
+                            Sẵn sàng lấy
+                            <i class="fas fa-bell @(Model.ReadyCount > 0 ? "ringing" : "")" id="readyBellIcon"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -619,7 +641,12 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div class="flex-grow-1">
                                         <div class="order-card-title">
-                                            <span class="table-badge @(readyCount > 0 ? "has-ready" : "")">@group.OrderNumber</span>
+                                            <span class="table-badge @(readyCount > 0 ? "has-ready" : "")">
+                                                Bàn @group.TableNumber
+                                            </span>
+                                            <span style="font-size: 13px; color: #6b7280; font-weight: 500;">
+                                                (#@group.OrderNumber)
+                                            </span>
                                             <span>@group.AreaName</span>
                                         </div>
                                         <div class="order-card-subtitle">
@@ -663,7 +690,9 @@
                                         var isCooking = itemStatusLower.Contains("cooking") || itemStatusLower.Contains("chế biến") || itemStatusLower.Contains("đang nấu");
                                         var isReadyStatus = itemStatusLower.Contains("ready") || itemStatusLower.Contains("sẵn sàng");
                                     }
-                                    <div class="item-row @(isReady ? "ready" : "") @(item.IsUrgent ? "urgent" : "")" data-item-id="@item.OrderDetailId">
+                                    <div class="item-row @(isReady ? "ready" : "") @(item.IsUrgent ? "urgent" : "")"
+                                         data-item-id="@item.OrderDetailId"
+                                         data-combo-item-id="@(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0)">
                                         <div class="item-info">
                                             <div class="item-name">
                                                 <span class="item-quantity">x@(item.Quantity)</span>
@@ -680,69 +709,65 @@
                                                 </div>
                                             }
                                             <div class="item-time @(isWaitingLong ? "waiting-long" : "")">
-                                                <i class="fas fa-clock"></i> Order: @item.OrderTime.ToString("HH:mm")
-                                                @if (isReadyStatus || isDone)
-                                                {
-                                                    <span> | Hoàn thành</span>
-                                                }
-                                                else
-                                                {
-                                                    <span> | Đã chờ @item.WaitingMinutes phút</span>
-                                                }
+                                                <i class="fas fa-clock"></i>
+                                                <span>Thời gian order : @item.OrderTime.ToString("HH:mm")</span>                                         
                                             </div>
                                         </div>
                                         
                                         <div class="item-actions">
-                                            <!-- Action Buttons for Pending/Cooking -->
+                                            <!-- Action Buttons + Status on same row for Pending/Cooking -->
                                             @if (isPending || isCooking)
                                             {
-                                                <div class="action-buttons-row mb-2">
+                                                <div class="action-buttons-row mb-2 d-flex align-items-center" style="gap: 8px;">
                                                     @if (item.CanRequestUrgent)
                                                     {
                                                         <button class="btn btn-urgent btn-action-item @(item.IsUrgent ? "active" : "")" 
-                                                                onclick="event.stopPropagation(); requestUrgent(@item.OrderDetailId)" 
-                                                                title="Làm gấp">
+                                                                onclick="event.stopPropagation(); requestUrgent(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0), @(item.IsUrgent.ToString().ToLower()))" 
+                                                                title="@(item.IsUrgent ? "Hủy làm gấp" : "Làm gấp")">
                                                             <i class="fas fa-fire"></i>
-                                                            @(item.IsUrgent ? "Đã gấp" : "Làm gấp")
+                                                            @(item.IsUrgent ? "Hủy làm gấp" : "Làm gấp")
                                                         </button>
                                                     }
                                                     @if (item.CanCancel)
                                                     {
                                                         <button class="btn btn-cancel btn-action-item" 
-                                                                onclick="event.stopPropagation(); cancelItem(@item.OrderDetailId)" 
+                                                                onclick="event.stopPropagation(); cancelItem(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0))" 
                                                                 title="Hủy món">
                                                             <i class="fas fa-times"></i>
                                                             Hủy món
                                                         </button>
                                                     }
+
+                                                    @if (isPending)
+                                                    {
+                                                        <button class="item-status-btn pending">
+                                                            <i class="fas fa-hourglass-half"></i>
+                                                            <span>CHỜ</span>
+                                                            <span style="font-size: 12px; color: #4b5563; margin-left: 4px;">
+                                                                @item.WaitingMinutes phút
+                                                            </span>
+                                                        </button>
+                                                    }
+                                                    else if (isCooking)
+                                                    {
+                                                        <button class="item-status-btn cooking @(item.IsUrgent ? "urgent" : "")">
+                                                            <i class="fas fa-utensils"></i> ĐANG NẤU
+                                                            @if (item.IsUrgent)
+                                                            {
+                                                                <i class="fas fa-exclamation-circle"></i>
+                                                            }
+                                                        </button>
+                                                    }
                                                 </div>
-                                                
-                                                <!-- Status Button -->
-                                                @if (isPending)
-                                                {
-                                                    <button class="item-status-btn pending">
-                                                        <i class="fas fa-hourglass-half"></i> CHỜ
-                                                    </button>
-                                                }
-                                                else if (isCooking)
-                                                {
-                                                    <button class="item-status-btn cooking @(item.IsUrgent ? "urgent" : "")">
-                                                        <i class="fas fa-utensils"></i> ĐANG NẤU
-                                                        @if (item.IsUrgent)
-                                                        {
-                                                            <i class="fas fa-exclamation-circle"></i>
-                                                        }
-                                                    </button>
-                                                }
                                             }
                                             
                                             <!-- Ready Status - Button LẤY MÓN lớn -->
-                                            @if (isReadyStatus)
+                                                @if (isReadyStatus)
                                             {
                                                 @if (item.IsSplit)
                                                 {
-                                                    <!-- Đã tách rồi, không cần popup, lấy hết -->
-                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServedDirect(@item.OrderDetailId, @item.Quantity)">
+                                                    <!-- Đã tách rồi: vẫn dùng popup để xác nhận giống món lẻ -->
+                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServed(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0), @item.Quantity)">
                                                         <i class="fas fa-check-circle"></i>
                                                         LẤY MÓN
                                                     </button>
@@ -750,7 +775,7 @@
                                                 else
                                                 {
                                                     <!-- Chưa tách, cần popup để chọn số lượng -->
-                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServed(@item.OrderDetailId, @item.Quantity)">
+                                                        <button class="btn-pickup" onclick="event.stopPropagation(); handleServed(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0), @item.Quantity)">
                                                         <i class="fas fa-check-circle"></i>
                                                         LẤY MÓN
                                                     </button>
@@ -788,6 +813,7 @@
 <!-- Modals -->
 @await Html.PartialAsync("_UrgentModal")
 @await Html.PartialAsync("_CancelModal")
+@await Html.PartialAsync("_UrgentCancelModal")
 
 <!-- Pickup Quantity Modal -->
 <div class="modal fade" id="pickupQuantityModal" tabindex="-1" aria-labelledby="pickupQuantityModalLabel" aria-hidden="true">
@@ -799,6 +825,7 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="pickupOrderDetailId" />
+                <input type="hidden" id="pickupOrderComboItemId" />
                 <div class="mb-3">
                     <label for="pickupMenuItemName" class="form-label">Món:</label>
                     <input type="text" class="form-control" id="pickupMenuItemName" readonly />

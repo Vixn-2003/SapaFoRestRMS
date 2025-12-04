@@ -131,6 +131,10 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     public class GroupedItemDetailDto
     {
         public int OrderDetailId { get; set; }
+        /// <summary>
+        /// OrderComboItemId - null nếu là món lẻ, có giá trị nếu là món trong combo
+        /// </summary>
+        public int? OrderComboItemId { get; set; }
         public int OrderId { get; set; }
         public string OrderNumber { get; set; } = string.Empty;
         public string TableNumber { get; set; } = string.Empty;
@@ -146,7 +150,15 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     /// </summary>
     public class StationItemDto
     {
+        /// <summary>
+        /// Id của MenuItem - dùng để xem công thức, thống kê...
+        /// </summary>
+        public int MenuItemId { get; set; }
         public int OrderDetailId { get; set; }
+        /// <summary>
+        /// OrderComboItemId - null nếu là món lẻ, có giá trị nếu là món trong combo
+        /// </summary>
+        public int? OrderComboItemId { get; set; }
         public int OrderId { get; set; }
         public string OrderNumber { get; set; } = string.Empty;
         public string TableNumber { get; set; } = string.Empty;
@@ -181,5 +193,29 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     {
         public int OrderDetailId { get; set; }
         public bool IsUrgent { get; set; }
+    }
+
+    /// <summary>
+    /// Request để in ticket cho món đã hoàn thành
+    /// </summary>
+    public class PrintItemTicketRequest
+    {
+        public int OrderDetailId { get; set; }
+        public int? OrderComboItemId { get; set; }
+    }
+
+    /// <summary>
+    /// DTO cho thông tin in ticket
+    /// </summary>
+    public class PrintItemTicketDto
+    {
+        public int OrderId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string TableNumber { get; set; } = string.Empty;
+        public string MenuItemName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public string? Notes { get; set; }
+        public DateTime CompletedAt { get; set; }
+        public string StationName { get; set; } = string.Empty;
     }
 }

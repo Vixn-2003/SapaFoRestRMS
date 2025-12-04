@@ -396,47 +396,53 @@ namespace BusinessAccessLayer.Services
         {
             return await _orderTableRepository.GetDistinctFloorsAsync();
         }
-        // === SỬA LẠI HÀM NÀY ===
-        // Đổi kiểu trả về từ Task<Order> thành Task<OrderResultDto>
-        // Sửa tên DTO đầu vào thành DTO mới: SubmitOrderRequest
+
         public async Task<OrderResultDto> SubmitOrderAsync(SubmitOrderRequest orderDto)
         {
-            // 1. Kiểm tra Reservation (Giữ nguyên)
+            // =========================================================================
+            // BƯỚC 1: CHUẨN BỊ DỮ LIỆU (Validation & Fetch Data)
+            // =========================================================================
+
+            // 1.1 Kiểm tra Bàn / Reservation
             var reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(orderDto.TableId);
             if (reservation == null)
             {
                 throw new Exception("Không tìm thấy bàn hợp lệ hoặc bàn chưa được kích hoạt.");
             }
 
-            // 2. Lấy giá gốc MÓN LẺ từ DB (Giữ nguyên)
+            // 1.2 Lấy thông tin MÓN LẺ từ DB (để lấy giá)
             var itemIds = orderDto.Items.Select(i => i.MenuItemId).ToList();
             var menuItemsFromDb = await _orderTableRepository.GetMenuItemsByIdsAsync(itemIds);
             var itemPriceMap = menuItemsFromDb.ToDictionary(m => m.MenuItemId, m => m.Price);
 
-            // 3. Lấy giá gốc COMBO từ DB (Giữ nguyên)
+            // 1.3 Lấy thông tin COMBO + CẤU TRÚC COMBO (Quan trọng)
             var comboIds = orderDto.Combos.Select(c => c.ComboId).ToList();
-            var combosFromDb = await _context.Combos.AsNoTracking() // <-- THÊM DÒNG NÀY
+
+            // Include ComboItems để biết combo gồm những món gì
+            var combosFromDb = await _context.Combos.AsNoTracking()
+                                             .Include(c => c.ComboItems)
                                              .Where(c => comboIds.Contains(c.ComboId) && c.IsAvailable == true)
                                              .ToListAsync();
             var comboPriceMap = combosFromDb.ToDictionary(c => c.ComboId, c => c.Price);
 
-            // 4. Tạo Order (ĐÃ SỬA: Trả lại code CustomerId như cũ)
+
+            // =========================================================================
+            // BƯỚC 2: KHỞI TẠO CẤU TRÚC OBJECT (Chưa lưu DB)
+            // =========================================================================
+
+            // Tạo Order cha
             var newOrder = new Order
             {
                 ReservationId = reservation.ReservationId,
-
-                // === TRẢ LẠI CODE CŨ CỦA BẠN ===
-                // Vì CustomerId là 'int', chúng ta gán thẳng
-                CustomerId = reservation.CustomerId,
-
+                CustomerId = reservation.CustomerId, // Int
                 CreatedAt = DateTime.Now,
                 OrderType = "Tại bàn",
                 Status = "Pending",
                 TotalAmount = 0,
-                OrderDetails = new List<OrderDetail>()
+                OrderDetails = new List<OrderDetail>() // Khởi tạo list rỗng
             };
 
-            // 5. Tạo OrderDetails cho MÓN LẺ (Giữ nguyên)
+            // 2.1 Xử lý MÓN LẺ -> Thêm vào list OrderDetails
             foreach (var cartItem in orderDto.Items)
             {
                 if (itemPriceMap.TryGetValue(cartItem.MenuItemId, out var price))
@@ -449,110 +455,159 @@ namespace BusinessAccessLayer.Services
                         UnitPrice = price,
                         Status = "Pending",
                         CreatedAt = DateTime.Now,
-                        Notes = cartItem.Notes,
+                        Notes = cartItem.Notes ?? "" // Tránh null
                     });
                     newOrder.TotalAmount += (price * cartItem.Quantity);
                 }
             }
 
-            // 6. Tạo OrderDetails cho COMBO (Giữ nguyên)
+            // 2.2 Xử lý COMBO -> Thêm vào list OrderDetails + Tự tạo OrderComboItems con
             foreach (var cartCombo in orderDto.Combos)
             {
                 if (comboPriceMap.TryGetValue(cartCombo.ComboId, out var price))
                 {
-                    newOrder.OrderDetails.Add(new OrderDetail
+                    // A. Tạo đối tượng OrderDetail cho Combo
+                    var comboDetail = new OrderDetail
                     {
                         MenuItemId = null,
                         ComboId = cartCombo.ComboId,
                         Quantity = cartCombo.Quantity,
                         UnitPrice = price,
                         Status = "Pending",
-                        CreatedAt = DateTime.UtcNow,
-                        Notes = cartCombo.Notes,
-                    });
+                        CreatedAt = DateTime.Now,
+                        Notes = cartCombo.Notes ?? "",
+
+                        // ⭐ KHỞI TẠO LUÔN LIST CON TẠI ĐÂY ⭐
+                        // EF Core sẽ tự hiểu đây là con của comboDetail
+                        OrderComboItems = new List<OrderComboItem>()
+                    };
+
+                    // B. Tìm công thức Combo và Add vào list con
+                    var comboDefinition = combosFromDb.FirstOrDefault(c => c.ComboId == cartCombo.ComboId);
+                    if (comboDefinition != null && comboDefinition.ComboItems != null)
+                    {
+                        foreach (var component in comboDefinition.ComboItems)
+                        {
+                            // Thêm trực tiếp vào danh sách con của comboDetail
+                            // KHÔNG CẦN gán OrderDetailId thủ công, EF tự lo
+                            comboDetail.OrderComboItems.Add(new OrderComboItem
+                            {
+                                MenuItemId = component.MenuItemId,
+                                // Công thức: (Định lượng gốc) * (Số lượng khách gọi)
+                                Quantity = component.Quantity  * cartCombo.Quantity,
+                                Status = "Pending",
+                                CreatedAt = DateTime.Now,
+                                Notes = cartCombo.Notes ?? "", // Copy ghi chú từ cha
+                                IsUrgent = false
+                            });
+                        }
+                    }
+
+                    // C. Thêm cục Combo (đã bao gồm các món con bên trong) vào Order tổng
+                    newOrder.OrderDetails.Add(comboDetail);
                     newOrder.TotalAmount += (price * cartCombo.Quantity);
                 }
             }
 
-            // 7. Kiểm tra giỏ hàng rỗng (Giữ nguyên)
+            // Kiểm tra giỏ hàng rỗng
             if (newOrder.OrderDetails.Count == 0)
             {
                 throw new Exception("Giỏ hàng trống hoặc các món/combo đã chọn không hợp lệ.");
             }
 
-            // 8. Lưu vào Database (Giữ nguyên)
-            _context.Orders.Add(newOrder);
-            await _context.SaveChangesAsync();
 
-            // 8.1. Reserve inventory cho các OrderDetail có MenuItemId (status = Pending)
-            foreach (var orderDetail in newOrder.OrderDetails)
+            // =========================================================================
+            // BƯỚC 3: LƯU VÀO DATABASE (QUAN TRỌNG: CHỈ SAVE 1 LẦN)
+            // =========================================================================
+            try
             {
-                if (orderDetail.MenuItemId.HasValue && orderDetail.Status == "Pending")
-                {
-                    var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(orderDetail.OrderDetailId);
-                    if (!reserveResult.success)
-                    {
-                        // Log warning nhưng không fail order creation
-                        Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {orderDetail.OrderDetailId}: {reserveResult.message}");
-                    }
-                }
+                // Chỉ cần Add Order cha, EF tự động duyệt cây để Add hết con cháu
+                _context.Orders.Add(newOrder);
+
+                // SaveChangesAsync sẽ tự động thực hiện Transaction:
+                // 1. Insert Order -> Có OrderId
+                // 2. Insert OrderDetails (dùng OrderId ở trên) -> Có OrderDetailId
+                // 3. Insert OrderComboItems (dùng OrderDetailId ở trên)
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // Bắt lỗi chi tiết để dễ debug
+                var msg = ex.InnerException?.Message ?? ex.Message;
+                throw new Exception($"Lỗi lưu đơn hàng: {msg}");
             }
 
-            // 9. Trả về DTO kết quả (Giữ nguyên bản sửa lỗi an toàn)
+
+            // =========================================================================
+            // BƯỚC 4: TRỪ KHO (INVENTORY) - Chạy sau khi đã Save thành công
+            // =========================================================================
+            foreach (var orderDetail in newOrder.OrderDetails)
+            {
+                // TH1: Trừ kho món lẻ
+                if (orderDetail.MenuItemId.HasValue && orderDetail.Status == "Pending")
+                {
+               
+                    var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(orderDetail.OrderDetailId);
+
+         
+                    if (!reserveResult.success)
+                    {
+                        Console.WriteLine($"Warning Inventory: {reserveResult.message}");
+                    }
+                }
+
+                // TH2: Trừ kho Combo (nếu logic kho của bạn hỗ trợ)
+                // Bạn có thể loop qua orderDetail.OrderComboItems để trừ kho từng món con
+            }
+
+
+            // =========================================================================
+            // BƯỚC 5: TRẢ VỀ KẾT QUẢ (DTO)
+            // =========================================================================
             var result = new OrderResultDto
             {
                 OrderId = newOrder.OrderId,
                 Status = newOrder.Status,
                 TotalAmount = newOrder.TotalAmount,
                 CreatedAt = newOrder.CreatedAt,
+                // Mapping dữ liệu để trả về Frontend
                 OrderDetails = newOrder.OrderDetails.Select(od =>
                 {
-                    if (od.MenuItemId.HasValue) // Đây là món lẻ
+                    string itemName = "Không rõ";
+                    string itemType = "Khác";
+
+                    if (od.MenuItemId.HasValue)
                     {
-                        return new OrderDetailResultDto
-                        {
-                            OrderDetailId = od.OrderDetailId,
-                            ItemName = menuItemsFromDb.FirstOrDefault(m => m.MenuItemId == od.MenuItemId.Value)?.Name ?? "Món không rõ",
-                            ItemType = "Món ăn",
-                            Quantity = od.Quantity,
-                            UnitPrice = od.UnitPrice,
-                            Status = od.Status
-                        };
+                        itemName = menuItemsFromDb.FirstOrDefault(m => m.MenuItemId == od.MenuItemId)?.Name ?? "Món lẻ";
+                        itemType = "Món ăn";
                     }
-                    else if (od.ComboId.HasValue) // <-- Đây là bản sửa lỗi ĐÚNG
+                    else if (od.ComboId.HasValue)
                     {
-                        return new OrderDetailResultDto
-                        {
-                            OrderDetailId = od.OrderDetailId,
-                            ItemName = combosFromDb.FirstOrDefault(c => c.ComboId == od.ComboId.Value)?.Name ?? "Combo không rõ",
-                            ItemType = "Combo",
-                            Quantity = od.Quantity,
-                            UnitPrice = od.UnitPrice,
-                            Status = od.Status
-                        };
+                        itemName = combosFromDb.FirstOrDefault(c => c.ComboId == od.ComboId)?.Name ?? "Combo";
+                        itemType = "Combo";
                     }
-                    else // Trường hợp hi hữu cả 2 đều null
+
+                    return new OrderDetailResultDto
                     {
-                        return new OrderDetailResultDto
-                        {
-                            OrderDetailId = od.OrderDetailId,
-                            ItemName = "Lỗi dữ liệu",
-                            ItemType = "Lỗi",
-                            Quantity = od.Quantity,
-                            UnitPrice = od.UnitPrice,
-                            Status = od.Status
-                        };
-                    }
+                        OrderDetailId = od.OrderDetailId,
+                        ItemName = itemName,
+                        ItemType = itemType,
+                        Quantity = od.Quantity,
+                        UnitPrice = od.UnitPrice,
+                        Status = od.Status
+                    };
                 }).ToList()
             };
 
-            return result; // Trả về DTO
+            return result;
         }
 
         public async Task<bool> CancelOrderItemAsync(int orderDetailId)
         {
-            var item = await _context.OrderDetails
+            // 1. Lấy thông tin món + Kèm theo OrderComboItems
+            var item = await _context.OrderDetails.AsNoTracking() 
                 .Include(od => od.Order)
+                .Include(od => od.OrderComboItems)
                 .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
 
             if (item == null)
@@ -560,95 +615,143 @@ namespace BusinessAccessLayer.Services
                 throw new Exception("Không tìm thấy món ăn.");
             }
 
-            // 1. Kiểm tra trạng thái:
+            // 2. KIỂM TRA TRẠNG THÁI MÓN CHA
             if (item.Status != "Pending")
             {
-                throw new Exception("Món ăn đang được chế biến, không thể hủy.");
+                throw new Exception("Món ăn đang được chế biến hoặc đã phục vụ, không thể hủy.");
             }
 
-            // 2. Tính thời gian đã trôi qua
-            var timeElapsed = DateTime.UtcNow - item.CreatedAt;
-
-            // 3. Đặt giới hạn 
-            const int cancelTimeLimitInMinutes = 2; // SỬA SỐ NÀY TỪ 2 THÀNH ?
-
-            if (timeElapsed.TotalMinutes > cancelTimeLimitInMinutes)
+         
+            if (item.OrderComboItems != null && item.OrderComboItems.Any())
             {
-                // Thông báo lỗi nếu quá thời gian
-                throw new Exception($"Đã quá {cancelTimeLimitInMinutes} phút, không thể hủy.");
+                // Kiểm tra xem có bất kỳ món con nào đã "Done" (hoặc đang nấu dở "Cooking") hay không
+                // Lưu ý: Hãy đảm bảo chữ "Done" khớp chính xác với DB của bạn (ví dụ: "Done", "Cooked", "Served")
+                bool hasCookedItem = item.OrderComboItems.Any(c => c.Status == "Done" || c.Status == "Served" || c.Status == "Cooking");
+
+                if (hasCookedItem)
+                {
+                    throw new Exception("Đã có món trong combo được nấu xong nên sẽ không hủy được. Vui lòng chờ !");
+                }
             }
 
-            // Nếu vượt qua kiểm tra -> Tiến hành hủy
-            item.Status = "Đã hủy";
+            // 3. Cập nhật trạng thái món Cha
+            item.Status = "Cancelled";
 
+            // 4. Cập nhật trạng thái các món Con
+            if (item.OrderComboItems != null && item.OrderComboItems.Any())
+            {
+                foreach (var childItem in item.OrderComboItems)
+                {
+                    // Chỉ hủy các món đang chờ
+                    if (childItem.Status == "Pending")
+                    {
+                        childItem.Status = "Cancelled";
+                    }
+                }
+            }
+
+            // 5. Cập nhật lại tổng tiền hóa đơn
             if (item.Order != null)
             {
                 item.Order.TotalAmount -= (item.UnitPrice * item.Quantity);
+
+                if (item.Order.TotalAmount < 0) item.Order.TotalAmount = 0;
             }
 
-            // Hủy món → Chỉ giảm QuantityReserved
+            // 6. Hoàn trả nguyên liệu kho
             var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
             if (!releaseResult.success)
             {
-                // Log warning but don't fail the cancellation
                 Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món: {releaseResult.message}");
             }
 
+            // 7. Lưu thay đổi
             await _context.SaveChangesAsync();
 
             return true;
         }
-       
+
+
         public async Task RequestAssistanceAsync(AssistanceRequestDto requestDto)
         {
-            Reservation? reservation = null;
+            // BƯỚC 1: KIỂM TRA SPAM (Dùng AsNoTracking để không giữ lock DB)
+            bool alreadyPending = await _context.AssistanceRequests
+                .AsNoTracking() // <--- QUAN TRỌNG: Chỉ đọc, không theo dõi
+                .AnyAsync(r => r.TableId == requestDto.TableId && r.Status == "Pending");
 
-            if (requestDto.UseReservation)
+            if (alreadyPending)
             {
-                reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(requestDto.TableId);
-                if (reservation == null)
-                {
-                    throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
-                }
+                // Trả về lỗi rõ ràng để Frontend biết mà hiển thị
+                throw new Exception("Yêu cầu trước đó đang chờ xử lý. Vui lòng đợi nhân viên!");
             }
 
-            // CHỐNG SPAM vẫn giữ nguyên
-            bool alreadyPending = await _orderTableRepository.HasPendingAssistanceRequestAsync(requestDto.TableId);
-            if (alreadyPending) throw new Exception("Bạn đã gửi yêu cầu trước đó. Nhân viên sẽ đến ngay!");
-            // Nếu Note rỗng hoặc null thì gán mặc định
-            var note = string.IsNullOrWhiteSpace(requestDto.Note) ? "Khách cần hỗ trợ !" : requestDto.Note;
+            // BƯỚC 2: KIỂM TRA RESERVATION
+            int? reservationId = null;
+            if (requestDto.UseReservation)
+            {
+                // Tự query trực tiếp ở đây dùng AsNoTracking để nhẹ nhất có thể
+                var reservation = await _context.ReservationTables
+                    .AsNoTracking()
+                    .Include(rt => rt.Reservation)
+                    .Where(rt => rt.TableId == requestDto.TableId
+                                 && (rt.Reservation.Status == "Active" || rt.Reservation.Status == "Guest Seated"))
+                    .Select(rt => rt.Reservation)
+                    .FirstOrDefaultAsync();
 
-            // Tạo yêu cầu mới (dù có reservation hay không)
+                if (reservation == null)
+                {
+                    throw new Exception("Bàn không hợp lệ hoặc hiện không có khách check-in.");
+                }
+                reservationId = reservation.ReservationId;
+            }
+
+            // BƯỚC 3: TẠO REQUEST MỚI
+            var note = string.IsNullOrWhiteSpace(requestDto.Note) ? "Khách cần hỗ trợ !" : requestDto.Note;
             var newRequest = new AssistanceRequest
             {
                 TableId = requestDto.TableId,
-                ReservationId = reservation?.ReservationId, // null nếu không có reservation
-                RequestTime = DateTime.UtcNow,
+                ReservationId = reservationId,
+                RequestTime = DateTime.Now,
                 Status = "Pending",
                 Note = note,
                 HandledTime = null
             };
 
-            await _orderTableRepository.CreateAssistanceRequestAsync(newRequest);
+            _context.AssistanceRequests.Add(newRequest);
             await _context.SaveChangesAsync();
 
-            // SIGNALR vẫn gửi thông báo bình thường
+            // BƯỚC 4: LẤY THÔNG TIN BÀN ĐỂ GỬI SOCKET (Dùng AsNoTracking)
             var tableInfo = await _context.Tables
+                .AsNoTracking() // <--- QUAN TRỌNG
                 .Include(t => t.Area)
-                .FirstOrDefaultAsync(t => t.TableId == requestDto.TableId);
+                .Where(t => t.TableId == requestDto.TableId)
+                .Select(t => new {
+                    t.TableNumber,
+                    AreaName = t.Area.AreaName
+                })
+                .FirstOrDefaultAsync();
 
-            var tableName = tableInfo?.TableNumber.ToString() ?? requestDto.TableId.ToString();
-            var areaName = tableInfo?.Area?.AreaName ?? "Không xác định";
+            var tableName = tableInfo?.TableNumber ?? requestDto.TableId.ToString();
+            var areaName = tableInfo?.AreaName ?? "Không xác định";
 
-            await _hubContext.Clients.Group("Employees").SendAsync("ReceiveNewRequest", new
+            // BƯỚC 5: GỬI SOCKET (Bọc try-catch để không chết app nếu lỗi mạng)
+            try
             {
-                requestId = newRequest.RequestId,
-                tableId = newRequest.TableId,
-                tableName = $"Bàn {tableName}",
-                areaName = areaName,
-                note = newRequest.Note,
-                time = newRequest.RequestTime.ToLocalTime().ToString("HH:mm")
-            });
+                await _hubContext.Clients.Group("Employees").SendAsync("ReceiveNewRequest", new
+                {
+                    requestId = newRequest.RequestId,
+                    tableId = newRequest.TableId,
+                    tableName = $"Bàn {tableName}",
+                    areaName = areaName,
+                    note = newRequest.Note,
+                    time = newRequest.RequestTime.ToLocalTime().ToString("HH:mm")
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi gửi socket: {ex.Message}");
+                // Không throw exception ở đây để đảm bảo request vẫn được lưu vào DB thành công
+            }
         }
 
         public async Task<ComboDetailDto> GetComboDetailsAsync(int comboId)
@@ -758,7 +861,7 @@ namespace BusinessAccessLayer.Services
 
             // b. Cập nhật trạng thái
             request.Status = "Completed";
-            request.HandledTime = DateTime.UtcNow; // Lưu thời gian xử lý
+            request.HandledTime = DateTime.Now; // Lưu thời gian xử lý
 
             // c. Lưu DB
             await _context.SaveChangesAsync();

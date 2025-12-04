@@ -19,6 +19,16 @@
     // Lấy 'currentCategoryId' trực tiếp từ ViewBag (Controller đã gửi)
     int? currentCategoryId = ViewBag.CurrentCategoryId as int?;
     Layout = null;
+
+    var statusMap = new Dictionary<string, (string cssClass, string displayText)>
+    {
+        { "Pending", ("status-sent", "Đã gửi") },
+        { "Cooking", ("status-processing", "Đang chế biến") },
+        { "Done", ("status-served", "Đã xong") },
+        { "Served", ("status-served", "Đã xong") },
+        { "Cancelled", ("status-cancelled", "Đã hủy") } // thêm trạng thái hủy
+
+    };
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -161,15 +171,13 @@
             <div class="order-status-container mt-3">
                 @foreach (var item in orderedItems.OrderBy(i => i.CreatedAt))
                 {
-                    string statusClass = "";
+                    string statusClass = "status-unknown";
                     string statusText = item.Status;
 
-                    switch (item.Status)
+                    if (statusMap.ContainsKey(item.Status))
                     {
-                        case "Đã gửi": statusClass = "status-sent"; break;
-                        case "Đang chế biến": statusClass = "status-processing"; break;
-                        case "Đã xong": statusClass = "status-served"; break;
-                        default: statusClass = "status-unknown"; break;
+                        statusClass = statusMap[item.Status].cssClass;
+                        statusText = statusMap[item.Status].displayText;
                     }
 
                     <div class="order-status-item shadow-sm" data-orderdetailid="@item.OrderDetailId">
@@ -178,9 +186,7 @@
                                 <strong>@item.ItemName</strong> <span class="quantity">x @item.Quantity</span>
                             </div>
                             <div class="order-meta">
-                                <small class="time">
-                                    🕒Thời gian gọi: @item.CreatedAt.ToString("HH:mm")
-                                </small>
+                                <small class="time">🕒Thời gian gọi: @item.CreatedAt.ToString("HH:mm")</small>
                                 @if (!string.IsNullOrEmpty(item.Notes))
                                 {
                                     <small class="notes">💬 Ghi chú: @item.Notes</small>
@@ -190,7 +196,7 @@
 
                         <div class="order-status">
                             <span class="status-badge @statusClass">@statusText</span>
-                            @if (item.Status == "Đã gửi")
+                            @if (item.Status == "Pending")
                             {
                                 <button class="btn btn-outline-danger btn-sm btn-cancel-item ms-2"
                                         data-item-id="@item.OrderDetailId">
@@ -200,6 +206,8 @@
                         </div>
                     </div>
                 }
+
+
             </div>
         }
         else

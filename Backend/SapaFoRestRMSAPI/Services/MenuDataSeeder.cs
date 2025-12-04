@@ -695,33 +695,33 @@ namespace SapaFoRestRMSAPI.Services
                 var now = DateTime.Now;
                 orders = new List<Order>
                 {
-                    // Order 1: Processing (recent, 5 minutes ago)
+                    // Order 1: Cooking (recent, 5 minutes ago)
                     new Order
                     {
                         ReservationId = reservation.ReservationId,
                         CustomerId = customer.CustomerId,
                         OrderType = "DineIn",
-                        Status = "Processing",
+                        Status = "Cooking",
                         CreatedAt = now.AddMinutes(-5),
                         TotalAmount = 0
                     },
-                    // Order 2: Preparing (older, 10 minutes ago)
+                    // Order 2: Ready (older, 10 minutes ago)
                     new Order
                     {
                         ReservationId = reservation.ReservationId,
                         CustomerId = customer.CustomerId,
                         OrderType = "DineIn",
-                        Status = "Preparing",
+                        Status = "Ready",
                         CreatedAt = now.AddMinutes(-10),
                         TotalAmount = 0
                     },
-                    // Order 3: Processing (very recent, 2 minutes ago)
+                    // Order 3: Pending (very recent, 2 minutes ago)
                     new Order
                     {
                         ReservationId = reservation.ReservationId,
                         CustomerId = customer.CustomerId,
                         OrderType = "DineIn",
-                        Status = "Processing",
+                        Status = "Pending",
                         CreatedAt = now.AddMinutes(-2),
                         TotalAmount = 0
                     }

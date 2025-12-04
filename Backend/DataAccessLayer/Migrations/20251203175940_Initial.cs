@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class LuongUpadteDb : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -43,34 +43,6 @@ namespace DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Combos__DD42582ED39A0BC4", x => x.ComboId);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "DayTypes",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DayTypes", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Departments",
-                columns: table => new
-                {
-                    DepartmentId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Departments", x => x.DepartmentId);
                 });
 
             migrationBuilder.CreateTable(
@@ -223,56 +195,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "DayCalendars",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    WorkDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    DayTypeId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DayCalendars", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_DayCalendars_DayTypes_DayTypeId",
-                        column: x => x.DayTypeId,
-                        principalTable: "DayTypes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ShiftTemplates",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DayTypeId = table.Column<int>(type: "int", nullable: false),
-                    DepartmentId = table.Column<int>(type: "int", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    StartTime = table.Column<TimeSpan>(type: "time", nullable: false),
-                    EndTime = table.Column<TimeSpan>(type: "time", nullable: false),
-                    RequiredEmployees = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ShiftTemplates", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ShiftTemplates_DayTypes_DayTypeId",
-                        column: x => x.DayTypeId,
-                        principalTable: "DayTypes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ShiftTemplates_Departments_DepartmentId",
-                        column: x => x.DepartmentId,
-                        principalTable: "Departments",
-                        principalColumn: "DepartmentId",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "MenuItems",
                 columns: table => new
                 {
@@ -284,7 +206,6 @@ namespace DataAccessLayer.Migrations
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     CourseType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     IsAvailable = table.Column<bool>(type: "bit", nullable: true, defaultValue: true),
-                    IsAds = table.Column<bool>(type: "bit", nullable: true, defaultValue: false),
                     ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     TimeCook = table.Column<int>(type: "int", nullable: true),
                     BatchSize = table.Column<int>(type: "int", nullable: true, defaultValue: 1),
@@ -704,7 +625,6 @@ namespace DataAccessLayer.Migrations
                     StaffId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
-                    DepartmentId = table.Column<int>(type: "int", nullable: true),
                     HireDate = table.Column<DateOnly>(type: "date", nullable: false),
                     SalaryBase = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false, defaultValue: 0)
@@ -712,11 +632,6 @@ namespace DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Staffs__96D4AB17BB2B00FA", x => x.StaffId);
-                    table.ForeignKey(
-                        name: "FK_Staffs_Departments_DepartmentId",
-                        column: x => x.DepartmentId,
-                        principalTable: "Departments",
-                        principalColumn: "DepartmentId");
                     table.ForeignKey(
                         name: "FK__Staffs__UserId__3E1D39E1",
                         column: x => x.UserId,
@@ -922,45 +837,18 @@ namespace DataAccessLayer.Migrations
                 name: "Shifts",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    ShiftId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Date = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TemplateId = table.Column<int>(type: "int", nullable: false),
-                    DepartmentId = table.Column<int>(type: "int", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    StartTime = table.Column<TimeSpan>(type: "time", nullable: false),
-                    EndTime = table.Column<TimeSpan>(type: "time", nullable: false),
-                    RequiredEmployees = table.Column<int>(type: "int", nullable: false),
-                    OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    ClosingBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    OpeningDenominations = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClosingDenominations = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Difference = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    HandoverToStaffId = table.Column<int>(type: "int", nullable: true),
-                    HandoverNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    HandoverTime = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    PinCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StaffId = table.Column<int>(type: "int", nullable: true)
+                    StaffId = table.Column<int>(type: "int", nullable: false),
+                    StartTime = table.Column<DateTime>(type: "datetime", nullable: true),
+                    EndTime = table.Column<DateTime>(type: "datetime", nullable: true),
+                    Date = table.Column<DateOnly>(type: "date", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Shifts", x => x.Id);
+                    table.PrimaryKey("PK__Shifts__C0A83881495D0B69", x => x.ShiftId);
                     table.ForeignKey(
-                        name: "FK_Shifts_Departments_DepartmentId",
-                        column: x => x.DepartmentId,
-                        principalTable: "Departments",
-                        principalColumn: "DepartmentId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Shifts_ShiftTemplates_TemplateId",
-                        column: x => x.TemplateId,
-                        principalTable: "ShiftTemplates",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Shifts_Staffs_StaffId",
+                        name: "FK__Shifts__StaffId__3D2915A8",
                         column: x => x.StaffId,
                         principalTable: "Staffs",
                         principalColumn: "StaffId");
@@ -1164,55 +1052,6 @@ namespace DataAccessLayer.Migrations
                         column: x => x.PurchaseOrderDetailId,
                         principalTable: "PurchaseOrderDetails",
                         principalColumn: "PurchaseOrderDetailId");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ShiftAssignments",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ShiftId = table.Column<int>(type: "int", nullable: false),
-                    StaffId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ShiftAssignments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ShiftAssignments_Shifts_ShiftId",
-                        column: x => x.ShiftId,
-                        principalTable: "Shifts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ShiftAssignments_Staffs_StaffId",
-                        column: x => x.StaffId,
-                        principalTable: "Staffs",
-                        principalColumn: "StaffId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ShiftHistorys",
-                columns: table => new
-                {
-                    ShiftHistoryId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ShiftId = table.Column<int>(type: "int", nullable: false),
-                    ActionBy = table.Column<int>(type: "int", nullable: false),
-                    Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ActionAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Detail = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ShiftHistorys", x => x.ShiftHistoryId);
-                    table.ForeignKey(
-                        name: "FK_ShiftHistorys_Shifts_ShiftId",
-                        column: x => x.ShiftId,
-                        principalTable: "Shifts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1633,11 +1472,6 @@ namespace DataAccessLayer.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DayCalendars_DayTypeId",
-                table: "DayCalendars",
-                column: "DayTypeId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Events_CreatedBy",
                 table: "Events",
                 column: "CreatedBy");
@@ -1875,54 +1709,14 @@ namespace DataAccessLayer.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ShiftAssignments_ShiftId",
-                table: "ShiftAssignments",
-                column: "ShiftId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShiftAssignments_StaffId",
-                table: "ShiftAssignments",
-                column: "StaffId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShiftHistorys_ShiftId",
-                table: "ShiftHistorys",
-                column: "ShiftId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Shifts_DepartmentId",
-                table: "Shifts",
-                column: "DepartmentId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Shifts_StaffId",
                 table: "Shifts",
                 column: "StaffId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Shifts_TemplateId",
-                table: "Shifts",
-                column: "TemplateId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShiftTemplates_DayTypeId",
-                table: "ShiftTemplates",
-                column: "DayTypeId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShiftTemplates_DepartmentId",
-                table: "ShiftTemplates",
-                column: "DepartmentId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_StaffPositions_PositionId",
                 table: "StaffPositions",
                 column: "PositionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Staffs_DepartmentId",
-                table: "Staffs",
-                column: "DepartmentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Staffs_UserId",
@@ -2028,9 +1822,6 @@ namespace DataAccessLayer.Migrations
                 name: "ComboItems");
 
             migrationBuilder.DropTable(
-                name: "DayCalendars");
-
-            migrationBuilder.DropTable(
                 name: "Events");
 
             migrationBuilder.DropTable(
@@ -2076,10 +1867,7 @@ namespace DataAccessLayer.Migrations
                 name: "SalaryRules");
 
             migrationBuilder.DropTable(
-                name: "ShiftAssignments");
-
-            migrationBuilder.DropTable(
-                name: "ShiftHistorys");
+                name: "Shifts");
 
             migrationBuilder.DropTable(
                 name: "StaffPositions");
@@ -2112,9 +1900,6 @@ namespace DataAccessLayer.Migrations
                 name: "Tables");
 
             migrationBuilder.DropTable(
-                name: "Shifts");
-
-            migrationBuilder.DropTable(
                 name: "Positions");
 
             migrationBuilder.DropTable(
@@ -2133,9 +1918,6 @@ namespace DataAccessLayer.Migrations
                 name: "Areas");
 
             migrationBuilder.DropTable(
-                name: "ShiftTemplates");
-
-            migrationBuilder.DropTable(
                 name: "Warehouses");
 
             migrationBuilder.DropTable(
@@ -2151,16 +1933,10 @@ namespace DataAccessLayer.Migrations
                 name: "Reservations");
 
             migrationBuilder.DropTable(
-                name: "DayTypes");
-
-            migrationBuilder.DropTable(
                 name: "Ingredients");
 
             migrationBuilder.DropTable(
                 name: "PurchaseOrders");
-
-            migrationBuilder.DropTable(
-                name: "Departments");
 
             migrationBuilder.DropTable(
                 name: "Customers");

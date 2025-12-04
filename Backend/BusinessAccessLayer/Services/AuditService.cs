@@ -36,7 +36,7 @@ namespace BusinessAccessLayer.Services
                 var batchId = await _unitOfWork.AuditRepository.GetBatchIdByIdReAsync(id);
                 if (batchId == 0)
                 {
-                    Console.WriteLine("❌ Không tìm thấy BatchId từ AuditId");
+                    Console.WriteLine(" Không tìm thấy BatchId từ AuditId");
                     return false;
                 }
 
@@ -44,7 +44,7 @@ namespace BusinessAccessLayer.Services
                 var batch = await _unitOfWork.InventoryIngredient.getBatchByBatchId(batchId);
                 if (batch == null)
                 {
-                    Console.WriteLine("❌ Không tìm thấy InventoryBatch");
+                    Console.WriteLine(" Không tìm thấy InventoryBatch");
                     return false;
                 }
 
@@ -54,7 +54,7 @@ namespace BusinessAccessLayer.Services
                     var confirmResult = await _unitOfWork.AuditRepository.ConfirmAuditReAsync(id, auditEntity);
                     if (!confirmResult)
                     {
-                        Console.WriteLine("❌ Không thể xác nhận audit để lưu vào DB");
+                        Console.WriteLine(" Không thể xác nhận audit để lưu vào DB");
                         return false;
                     }
 
@@ -68,12 +68,13 @@ namespace BusinessAccessLayer.Services
                     }
 
                     batch.QuantityRemaining = request.NewQuantity;
+                     batch.ExpiryDate = request.ExpiryDate;
 
 
                     var updateBatchResult = await _unitOfWork.InventoryIngredient.UpdateBatchByBatch(batch);
                     if (!updateBatchResult)
                     {
-                        Console.WriteLine("❌ Không thể cập nhật tồn kho sau khi audit");
+                        Console.WriteLine(" Không thể cập nhật tồn kho sau khi audit");
                         return false;
                     }
 
@@ -82,7 +83,7 @@ namespace BusinessAccessLayer.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Lỗi ConfirmAuditAsync: {ex.Message}");
+                Console.WriteLine($" Lỗi ConfirmAuditAsync: {ex.Message}");
                 return false;
             }
         }
