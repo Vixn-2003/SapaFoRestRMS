@@ -76,6 +76,10 @@ namespace DataAccessLayer.UnitOfWork
 
         public IOrderDetailRepository OrderDetails => _orderDetails ??= new OrderDetailRepository(_context);
 
+        private IOrderComboItemRepository _orderComboItems;
+
+        public IOrderComboItemRepository OrderComboItems => _orderComboItems ??= new OrderComboItemRepository(_context);
+
         private IAuditLogRepository _auditLogs;
 
         public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(_context);

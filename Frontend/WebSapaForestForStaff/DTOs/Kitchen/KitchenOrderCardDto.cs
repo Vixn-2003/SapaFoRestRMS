@@ -28,6 +28,10 @@ namespace WebSapaForestForStaff.DTOs.Kitchen
     public class KitchenOrderItemDto
     {
         public int OrderDetailId { get; set; }
+        /// <summary>
+        /// OrderComboItemId - null nếu là món lẻ, có giá trị nếu là món trong combo
+        /// </summary>
+        public int? OrderComboItemId { get; set; }
         public string MenuItemName { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public string Status { get; set; } = "Pending"; // Pending, Cooking, Late, Ready, Done

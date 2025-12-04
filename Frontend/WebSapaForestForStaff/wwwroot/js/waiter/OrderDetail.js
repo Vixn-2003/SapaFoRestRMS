@@ -52,8 +52,9 @@ function renderCart() {
             var realIndex = cartItems.indexOf(item);
 
             var isCancelled = item.status === "Cancelled" || item.status === "Đã hủy";
-            var isProcessing = item.status === "Processing" || item.status === "Đang chế biến";
-            var isFinished = item.status === "Finished" || item.status === "Served" || item.status === "Đã xong";
+            var isProcessing = item.status === "Cooking" || item.status === "Đang chế biến";
+            var isFinished = item.status === "Done" || item.status === "Served" || item.status === "Đã xong";
+            var isPending = item.status === "Pending" || item.status === "Đã gửi";
 
             var lineTotal = item.price * item.quantity;
             if (!isCancelled) {
@@ -69,6 +70,7 @@ function renderCart() {
                 statusHtml = '<span class="badge-cancelled">ĐÃ HỦY</span>';
                 itemClass = 'item-cancelled';
             }
+            else if (isPending) statusHtml = '<span class="badge bg-primary" style="font-size:10px;">ĐÃ GỬI</span>';
             else if (isProcessing) statusHtml = '<span class="badge-processing">CHẾ BIẾN</span>';
             else if (isFinished) statusHtml = '<span class="badge-finished">ĐÃ XONG</span>';
             else statusHtml = '<span class="text-muted bg-light border px-2 rounded" style="font-size:10px;">' + item.status + '</span>';

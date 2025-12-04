@@ -50,6 +50,7 @@ namespace WebSapaForestForStaff.DTOs
         [JsonPropertyName("orderId")]
         public int? OrderId { get; set; }
 
+        public int? reservationId { get; set; }
 
     }
 }

@@ -1,0 +1,124 @@
+﻿@{
+    ViewData["Title"] = "Thanh toán đặt cọc";
+    Layout = "";
+    var amount = ViewBag.Amount ?? 0;
+    var reservationId = ViewBag.ReservationId ?? "";
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", sans-serif;
+            background: url('https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat fixed;
+        }
+
+        /* lớp mờ tạo cảm giác sương Sapa */
+        .overlay {
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(3px);
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .payment-card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 35px 40px;
+            width: 420px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            animation: fadeIn 0.5s ease;
+        }
+
+        h2 {
+            margin-bottom: 16px;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #e9f7e5;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+
+        .description {
+            color: #e3f4ea;
+            font-size: 17px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        /* khung gỗ cho QR */
+        .qr-frame {
+            background: url('https://inuvdp.com/wp-content/uploads/2024/08/background-go-vector6.jpg') center/cover;
+            padding: 18px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .qr-img {
+            width: 260px;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .note {
+            font-size: 14px;
+            color: #d0e8d4;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+
+        @@keyframes fadeIn {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        }
+    </style>
+</head>
+
+<body>
+    <div class="overlay">
+        <div class="payment-card">
+            <h2>Thanh toán đặt cọc</h2>
+
+            <p class="description">
+                Vui lòng quét mã QR để thanh toán số tiền<br />
+                <strong style="color:#b4f7c8; font-size:18px;">
+                    @amount.ToString("N0") VND
+                </strong>
+            </p>
+
+            <div class="qr-frame">
+                <img class="qr-img"
+                     src="@($"https://img.vietqr.io/image/BIDV-4271010783-compact.png?amount={amount}&addInfo=DatCocBanMSDB:{reservationId}")" />
+            </div>
+
+            <p class="note">Sau khi thanh toán, vui lòng chờ nhân viên xác nhận.</p>
+        </div>
+    </div>
+</body>
+</html>

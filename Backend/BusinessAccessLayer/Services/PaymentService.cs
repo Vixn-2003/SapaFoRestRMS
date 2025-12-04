@@ -25,13 +25,15 @@ public class PaymentService : IPaymentService
     private readonly IMapper _mapper;
     private readonly IAuditLogService _auditLogService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IKitchenDisplayService _kitchenDisplayService;
 
-    public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, IAuditLogService auditLogService, IServiceProvider serviceProvider)
+    public PaymentService(IUnitOfWork unitOfWork, IMapper mapper, IAuditLogService auditLogService, IServiceProvider serviceProvider, IKitchenDisplayService kitchenDisplayService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _auditLogService = auditLogService;
         _serviceProvider = serviceProvider;
+        _kitchenDisplayService = kitchenDisplayService;
     }
 
     private static readonly HashSet<string> PendingStatuses = new(StringComparer.OrdinalIgnoreCase)
@@ -116,82 +118,90 @@ public class PaymentService : IPaymentService
         // Tính toán các khoản tiền
         CalculateOrderAmounts(order, orderDto);
         PopulateOrderMetadata(order, orderDto);
+        
+        // Cập nhật lại Status của combo dựa trên trạng thái các món con trong combo (từ KDS)
+        await UpdateComboStatusesFromKitchenAsync(orderDto, ct);
 
         return orderDto;
     }
 
-        public async Task<OrderDto> ApplyDiscountAsync(DiscountRequestDto request, CancellationToken ct = default)
+    /// <summary>
+    /// Cập nhật status của các dòng combo trong màn thanh toán
+    /// dựa trên trạng thái thực tế của các món con trong combo ở KDS.
+    /// </summary>
+    private async Task UpdateComboStatusesFromKitchenAsync(OrderDto orderDto, CancellationToken ct)
+    {
+        if (orderDto == null || orderDto.OrderItems == null || orderDto.OrderItems.Count == 0)
         {
-            var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
-
-            if (order == null)
-            {
-                throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
-            }
-
-            // Map + tính toán tổng hiện tại
-            var orderDto = _mapper.Map<OrderDto>(order);
-            CalculateOrderAmounts(order, orderDto);
-
-            decimal discountAmount = request.DiscountAmount ?? 0;
-
-            // Nếu có VoucherCode → áp dụng logic Voucher
-            if (!string.IsNullOrWhiteSpace(request.VoucherCode))
-            {
-                var voucherService = _serviceProvider.GetService<IVoucherService>();
-                if (voucherService == null)
-                {
-                    throw new Exception("VoucherService chưa được cấu hình trong hệ thống.");
-                }
-
-                var vouchers = await voucherService.GetAllAsync();
-                var voucher = vouchers.FirstOrDefault(v =>
-                    string.Equals(v.Code, request.VoucherCode!.Trim(), StringComparison.OrdinalIgnoreCase) &&
-                    v.IsDelete != true &&
-                    string.Equals(v.Status, "Đang sử dụng", StringComparison.OrdinalIgnoreCase));
-
-                if (voucher == null)
-                {
-                    throw new KeyNotFoundException("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
-                }
-
-                var subtotal = orderDto.Subtotal ?? 0;
-
-                // Check điều kiện giá trị tối thiểu
-                if (voucher.MinOrderValue.HasValue && subtotal < voucher.MinOrderValue.Value)
-                {
-                    throw new InvalidOperationException(
-                        $"Đơn hàng chưa đủ giá trị tối thiểu {voucher.MinOrderValue.Value:N0} ₫ để áp dụng voucher này.");
-                }
-
-                // Tính mức giảm theo loại voucher
-                if (string.Equals(voucher.DiscountType, "Phần trăm", StringComparison.OrdinalIgnoreCase))
-                {
-                    var raw = subtotal * (voucher.DiscountValue / 100m);
-                    discountAmount = voucher.MaxDiscount.HasValue
-                        ? Math.Min(raw, voucher.MaxDiscount.Value)
-                        : raw;
-                }
-                else // "Giá trị cố định"
-                {
-                    discountAmount = voucher.DiscountValue;
-                }
-
-                // Không cho giảm quá subtotal
-                if (discountAmount > subtotal)
-                {
-                    discountAmount = subtotal;
-                }
-            }
-
-            orderDto.DiscountAmount = discountAmount;
-
-            // Tính lại tổng tiền sau ưu đãi
-            orderDto.TotalAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
-                                   (orderDto.ServiceFee ?? 0) - discountAmount;
-
-            return orderDto;
+            return;
         }
+
+        // Lấy toàn bộ items của order từ KDS (bao gồm món lẻ + món trong combo)
+        var kitchenCard = await _kitchenDisplayService.GetOrderDetailsWithAllItemsAsync(orderDto.OrderId);
+        if (kitchenCard == null || kitchenCard.Items == null || kitchenCard.Items.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var item in orderDto.OrderItems.Where(i => i.ComboId.HasValue))
+        {
+            // Các KitchenOrderItemDto tương ứng với combo này: cùng OrderDetailId
+            var relatedKitchenItems = kitchenCard.Items
+                .Where(k => k.OrderDetailId == item.OrderDetailId)
+                .ToList();
+
+            if (!relatedKitchenItems.Any())
+            {
+                continue;
+            }
+
+            var statuses = relatedKitchenItems
+                .Select(k => (k.Status ?? "Pending").Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToList();
+
+            if (!statuses.Any())
+            {
+                continue;
+            }
+
+            // Quy tắc tổng hợp:
+            // - Tất cả Done  -> Done
+            // - Tất cả Cooking -> Cooking
+            // - Tất cả Ready -> Ready
+            // - Tất cả Pending -> Pending
+            // - Trường hợp mix: giữ nguyên Status gốc (không override để tránh hiểu nhầm)
+            var distinct = statuses.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (distinct.Count == 1)
+            {
+                item.Status = distinct[0];
+            }
+        }
+    }
+
+    public async Task<OrderDto> ApplyDiscountAsync(DiscountRequestDto request, CancellationToken ct = default)
+    {
+        var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
+
+        if (order == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
+        }
+
+        // Tính toán giảm giá (có thể tích hợp với VoucherService sau)
+        decimal discountAmount = request.DiscountAmount ?? 0;
+
+        // Cập nhật discount vào order (có thể lưu vào Payment record)
+        var orderDto = _mapper.Map<OrderDto>(order);
+        orderDto.DiscountAmount = discountAmount;
+
+        // Tính lại tổng tiền
+        CalculateOrderAmounts(order, orderDto);
+        orderDto.TotalAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
+                              (orderDto.ServiceFee ?? 0) - discountAmount;
+
+        return orderDto;
+    }
 
     public async Task<TransactionDto> InitiatePaymentAsync(PaymentInitiateRequestDto request, CancellationToken ct = default)
     {

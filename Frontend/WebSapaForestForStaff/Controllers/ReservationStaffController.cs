@@ -224,6 +224,7 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Manager")]
         public IActionResult CreateReservation()
         {
             return View();
@@ -231,6 +232,7 @@ namespace WebSapaForestForStaff.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreateReservation(ReservationViewModel model)
         {
             if (!ModelState.IsValid)
@@ -245,7 +247,8 @@ namespace WebSapaForestForStaff.Controllers
                 ReservationDate = model.ReservationDate,
                 ReservationTime = model.ReservationTime,
                 NumberOfGuests = model.NumberOfGuests,
-                Notes = model.Notes
+                Notes = model.Notes,
+                OtpCode = "0000"
             };
 
             var jsonContent = JsonConvert.SerializeObject(dto);
