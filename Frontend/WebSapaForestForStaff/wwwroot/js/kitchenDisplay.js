@@ -2700,7 +2700,7 @@ function showConfirmPopup(message, title = 'Xác nhận') {
 // Toast notifications
 function showSuccess(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.success(message, '', {
+        const toast = toastr.success(message, '', {
             closeButton: true,
             progressBar: true,
             timeOut: 5000,
@@ -2708,19 +2708,36 @@ function showSuccess(message) {
             positionClass: 'toast-top-right',
             escapeHtml: false
         });
+
+        // Đảm bảo toast được clear sau 5s ngay cả khi cấu hình global bị override
+        setTimeout(() => {
+            try {
+                if (toast) {
+                    toastr.clear(toast);
+                }
+            } catch (e) { /* ignore */ }
+        }, 5000);
     }
 }
 
 function showError(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.error(message, '', {
+        const toast = toastr.error(message, '', {
             closeButton: true,
             progressBar: true,
-            timeOut: 6000,
+            timeOut: 5000,
             extendedTimeOut: 2000,
             positionClass: 'toast-top-right',
             escapeHtml: false
         });
+
+        setTimeout(() => {
+            try {
+                if (toast) {
+                    toastr.clear(toast);
+                }
+            } catch (e) { /* ignore */ }
+        }, 5000);
     } else {
         console.error('ERROR:', message);
     }
