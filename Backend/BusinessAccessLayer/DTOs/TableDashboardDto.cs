@@ -33,6 +33,6 @@ namespace BusinessAccessLayer.DTOs
 
         public decimal GrandTotal { get; set; }
 
-
+        public int? reservationId { get; set; }
     }
 }
