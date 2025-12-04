@@ -99,8 +99,29 @@
                 🔔
                 <span class="badge"></span>
             </div>
-            <div class="icon-btn user-profile">
-                <i class="fa-solid fa-user"></i>
+            <!-- User profile dropdown (cashier / waiter) -->
+            <div class="icon-btn user-profile dropdown">
+                <a class="nav-link dropdown-toggle p-0" href="#" id="CounterUserDropdown"
+                   role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa-solid fa-user"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="CounterUserDropdown">
+                    <li>
+                        <a class="dropdown-item" asp-controller="UserProfile" asp-action="Index">
+                            <i class="fa-solid fa-id-badge me-2"></i> Hồ sơ của tôi
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                        <form id="counterLogoutForm" asp-controller="Auth" asp-action="Logout" method="post" class="d-none">
+                            @Html.AntiForgeryToken()
+                        </form>
+                        <a class="dropdown-item" href="#"
+                           onclick="event.preventDefault(); document.getElementById('counterLogoutForm').submit();">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>

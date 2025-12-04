@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using System.Security.Claims;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.DTOs.OrderGuest;
 using WebSapaForestForStaff.DTOs.OrderGuest.ListOrder;
@@ -215,6 +216,10 @@ namespace WebSapaForestForStaff.Controllers
             ViewData["CurrentSearch"] = searchString;
             ViewData["CurrentCategory"] = categoryId;
             ViewData["TableId"] = id; // Lưu lại ID bàn để dùng cho Form Action
+            
+            // ✅ Lấy PositionId từ User Claims
+            var positionIdClaim = User.FindFirst("PositionId")?.Value;
+            ViewData["UserPositionId"] = positionIdClaim != null && int.TryParse(positionIdClaim, out var posId) ? posId : 0;
 
             // Mẹo: Để hiển thị danh sách các nút Category (Tất cả, Đồ ăn, Đồ uống...), 
             // bạn nên gọi thêm 1 API lấy danh sách Category ở đây và gán vào ViewBag.

@@ -2,6 +2,7 @@ using AutoMapper;
 using BusinessAccessLayer.Constants;
 using BusinessAccessLayer.DTOs.Payment;
 using BusinessAccessLayer.Services.Interfaces;
+using BusinessAccessLayer.DTOs;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
 using DomainAccessLayer.Models;
@@ -119,29 +120,78 @@ public class PaymentService : IPaymentService
         return orderDto;
     }
 
-    public async Task<OrderDto> ApplyDiscountAsync(DiscountRequestDto request, CancellationToken ct = default)
-    {
-        var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
-
-        if (order == null)
+        public async Task<OrderDto> ApplyDiscountAsync(DiscountRequestDto request, CancellationToken ct = default)
         {
-            throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
+            var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
+
+            if (order == null)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
+            }
+
+            // Map + tính toán tổng hiện tại
+            var orderDto = _mapper.Map<OrderDto>(order);
+            CalculateOrderAmounts(order, orderDto);
+
+            decimal discountAmount = request.DiscountAmount ?? 0;
+
+            // Nếu có VoucherCode → áp dụng logic Voucher
+            if (!string.IsNullOrWhiteSpace(request.VoucherCode))
+            {
+                var voucherService = _serviceProvider.GetService<IVoucherService>();
+                if (voucherService == null)
+                {
+                    throw new Exception("VoucherService chưa được cấu hình trong hệ thống.");
+                }
+
+                var vouchers = await voucherService.GetAllAsync();
+                var voucher = vouchers.FirstOrDefault(v =>
+                    string.Equals(v.Code, request.VoucherCode!.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    v.IsDelete != true &&
+                    string.Equals(v.Status, "Đang sử dụng", StringComparison.OrdinalIgnoreCase));
+
+                if (voucher == null)
+                {
+                    throw new KeyNotFoundException("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
+                }
+
+                var subtotal = orderDto.Subtotal ?? 0;
+
+                // Check điều kiện giá trị tối thiểu
+                if (voucher.MinOrderValue.HasValue && subtotal < voucher.MinOrderValue.Value)
+                {
+                    throw new InvalidOperationException(
+                        $"Đơn hàng chưa đủ giá trị tối thiểu {voucher.MinOrderValue.Value:N0} ₫ để áp dụng voucher này.");
+                }
+
+                // Tính mức giảm theo loại voucher
+                if (string.Equals(voucher.DiscountType, "Phần trăm", StringComparison.OrdinalIgnoreCase))
+                {
+                    var raw = subtotal * (voucher.DiscountValue / 100m);
+                    discountAmount = voucher.MaxDiscount.HasValue
+                        ? Math.Min(raw, voucher.MaxDiscount.Value)
+                        : raw;
+                }
+                else // "Giá trị cố định"
+                {
+                    discountAmount = voucher.DiscountValue;
+                }
+
+                // Không cho giảm quá subtotal
+                if (discountAmount > subtotal)
+                {
+                    discountAmount = subtotal;
+                }
+            }
+
+            orderDto.DiscountAmount = discountAmount;
+
+            // Tính lại tổng tiền sau ưu đãi
+            orderDto.TotalAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
+                                   (orderDto.ServiceFee ?? 0) - discountAmount;
+
+            return orderDto;
         }
-
-        // Tính toán giảm giá (có thể tích hợp với VoucherService sau)
-        decimal discountAmount = request.DiscountAmount ?? 0;
-
-        // Cập nhật discount vào order (có thể lưu vào Payment record)
-        var orderDto = _mapper.Map<OrderDto>(order);
-        orderDto.DiscountAmount = discountAmount;
-
-        // Tính lại tổng tiền
-        CalculateOrderAmounts(order, orderDto);
-        orderDto.TotalAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
-                              (orderDto.ServiceFee ?? 0) - discountAmount;
-
-        return orderDto;
-    }
 
     public async Task<TransactionDto> InitiatePaymentAsync(PaymentInitiateRequestDto request, CancellationToken ct = default)
     {

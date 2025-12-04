@@ -40,8 +40,13 @@ namespace BusinessAccessLayer.Services
             if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
                 throw new UnauthorizedAccessException("Invalid email or password");
 
+            // ✅ Tài khoản đã bị xóa khỏi hệ thống
             if (user.IsDeleted == true)
-                throw new UnauthorizedAccessException("This account has been deleted");
+                throw new UnauthorizedAccessException("Người dùng đã bị xóa khỏi hệ thống");
+
+            // ✅ Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = DeActive)
+            if (user.Status == 1)
+                throw new UnauthorizedAccessException("Tài khoản này đang không còn hoạt động trên hệ thống");
 
             // Staff must have at least one assigned position to be allowed to login
             var roleName = user.Role?.RoleName ?? string.Empty;
@@ -86,8 +91,14 @@ namespace BusinessAccessLayer.Services
                 throw new UnauthorizedAccessException("Invalid refresh token payload");
 
             var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult();
-            if (user == null || user.IsDeleted == true)
+            if (user == null)
                 throw new UnauthorizedAccessException("User not found");
+
+            if (user.IsDeleted == true)
+                throw new UnauthorizedAccessException("Người dùng đã bị xóa khỏi hệ thống");
+
+            if (user.Status == 1)
+                throw new UnauthorizedAccessException("Tài khoản này đang không còn hoạt động trên hệ thống");
 
             var response = new LoginResponse
             {

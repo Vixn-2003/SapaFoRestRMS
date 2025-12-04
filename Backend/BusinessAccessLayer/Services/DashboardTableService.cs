@@ -373,6 +373,9 @@ namespace BusinessAccessLayer.Services
                 if (latestOrder != null)
                 {
                     screenDto.ActiveOrderId = latestOrder.OrderId;
+                    // ✅ Đưa trạng thái order hiện tại ra FE để dùng cho flow waiter/cashier
+                    // Chuẩn hoá về lowercase để so sánh đơn giản ở frontend
+                    screenDto.OrderStatus = latestOrder.Status?.ToLowerInvariant();
 
                     foreach (var od in latestOrder.OrderDetails)
                     {

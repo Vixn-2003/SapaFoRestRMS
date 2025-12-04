@@ -1,10 +1,27 @@
+@*
+    ❌❌❌ FILE NÀY ĐÃ KHÔNG ĐƯỢC SỬ DỤNG TRONG CASHIER FLOW NỮA ❌❌❌
+    
+    WORKFLOW MỚI:
+    - Waiter xác nhận món tại OrderDetail.cshtml (waiter flow)
+    - Thu ngân KHÔNG xác nhận món nữa
+    - Thu ngân CHỈ xử lý thanh toán tại Payment.cshtml
+    
+    Redirect flow mới:
+    OrderDetail.cshtml → Payment.cshtml (bỏ qua ConfirmOrder.cshtml)
+    
+    File này có thể được dùng cho mục đích khác trong tương lai,
+    nhưng KHÔNG DÙNG CHO CASHIER PAYMENT FLOW.
+    
+    Last updated: Dec 2025
+*@
+
 @model WebSapaForestForStaff.DTOs.Payment.OrderDetailDto
 
 @using WebSapaForestForStaff.Controllers
 @using System.Security.Claims
 
 @{
-    ViewData["Title"] = "Xác Nhận Hóa Đơn";
+    ViewData["Title"] = "⚠️ DEPRECATED - Xác Nhận Hóa Đơn (Không dùng)";
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 
     var tables = Model.TableNumbers != null && Model.TableNumbers.Any()

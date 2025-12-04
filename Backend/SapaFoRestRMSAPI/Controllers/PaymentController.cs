@@ -197,7 +197,7 @@ public class PaymentController : ControllerBase
     /// POST /api/payment/discounts/validate
     /// </summary>
     [HttpPost("discounts/validate")]
-    public async Task<IActionResult> ValidateDiscount([FromBody] DiscountRequestDto request, CancellationToken ct = default)
+        public async Task<IActionResult> ValidateDiscount([FromBody] DiscountRequestDto request, CancellationToken ct = default)
     {
         try
         {
@@ -212,6 +212,10 @@ public class PaymentController : ControllerBase
                 message = "Áp dụng ưu đãi thành công",
                 order = order 
             });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
