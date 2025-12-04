@@ -89,6 +89,7 @@ namespace SapaFoRestRMSAPI.Controllers
     [FromForm] string CourseType,
     [FromForm] string Description = "",
     [FromForm] int? TimeCook = null,
+    [FromForm] int? BatchSize = null,
     [FromForm] int? BillingType = 2,
     [FromForm] bool IsAds = false,
     [FromForm] string RecipesJson = "",
@@ -130,6 +131,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     Description = Description?.Trim(),
                     ImageUrl = imageUrl,
                     TimeCook = TimeCook,
+                    BatchSize = BatchSize,
                     BillingType = (ItemBillingType)BillingType,
                     IsAds = IsAds
                 };
@@ -196,6 +198,7 @@ namespace SapaFoRestRMSAPI.Controllers
     [FromForm] string Description = "",
     [FromForm] string ImageUrl = "",
     [FromForm] int? TimeCook = null,
+    [FromForm] int? BatchSize = null,
     [FromForm] int? BillingType = 2,
     [FromForm] bool IsAds = false,
     [FromForm] string RecipesJson = "",
@@ -232,6 +235,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     Description = Description?.Trim(),
                     ImageUrl = finalImageUrl,
                     TimeCook = TimeCook,
+                    BatchSize = BatchSize,
                     BillingType = (ItemBillingType)BillingType,
                     IsAds = IsAds
                 };

@@ -1,8 +1,6 @@
 ﻿@{
     ViewData["Title"] = "Kitchen Display System - Bếp Phó";
-}
-@{
-    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    Layout = "~/Views/Shared/_LayoutKitchen.cshtml";
 }
 @section Styles {
     <style>
@@ -24,7 +22,7 @@
         .kds-main-layout {
             display: flex;
             gap: 20px;
-            height: calc(100vh - 200px);
+            min-height: calc(100vh - 200px);
         }
 
         .completed-orders-column {
@@ -32,7 +30,7 @@
             background: #f8f9fa;
             border-radius: 8px;
             padding: 15px;
-            overflow-y: auto;
+            overflow: visible;
             transition: all 0.3s ease;
             border: 2px solid #28a745;
         }
@@ -97,24 +95,39 @@
 
         .active-orders-column {
             flex: 1;
-            overflow-y: auto;
+            overflow: visible;
             min-width: 0; /* Cho phép flex item co lại */
         }
 
         .orders-grid {
-            display: grid !important;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
-            grid-auto-flow: row !important;
-            gap: 20px !important;
-            width: 100% !important;
-            align-items: start !important;
+            position: relative;
+            width: 100%;
             padding: 0 !important;
+        }
+        
+        /* Masonry container */
+        .orders-grid.masonry {
+            display: block;
         }
         
         /* Đảm bảo order-card không bị stretch */
         .orders-grid .order-card {
             width: 100%;
             max-width: 100%;
+            margin-bottom: 20px;
+            break-inside: avoid;
+        }
+        
+        /* Masonry columns wrapper */
+        .masonry-columns {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .masonry-column {
+            flex: 1;
+            min-width: 0;
         }
         
         /* Table group container cho mode "theo-ban" */
@@ -128,18 +141,72 @@
             gap: 20px;
         }
 
-        /* Toastr Custom Styles - Nền xanh dễ nhìn */
+        /* Toastr Custom Styles */
+        #toast-container {
+            position: fixed !important;
+            top: 80px !important;
+            right: 20px !important;
+            z-index: 999999 !important;
+        }
+
         #toast-container > .toast {
-            background-color: #28a745 !important;
-            color: #ffffff !important;
             border-radius: 8px !important;
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
             opacity: 0.95 !important;
+            color: #ffffff !important;
+            font-weight: 500 !important;
+            padding: 15px 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            min-width: 300px !important;
+            max-width: 500px !important;
+        }
+
+        /* Toast icon spacing */
+        #toast-container > .toast > .toast-icon {
+            flex-shrink: 0 !important;
+            margin-right: 0 !important;
+            font-size: 20px !important;
+            line-height: 1 !important;
+        }
+
+        /* Toast message spacing */
+        #toast-container > .toast > .toast-message {
+            flex: 1 !important;
+            color: inherit !important;
+            font-weight: 500 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.4 !important;
+        }
+
+        /* Toast title spacing */
+        #toast-container > .toast > .toast-title {
+            flex: 1 !important;
+            color: inherit !important;
+            font-weight: 600 !important;
+            margin: 0 0 4px 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Toast close button */
+        #toast-container > .toast > .toast-close-button {
+            flex-shrink: 0 !important;
+            margin-left: auto !important;
+            margin-right: 0 !important;
+            opacity: 0.8 !important;
+            font-size: 18px !important;
+            line-height: 1 !important;
+        }
+
+        #toast-container > .toast > .toast-close-button:hover {
+            opacity: 1 !important;
         }
 
         #toast-container > .toast-success {
             background-color: #28a745 !important;
             color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
         }
 
         #toast-container > .toast-error {
@@ -162,11 +229,6 @@
 
         #toast-container > div {
             opacity: 1 !important;
-        }
-
-        .toast-message {
-            color: inherit !important;
-            font-weight: 500 !important;
         }
 
         /* Order Card */
@@ -317,6 +379,34 @@
         }
 
         /* Styles for "Theo từng món" view */
+        .items-horizontal-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+        }
+
+        .items-section {
+            width: 100%;
+            display: block;
+        }
+
+        .items-grid-section {
+            position: relative;
+            width: 100%;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .items-grid-section.masonry {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+        }
+
         .item-card {
             background: white;
             border-radius: 12px;
@@ -325,6 +415,11 @@
             transition: transform 0.2s;
             display: flex;
             flex-direction: column;
+            flex: 0 0 auto !important;
+            width: auto !important;
+            min-width: 280px;
+            max-width: 320px;
+            break-inside: avoid;
         }
 
         .item-card:hover {
@@ -372,8 +467,6 @@
 
         .item-details-list {
             margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
         }
 
         .item-detail-row {
@@ -417,6 +510,11 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
+        }
+
+        /* Override cho grouped items view - không dùng grid */
+        #ordersGrid:not(.orders-grid) {
+            display: block !important;
         }
 
         /* Order Card Clickable */
@@ -539,8 +637,7 @@
         .order-modal-body {
             padding: 20px;
             flex: 1;
-            overflow-y: auto;
-            max-height: calc(90vh - 200px);
+            overflow: visible;
         }
 
         .order-modal-items {

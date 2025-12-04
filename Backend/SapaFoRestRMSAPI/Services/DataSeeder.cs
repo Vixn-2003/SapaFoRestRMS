@@ -873,13 +873,13 @@ namespace SapaFoRestRMSAPI.Services
             await context.SaveChangesAsync();
 
             // 11.1. Seed Order 8: ACTIVE order with combo + OrderComboItems for kitchen testing
-            // Status dùng chuỗi "Processing" để KitchenDisplay (đang filter Pending/Processing/Preparing) thấy được.
+            // Sử dụng trạng thái "Cooking" để KitchenDisplay hiển thị đúng luồng mới.
             var order8 = new Order
             {
                 ReservationId = reservation.ReservationId,
                 CustomerId = customer.CustomerId,
                 OrderType = "DineIn",
-                Status = "Processing",
+                Status = "Cooking",
                 CreatedAt = DateTime.UtcNow.AddMinutes(-10),
                 TotalAmount = 0m
             };

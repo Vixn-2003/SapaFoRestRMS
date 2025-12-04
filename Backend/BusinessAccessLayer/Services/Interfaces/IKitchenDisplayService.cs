@@ -73,5 +73,10 @@ namespace BusinessAccessLayer.Services
         /// Get order details with all items including Done status (for modal display)
         /// </summary>
         Task<KitchenOrderCardDto?> GetOrderDetailsWithAllItemsAsync(int orderId);
+
+        /// <summary>
+        /// Lấy thông tin order detail để in ticket khi hoàn thành món
+        /// </summary>
+        Task<PrintItemTicketDto?> GetOrderDetailForPrintAsync(int orderDetailId, int? orderComboItemId);
     }
 }

@@ -341,5 +341,35 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/print-item-ticket
+        /// In ticket cho món đã hoàn thành
+        /// </summary>
+        [HttpPost("print-item-ticket")]
+        public async Task<IActionResult> PrintItemTicket([FromBody] PrintItemTicketRequest request)
+        {
+            try
+            {
+                // Lấy thông tin order detail và order
+                var orderDetail = await _kitchenService.GetOrderDetailForPrintAsync(request.OrderDetailId, request.OrderComboItemId);
+                
+                if (orderDetail == null)
+                {
+                    return NotFound(new { success = false, message = "Không tìm thấy món ăn" });
+                }
+
+                // Trả về thông tin để frontend in
+                return Ok(new 
+                { 
+                    success = true, 
+                    data = orderDetail 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

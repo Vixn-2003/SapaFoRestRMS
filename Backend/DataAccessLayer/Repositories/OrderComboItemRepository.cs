@@ -56,6 +56,7 @@ namespace DataAccessLayer.Repositories
         {
             return await _context.OrderComboItems
                 .Include(oci => oci.MenuItem)
+                    .ThenInclude(mi => mi.Category)
                 .Include(oci => oci.OrderDetail)
                 .FirstOrDefaultAsync(oci => oci.OrderComboItemId == orderComboItemId);
         }

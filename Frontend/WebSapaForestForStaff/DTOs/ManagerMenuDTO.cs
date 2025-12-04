@@ -19,6 +19,7 @@ namespace WebSapaForestForStaff.DTOs
         public string? ImageUrl { get; set; }
 
         public int? TimeCook { get; set; }
+        public int? BatchSize { get; set; }
 
         public bool? IsAds { get; set; }
 

@@ -24,6 +24,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         // Batch reservation methods
         Task<(bool success, string message)> ReserveBatchesForOrderDetailAsync(int orderDetailId);
         Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailAsync(int orderDetailId);
+        Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailWithQuantityAsync(int orderDetailId, int quantityToConsume);
         Task<(bool success, string message)> ReleaseReservedBatchesForOrderDetailAsync(int orderDetailId);
     }
 }
