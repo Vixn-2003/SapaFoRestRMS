@@ -1,8 +1,21 @@
 // Waiter Order Tracking JavaScript
 const API_BASE = window.API_BASE_URL || 'https://localhost:7096/api';
 
-// Request Urgent
-function requestUrgent(orderDetailId, orderComboItemId) {
+// Request / Cancel Urgent (toggle)
+function requestUrgent(orderDetailId, orderComboItemId, isUrgent) {
+    if (isUrgent) {
+        // Hủy làm gấp: mở popup xác nhận (Bootstrap modal), không dùng window.confirm
+        document.getElementById('cancelUrgentOrderDetailId').value = orderDetailId;
+        const comboInput = document.getElementById('cancelUrgentOrderComboItemId');
+        if (comboInput) {
+            comboInput.value = orderComboItemId && orderComboItemId > 0 ? orderComboItemId : '';
+        }
+        const modal = new bootstrap.Modal(document.getElementById('cancelUrgentModal'));
+        modal.show();
+        return;
+    }
+
+    // Làm gấp mới: mở modal nhập lý do
     document.getElementById('urgentOrderDetailId').value = orderDetailId;
     const comboInput = document.getElementById('urgentOrderComboItemId');
     if (comboInput) {
@@ -39,14 +52,102 @@ async function submitUrgentRequest() {
 
         const result = await response.json();
         if (result.success) {
-            alert('Đã yêu cầu làm gấp thành công');
+            showToast('Đã yêu cầu làm gấp thành công', 'success');
             bootstrap.Modal.getInstance(document.getElementById('urgentModal')).hide();
             location.reload();
         } else {
-            alert('Lỗi: ' + result.message);
+            showToast('Lỗi: ' + result.message, 'error');
         }
     } catch (error) {
-        alert('Lỗi kết nối: ' + error.message);
+        showToast('Lỗi kết nối: ' + error.message, 'error');
+    }
+}
+
+// Gửi toggle urgent trực tiếp (dùng cho Hủy làm gấp)
+async function submitUrgentToggle(orderDetailId, orderComboItemId, reason) {
+    try {
+        const response = await fetch(`${API_BASE}/WaiterOrderTracking/request-urgent`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                orderDetailId: orderDetailId,
+                orderComboItemId: orderComboItemId && orderComboItemId > 0 ? orderComboItemId : null,
+                waiterUserId: getCurrentUserId(),
+                reason: reason || ''
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showToast('Đã cập nhật trạng thái làm gấp', 'success');
+            const currentFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'all';
+            sessionStorage.setItem('waiterOrderFilter', currentFilter);
+            location.reload();
+        } else {
+            showToast('Lỗi: ' + result.message, 'error');
+        }
+    } catch (error) {
+        showToast('Lỗi kết nối: ' + error.message, 'error');
+    }
+}
+
+// Submit từ popup hủy làm gấp
+async function submitCancelUrgent() {
+    const orderDetailId = parseInt(document.getElementById('cancelUrgentOrderDetailId').value);
+    const orderComboItemId = parseInt(document.getElementById('cancelUrgentOrderComboItemId').value || '0');
+
+    await submitUrgentToggle(orderDetailId, orderComboItemId, '');
+    const modalEl = document.getElementById('cancelUrgentModal');
+    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) {
+        modalInstance.hide();
+    }
+}
+
+// Toast helper (Bootstrap)
+function showToast(message, type = 'success') {
+    try {
+        let container = document.getElementById('waiterToastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'waiterToastContainer';
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = 9999;
+            document.body.appendChild(container);
+        }
+
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-white border-0`;
+        toastEl.role = 'alert';
+        toastEl.ariaLive = 'assertive';
+        toastEl.ariaAtomic = 'true';
+
+        const bgClass = type === 'error' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-success');
+        toastEl.classList.add(bgClass);
+
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+
+        container.appendChild(toastEl);
+        const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+        toast.show();
+
+        toastEl.addEventListener('hidden.bs.toast', () => {
+            if (toastEl.parentNode === container) {
+                container.removeChild(toastEl);
+            }
+        });
+    } catch (e) {
+        // Fallback nếu Bootstrap Toast lỗi
+        alert(message);
     }
 }
 
@@ -105,8 +206,12 @@ async function submitCancelRequest() {
 
 // Handle Served (Pick up item) - Show modal to select quantity (for non-split items)
 function handleServed(orderDetailId, orderComboItemId, maxQuantity) {
-    // Find the item to get its name
-    const itemRow = document.querySelector(`[data-item-id="${orderDetailId}"]`);
+    // Find the exact item row to get its name
+    let selector = `[data-item-id="${orderDetailId}"]`;
+    if (orderComboItemId && orderComboItemId > 0) {
+        selector += `[data-combo-item-id="${orderComboItemId}"]`;
+    }
+    const itemRow = document.querySelector(selector);
     if (!itemRow) {
         alert('Không tìm thấy món ăn');
         return;

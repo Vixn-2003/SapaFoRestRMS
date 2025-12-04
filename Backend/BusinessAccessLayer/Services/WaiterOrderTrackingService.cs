@@ -214,37 +214,87 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Nếu là món trong combo, có thể dùng OrderComboItemId sau này (hiện tại chỉ đánh dấu cấp OrderDetail)
-
-                // Kiểm tra status - chỉ có thể yêu cầu làm gấp khi chưa Done
-                var status = (orderDetail.Status ?? "Pending").Trim();
-                var normalizedStatus = NormalizeStatus(status);
-                if (normalizedStatus == "Done")
+                // Nếu có OrderComboItemId → đánh dấu urgent cho đúng món con trong combo
+                if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
                 {
-                    return new RequestUrgentResponse
+                    var orderComboItem = await _unitOfWork.OrderComboItems.GetByIdAsync(request.OrderComboItemId.Value);
+                    if (orderComboItem == null)
                     {
-                        Success = false,
-                        Message = "Món đã hoàn thành, không thể yêu cầu làm gấp"
-                    };
-                }
+                        return new RequestUrgentResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy món trong combo"
+                        };
+                    }
 
-                // Đánh dấu urgent
-                orderDetail.IsUrgent = true;
-                // Lưu lý do vào Notes (có thể tạo field riêng UrgentReason nếu cần)
-                if (!string.IsNullOrEmpty(request.Reason))
+                    var statusCombo = (orderComboItem.Status ?? "Pending").Trim();
+                    var normalizedComboStatus = NormalizeStatus(statusCombo);
+                    if (normalizedComboStatus == "Done")
+                    {
+                        return new RequestUrgentResponse
+                        {
+                            Success = false,
+                            Message = "Món trong combo đã hoàn thành, không thể yêu cầu làm gấp"
+                        };
+                    }
+
+                    // Toggle urgent: nếu đang urgent thì hủy, nếu chưa thì bật
+                    if (orderComboItem.IsUrgent)
+                    {
+                        orderComboItem.IsUrgent = false;
+                    }
+                    else
+                    {
+                        orderComboItem.IsUrgent = true;
+                        if (!string.IsNullOrEmpty(request.Reason))
+                        {
+                            var currentNotes = orderComboItem.Notes ?? "";
+                            orderComboItem.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                    }
+
+                    await _unitOfWork.OrderComboItems.UpdateAsync(orderComboItem);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                else
                 {
-                    var currentNotes = orderDetail.Notes ?? "";
-                    orderDetail.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
-                }
+                    // Món lẻ hoặc combo nhưng chưa chọn món con cụ thể → đánh dấu urgent cấp OrderDetail
+                    var status = (orderDetail.Status ?? "Pending").Trim();
+                    var normalizedStatus = NormalizeStatus(status);
+                    if (normalizedStatus == "Done")
+                    {
+                        return new RequestUrgentResponse
+                        {
+                            Success = false,
+                            Message = "Món đã hoàn thành, không thể yêu cầu làm gấp"
+                        };
+                    }
 
-                await _unitOfWork.SaveChangesAsync();
+                    // Toggle urgent cho món lẻ / dòng combo
+                    if (orderDetail.IsUrgent)
+                    {
+                        orderDetail.IsUrgent = false;
+                    }
+                    else
+                    {
+                        orderDetail.IsUrgent = true;
+                        if (!string.IsNullOrEmpty(request.Reason))
+                        {
+                            var currentNotes = orderDetail.Notes ?? "";
+                            orderDetail.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                    }
+
+                    await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                    await _unitOfWork.SaveChangesAsync();
+                }
 
                 // TODO: Gửi SignalR notification cho bếp
 
                 return new RequestUrgentResponse
                 {
                     Success = true,
-                    Message = "Đã yêu cầu làm gấp thành công"
+                    Message = "Đã cập nhật trạng thái làm gấp"
                 };
             }
             catch (Exception ex)
