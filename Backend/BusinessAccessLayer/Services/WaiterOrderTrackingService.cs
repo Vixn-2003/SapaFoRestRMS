@@ -94,30 +94,71 @@ namespace BusinessAccessLayer.Services
                         }
                     }
 
-                    var item = new OrderTrackingItemDto
+                    // ✅ Nếu là combo và đã có OrderComboItems → sổ ra từng món trong combo
+                    if (orderDetail.ComboId.HasValue &&
+                        orderDetail.OrderComboItems != null &&
+                        orderDetail.OrderComboItems.Any())
                     {
-                        OrderDetailId = orderDetail.OrderDetailId,
-                        OrderId = order.OrderId,
-                        MenuItemName = orderDetail.MenuItem?.Name ?? orderDetail.Combo?.Name ?? "N/A",
-                        Quantity = orderDetail.Quantity,
-                        Status = status,
-                        Notes = orderDetail.Notes,
-                        IsUrgent = orderDetail.IsUrgent,
-                        OrderTime = orderDetail.CreatedAt,
-                        WaitingMinutes = waitingMinutes,
-                        StartedAt = orderDetail.StartedAt,
-                        ReadyAt = orderDetail.ReadyAt,
-                        ServedAt = isDone ? (orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null, // Nếu Done, dùng ReadyAt hoặc CreatedAt
-                        CanCancel = canCancel,
-                        CanReturn = false,
-                        CanRequestUrgent = canRequestUrgent,
-                        IsSplit = isSplit
-                    };
+                        foreach (var orderComboItem in orderDetail.OrderComboItems)
+                        {
+                            var menuItemName = orderComboItem.MenuItem?.Name 
+                                ?? orderDetail.Combo?.Name 
+                                ?? "Combo item";
 
-                    allItems.Add(item);
-                    group.Items.Add(item);
+                            var itemQuantity = orderDetail.Quantity * orderComboItem.Quantity;
 
-                    // Đếm theo status
+                            var comboItem = new OrderTrackingItemDto
+                            {
+                                OrderDetailId = orderDetail.OrderDetailId, // vẫn dùng OrderDetailId để waiter thao tác
+                                OrderId = order.OrderId,
+                                MenuItemName = menuItemName,
+                                Quantity = itemQuantity,
+                                Status = status, // trạng thái chung theo OrderDetail
+                                Notes = orderComboItem.Notes ?? orderDetail.Notes,
+                                IsUrgent = orderComboItem.IsUrgent || orderDetail.IsUrgent,
+                                OrderTime = orderDetail.CreatedAt,
+                                WaitingMinutes = waitingMinutes,
+                                StartedAt = orderDetail.StartedAt,
+                                ReadyAt = orderDetail.ReadyAt,
+                                ServedAt = isDone ? (orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null,
+                                CanCancel = canCancel,
+                                CanReturn = false,
+                                CanRequestUrgent = canRequestUrgent,
+                                IsSplit = isSplit
+                            };
+
+                            allItems.Add(comboItem);
+                            group.Items.Add(comboItem);
+                        }
+                    }
+                    else
+                    {
+                        // Món lẻ (không phải combo) → giữ nguyên logic cũ
+                        var item = new OrderTrackingItemDto
+                        {
+                            OrderDetailId = orderDetail.OrderDetailId,
+                            OrderId = order.OrderId,
+                            MenuItemName = orderDetail.MenuItem?.Name ?? orderDetail.Combo?.Name ?? "N/A",
+                            Quantity = orderDetail.Quantity,
+                            Status = status,
+                            Notes = orderDetail.Notes,
+                            IsUrgent = orderDetail.IsUrgent,
+                            OrderTime = orderDetail.CreatedAt,
+                            WaitingMinutes = waitingMinutes,
+                            StartedAt = orderDetail.StartedAt,
+                            ReadyAt = orderDetail.ReadyAt,
+                            ServedAt = isDone ? (orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null, // Nếu Done, dùng ReadyAt hoặc CreatedAt
+                            CanCancel = canCancel,
+                            CanReturn = false,
+                            CanRequestUrgent = canRequestUrgent,
+                            IsSplit = isSplit
+                        };
+
+                        allItems.Add(item);
+                        group.Items.Add(item);
+                    }
+
+                    // Đếm theo status (tính theo từng OrderDetail)
                     if (statusLower.Contains("pending") || statusLower.Contains("chờ"))
                     {
                         result.WaitingKitchenCount++;
@@ -360,6 +401,7 @@ namespace BusinessAccessLayer.Services
         // Helper methods
         private string GetTableNumber(Order order)
         {
+            // Ưu tiên: lấy số bàn từ ReservationTables (đặt bàn)
             if (order.Reservation != null && order.Reservation.ReservationTables != null)
             {
                 var reservationTable = order.Reservation.ReservationTables
@@ -368,8 +410,23 @@ namespace BusinessAccessLayer.Services
                 {
                     return reservationTable.Table.TableNumber ?? "N/A";
                 }
+
+                // Fallback: tên khách trong reservation
+                var reservationCustomer = order.Reservation.Customer?.User?.FullName;
+                if (!string.IsNullOrEmpty(reservationCustomer))
+                {
+                    return reservationCustomer;
+                }
             }
-            return "N/A";
+
+            // Tiếp theo: tên khách của order trực tiếp (walk-in)
+            if (order.Customer != null && order.Customer.User != null)
+            {
+                return order.Customer.User.FullName ?? "Khách";
+            }
+
+            // Cuối cùng: hiển thị theo loại order
+            return order.OrderType ?? "N/A";
         }
 
         private string GetAreaName(Order order)

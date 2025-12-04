@@ -150,6 +150,10 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     /// </summary>
     public class StationItemDto
     {
+        /// <summary>
+        /// Id của MenuItem - dùng để xem công thức, thống kê...
+        /// </summary>
+        public int MenuItemId { get; set; }
         public int OrderDetailId { get; set; }
         /// <summary>
         /// OrderComboItemId - null nếu là món lẻ, có giá trị nếu là món trong combo

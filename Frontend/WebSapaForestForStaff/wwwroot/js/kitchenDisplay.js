@@ -338,12 +338,74 @@ function sortItemsByCourseType(items) {
     });
 }
 
+// Helper functions for item status & quantity-based counts
+function getItemQuantity(item) {
+    const qty = item && typeof item.quantity === 'number' ? item.quantity : parseInt(item?.quantity, 10);
+    if (!isNaN(qty) && qty > 0) return qty;
+    return 1;
+}
+
+function isStatusReady(status) {
+    if (!status) return false;
+    const s = status.toLowerCase().trim();
+    return s.includes('ready') || s.includes('sẵn sàng');
+}
+
+function isStatusDone(status) {
+    if (!status) return false;
+    const s = status.toLowerCase().trim();
+    return s.includes('done') || s.includes('hoàn thành') || s.includes('xong');
+}
+
+function isStatusCooking(status) {
+    if (!status) return false;
+    const s = status.toLowerCase().trim();
+    return s === 'cooking' || s === 'đang nấu' || s.includes('cooking') || s.includes('đang nấu');
+}
+
+function isStatusLate(status) {
+    if (!status) return false;
+    const s = status.toLowerCase().trim();
+    return s.includes('late') || s.includes('trễ');
+}
+
+function getOrderQuantityTotals(order) {
+    const items = order.items || [];
+    let totalQty = 0;
+    let completedQty = 0;
+    let lateQty = 0;
+    let cookingQty = 0;
+
+    items.forEach(item => {
+        const qty = getItemQuantity(item);
+        totalQty += qty;
+
+        if (isStatusReady(item.status) || isStatusDone(item.status)) {
+            completedQty += qty;
+        }
+        if (isStatusLate(item.status)) {
+            lateQty += qty;
+        }
+        if (isStatusCooking(item.status)) {
+            cookingQty += qty;
+        }
+    });
+
+    return {
+        totalQty,
+        completedQty,
+        lateQty,
+        cookingQty
+    };
+}
+
 // Create single order card HTML
 function createOrderCard(order) {
     const timerClass = getTimerClass(order.priorityLevel);
-    // ✅ SỬA: Backend đã tính completedItems = Ready + Done
-    const completedItems = order.completedItems || 0; // Backend trả về readyCount + doneCount
-    const canComplete = completedItems === order.totalItems;
+    const { totalQty, completedQty } = getOrderQuantityTotals(order);
+    const completedItems = completedQty;
+    const totalItems = totalQty || order.totalItems || 0;
+    const canComplete = totalItems > 0 && completedItems === totalItems;
     const numberOfGuests = order.numberOfGuests || 0;
     
     // ✅ Backend đã sort by course type rồi, hiển thị tất cả items (kể cả Ready và Done)
@@ -395,11 +457,11 @@ function createOrderCard(order) {
             <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
                     <small>Tiến độ</small>
-                    <small>${completedItems}/${order.totalItems} món đã hoàn thành</small>
+                    <small>${completedItems}/${totalItems} món đã hoàn thành</small>
                 </div>
                 <div class="progress" style="height: 8px;">
                     <div class="progress-bar ${canComplete ? 'bg-success' : 'bg-warning'}" 
-                         style="width: ${((completedItems) / order.totalItems) * 100}%">
+                         style="width: ${totalItems > 0 ? ((completedItems / totalItems) * 100) : 0}%">
                     </div>
                 </div>
             </div>
@@ -755,6 +817,7 @@ function groupOrdersByTable(orders) {
     const grouped = {};
     
     orders.forEach(order => {
+        const { totalQty, completedQty, lateQty } = getOrderQuantityTotals(order);
         const tableKey = order.tableNumber || 'N/A';
         if (!grouped[tableKey]) {
             grouped[tableKey] = {
@@ -767,10 +830,10 @@ function groupOrdersByTable(orders) {
             };
         }
         grouped[tableKey].orders.push(order);
-        grouped[tableKey].totalItems += order.totalItems || 0;
-        grouped[tableKey].completedItems += order.completedItems || 0;
-        grouped[tableKey].lateItems += order.lateItems || 0;
-        grouped[tableKey].readyItems += order.readyItems || 0;
+        grouped[tableKey].totalItems += totalQty;
+        grouped[tableKey].completedItems += completedQty;
+        grouped[tableKey].lateItems += lateQty;
+        grouped[tableKey].readyItems += completedQty; // Ready + Done đã tính trong completedQty
     });
     
     return Object.values(grouped);
@@ -790,11 +853,20 @@ function renderOrdersByTable(orders) {
         return;
     }
     
-    // Tính tổng số đơn và số món đã hoàn thành của TẤT CẢ orders
+    // Tính tổng số đơn và số món theo trạng thái của TẤT CẢ orders (đếm theo quantity)
     const totalOrders = orders.length;
-    const totalItems = orders.reduce((sum, order) => sum + (order.totalItems || 0), 0);
-    const totalCompletedItems = orders.reduce((sum, order) => sum + (order.completedItems || 0), 0);
-    const totalLateItems = orders.reduce((sum, order) => sum + (order.lateItems || 0), 0);
+    let totalItems = 0;
+    let totalCompletedItems = 0;
+    let totalLateItems = 0;
+    let totalCookingItems = 0;
+
+    orders.forEach(order => {
+        const { totalQty, completedQty, lateQty, cookingQty } = getOrderQuantityTotals(order);
+        totalItems += totalQty;
+        totalCompletedItems += completedQty;
+        totalLateItems += lateQty;
+        totalCookingItems += cookingQty;
+    });
     
     // Render từng order card
     const cardHtmls = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '');
@@ -816,7 +888,7 @@ function renderOrdersByTable(orders) {
                 <i class="mdi mdi-silverware-fork-knife"></i> 
                 <span>${totalOrders} đơn | ${totalCompletedItems}/${totalItems} món đã hoàn thành</span>
                 ${totalLateItems > 0 ? `<span style="color: #dc3545; margin-left: 10px;"><i class="mdi mdi-alert-circle"></i> Món đã trễ: ${totalLateItems}</span>` : ''}
-                ${totalCompletedItems > 0 ? `<span style="color: #28a745; margin-left: 10px;"><i class="mdi mdi-check-circle"></i> Món đã hoàn thành: ${totalCompletedItems}</span>` : ''}
+                ${totalCookingItems > 0 ? `<span style="color: #28a745; margin-left: 10px;"><i class="mdi mdi-check-circle"></i> Món đang nấu: ${totalCookingItems}</span>` : ''}
             </h3>
         </div>
     `;
@@ -931,7 +1003,7 @@ function createTableGroupCard(group) {
         return '';
     }
     
-    // Đếm lại số orders và items sau khi filter
+    // Đếm lại số orders và items sau khi filter (theo quantity)
     const filteredOrders = group.orders.filter(order => {
         const sortedItems = sortItemsByCourseType(order.items || []);
         const filteredItems = currentStatusFilter !== 'all' 
@@ -940,6 +1012,12 @@ function createTableGroupCard(group) {
         return filteredItems.length > 0;
     });
     
+    // Đếm số món đang Cooking cho riêng group này
+    const cookingItemsCount = group.orders.reduce((sum, order) => {
+        const { cookingQty } = getOrderQuantityTotals(order);
+        return sum + cookingQty;
+    }, 0);
+
     return `
         <div class="table-group-container" style="margin-bottom: 30px;">
             <div class="table-group-header" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -947,7 +1025,7 @@ function createTableGroupCard(group) {
                     <i class="mdi mdi-table"></i> 
                     <span>${filteredOrders.length} đơn | ${group.completedItems || 0}/${group.totalItems} món đã hoàn thành</span>
                     ${group.lateItems > 0 ? `<span style="color: #dc3545; margin-left: 10px;"><i class="mdi mdi-alert-circle"></i> Món đã trễ: ${group.lateItems}</span>` : ''}
-                    ${group.completedItems > 0 ? `<span style="color: #28a745; margin-left: 10px;"><i class="mdi mdi-check-circle"></i> Món đã hoàn thành: ${group.completedItems}</span>` : ''}
+                    ${cookingItemsCount > 0 ? `<span style="color: #28a745; margin-left: 10px;"><i class="mdi mdi-check-circle"></i> Món đang nấu: ${cookingItemsCount}</span>` : ''}
                 </h3>
             </div>
             <div class="table-orders-list">
@@ -1049,7 +1127,7 @@ async function loadGroupedItems() {
 // Render grouped items
 function renderGroupedItems(groupedItems) {
     const grid = document.getElementById('ordersGrid');
-    grid.className = 'items-grid';
+    grid.className = ''; // Không dùng items-grid để tránh CSS grid override
 
     if (!groupedItems || groupedItems.length === 0) {
         grid.innerHTML = `
@@ -1074,9 +1152,88 @@ function renderGroupedItems(groupedItems) {
         return;
     }
 
-    const sortedItems = sortGroupedItems(filteredItems);
+    // Chia items thành 2 nhóm: Món nấu lâu và Món theo order
+    const LONG_COOK_THRESHOLD = 15;
+    const longCookItems = [];
+    const regularItems = [];
 
-    grid.innerHTML = sortedItems.map(item => createItemCard(item)).join('');
+    filteredItems.forEach(item => {
+        const timeCook = Number(item.timeCook) || 0;
+        if (timeCook > LONG_COOK_THRESHOLD) {
+            longCookItems.push(item);
+        } else {
+            regularItems.push(item);
+        }
+    });
+
+    // Sắp xếp từng nhóm
+    const sortedLongCookItems = sortGroupedItems(longCookItems);
+    const sortedRegularItems = sortGroupedItems(regularItems);
+
+    // Render 2 hàng ngang
+    let html = `
+        <div class="items-horizontal-layout" style="display: flex; flex-direction: column; gap: 30px; width: 100%;">
+    `;
+
+    // Hàng 1: Món nấu lâu
+    if (sortedLongCookItems.length > 0) {
+        html += `
+            <div class="items-section" style="width: 100%;">
+                <div class="section-header" style="padding: 15px 20px; margin-bottom: 20px;">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; color: #333;">
+                        <i class="mdi mdi-clock-outline" style="font-size: 24px;"></i>
+                        <span>Món nấu lâu (${sortedLongCookItems.length} món)</span>
+                    </h3>
+                </div>
+                <div class="items-grid-section" id="longCookItemsGrid" style="position: relative; width: 100%; display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 20px;"></div>
+            </div>
+        `;
+    }
+
+    // Hàng 2: Món theo order
+    if (sortedRegularItems.length > 0) {
+        html += `
+            <div class="items-section" style="width: 100%;">
+                <div class="section-header" style="padding: 15px 20px; margin-bottom: 20px;">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 600; color: #333;">
+                        <i class="mdi mdi-silverware-fork-knife" style="font-size: 24px;"></i>
+                        <span>Món theo order (${sortedRegularItems.length} món)</span>
+                    </h3>
+                </div>
+                <div class="items-grid-section" id="regularItemsGrid" style="position: relative; width: 100%; display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 20px;"></div>
+            </div>
+        `;
+    }
+
+    html += `</div>`;
+    grid.innerHTML = html;
+
+    // Render cards theo hàng ngang cho cả 2 phần
+    if (sortedLongCookItems.length > 0) {
+        const longCookGrid = document.getElementById('longCookItemsGrid');
+        if (longCookGrid) {
+            const longCookCardHtmls = sortedLongCookItems.map(item => createItemCard(item));
+            longCookGrid.innerHTML = longCookCardHtmls.join('');
+            // Đảm bảo flexbox row
+            longCookGrid.style.display = 'flex';
+            longCookGrid.style.flexDirection = 'row';
+            longCookGrid.style.flexWrap = 'wrap';
+            longCookGrid.style.gap = '20px';
+        }
+    }
+
+    if (sortedRegularItems.length > 0) {
+        const regularGrid = document.getElementById('regularItemsGrid');
+        if (regularGrid) {
+            const regularCardHtmls = sortedRegularItems.map(item => createItemCard(item));
+            regularGrid.innerHTML = regularCardHtmls.join('');
+            // Đảm bảo flexbox row
+            regularGrid.style.display = 'flex';
+            regularGrid.style.flexDirection = 'row';
+            regularGrid.style.flexWrap = 'wrap';
+            regularGrid.style.gap = '20px';
+        }
+    }
     
     // Attach click handlers for "Bắt đầu nấu" buttons
     setTimeout(() => {
@@ -1107,7 +1264,7 @@ function renderGroupedItems(groupedItems) {
                 }
             });
         });
-    }, 50);
+    }, 100);
 }
 
 function sortGroupedItems(items) {
@@ -2233,7 +2390,7 @@ async function fulfillSelectedItems() {
     // Không cho phép đánh dấu Ready cho món vẫn Pending
     if (pendingItems.length > 0) {
         const itemNames = pendingItems.map(i => i.name).join(', ');
-        showError(`Các món sau chưa nấu: ${itemNames}. Vui lòng bắt đầu nấu trước!`);
+        showError(`Các món sau chưa nấu: ${itemNames}<br>Vui lòng bắt đầu nấu trước!`);
         return;
     }
 
@@ -2531,13 +2688,27 @@ function showConfirmPopup(message, title = 'Xác nhận') {
 // Toast notifications
 function showSuccess(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.success(message);
+        toastr.success(message, '', {
+            closeButton: true,
+            progressBar: true,
+            timeOut: 5000,
+            extendedTimeOut: 2000,
+            positionClass: 'toast-top-right',
+            escapeHtml: false
+        });
     }
 }
 
 function showError(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.error(message);
+        toastr.error(message, '', {
+            closeButton: true,
+            progressBar: true,
+            timeOut: 6000,
+            extendedTimeOut: 2000,
+            positionClass: 'toast-top-right',
+            escapeHtml: false
+        });
     } else {
         console.error('ERROR:', message);
     }

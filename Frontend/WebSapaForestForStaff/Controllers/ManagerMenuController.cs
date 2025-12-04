@@ -169,6 +169,13 @@ namespace WebSapaForestForStaff.Controllers
                     timeCook = Convert.ToInt32(Request.Form["ProductsMenu.TimeCook"]);
                 }
 
+                int? batchSize = null;
+                if (Request.Form.ContainsKey("ProductsMenu.BatchSize") &&
+                    !string.IsNullOrEmpty(Request.Form["ProductsMenu.BatchSize"]))
+                {
+                    batchSize = Convert.ToInt32(Request.Form["ProductsMenu.BatchSize"]);
+                }
+
                 var billingType = Convert.ToInt32(Request.Form["ProductsMenu.BillingType"]);
                 var isAds = Convert.ToBoolean(Request.Form["ProductsMenu.IsAds"]); // ✅ ĐỔI THÀNH ToBoolean
 
@@ -189,6 +196,10 @@ namespace WebSapaForestForStaff.Controllers
                 if (timeCook.HasValue)
                 {
                     formContent.Add(new StringContent(timeCook.Value.ToString()), "TimeCook");
+                }
+                if (batchSize.HasValue)
+                {
+                    formContent.Add(new StringContent(batchSize.Value.ToString()), "BatchSize");
                 }
 
                 formContent.Add(new StringContent(billingType.ToString()), "BillingType");
@@ -288,6 +299,13 @@ namespace WebSapaForestForStaff.Controllers
                     timeCook = Convert.ToInt32(Request.Form["ProductsMenu.TimeCook"]);
                 }
 
+                int? batchSize = null;
+                if (Request.Form.ContainsKey("ProductsMenu.BatchSize") &&
+                    !string.IsNullOrEmpty(Request.Form["ProductsMenu.BatchSize"]))
+                {
+                    batchSize = Convert.ToInt32(Request.Form["ProductsMenu.BatchSize"]);
+                }
+
                 var billingType = Convert.ToInt32(Request.Form["ProductsMenu.BillingType"]);
                 var isAds = Convert.ToBoolean(Request.Form["ProductsMenu.IsAds"]);
 
@@ -304,6 +322,10 @@ namespace WebSapaForestForStaff.Controllers
                 if (timeCook.HasValue)
                 {
                     formContent.Add(new StringContent(timeCook.Value.ToString()), "TimeCook");
+                }
+                if (batchSize.HasValue)
+                {
+                    formContent.Add(new StringContent(batchSize.Value.ToString()), "BatchSize");
                 }
 
                 formContent.Add(new StringContent(billingType.ToString()), "BillingType");

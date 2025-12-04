@@ -106,6 +106,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
+                            .ThenInclude(t => t.Area)
                 .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
@@ -151,6 +152,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
+                            .ThenInclude(t => t.Area)
                 .Where(o => (o.Status == "Processing" || o.Status == "Preparing" || o.Status == "Completed"))
                 .Where(o => o.OrderDetails.Any(od => od.Status == "Done" || od.Status == "Hoàn thành"))
                 // Bỏ filter theo CreatedAt vì không chính xác (order có thể tạo từ lâu nhưng mới Done gần đây)
@@ -180,6 +182,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
+                            .ThenInclude(t => t.Area)
                 .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();

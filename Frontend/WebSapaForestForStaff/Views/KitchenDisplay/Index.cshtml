@@ -1,8 +1,6 @@
 ﻿@{
     ViewData["Title"] = "Kitchen Display System - Bếp Phó";
-}
-@{
-    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    Layout = "~/Views/Shared/_LayoutKitchen.cshtml";
 }
 @section Styles {
     <style>
@@ -143,18 +141,72 @@
             gap: 20px;
         }
 
-        /* Toastr Custom Styles - Nền xanh dễ nhìn */
+        /* Toastr Custom Styles */
+        #toast-container {
+            position: fixed !important;
+            top: 80px !important;
+            right: 20px !important;
+            z-index: 999999 !important;
+        }
+
         #toast-container > .toast {
-            background-color: #28a745 !important;
-            color: #ffffff !important;
             border-radius: 8px !important;
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
             opacity: 0.95 !important;
+            color: #ffffff !important;
+            font-weight: 500 !important;
+            padding: 15px 20px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            min-width: 300px !important;
+            max-width: 500px !important;
+        }
+
+        /* Toast icon spacing */
+        #toast-container > .toast > .toast-icon {
+            flex-shrink: 0 !important;
+            margin-right: 0 !important;
+            font-size: 20px !important;
+            line-height: 1 !important;
+        }
+
+        /* Toast message spacing */
+        #toast-container > .toast > .toast-message {
+            flex: 1 !important;
+            color: inherit !important;
+            font-weight: 500 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.4 !important;
+        }
+
+        /* Toast title spacing */
+        #toast-container > .toast > .toast-title {
+            flex: 1 !important;
+            color: inherit !important;
+            font-weight: 600 !important;
+            margin: 0 0 4px 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Toast close button */
+        #toast-container > .toast > .toast-close-button {
+            flex-shrink: 0 !important;
+            margin-left: auto !important;
+            margin-right: 0 !important;
+            opacity: 0.8 !important;
+            font-size: 18px !important;
+            line-height: 1 !important;
+        }
+
+        #toast-container > .toast > .toast-close-button:hover {
+            opacity: 1 !important;
         }
 
         #toast-container > .toast-success {
             background-color: #28a745 !important;
             color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
         }
 
         #toast-container > .toast-error {
@@ -177,11 +229,6 @@
 
         #toast-container > div {
             opacity: 1 !important;
-        }
-
-        .toast-message {
-            color: inherit !important;
-            font-weight: 500 !important;
         }
 
         /* Order Card */
@@ -332,6 +379,34 @@
         }
 
         /* Styles for "Theo từng món" view */
+        .items-horizontal-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 100%;
+        }
+
+        .items-section {
+            width: 100%;
+            display: block;
+        }
+
+        .items-grid-section {
+            position: relative;
+            width: 100%;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .items-grid-section.masonry {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+        }
+
         .item-card {
             background: white;
             border-radius: 12px;
@@ -340,6 +415,11 @@
             transition: transform 0.2s;
             display: flex;
             flex-direction: column;
+            flex: 0 0 auto !important;
+            width: auto !important;
+            min-width: 280px;
+            max-width: 320px;
+            break-inside: avoid;
         }
 
         .item-card:hover {
@@ -430,6 +510,11 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
+        }
+
+        /* Override cho grouped items view - không dùng grid */
+        #ordersGrid:not(.orders-grid) {
+            display: block !important;
         }
 
         /* Order Card Clickable */

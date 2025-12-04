@@ -1125,6 +1125,7 @@ namespace BusinessAccessLayer.Services
 
                             var item = new StationItemDto
                             {
+                                MenuItemId = mi.MenuItemId,
                                 OrderDetailId = orderDetail.OrderDetailId,
                                 OrderComboItemId = orderComboItem.OrderComboItemId,
                                 OrderId = order.OrderId,
@@ -1190,6 +1191,7 @@ namespace BusinessAccessLayer.Services
 
                         var item = new StationItemDto
                         {
+                            MenuItemId = orderDetail.MenuItem.MenuItemId,
                             OrderDetailId = orderDetail.OrderDetailId,
                             OrderComboItemId = null,
                             OrderId = order.OrderId,

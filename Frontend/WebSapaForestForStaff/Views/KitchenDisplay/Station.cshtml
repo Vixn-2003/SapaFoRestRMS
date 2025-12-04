@@ -1,6 +1,6 @@
 @{
     ViewData["Title"] = "Trạm Bếp - " + (ViewBag.CategoryName ?? "N/A");
-    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    Layout = "~/Views/Shared/_LayoutKitchen.cshtml";
 }
 
 @section Styles {
@@ -188,6 +188,105 @@
             gap: 15px;
             justify-content: center;
             margin-top: 30px;
+        }
+
+        /* Recipe Popup Styles */
+        .recipe-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            animation: fadeIn 0.2s;
+        }
+
+        .recipe-popup {
+            background: #ffffff;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            overflow: hidden;
+            animation: slideUp 0.3s;
+        }
+
+        .recipe-popup-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #e3f2fd;
+        }
+
+        .recipe-popup-icon {
+            font-size: 24px;
+            color: #1976d2;
+            margin-right: 10px;
+        }
+
+        .recipe-popup-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2933;
+        }
+
+        .recipe-popup-close {
+            border: none;
+            background: transparent;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .recipe-popup-body {
+            padding: 16px 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .recipe-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .recipe-table th,
+        .recipe-table td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 6px 8px;
+        }
+
+        .recipe-table th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        .recipe-popup-footer {
+            padding: 10px 20px 14px;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
+        }
+
+        .recipe-popup-btn {
+            padding: 8px 18px;
+            border-radius: 6px;
+            border: none;
+            background: #1976d2;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .recipe-popup-btn:hover {
+            background: #1565c0;
         }
 
         /* Confirm Popup Styles */

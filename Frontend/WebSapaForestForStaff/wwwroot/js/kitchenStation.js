@@ -375,6 +375,22 @@ function renderStationItems(data) {
         cookingTable.innerHTML = cookingItems
             .map(item => createCookingTableRow(item))
             .join('');
+
+        // Gắn click để mở popup công thức cho từng món
+        const nameCells = cookingTable.querySelectorAll('.station-menu-item-name[data-menu-item-id]');
+        nameCells.forEach(el => {
+            el.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const menuItemIdAttr = this.getAttribute('data-menu-item-id');
+                const menuItemId = menuItemIdAttr ? parseInt(menuItemIdAttr) : NaN;
+                const menuItemName = this.textContent.trim();
+                if (!isNaN(menuItemId) && menuItemId > 0) {
+                    openRecipePopup(menuItemId, menuItemName);
+                } else {
+                    showError('Không tìm được thông tin công thức cho món này');
+                }
+            });
+        });
     } else {
         cookingTable.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có món nào được bếp phó fire</td></tr>';
     }
@@ -460,6 +476,7 @@ function createCookingTableRow(item) {
         <tr class="${rowClass}" 
             data-order-detail-id="${item.orderDetailId}" 
             data-order-combo-item-id="${item.orderComboItemId || ''}"
+            data-menu-item-id="${item.menuItemId || ''}"
             data-item-key="${itemKey}"
             data-time-cook="${timeCook}" 
             data-started-at="${startedAt ? startedAt.toISOString() : ''}">
@@ -472,7 +489,12 @@ function createCookingTableRow(item) {
             <td class="time-cell countdown-cell" data-item-id="${itemId}" style="font-size: 22px;">${countdownHtml}</td>
             <td style="font-size: 18px; font-weight: 600;">${item.tableNumber}</td>
             <td style="font-size: 18px;">
-                <strong style="font-size: 20px;">${item.menuItemName}</strong> <span style="font-size: 18px; color: #ff9800; font-weight: 600;">x${item.quantity}</span>
+                <strong class="station-menu-item-name"
+                        data-menu-item-id="${item.menuItemId || ''}"
+                        style="font-size: 20px; cursor: pointer; text-decoration: underline dotted;">
+                    ${item.menuItemName}
+                </strong>
+                <span style="font-size: 18px; color: #ff9800; font-weight: 600;">x${item.quantity}</span>
                 ${item.isUrgent ? '<span class="badge bg-danger ms-2" style="font-size: 14px; padding: 4px 8px;">CẦN LÀM NGAY</span>' : ''}
             </td>
             <td class="notes-text" style="font-size: 16px;">${item.notes || '-'}</td>
@@ -860,6 +882,100 @@ function showError(message) {
         toastr.error(message);
     } else {
         console.error('ERROR:', message);
+    }
+}
+
+// Popup hiển thị công thức món ăn
+async function openRecipePopup(menuItemId, menuItemName) {
+    try {
+        console.log('[openRecipePopup] menuItemId =', menuItemId);
+
+        const response = await fetch(`${API_BASE}/ManagerMenu/recipes/${menuItemId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const recipes = await response.json();
+
+        if (!recipes || recipes.length === 0) {
+            showError(`Món "${menuItemName}" chưa được cấu hình công thức`);
+            return;
+        }
+
+        const rowsHtml = recipes.map((r, index) => {
+            const ingredientName = r.ingredient?.name || r.ingredient?.IngredientName || 'Nguyên liệu';
+            const unitName = r.ingredient?.unit?.unitName || r.ingredient?.unit?.UnitName || '';
+            const qty = r.quantityNeeded ?? r.quantity ?? 0;
+
+            return `
+                <tr>
+                    <td style="padding: 6px 8px; text-align: center;">${index + 1}</td>
+                    <td style="padding: 6px 8px;">${ingredientName}</td>
+                    <td style="padding: 6px 8px; text-align: right;">${qty}</td>
+                    <td style="padding: 6px 8px;">${unitName}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const overlay = document.createElement('div');
+        overlay.className = 'recipe-popup-overlay';
+
+        overlay.innerHTML = `
+            <div class="recipe-popup">
+                <div class="recipe-popup-header">
+                    <div class="recipe-popup-icon">
+                        <i class="mdi mdi-book-open-page-variant"></i>
+                    </div>
+                    <div class="recipe-popup-title">
+                        Công thức: ${menuItemName}
+                    </div>
+                    <button type="button" class="recipe-popup-close">&times;</button>
+                </div>
+                <div class="recipe-popup-body">
+                    <table class="recipe-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nguyên liệu</th>
+                                <th>Số lượng</th>
+                                <th>Đơn vị</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="recipe-popup-footer">
+                    <button type="button" class="recipe-popup-btn recipe-popup-btn-close">Đóng</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const closePopup = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                }
+            }, 200);
+        };
+
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) {
+                closePopup();
+            }
+        });
+
+        overlay.querySelector('.recipe-popup-close')
+            .addEventListener('click', closePopup);
+        overlay.querySelector('.recipe-popup-btn-close')
+            .addEventListener('click', closePopup);
+    } catch (error) {
+        console.error('[openRecipePopup] Error:', error);
+        showError('Không tải được công thức món ăn');
     }
 }
 
