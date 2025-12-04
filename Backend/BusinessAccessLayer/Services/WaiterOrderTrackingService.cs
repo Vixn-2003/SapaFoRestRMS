@@ -112,9 +112,14 @@ namespace BusinessAccessLayer.Services
                             // Trạng thái riêng theo từng món con
                             var comboStatus = (orderComboItem.Status ?? status).Trim();
                             var comboStatusLower = comboStatus.ToLower();
+                            var normalizedComboStatus = NormalizeStatus(comboStatus);
                             var comboIsDone = comboStatusLower.Contains("done") ||
                                               comboStatusLower.Contains("hoàn thành") ||
                                               comboStatusLower.Contains("xong");
+
+                            // Quyền Hủy / Làm gấp theo trạng thái món con
+                            var canCancelItem = normalizedComboStatus == "Pending";
+                            var canRequestUrgentItem = normalizedComboStatus != "Done";
 
                             var comboItem = new OrderTrackingItemDto
                             {
@@ -131,9 +136,9 @@ namespace BusinessAccessLayer.Services
                                 StartedAt = orderComboItem.StartedAt ?? orderDetail.StartedAt,
                                 ReadyAt = orderComboItem.ReadyAt ?? orderDetail.ReadyAt,
                                 ServedAt = comboIsDone ? (orderComboItem.ReadyAt ?? orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null,
-                                CanCancel = canCancel,
+                                CanCancel = canCancelItem,
                                 CanReturn = false,
-                                CanRequestUrgent = canRequestUrgent,
+                                CanRequestUrgent = canRequestUrgent && canRequestUrgentItem,
                                 IsSplit = isSplit
                             };
 
