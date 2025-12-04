@@ -24,7 +24,7 @@
         .kds-main-layout {
             display: flex;
             gap: 20px;
-            height: calc(100vh - 200px);
+            min-height: calc(100vh - 200px);
         }
 
         .completed-orders-column {
@@ -32,7 +32,7 @@
             background: #f8f9fa;
             border-radius: 8px;
             padding: 15px;
-            overflow-y: auto;
+            overflow: visible;
             transition: all 0.3s ease;
             border: 2px solid #28a745;
         }
@@ -97,24 +97,39 @@
 
         .active-orders-column {
             flex: 1;
-            overflow-y: auto;
+            overflow: visible;
             min-width: 0; /* Cho phép flex item co lại */
         }
 
         .orders-grid {
-            display: grid !important;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
-            grid-auto-flow: row !important;
-            gap: 20px !important;
-            width: 100% !important;
-            align-items: start !important;
+            position: relative;
+            width: 100%;
             padding: 0 !important;
+        }
+        
+        /* Masonry container */
+        .orders-grid.masonry {
+            display: block;
         }
         
         /* Đảm bảo order-card không bị stretch */
         .orders-grid .order-card {
             width: 100%;
             max-width: 100%;
+            margin-bottom: 20px;
+            break-inside: avoid;
+        }
+        
+        /* Masonry columns wrapper */
+        .masonry-columns {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .masonry-column {
+            flex: 1;
+            min-width: 0;
         }
         
         /* Table group container cho mode "theo-ban" */
@@ -372,8 +387,6 @@
 
         .item-details-list {
             margin-top: 15px;
-            max-height: 200px;
-            overflow-y: auto;
         }
 
         .item-detail-row {
@@ -539,8 +552,7 @@
         .order-modal-body {
             padding: 20px;
             flex: 1;
-            overflow-y: auto;
-            max-height: calc(90vh - 200px);
+            overflow: visible;
         }
 
         .order-modal-items {

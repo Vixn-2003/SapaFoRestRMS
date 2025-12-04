@@ -1484,8 +1484,70 @@ public class PaymentService : IPaymentService
                 );
             }
 
-            // Step 8.3: Inventory deduction (placeholder)
-            // await _inventoryService.DeductItemsAsync(orderId, ct);
+            // Step 8.3: Inventory deduction cho món ConsumptionBased khi paid
+            // Với món ConsumptionBased: chỉ reserve khi tạo order, consume khi paid (dựa trên QuantityUsed)
+            if (order?.OrderDetails != null && order.OrderDetails.Any())
+            {
+                var inventoryService = _serviceProvider.GetRequiredService<IInventoryIngredientService>();
+                
+                foreach (var orderDetail in order.OrderDetails)
+                {
+                    // Chỉ xử lý món có MenuItem và BillingType = ConsumptionBased
+                    if (orderDetail.MenuItem?.BillingType == ItemBillingType.ConsumptionBased && 
+                        orderDetail.MenuItemId.HasValue)
+                    {
+                        // Sử dụng QuantityUsed nếu có (đã confirm), nếu không thì dùng Quantity
+                        var quantityToConsume = orderDetail.QuantityUsed ?? orderDetail.Quantity;
+                        
+                        if (quantityToConsume > 0)
+                        {
+                            try
+                            {
+                                var consumeResult = await inventoryService.ConsumeReservedBatchesForOrderDetailWithQuantityAsync(
+                                    orderDetail.OrderDetailId, 
+                                    quantityToConsume
+                                );
+                                
+                                if (!consumeResult.success)
+                                {
+                                    // Log warning nhưng không fail payment
+                                    await _auditLogService.LogEventAsync(
+                                        eventType: "InventoryConsumptionWarning",
+                                        entityType: "OrderDetail",
+                                        entityId: orderDetail.OrderDetailId,
+                                        description: $"Cảnh báo: Không thể trừ kho cho món {orderDetail.MenuItem.Name}: {consumeResult.message}",
+                                        userId: null,
+                                        ct: ct
+                                    );
+                                }
+                                else
+                                {
+                                    await _auditLogService.LogEventAsync(
+                                        eventType: "InventoryConsumed",
+                                        entityType: "OrderDetail",
+                                        entityId: orderDetail.OrderDetailId,
+                                        description: $"Đã trừ kho cho món {orderDetail.MenuItem.Name} (SL: {quantityToConsume})",
+                                        userId: null,
+                                        ct: ct
+                                    );
+                                }
+                            }
+                            catch (Exception invEx)
+                            {
+                                // Log error nhưng không fail payment
+                                await _auditLogService.LogEventAsync(
+                                    eventType: "InventoryConsumptionError",
+                                    entityType: "OrderDetail",
+                                    entityId: orderDetail.OrderDetailId,
+                                    description: $"Lỗi khi trừ kho: {invEx.Message}",
+                                    userId: null,
+                                    ct: ct
+                                );
+                            }
+                        }
+                    }
+                }
+            }
 
             // Step 8.4: Update reports (placeholder)
             // await _reportService.SyncPaymentAsync(orderId, transactionId, ct);

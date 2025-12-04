@@ -162,7 +162,7 @@ async function loadActiveOrders() {
     }
 }
 
-// Render orders to grid - FIXED
+// Render orders to grid - FIXED with Masonry Layout
 function renderOrders(orders) {
     const grid = document.getElementById('ordersGrid');
 
@@ -181,9 +181,9 @@ function renderOrders(orders) {
         return;
     }
 
-    const renderedCards = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '').join('');
+    const renderedCards = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '');
     
-    if (renderedCards.trim() === '') {
+    if (renderedCards.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="mdi mdi-filter-off" style="font-size: 48px;"></i>
@@ -193,7 +193,8 @@ function renderOrders(orders) {
         return;
     }
     
-    grid.innerHTML = renderedCards;
+    // Apply masonry layout
+    applyMasonryLayout(grid, renderedCards);
 
     // Attach click handlers - SIMPLIFIED VERSION
     setTimeout(() => {
@@ -214,6 +215,103 @@ function renderOrders(orders) {
             });
         });
     }, 50);
+}
+
+// Apply Masonry Layout (Pinterest style)
+function applyMasonryLayout(container, cardHtmls) {
+    // Preserve header if exists
+    const existingHeader = container.querySelector('.table-group-header');
+    const headerHtml = existingHeader ? existingHeader.outerHTML : '';
+    
+    // Clear container (but keep header if exists)
+    if (existingHeader) {
+        container.innerHTML = headerHtml;
+    } else {
+        container.innerHTML = '';
+    }
+    container.classList.add('masonry');
+    
+    // Calculate number of columns based on container width
+    const cardMinWidth = 320; // minmax(320px, 1fr)
+    const gap = 20;
+    const containerWidth = container.offsetWidth || window.innerWidth - 40;
+    const numColumns = Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+    
+    // Create columns
+    const columns = [];
+    const columnHeights = [];
+    
+    for (let i = 0; i < numColumns; i++) {
+        const column = document.createElement('div');
+        column.className = 'masonry-column';
+        columns.push(column);
+        columnHeights.push(0);
+    }
+    
+    // Create columns wrapper
+    const columnsWrapper = document.createElement('div');
+    columnsWrapper.className = 'masonry-columns';
+    columns.forEach(col => columnsWrapper.appendChild(col));
+    container.appendChild(columnsWrapper);
+    
+    // First, render all cards invisibly to measure their heights
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.visibility = 'hidden';
+    tempContainer.style.width = cardMinWidth + 'px';
+    document.body.appendChild(tempContainer);
+    
+    const cardElements = [];
+    cardHtmls.forEach(cardHtml => {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = cardHtml;
+        const cardElement = tempDiv.firstElementChild;
+        if (cardElement) {
+            tempContainer.appendChild(cardElement);
+            cardElements.push(cardElement);
+        }
+    });
+    
+    // Wait for layout to calculate heights
+    setTimeout(() => {
+        // Now distribute cards to columns based on actual heights
+        cardElements.forEach(cardElement => {
+            const cardHeight = cardElement.offsetHeight;
+            
+            // Find column with minimum height
+            let minHeightIndex = 0;
+            let minHeight = columnHeights[0];
+            
+            for (let i = 1; i < columnHeights.length; i++) {
+                if (columnHeights[i] < minHeight) {
+                    minHeight = columnHeights[i];
+                    minHeightIndex = i;
+                }
+            }
+            
+            // Move card to the shortest column
+            columns[minHeightIndex].appendChild(cardElement);
+            columnHeights[minHeightIndex] += cardHeight + gap;
+        });
+        
+        // Remove temp container
+        document.body.removeChild(tempContainer);
+    }, 50);
+    
+    // Recalculate on window resize (debounced)
+    if (!container._masonryResizeHandler) {
+        let resizeTimeout;
+        container._masonryResizeHandler = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                // Re-apply masonry with current card HTMLs
+                const currentCards = Array.from(container.querySelectorAll('.order-card'));
+                const cardHtmls = currentCards.map(card => card.outerHTML);
+                applyMasonryLayout(container, cardHtmls);
+            }, 250);
+        };
+        window.addEventListener('resize', container._masonryResizeHandler);
+    }
 }
 
 // Sort items by course type: Khai vị -> Món chính -> Tráng miệng
@@ -422,9 +520,9 @@ function getStatusText(status) {
     return status.toUpperCase();
 }
 
-// Complete order - ✅ SỬA: Chuyển tất cả items sang Ready thay vì Done
+// Complete order - ✅ SỬA: Đánh dấu đơn hoàn thành khi bếp phó xác nhận
 async function completeOrder(orderId) {
-    const confirmed = await showConfirmPopup('Xác nhận đánh dấu tất cả món trong đơn này là sẵn sàng?');
+    const confirmed = await showConfirmPopup('Xác nhận đơn này đã hoàn thành? Đơn sẽ bị ẩn khỏi màn hình "Tất cả".', 'Xác nhận hoàn thành đơn');
     if (!confirmed) {
         return;
     }
@@ -437,26 +535,59 @@ async function completeOrder(orderId) {
             return;
         }
 
-        // Chuyển tất cả items có status Cooking hoặc Late sang Ready
-        // Với món trong combo: dùng cả orderDetailId + orderComboItemId để backend cập nhật đúng OrderComboItem
-        const itemsToMarkReady = order.items
-            .filter(item => {
-                const status = (item.status || 'Pending').trim();
-                return status === 'Cooking' || status === 'Đang nấu' || status === 'Late' || status === 'Trễ';
-            });
+        // Phân loại các món theo trạng thái
+        const itemsToMarkReady = []; // Món cần chuyển sang Ready (Cooking, Late)
+        const readyItems = []; // Món đã Ready
+        const doneItems = []; // Món đã Done
+        const pendingItems = []; // Món còn Pending
 
-        if (itemsToMarkReady.length === 0) {
-            showError('Không có món nào đang nấu hoặc trễ để đánh dấu sẵn sàng');
+        order.items.forEach(item => {
+            const status = (item.status || 'Pending').trim();
+            if (status === 'Cooking' || status === 'Đang nấu' || status === 'Late' || status === 'Trễ') {
+                itemsToMarkReady.push(item);
+            } else if (status === 'Ready' || status === 'Sẵn sàng') {
+                readyItems.push(item);
+            } else if (status === 'Done' || status === 'Hoàn thành' || status === 'Xong') {
+                doneItems.push(item);
+            } else if (status === 'Pending' || status === 'Chờ') {
+                pendingItems.push(item);
+            }
+        });
+
+        // Nếu có món còn Pending, không cho phép
+        if (pendingItems.length > 0) {
+            showError('Có món chưa bắt đầu nấu. Vui lòng bắt đầu nấu trước!');
             return;
         }
 
-        // Gọi API để chuyển từng item sang Ready
-        const promises = itemsToMarkReady.map(item =>
-            updateItemStatusAPI(item.orderDetailId, 'Ready', item.orderComboItemId)
-        );
+        // Nếu có món cần chuyển sang Ready, thực hiện chuyển trước
+        if (itemsToMarkReady.length > 0) {
+            const promises = itemsToMarkReady.map(item =>
+                updateItemStatusAPI(item.orderDetailId, 'Ready', item.orderComboItemId)
+            );
+            await Promise.all(promises);
+        }
 
-        await Promise.all(promises);
-        showSuccess(`Đã đánh dấu ${itemsToMarkReady.length} món sẵn sàng!`);
+        // Đánh dấu đơn là Completed (bếp phó xác nhận)
+        const response = await fetch(`${API_BASE}/KitchenDisplay/complete-order`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                orderId: orderId,
+                sousChefUserId: 1 // TODO: Get from session
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Không thể đánh dấu đơn hoàn thành');
+        }
+
+        showSuccess('Đã xác nhận đơn hoàn thành! Đơn sẽ bị ẩn khỏi màn hình "Tất cả".');
         reloadCurrentView();
         
         // Tự động reload đơn vừa sẵn sàng nếu đang hiển thị
@@ -465,8 +596,8 @@ async function completeOrder(orderId) {
             loadRecentlyFulfilledOrders();
         }
     } catch (error) {
-        console.error('Error marking order as ready:', error);
-        showError('Không thể đánh dấu sẵn sàng: ' + error.message);
+        console.error('Error completing order:', error);
+        showError('Không thể đánh dấu đơn hoàn thành: ' + error.message);
     }
 }
 
@@ -666,9 +797,9 @@ function renderOrdersByTable(orders) {
     const totalLateItems = orders.reduce((sum, order) => sum + (order.lateItems || 0), 0);
     
     // Render từng order card
-    const renderedOrders = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '').join('');
+    const cardHtmls = orders.map(order => createOrderCard(order)).filter(html => html.trim() !== '');
     
-    if (renderedOrders.trim() === '') {
+    if (cardHtmls.length === 0) {
         grid.innerHTML = `
             <div class="empty-state">
                 <i class="mdi mdi-filter-off" style="font-size: 48px;"></i>
@@ -680,7 +811,7 @@ function renderOrdersByTable(orders) {
     
     // ✅ Tạo header tổng hợp cho TẤT CẢ orders - đặt ở trên cùng, chiếm toàn bộ chiều rộng
     const summaryHeader = `
-        <div class="table-group-header" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px; grid-column: 1 / -1;">
+        <div class="table-group-header" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px; width: 100%;">
             <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                 <i class="mdi mdi-silverware-fork-knife"></i> 
                 <span>${totalOrders} đơn | ${totalCompletedItems}/${totalItems} món đã hoàn thành</span>
@@ -690,7 +821,12 @@ function renderOrdersByTable(orders) {
         </div>
     `;
     
-    grid.innerHTML = summaryHeader + renderedOrders;
+    // Clear and add header
+    grid.innerHTML = summaryHeader;
+    grid.classList.add('masonry');
+    
+    // Apply masonry to cards
+    applyMasonryLayout(grid, cardHtmls);
     
     // Attach click handlers
     setTimeout(() => {
