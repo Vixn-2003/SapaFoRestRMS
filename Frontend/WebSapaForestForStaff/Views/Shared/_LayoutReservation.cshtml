@@ -106,9 +106,12 @@
             <a href="/HomeManager/index">
                 <i class="bi bi-table"></i> Quay Lại Trang Quản Lý
             </a>
-            <a href="/Account/Logout" class="mt-4">
+            <a href="javascript:void(0);" onclick="document.getElementById('logoutForm').submit();">
                 <i class="bi bi-box-arrow-right"></i> Đăng xuất
             </a>
+
+            <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="display:none;"></form>
+
         </div>
 
         <!-- Content -->

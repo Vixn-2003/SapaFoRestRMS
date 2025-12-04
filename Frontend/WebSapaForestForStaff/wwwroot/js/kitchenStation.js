@@ -871,7 +871,14 @@ async function reportMissingIngredients() {
 // Toast notifications
 function showSuccess(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.success(message);
+        toastr.success(message, '', {
+            closeButton: true,
+            progressBar: true,
+            timeOut: 5000,
+            extendedTimeOut: 0,
+            positionClass: 'toast-top-right',
+            escapeHtml: false
+        });
     } else {
         console.log('SUCCESS:', message);
     }
@@ -879,7 +886,14 @@ function showSuccess(message) {
 
 function showError(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.error(message);
+        toastr.error(message, '', {
+            closeButton: true,
+            progressBar: true,
+            timeOut: 5000,
+            extendedTimeOut: 0,
+            positionClass: 'toast-top-right',
+            escapeHtml: false
+        });
     } else {
         console.error('ERROR:', message);
     }
