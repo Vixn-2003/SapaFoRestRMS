@@ -64,16 +64,40 @@ namespace WebSapaForestForStaff.Controllers
                 }
                 if (User.IsInRole("Staff"))
                 {
-                    // Check if Staff has Cashier position
+                    // Check Staff positions (mapped by PositionId via position name)
+                    // 1: Waiter/Waitress      -> DashboardTable
+                    // 2: Cashier              -> DashboardTable
+                    // 3: Kitchen Staff        -> KischenDisplay
+                    // 4: Inventory Staff      -> MainImportInventory
                     var positionsClaim = User.FindFirst("Positions")?.Value;
                     if (!string.IsNullOrEmpty(positionsClaim))
                     {
                         try
                         {
                             var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsClaim);
-                            if (positions != null && positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
+                            if (positions != null && positions.Any())
                             {
-                                return RedirectToAction("Index", "DashboardTable");
+                                // Id = 1,2  -> DashboardTable
+                                if (positions.Any(p =>
+                                        string.Equals(p, "Waiter/Waitress", StringComparison.OrdinalIgnoreCase) ||
+                                        string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    return RedirectToAction("Index", "DashboardTable");
+                                }
+
+                                // Id = 3 -> KischenDisplay
+                                if (positions.Any(p =>
+                                        string.Equals(p, "Kitchen Staff", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    return RedirectToAction("Index", "KischenDisplay");
+                                }
+
+                                // Id = 4 -> MainImportInventory
+                                if (positions.Any(p =>
+                                        string.Equals(p, "Inventory Staff", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    return RedirectToAction("Index", "MainImportInventory");
+                                }
                             }
                         }
                         catch
@@ -81,6 +105,8 @@ namespace WebSapaForestForStaff.Controllers
                             // If parsing fails, fall through to default redirect
                         }
                     }
+
+                    // Default page for Staff if no matching position
                     return RedirectToAction("Index", "TableManage");
                 }
                 if (User.IsInRole("Customer"))
@@ -149,14 +175,39 @@ namespace WebSapaForestForStaff.Controllers
                     // 🔁 Redirect theo Role và Position
                     string redirectUrl;
                     
-                    // Check if Staff with Cashier position
-                    if (authResponse.RoleId == 4 && authResponse.Positions != null && 
-                        authResponse.Positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
+                    // Check Staff positions (RoleId = 4) theo PositionId (suy ra qua tên Position)
+                    if (authResponse.RoleId == 4 && authResponse.Positions != null && authResponse.Positions.Any())
                     {
-                        redirectUrl = returnUrl ?? Url.Action("Index", "DashboardTable");
+                        var positions = authResponse.Positions;
+
+                        // Id = 1,2 (Waiter/Waitress, Cashier) -> DashboardTable
+                        if (positions.Any(p =>
+                                string.Equals(p, "Waiter/Waitress", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            redirectUrl = returnUrl ?? Url.Action("Index", "DashboardTable");
+                        }
+                        // Id = 3 (Kitchen Staff) -> KischenDisplay
+                        else if (positions.Any(p =>
+                                     string.Equals(p, "Kitchen Staff", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            redirectUrl = returnUrl ?? Url.Action("Index", "KischenDisplay");
+                        }
+                        // Id = 4 (Inventory Staff) -> MainImportInventory
+                        else if (positions.Any(p =>
+                                     string.Equals(p, "Inventory Staff", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            redirectUrl = returnUrl ?? Url.Action("Index", "MainImportInventory");
+                        }
+                        else
+                        {
+                            // Staff nhưng không match position cụ thể -> về trang TableManage mặc định
+                            redirectUrl = returnUrl ?? Url.Action("Index", "TableManage");
+                        }
                     }
                     else
                     {
+                        // Các Role khác (Owner/Admin/Manager/Customer)
                         redirectUrl = authResponse.RoleId switch
                         {
                             1 => returnUrl ?? Url.Action("Index", "Admin"),
