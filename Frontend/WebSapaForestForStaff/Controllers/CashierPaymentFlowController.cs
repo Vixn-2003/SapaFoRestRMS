@@ -154,14 +154,13 @@ namespace WebSapaForestForStaff.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> InitiatePayment(PaymentInitiateRequest request)
         {
-            if (request.OrderId <= 0 || string.IsNullOrEmpty(request.Method))
+            if (request.OrderId <= 0 || string.IsNullOrEmpty(request.PaymentMethod))
             {
                 TempData["ErrorMessage"] = "Vui lòng chọn phương thức thanh toán.";
                 return RedirectToAction(nameof(Payment), new { id = request.OrderId });
             }
 
-            // ✅ MỚI: KHÔNG validate confirm nữa
-            // Waiter đã xác nhận món trước đó
+            // ✅ KHÔNG cần validate confirm ở đây – waiter đã xác nhận trước đó (OrderDetail flow)
             var order = await _paymentApiService.GetOrderDetailAsync(request.OrderId);
             if (order == null)
             {
@@ -169,20 +168,34 @@ namespace WebSapaForestForStaff.Controllers
                 return RedirectToAction(nameof(OrderSelection));
             }
 
-            var session = await _paymentApiService.InitiatePaymentAsync(request);
-            if (session == null || string.IsNullOrEmpty(session.SessionId))
+            try
             {
-                TempData["ErrorMessage"] = "Không thể khởi tạo thanh toán.";
+                var session = await _paymentApiService.InitiatePaymentAsync(request);
+                if (session == null || string.IsNullOrEmpty(session.SessionId))
+                {
+                    TempData["ErrorMessage"] = "Không thể khởi tạo thanh toán.";
+                    return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+                }
+
+                var viewModel = new PaymentConfirmViewModel
+                {
+                    OrderId = request.OrderId,
+                    Session = session
+                };
+
+                return View("~/Views/CashierFlow/PaymentConfirm.cshtml", viewModel);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Lỗi business từ API (ví dụ: Đơn hàng chưa được khách xác nhận)
+                TempData["ErrorMessage"] = ex.Message;
                 return RedirectToAction(nameof(Payment), new { id = request.OrderId });
             }
-
-            var viewModel = new PaymentConfirmViewModel
+            catch (Exception)
             {
-                OrderId = request.OrderId,
-                Session = session
-            };
-
-            return View("~/Views/CashierFlow/PaymentConfirm.cshtml", viewModel);
+                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi khởi tạo thanh toán. Vui lòng thử lại.";
+                return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+            }
         }
 
         [HttpPost("payment/confirm")]

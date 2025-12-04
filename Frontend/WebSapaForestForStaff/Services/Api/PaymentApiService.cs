@@ -77,7 +77,17 @@ namespace WebSapaForestForStaff.Services.Api
             var response = await SendWithAutoRefreshAsync(client =>
                 client.PostAsJsonAsync(BuildApiUrl("/payment/payments/initiate"), request));
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                // Đọc message chi tiết từ API để hiển thị cho thu ngân
+                var message = await ReadApiMessageAsync(response) ?? "Không thể khởi tạo thanh toán.";
+                _logger.LogWarning("InitiatePaymentAsync failed for OrderId {OrderId} with status {StatusCode}: {Message}",
+                    request.OrderId, (int)response.StatusCode, message);
+
+                // Ném exception có message rõ ràng để controller bắt và hiển thị
+                throw new InvalidOperationException(message);
+            }
+
             return await response.Content.ReadFromJsonAsync<PaymentSessionDto>();
         }
 

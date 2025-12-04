@@ -9,6 +9,9 @@ namespace WebSapaForestForStaff.DTOs.Payment
         public string SessionId { get; set; } = string.Empty;
         public decimal? CashGiven { get; set; }
         public string? Notes { get; set; }
+        // Các field cần map sang PaymentRequestDto bên backend
+        public string PaymentMethod { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
     }
 }
 
