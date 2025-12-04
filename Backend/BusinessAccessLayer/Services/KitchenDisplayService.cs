@@ -318,13 +318,23 @@ namespace BusinessAccessLayer.Services
                     }
                 }
 
-                // Validate status transition: Pending → Cooking → Done
+                // Validate status transition: Pending → Cooking → Ready/Done
                 var currentStatus = (orderDetail.Status ?? "Pending").Trim();
                 var newStatus = request.NewStatus.Trim();
 
-                // Normalize status for comparison (handle both English and Vietnamese)
+                // Normalize status for comparison (handle both English và Vietnamese)
                 var normalizedCurrentStatus = NormalizeStatus(currentStatus);
                 var normalizedNewStatus = NormalizeStatus(newStatus);
+
+                // Nếu trạng thái mới giống trạng thái hiện tại → coi như thành công, không làm gì thêm (idempotent)
+                if (normalizedCurrentStatus == normalizedNewStatus)
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = true,
+                        Message = "Trạng thái món đã ở đúng trạng thái hiện tại"
+                    };
+                }
                 
                 // Validate status transitions
                 if (normalizedCurrentStatus == "Pending")
@@ -1499,6 +1509,16 @@ namespace BusinessAccessLayer.Services
 
                 var normalizedCurrentStatus = NormalizeStatus(currentStatus);
                 var normalizedNewStatus = NormalizeStatus(newStatus);
+
+                // Idempotent: nếu trạng thái không đổi thì coi như thành công
+                if (normalizedCurrentStatus == normalizedNewStatus)
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = true,
+                        Message = "Trạng thái món trong combo đã ở đúng trạng thái hiện tại"
+                    };
+                }
 
                 // Chỉ cho phép các transition hợp lý, KHÔNG can thiệp inventory
                 if (normalizedCurrentStatus == "Pending")

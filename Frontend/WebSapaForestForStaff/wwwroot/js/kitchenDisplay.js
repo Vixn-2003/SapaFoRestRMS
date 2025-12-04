@@ -1885,22 +1885,28 @@ async function startCookingForItem(itemData) {
         }
 
         try {
-            // selectedItems is now array of {orderDetailId, quantity}
+            // selectedItems is now array of {orderDetailId, orderComboItemId, quantity}
             const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
             const promises = [];
             
-            selectedItems.forEach(({ orderDetailId, quantity }) => {
+            selectedItems.forEach(({ orderDetailId, orderComboItemId, quantity }) => {
                 if (quantity > 0) {
                     // Tìm detail để lấy tổng số lượng
                     const detail = itemData.itemDetails.find(d => d.orderDetailId === orderDetailId);
                     const totalQty = detail?.quantity || quantity;
                     
-                    // Nếu quantity < totalQuantity, gọi API split
-                    if (quantity < totalQty) {
-                        promises.push(startCookingWithQuantityAPI(orderDetailId, quantity));
-                    } else {
-                        // Nếu quantity = totalQuantity, chỉ cần update status
-                        promises.push(updateItemStatusAPI(orderDetailId, 'Cooking'));
+                    // Nếu là món trong combo → luôn update theo OrderComboItemId để bắt đầu nấu từng món con
+                    if (detail && detail.orderComboItemId) {
+                        promises.push(updateItemStatusAPI(orderDetailId, 'Cooking', detail.orderComboItemId));
+                    }
+                    else {
+                        // Nếu quantity < totalQuantity, gọi API split
+                        if (quantity < totalQty) {
+                            promises.push(startCookingWithQuantityAPI(orderDetailId, quantity));
+                        } else {
+                            // Nếu quantity = totalQuantity, chỉ cần update status
+                            promises.push(updateItemStatusAPI(orderDetailId, 'Cooking'));
+                        }
                     }
                 }
             });
@@ -1914,15 +1920,15 @@ async function startCookingForItem(itemData) {
         }
     } else {
         // No batch size, use simple confirmation
-        const orderDetailIds = itemData.itemDetails.map(d => d.orderDetailId);
+        const details = itemData.itemDetails || [];
         const confirmed = await showConfirmPopup(`Bắt đầu nấu ${orderDetailIds.length} món này?`);
         if (!confirmed) {
             return;
         }
 
         try {
-            const promises = orderDetailIds.map(orderDetailId =>
-                updateItemStatusAPI(orderDetailId, 'Cooking')
+            const promises = details.map(detail =>
+                updateItemStatusAPI(detail.orderDetailId, 'Cooking', detail.orderComboItemId || null)
             );
 
             await Promise.all(promises);
@@ -2094,7 +2100,13 @@ function showBatchSelectionPopup(itemData) {
                     const maxQuantity = parseInt(input.getAttribute('max')) || 0;
                     
                     if (quantity > 0 && quantity <= maxQuantity) {
-                        selectedItems.push({ orderDetailId, quantity });
+                        // Tìm lại detail để lấy OrderComboItemId nếu có
+                        const detail = itemDetails.find(d => d.orderDetailId === orderDetailId);
+                        selectedItems.push({
+                            orderDetailId,
+                            orderComboItemId: detail && detail.orderComboItemId ? detail.orderComboItemId : null,
+                            quantity
+                        });
                     }
                 });
                 
