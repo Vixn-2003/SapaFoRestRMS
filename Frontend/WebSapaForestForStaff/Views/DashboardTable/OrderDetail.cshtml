@@ -9,9 +9,8 @@
     var tableId = ViewData["TableId"] ?? Model.TableId;
     var categories = ViewData["Categories"] as List<WebSapaForestForStaff.DTOs.OrderGuest.CategoryDto>;
     var hasActiveOrder = Model.ActiveOrderId.HasValue;
-    var checkoutUrl = hasActiveOrder
-        ? Url.Action(nameof(CashierPaymentFlowController.OrderDetail), "CashierPaymentFlow", new { id = Model.ActiveOrderId })
-        : string.Empty;
+    var userPositionId = ViewData["UserPositionId"] as int? ?? 0; // 1 = Waiter, 2 = Cashier
+    var orderStatus = Model.OrderStatus ?? ""; // Status của order hiện tại
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
@@ -665,9 +664,9 @@
         <button class="btn-save-order flex-fill" style="display:none">
             Lưu Order
         </button>
-                        <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
-                            Tạo đơn <i class="fa-solid fa-chevron-right ms-2"></i>
-                        </button>
+        <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
+            Thanh Toán Bàn <i class="fa-solid fa-chevron-right ms-2"></i>
+        </button>
     </div>
 </div>
 
@@ -750,6 +749,9 @@
     })))');
 
     window.__TABLE_ID__ = '@(ViewData["TableId"] ?? Model.TableId)';
+    window.__USER_POSITION_ID__ = @userPositionId; // 1 = Waiter, 2 = Cashier
+    window.__ORDER_STATUS__ = '@orderStatus'; // Order status (raw from backend)
+    window.__ACTIVE_ORDER_ID__ = @(Model.ActiveOrderId ?? 0);
 
     
 </script>
@@ -759,8 +761,8 @@
 
 <script>
     // Khởi tạo biến JS từ Razor
-    cartItems = window.__INITIAL_ORDER_DATA__ || [];
-    tableId = window.__TABLE_ID__;
+        cartItems = window.__INITIAL_ORDER_DATA__ || [];
+        tableId = window.__TABLE_ID__;
 
     // Modal Bootstrap
     var modalDelEl = document.getElementById('confirmDeleteModal');
@@ -774,37 +776,37 @@
 
     // Render giỏ hàng lần đầu
     renderCart();
+
     /**
      * 🧾 CREATE PAYMENT ORDER CONFIRMATION
-     * Shows confirmation popup before creating payment order and redirecting to ConfirmOrder page
+     * Shows confirmation popup with role-based logic (Waiter vs Cashier)
      */
     async function handleCreatePaymentOrder() {
         // Check if there are any items in the cart
         const visibleItems = cartItems.filter(x => !x.isDeleted);
-
+        
         if (visibleItems.length === 0) {
-            alert('Chưa có món nào trong đơn hàng. Vui lòng thêm món trước khi tạo đơn thanh toán.');
+            alert('Chưa có món nào trong đơn hàng. Vui lòng thêm món trước khi thanh toán.');
             return;
         }
 
         // Check if there are unsaved changes
         const hasUnsavedChanges = cartItems.some(x => x.isNew || x.isDirty);
         if (hasUnsavedChanges) {
-            alert('Bạn có thay đổi chưa lưu. Vui lòng lưu đơn hàng trước khi tạo thanh toán.');
+            alert('Bạn có thay đổi chưa lưu. Vui lòng lưu đơn hàng trước khi tiếp tục.');
             return;
         }
 
-        // Get order details for display
+        const activeOrderId = window.__ACTIVE_ORDER_ID__;
         const tableNumber = '@Model.TableNumber';
         const customerName = '@(Model.CustomerName ?? "Khách vãng lai")';
         const totalQty = visibleItems.reduce((sum, item) => sum + item.quantity, 0);
         const totalAmount = visibleItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        // Show confirmation popup
         const confirmed = await showConfirmPopup(
-            "🧾 Xác nhận tạo đơn thanh toán",
+            "💳 Thanh toán bàn",
             `<div class="text-center mb-3">
-                <h5 class="mb-3">Khách hàng đã ăn xong và cần thanh toán hóa đơn?</h5>
+                <h5 class="mb-3">Chuyển sang màn hình thanh toán và xác nhận hóa đơn?</h5>
             </div>
             <div style="background: #f7fafc; padding: 16px; border-radius: 8px; text-align: left;">
                 <div class="d-flex justify-content-between mb-2">
@@ -827,23 +829,42 @@
             <div class="alert alert-info d-flex align-items-start gap-2 mt-3 mb-0">
                 <i class="fa-solid fa-info-circle mt-1"></i>
                 <div class="small">
-                    <strong>Bước tiếp theo:</strong> Xác nhận món ăn và số lượng sử dụng với khách hàng trước khi thanh toán.
+                    Sau khi xác nhận, hệ thống sẽ chuyển sang màn hình thanh toán.
                 </div>
             </div>`,
-            "✅ Xác nhận",
+            "💳 Thanh toán bàn",
             "❌ Hủy"
         );
 
-        if (confirmed) {
-            // Get the active order ID
-            const activeOrderId = @(Model.ActiveOrderId ?? 0);
-
-            if (activeOrderId > 0) {
-                // Redirect to ConfirmOrder page
-                window.location.href = `/cashier-flow/orders/${activeOrderId}`;
-            } else {
-                alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
-            }
+        if (!confirmed || activeOrderId <= 0) {
+            return;
         }
+
+        try {
+            // Gọi API backend để chuyển trạng thái Order sang Confirmed trước khi thanh toán
+            const payload = {
+                orderId: activeOrderId,
+                items: visibleItems.map(item => ({
+                    orderDetailId: item.id,
+                    quantityUsed: item.quantity,
+                    isRemoved: false
+                })),
+                notes: null
+            };
+
+            await fetch(`https://localhost:7096/api/Payment/orders/${activeOrderId}/confirm`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {
+            console.error('Lỗi khi xác nhận hóa đơn trước thanh toán:', e);
+            // Nếu lỗi, vẫn cho phép vào màn hình thanh toán để không chặn flow
+        }
+
+        // Redirect tới màn hình Payment
+        window.location.href = `/cashier-flow/payment/${activeOrderId}`;
     }
 </script>

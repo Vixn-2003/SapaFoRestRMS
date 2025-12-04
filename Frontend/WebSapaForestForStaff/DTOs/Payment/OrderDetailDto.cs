@@ -52,6 +52,10 @@ namespace WebSapaForestForStaff.DTOs.Payment
             get => TotalAmount != 0 ? TotalAmount : Subtotal;
             set => TotalAmount = value;
         }
+
+        // 🔖 Thông tin ưu đãi hiện tại (nếu backend có trả về thêm)
+        public string? AppliedVoucherCode { get; set; }
+        public int? AppliedPromotionId { get; set; }
     }
 }
 

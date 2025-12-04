@@ -68,8 +68,100 @@
         background-color: #f5f7fa;
     }
 
+    /* Layout tổng thể giống concept cashier-layout */
     .cashier-shell {
-        padding: 32px 40px;
+        padding: 24px 32px;
+        min-height: calc(100vh - 80px);
+        display: grid;
+        /* Tỉ lệ 4 : 6 cho OrderSidebar : PaymentArea */
+        grid-template-columns: 4fr 6fr;
+        gap: 24px;
+    }
+
+    /* Header full-width trên cùng (gộp thông tin đơn + khách) */
+    .payment-page-header {
+        grid-column: 1 / -1;
+        margin-bottom: 12px;
+    }
+
+    .payment-header-card {
+        background-color: #ffffff;
+        border-radius: 18px;
+        padding: 16px 20px;
+        box-shadow: 0 14px 35px rgba(15, 139, 131, 0.12);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        border: 2px solid #16a34a; /* xanh lá viền */
+    }
+
+    .payment-header-main {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .payment-header-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        background: rgba(22, 163, 74, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        color: #16a34a;
+    }
+
+    .payment-header-text .page-title {
+        color: #111827;
+        margin-bottom: 2px;
+    }
+
+    .payment-header-sub {
+        font-size: 13px;
+        opacity: 0.95;
+    }
+
+    .payment-header-sub span + span::before {
+        content: "•";
+        margin: 0 6px;
+        opacity: 0.8;
+    }
+
+    .payment-header-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    /* Bên phải: order-sidebar (chi tiết món & tổng tiền) */
+    .order-sidebar {
+        background: #ffffff;
+        border-right: 2px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .order-sidebar .card {
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(15, 139, 131, 0.08);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .order-items-scroll {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .order-summary-footer {
+        border-top: 1px solid #e5e7eb;
+        background: #ffffff;
     }
 
     .payment-summary-card {
@@ -121,58 +213,165 @@
     .card {
         border-radius: 18px;
     }
+
+    /* Bên trái: payment-area (các phương thức thanh toán) */
+    .payment-area {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .page-header {
+        margin-bottom: 8px;
+    }
+
+    .page-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .customer-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    /* Quick info nhắc áp dụng ưu đãi trước khi thanh toán */
+    .quick-info {
+        margin-top: 0;
+        background: #111827;
+        color: #ffffff;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 13px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        max-width: 1026px;
+    }
+
+    .quick-info strong {
+        color: #10b981;
+    }
 </style>
 
 <div class="cashier-shell">
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <div>
-        <h2 class="mb-1">Thanh toán đơn hàng</h2>
-        <div class="text-muted">Đơn #@(Model.OrderCode ?? $"#{Model.OrderId}") &nbsp; | &nbsp; Bàn: @tables</div>
-        @if (!string.IsNullOrEmpty(Model.WaiterName) || !string.IsNullOrEmpty(Model.StaffName))
-        {
-            <div class="text-muted small mt-1">
-                Nhân viên phục vụ: @(Model.WaiterName ?? Model.StaffName ?? "—")
+    <!-- HEADER FULL-WIDTH: Thông tin đơn + khách + trạng thái -->
+    <div class="payment-page-header">
+        <div class="payment-header-card">
+            <div class="payment-header-main">
+                <div class="payment-header-icon">
+                    <i class="bi bi-receipt-cutoff"></i>
+                </div>
+                <div class="payment-header-text">
+                    <h2 class="page-title mb-1">Thanh toán đơn hàng</h2>
+                    <div class="payment-header-sub">
+                        <span>Đơn <strong>#@(Model.OrderCode ?? $"#{Model.OrderId}")</strong></span>
+                        <span>Bàn <strong class="text-warning">@tables</strong></span>
+                        @if (!string.IsNullOrEmpty(Model.WaiterName) || !string.IsNullOrEmpty(Model.StaffName))
+                        {
+                            <span>
+                                <i class="bi bi-people me-1"></i>
+                                Phục vụ: <strong>@(Model.WaiterName ?? Model.StaffName ?? "—")</strong>
+                            </span>
+                        }
+                    </div>
+                    <div class="customer-info mt-1">
+                        <span>
+                            <i class="bi bi-person-circle me-1"></i>
+                            @(Model.CustomerName ?? "Khách lẻ")
+                        </span>
+                        <span>
+                            <i class="bi bi-telephone me-1"></i>
+                            @(Model.CustomerPhone ?? "Không có số điện thoại")
+                        </span>
+                    </div>
+                </div>
             </div>
-        }
+            <div class="payment-header-right">
+                @if (!string.IsNullOrWhiteSpace(Model.Status))
+                {
+                    <span class="badge @GetStatusBadgeClass(Model.Status) px-3 py-2">
+                        @GetStatusDisplayText(Model.Status)
+                    </span>
+                }
+               
+            </div>
+        </div>
     </div>
-    <div class="d-flex gap-2">
-        @if (!string.IsNullOrWhiteSpace(Model.Status))
-        {
-            <span class="badge @GetStatusBadgeClass(Model.Status) px-3 py-2 align-self-center">@GetStatusDisplayText(Model.Status)</span>
-        }
-        <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" 
-           class="btn btn-outline-secondary">
-            ← Quay lại danh sách
-        </a>
-    </div>
-</div>
 
-@if (TempData["ErrorMessage"] is string errorMessage)
-{
-    <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
-        <i class="bi bi-exclamation-octagon fs-4"></i>
-        <span>@errorMessage</span>
-    </div>
-}
-@if (TempData["SuccessMessage"] is string successMessage)
-{
-    <div class="alert alert-success d-flex align-items-center gap-2 mb-3" role="alert">
-        <i class="bi bi-check-circle fs-4"></i>
-        <span>@successMessage</span>
-    </div>
-}
+    <!-- LEFT: Payment area -->
+    <div class="payment-area">
+        <!-- Thông tin quy trình thanh toán -->
+        <div class="alert alert-info mb-2">
+            <div class="d-flex">
+                <i class="bi bi-lightning-charge me-2 fs-4"></i>
+                <div>
+                    <strong>Quy trình thanh toán:</strong>
+                    <p class="mb-0 small">
+                        Chọn phương thức → Thu thập thông tin qua modal → Hệ thống gửi yêu cầu khởi tạo thanh toán
+                        → Nếu cần xác nhận QR, màn hình chuyển sang bước Confirm → Hoàn tất và xem hóa đơn.
+                    </p>
+                </div>
+            </div>
+        </div>
 
-<div class="row g-4">
-    <div class="col-lg-7">
-        
+        <!-- Lưới phương thức thanh toán -->
+        <div class="payment-grid row g-3">
+            <div class="col-sm-12">
+                <button type="button" class="payment-card" onclick="openPromotionModal()">
+                    <div class="icon mb-3">🎁</div>
+                    <h5>Ưu đãi / Khuyến mãi</h5>
+                    <p class="text-muted mb-0">Áp dụng mã giảm giá, chương trình khuyến mãi trước khi thu tiền.</p>
+                </button>
+            </div>
+            <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openCashPaymentModal()">
+                    <div class="icon mb-3">💵</div>
+                    <h5>Tiền mặt</h5>
+                    <p class="text-muted mb-0">Nhập số tiền khách đưa, tính tiền thối tự động.</p>
+                </button>
+            </div>
+            <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openQrPaymentModal()">
+                    <div class="icon mb-3">📱</div>
+                    <h5>QR / Ví điện tử</h5>
+                    <p class="text-muted mb-0">Sinh mã VietQR, xác nhận sau khi khách chuyển khoản.</p>
+                </button>
+            </div>
+            <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openCombinedPaymentModal()">
+                    <div class="icon mb-3">💳</div>
+                    <h5>Thanh toán kết hợp</h5>
+                    <p class="text-muted mb-0">Chia tổng tiền giữa tiền mặt và QR.</p>
+                </button>
+            </div>
+            <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openSplitBillModal()">
+                    <div class="icon mb-3">🧾</div>
+                    <h5>Chia hóa đơn</h5>
+                    <p class="text-muted mb-0">Chia đều hoặc tùy chỉnh theo nhóm khách.</p>
+                </button>
+            </div>
+        </div>
+    </div>
 
-        <div class="card">
+    <!-- RIGHT: Order sidebar -->
+    <div class="order-sidebar">
+        <!-- Quick info: nhấn mạnh áp dụng ưu đãi trước khi thanh toán -->
+        <div class="quick-info mb-2">
+            <strong>Lưu ý:</strong> Hãy áp dụng <strong>Ưu đãi / Khuyến mãi</strong> trước khi chọn phương thức thanh toán
+            để tổng tiền được cập nhật chính xác theo chương trình khuyến mãi.
+        </div>
+
+        <div class="card flex-grow-1">
             <div class="card-header fw-bold">
                 Danh sách món ăn / đồ uống
                 <span class="badge bg-primary ms-2">@((Model.Items?.Count ?? 0)) món</span>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
+            <div class="card-body p-0 d-flex flex-column">
+                <div class="table-responsive order-items-scroll">
                     <table class="table table-bordered align-middle mb-0">
                         <thead class="table-light text-center">
                         <tr>
@@ -221,110 +420,86 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <td colspan="4" class="fw-semibold ps-3">Tạm tính</td>
-                                <td class="text-end fw-bold">@Model.Subtotal.ToString("N0") ₫</td>
+                                <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                    <i class="bi bi-receipt-cutoff me-2 text-secondary"></i>
+                                    Tạm tính
+                                    <small class="text-muted d-block">
+                                        Giá món trước thuế và phí
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold align-middle">@Model.Subtotal.ToString("N0") ₫</td>
                             </tr>
                             <tr>
-                                <td colspan="4" class="fw-semibold ps-3">VAT</td>
-                                <td class="text-end fw-bold">@Model.VatAmount.ToString("N0") ₫</td>
+                                <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                    <i class="bi bi-percent me-2 text-secondary"></i>
+                                    VAT (10%)
+                                    <i class="bi bi-info-circle ms-1 text-primary"
+                                       data-bs-toggle="tooltip"
+                                       title="Thuế Giá Trị Gia Tăng 10% theo quy định nhà nước."></i>
+                                    <small class="text-muted d-block">
+                                        Thuế VAT (10%): Thuế giá trị gia tăng theo quy định
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold align-middle">@Model.VatAmount.ToString("N0") ₫</td>
                             </tr>
                             <tr>
-                                <td colspan="4" class="fw-semibold ps-3">Phí dịch vụ</td>
-                                <td class="text-end fw-bold">@Model.ServiceFee.ToString("N0") ₫</td>
+                                <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                    <i class="bi bi-hand-index-thumb me-2 text-secondary"></i>
+                                    Phí phục vụ (5%)
+                                    <i class="bi bi-info-circle ms-1 text-primary"
+                                       data-bs-toggle="tooltip"
+                                       title="Phụ thu 5% khi khách sử dụng dịch vụ phục vụ tại bàn."></i>
+                                    <small class="text-muted d-block">
+                                        Phí phục vụ (5%): Phụ thu phục vụ tại bàn
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold align-middle">@Model.ServiceFee.ToString("N0") ₫</td>
                             </tr>
                             @if (Model.DiscountAmount > 0)
                             {
                                 <tr>
-                                    <td colspan="4" class="fw-semibold ps-3">Giảm giá</td>
-                                    <td class="text-end fw-bold text-danger">-@Model.DiscountAmount.ToString("N0") ₫</td>
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="bi bi-tags me-2 text-secondary"></i>
+                                        Giảm giá
+                                        <i class="bi bi-info-circle ms-1 text-primary"
+                                           data-bs-toggle="tooltip"
+                                           title="Giảm giá theo chương trình khuyến mãi hoặc mã ưu đãi áp dụng."></i>
+                                        <small class="text-muted d-block">
+                                            Giảm giá – theo chương trình khuyến mãi / mã giảm giá đã áp dụng
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-danger align-middle">-@Model.DiscountAmount.ToString("N0") ₫</td>
                                 </tr>
                             }
                             @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
                             {
                                 <tr class="table-info">
-                                    <td colspan="4" class="fw-semibold ps-3">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
                                         <i class="fa-solid fa-hand-holding-dollar me-1"></i>
                                         Đã đặt cọc
+                                        <small class="text-muted d-block">
+                                            Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
+                                        </small>
                                     </td>
-                                    <td class="text-end fw-bold text-success">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
+                                    <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
                                 </tr>
                             }
                             <tr class="table-success">
-                                <td colspan="4" class="fw-bold fs-5 ps-3">Tổng cộng thanh toán</td>
-                                <td class="text-end fw-bold text-primary fs-4">@Model.TotalAmount.ToString("N0") ₫</td>
+                                <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                        <span class="fs-5">Tổng cộng thanh toán</span>
+                                    </span>
+                                    <small class="text-muted d-block mt-1">
+                                        Tạm tính + VAT + Phí phục vụ - Giảm giá - Đặt cọc (nếu có)
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                    @Model.TotalAmount.ToString("N0") ₫
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-5">
-        <div class="card mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <p class="text-muted mb-1">Khách hàng</p>
-                        <h5 class="mb-0">@(Model.CustomerName ?? "Khách lẻ")</h5>
-                        <small class="text-muted">@(Model.CustomerPhone ?? "Không có số điện thoại")</small>
-                    </div>
-                    <span class="badge bg-warning text-dark">@GetStatusDisplayText(Model.Status)</span>
-                </div>
-                <div class="d-flex justify-content-between text-muted">
-                    <span>Nhân viên phục vụ</span>
-                    <strong>@(Model.WaiterName ?? Model.StaffName ?? "—")</strong>
-                </div>
-            </div>
-        </div>
-
-        <div class="payment-grid row g-3">
-            <div class="col-sm-6">
-                <button type="button" class="payment-card" onclick="openCashPaymentModal()">
-                    <div class="icon mb-3">💵</div>
-                    <h5>Tiền mặt</h5>
-                    <p class="text-muted mb-0">Nhập số tiền khách đưa, tính tiền thối tự động.</p>
-                </button>
-            </div>
-            <div class="col-sm-6">
-                <button type="button" class="payment-card" onclick="openQrPaymentModal()">
-                    <div class="icon mb-3">📱</div>
-                    <h5>QR / Ví điện tử</h5>
-                    <p class="text-muted mb-0">Sinh mã VietQR, xác nhận sau khi khách chuyển khoản.</p>
-                </button>
-            </div>
-            <div class="col-sm-6">
-                <button type="button" class="payment-card" onclick="openCombinedPaymentModal()">
-                    <div class="icon mb-3">💳</div>
-                    <h5>Thanh toán kết hợp</h5>
-                    <p class="text-muted mb-0">Chia tổng tiền giữa tiền mặt và QR.</p>
-                </button>
-            </div>
-            <div class="col-sm-6">
-                <button type="button" class="payment-card" onclick="openSplitBillModal()">
-                    <div class="icon mb-3">🧾</div>
-                    <h5>Chia hóa đơn</h5>
-                    <p class="text-muted mb-0">Chia đều hoặc tùy chỉnh theo nhóm khách.</p>
-                </button>
-            </div>
-            <div class="col-sm-12">
-                <button type="button" class="payment-card" onclick="openPromotionModal()">
-                    <div class="icon mb-3">🎁</div>
-                    <h5>Ưu đãi / Khuyến mãi</h5>
-                    <p class="text-muted mb-0">Áp dụng mã giảm giá, chương trình khuyến mãi.</p>
-                </button>
-            </div>
-        </div>
-
-        <div class="alert alert-info mt-3 mb-0">
-            <div class="d-flex">
-                <i class="bi bi-lightning-charge me-2 fs-4"></i>
-                <div>
-                    <strong>Quy trình:</strong>
-                    <p class="mb-0 small">
-                        Chọn phương thức → Thu thập thông tin qua modal → Hệ thống gửi yêu cầu khởi tạo thanh toán
-                        → Nếu cần xác nhận QR, màn hình chuyển sang bước Confirm → Hoàn tất và xem hóa đơn.
-                    </p>
                 </div>
             </div>
         </div>
@@ -338,21 +513,9 @@
       class="d-none">
     @Html.AntiForgeryToken()
     <input type="hidden" name="OrderId" value="@Model.OrderId" />
-    <input type="hidden" name="Method" id="paymentMethodInput" />
+    <input type="hidden" name="PaymentMethod" id="paymentMethodInput" />
     <input type="hidden" name="Amount" id="paymentAmountInput" value="@Model.TotalAmount" />
 </form>
-
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1060;">
-    <div id="cashierToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong class="me-auto">Thông báo</strong>
-            <small>Just now</small>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body" id="cashierToastMessage"></div>
-    </div>
-</div>
 </div>
 
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_CashPaymentModal.cshtml")
@@ -364,8 +527,6 @@
 @section Scripts {
     <script>
         const orderContext = @Html.Raw(orderJson);
-        const toastElement = document.getElementById('cashierToast');
-        const toastBody = document.getElementById('cashierToastMessage');
 
         const cashModal = new bootstrap.Modal('#cashPaymentModal');
         const qrModal = new bootstrap.Modal('#qrPaymentModal');
@@ -379,23 +540,6 @@
 
         function formatCurrency(value) {
             return (value || 0).toLocaleString('vi-VN') + ' ₫';
-        }
-
-        function showToast(message, type = 'info') {
-            toastBody.textContent = message;
-            toastElement.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-warning');
-
-            if (type === 'success') {
-                toastElement.classList.add('text-bg-success');
-            }
-            else if (type === 'error') {
-                toastElement.classList.add('text-bg-danger');
-            }
-            else if (type === 'warning') {
-                toastElement.classList.add('text-bg-warning');
-            }
-
-            bootstrap.Toast.getOrCreateInstance(toastElement).show();
         }
 
         function submitPayment(method, amountOverride) {
@@ -713,85 +857,29 @@
             submitPayment('split', orderContext.Total);
         }
 
-        // Promotion modal logic
+        // Promotion modal logic - chỉ mở modal, form sẽ submit POST
         function openPromotionModal() {
             promoModal.show();
-            loadPromotions();
         }
 
-        async function loadPromotions() {
-            const promotionList = document.getElementById('promotionList');
-            promotionList.innerHTML = '<div class="text-center py-3 text-muted">Đang tải ưu đãi...</div>';
-            const promotions = getMockPromotions();
-            promotionList.innerHTML = promotions.map(p => `
-                <div class="promotion-item" onclick="selectPromotion(${p.id}, ${p.discountValue}, '${p.discountType}')">
-                    <div class="promotion-name fw-semibold">${p.name}</div>
-                    <div class="promotion-desc text-muted">${p.description}</div>
-                </div>
-            `).join('');
+        // Tự động mở modal nếu có lỗi từ server (để user thấy và sửa)
+        @if (!string.IsNullOrEmpty(ViewData["DiscountErrorMessage"] as string))
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                promoModal.show();
+            });
+            </text>
         }
 
-        function getMockPromotions() {
-            return [
-                { id: 1, name: 'Giảm 10% cho đơn trên 500.000đ', description: 'Áp dụng cho đơn hàng từ 500.000đ trở lên', discountType: 'percentage', discountValue: 10 },
-                { id: 2, name: 'Giảm 50.000đ', description: 'Giảm trực tiếp 50.000đ cho mọi đơn', discountType: 'fixed', discountValue: 50000 },
-                { id: 3, name: 'Giảm 20% cuối tuần', description: 'Áp dụng vào thứ 7 và Chủ nhật', discountType: 'percentage', discountValue: 20 }
-            ];
-        }
-
-        function selectPromotion(id, discountValue, discountType) {
-            const subtotal = orderContext.Subtotal || orderContext.Total;
-            let discountAmount = discountType === 'percentage'
-                ? subtotal * (discountValue / 100)
-                : discountValue;
-            applyDiscount(discountAmount);
-            promoModal.hide();
-        }
-
-        function applyDiscount(discountAmount) {
-            orderContext.Discount = (orderContext.Discount || 0) + discountAmount;
-            orderContext.Total = Math.max(0, orderContext.Subtotal + orderContext.Vat + orderContext.ServiceFee - orderContext.Discount);
-
-            document.querySelector('.payment-summary-card h2').textContent = formatCurrency(orderContext.Total);
-            document.querySelector('.payment-summary-card .text-end').innerHTML = `
-                <p class="mb-1">Tạm tính: <strong>${formatCurrency(orderContext.Subtotal)}</strong></p>
-                <p class="mb-1">VAT (10%): <strong>${formatCurrency(orderContext.Vat)}</strong></p>
-                <p class="mb-1">Phí dịch vụ (5%): <strong>${formatCurrency(orderContext.ServiceFee)}</strong></p>
-                <p class="mb-0">Giảm giá: <strong>-${formatCurrency(orderContext.Discount)}</strong></p>
-            `;
-            amountInput.value = orderContext.Total;
-            showToast('Đã áp dụng ưu đãi tạm thời (demo)', 'success');
-        }
-
-        function validateDiscountCode() {
-            const code = document.getElementById('discountCode').value.trim();
-            const messageDiv = document.getElementById('discountCodeMessage');
-            if (!code) {
-                messageDiv.innerHTML = '<div class="alert alert-warning mb-0">Vui lòng nhập mã giảm giá!</div>';
-                return;
-            }
-
-            const mockResult = validateMockDiscountCode(code);
-            if (mockResult.valid) {
-                messageDiv.innerHTML = `<div class="alert alert-success mb-0">${mockResult.message}</div>`;
-                applyDiscount(mockResult.discountAmount);
-                setTimeout(() => promoModal.hide(), 900);
-            } else {
-                messageDiv.innerHTML = `<div class="alert alert-danger mb-0">${mockResult.message}</div>`;
-            }
-        }
-
-        function validateMockDiscountCode(code) {
-            const validCodes = {
-                'GIAM10': { discountAmount: 50000, message: 'Mã hợp lệ! Giảm 50.000đ' },
-                'KHUYENMAI': { discountAmount: 100000, message: 'Mã hợp lệ! Giảm 100.000đ' },
-                'VIP2025': { discountAmount: 200000, message: 'Mã hợp lệ! Giảm 200.000đ' }
-            };
-
-            const normalized = code.toUpperCase();
-            return validCodes[normalized]
-                ? { valid: true, ...validCodes[normalized] }
-                : { valid: false, message: 'Mã giảm giá không hợp lệ hoặc đã hết hạn!' };
+        // Hiển thị toast thành công nếu có
+        @if (!string.IsNullOrEmpty(ViewData["DiscountSuccessMessage"] as string))
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast('@ViewData["DiscountSuccessMessage"]', 'success');
+            });
+            </text>
         }
     </script>
 }
