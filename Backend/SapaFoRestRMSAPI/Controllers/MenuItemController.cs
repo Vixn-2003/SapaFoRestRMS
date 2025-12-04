@@ -18,7 +18,7 @@ namespace SapaFoRestRMSAPI.Controllers
         [HttpGet("top-best-sellers")]
         public async Task<IActionResult> GetTopBestSellers()
         {
-            var topItems = await _menuItemService.GetTopBestSellersAsync(10);
+            var topItems = await _menuItemService.GetTopBestSellersAsync();
             return Ok(topItems);
         }
     }

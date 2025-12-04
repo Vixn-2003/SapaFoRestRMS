@@ -34,6 +34,10 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IOrderDetailRepository OrderDetails { get; }
         IOrderComboItemRepository OrderComboItems { get; }
         ITableRepository Tables { get; }
+        IShiftRepository Shifts { get; }
+
+        IShiftCounterRepository ShiftCounters { get; }
+        IReservationRepository Reservations { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

@@ -1,6 +1,7 @@
 ﻿using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SapaFoRestRMSAPI.Services;
 
@@ -8,6 +9,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    //[Authorize(Roles = "Manager")]
     public class ReservationStaffController : ControllerBase
     {
         private readonly IReservationService _service;

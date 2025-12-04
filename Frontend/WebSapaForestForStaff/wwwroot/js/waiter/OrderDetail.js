@@ -52,8 +52,8 @@ function renderCart() {
             var realIndex = cartItems.indexOf(item);
 
             var isCancelled = item.status === "Cancelled" || item.status === "Đã hủy";
-            var isProcessing = item.status === "Processing" || item.status === "Đang chế biến";
-            var isFinished = item.status === "Finished" || item.status === "Served" || item.status === "Đã xong";
+            var isProcessing = item.status === "Cooking" || item.status === "Đang chế biến";
+            var isFinished = item.status === "Done" || item.status === "Served" || item.status === "Đã xong";
 
             var lineTotal = item.price * item.quantity;
             if (!isCancelled) {

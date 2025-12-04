@@ -92,6 +92,18 @@ namespace DataAccessLayer.UnitOfWork
 
         public ITableRepository Tables => _tables ??= new TableRepository(_context);
 
+        private IShiftRepository _shifts;
+
+        public IShiftRepository Shifts => _shifts ??= new ShiftRepository(_context);
+        private IShiftCounterRepository  _shiftCounters;
+
+
+        public IShiftCounterRepository ShiftCounters => _shiftCounters ??= new ShiftCounterRepository(_context);
+
+        private IReservationRepository _reservations;
+
+        public IReservationRepository Reservations => _reservations ??= new ReservationRepository(_context);
+
         public UnitOfWork(SapaFoRestRmsContext context)
         {
             _context = context;

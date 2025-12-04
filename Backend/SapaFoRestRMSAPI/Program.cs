@@ -26,24 +26,6 @@ using BusinessAccessLayer.Services.Inventory;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -----------------------------
-// ✅ Cấu hình CORS cho phép frontend (http://localhost:5158) gọi API
-// -----------------------------
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins(
-            "http://localhost:5158",  // frontend chạy http
-            "https://localhost:5158", // phòng khi chạy https
-             "http://localhost:5054",  // module Staff
-            "https://localhost:5054"  // phòng khi chạy https
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials()
-    );
-});
-
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase"), sqlOptions =>
@@ -275,14 +257,29 @@ builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
 
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
-
-
+//daytype
+builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
+builder.Services.AddScoped<IDayTypeService, DayTypeService>();
+//shifttemplate
+builder.Services.AddScoped<IShiftTemplateRepository, ShiftTemplateRepository>();
+builder.Services.AddScoped<IShiftTemplateService, ShiftTemplateService>();
+//department
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+//shift 
+builder.Services.AddScoped<IShiftRepository, ShiftRepository>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+//shiftassignment
+builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
+builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // AuditLog Service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
 
 // Receipt Service - Pass WebRootPath from IWebHostEnvironment
 builder.Services.AddScoped<IReceiptService>(sp =>
@@ -363,37 +360,35 @@ builder.Services
         };
     });
 
+// ================================
+// ✅ CORS CONFIGURATION (Centralized)
+// ================================
+// Đọc danh sách origins từ appsettings.json
+// Mỗi dev chỉ cần chỉnh sửa appsettings.Development.json với IP của mình
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-// === 1. THÊM DỊCH VỤ CORS ===
-// === THAY THẾ TOÀN BỘ KHỐI NÀY ===
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:5054",    // 👈 Frontend bạn đang chạy 
-            "http://localhost:5123",    // Razor nội bộ
-            "https://localhost:7096",   // 👈 Backend HTTPS localhost
-            "http://localhost:5180",    // Backend HTTP localhost
-            "http://192.168.1.47:5123", // IP Razor Wifi nhà
-            "http://192.168.1.47:5180",  // Swagger wifi nhà
-            "http://192.168.1.97:5054",  // 👈 Frontend IP mới
-            "http://192.168.1.97:5180",  // 👈 Backend HTTP IP mới
-            "https://192.168.1.97:7096", // 👈 Backend HTTPS IP mới (PORT CHÍNH)
-            "http://192.168.1.97:7096",  // 👈 Backend HTTP IP mới (nếu dùng HTTP)
-            "http://192.168.1.97:5123"   // 👈 Razor IP mới
-                                        //   "http://192.168.105.100:5123", // IP Razor
-                                        //  "http://192.168.105.100:5180"  // Swagger
+        // Đọc từ appsettings.json hoặc appsettings.Development.json
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>() 
+            ?? new[] { "http://localhost:5123" }; // Fallback mặc định nếu không có config
 
-        // "http://10.33.8.77:5123", // IP Razor
-        //"http://10.33.8.77:5180"  // Swagger
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials(); // 👈 Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
+        // Log để dễ debug
+        Console.WriteLine("🔒 CORS Allowed Origins:");
+        foreach (var origin in allowedOrigins)
+        {
+            Console.WriteLine($"   ✅ {origin}");
+        }
+
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
     });
 });
+
 
 var app = builder.Build();
 
@@ -406,7 +401,7 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
-// Bật CORS
+//// Bật CORS
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();

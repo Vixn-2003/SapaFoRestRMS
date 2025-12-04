@@ -9,6 +9,6 @@ namespace BusinessAccessLayer.Services.Interfaces
 {
     public interface IMenuItemService
     {
-        Task<IEnumerable<BestSellerDto>> GetTopBestSellersAsync(int top = 10);
+        Task<IEnumerable<BestSellerDto>> GetTopBestSellersAsync();
     }
 }
