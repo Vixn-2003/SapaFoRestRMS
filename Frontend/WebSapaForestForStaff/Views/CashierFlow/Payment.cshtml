@@ -513,7 +513,7 @@
       class="d-none">
     @Html.AntiForgeryToken()
     <input type="hidden" name="OrderId" value="@Model.OrderId" />
-    <input type="hidden" name="Method" id="paymentMethodInput" />
+    <input type="hidden" name="PaymentMethod" id="paymentMethodInput" />
     <input type="hidden" name="Amount" id="paymentAmountInput" value="@Model.TotalAmount" />
 </form>
 </div>

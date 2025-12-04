@@ -553,13 +553,18 @@ public class PaymentService : IPaymentService
         decimal depositToDeduct = 0;
         if (order.Reservation != null)
         {
-            orderDto.DepositAmount = order.Reservation.DepositAmount;
+            // Ưu tiên lấy tổng tiền cọc đã thanh toán, fallback về DepositAmount cũ nếu cần
+            var deposit = order.Reservation.TotalDepositPaid
+                          ?? order.Reservation.DepositAmount
+                          ?? 0;
+
+            orderDto.DepositAmount = deposit;
             orderDto.DepositPaid = order.Reservation.DepositPaid;
 
             // Chỉ trừ tiền cọc nếu khách đã thanh toán cọc
-            if (order.Reservation.DepositPaid && order.Reservation.DepositAmount.HasValue)
+            if (order.Reservation.DepositPaid && deposit > 0)
             {
-                depositToDeduct = order.Reservation.DepositAmount.Value;
+                depositToDeduct = deposit;
             }
         }
 
