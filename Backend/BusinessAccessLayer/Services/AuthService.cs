@@ -51,7 +51,8 @@ namespace BusinessAccessLayer.Services
             // Staff must have at least one assigned position to be allowed to login
             var roleName = user.Role?.RoleName ?? string.Empty;
             List<string>? positions = null;
-            
+            List<int>? positionIds = null;
+
             if (string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase))
             {
                 var staff = await _dbContext.Staffs
@@ -62,9 +63,10 @@ namespace BusinessAccessLayer.Services
                 {
                     throw new UnauthorizedAccessException("Staff account has no assigned position. Please contact administrator.");
                 }
-                
-                // Get position names
+
+                // Get position names & ids
                 positions = staff.Positions.Select(p => p.PositionName).ToList();
+                positionIds = staff.Positions.Select(p => p.PositionId).ToList();
             }
 
             return new LoginResponse
@@ -76,7 +78,8 @@ namespace BusinessAccessLayer.Services
                 RoleName = user.Role?.RoleName ?? string.Empty,
                 Token = GenerateJwtToken(user),
                 RefreshToken = GenerateRefreshToken(user),
-                Positions = positions
+                Positions = positions,
+                PositionIds = positionIds
             };
         }
 
@@ -99,7 +102,6 @@ namespace BusinessAccessLayer.Services
 
             if (user.Status == 1)
                 throw new UnauthorizedAccessException("Tài khoản này đang không còn hoạt động trên hệ thống");
-
             var response = new LoginResponse
             {
                 UserId = user.UserId,
