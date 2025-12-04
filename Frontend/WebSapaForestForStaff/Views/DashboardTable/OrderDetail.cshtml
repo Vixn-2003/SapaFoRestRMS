@@ -664,9 +664,12 @@
         <button class="btn-save-order flex-fill" style="display:none">
             Lưu Order
         </button>
-        <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
-           Tạo đơn <i class="fa-solid fa-chevron-right ms-2"></i>
-        </button>
+                        @if (userPositionId == 2)  // Chỉ Cashier mới thấy nút tạo đơn
+                        {
+                            <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
+                                Thanh Toán Bàn <i class="fa-solid fa-chevron-right ms-2"></i>
+                            </button>
+                        }
     </div>
 </div>
 

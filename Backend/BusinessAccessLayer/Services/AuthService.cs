@@ -38,7 +38,7 @@ namespace BusinessAccessLayer.Services
         {
             var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
-                throw new UnauthorizedAccessException("Invalid email or password");
+                throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
 
             // ✅ Tài khoản đã bị xóa khỏi hệ thống
             if (user.IsDeleted == true)

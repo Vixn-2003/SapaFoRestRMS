@@ -92,11 +92,11 @@ namespace WebSapaForestForStaff.Controllers
                                     return RedirectToAction("Index", "KischenDisplay");
                                 }
 
-                                // Id = 4 -> MainImportInventory
+                                // Id = 4 -> DashboardInventory
                                 if (positions.Any(p =>
                                         string.Equals(p, "Inventory Staff", StringComparison.OrdinalIgnoreCase)))
                                 {
-                                    return RedirectToAction("Index", "MainImportInventory");
+                                    return RedirectToAction("Index", "DashboardInventory");
                                 }
                             }
                         }
@@ -193,11 +193,11 @@ namespace WebSapaForestForStaff.Controllers
                         {
                             redirectUrl = returnUrl ?? Url.Action("Index", "KischenDisplay");
                         }
-                        // Id = 4 (Inventory Staff) -> MainImportInventory
+                        // Id = 4 -> DashboardInventory
                         else if (positions.Any(p =>
-                                     string.Equals(p, "Inventory Staff", StringComparison.OrdinalIgnoreCase)))
+                                string.Equals(p, "Inventory Staff", StringComparison.OrdinalIgnoreCase)))
                         {
-                            redirectUrl = returnUrl ?? Url.Action("Index", "MainImportInventory");
+                            return RedirectToAction("Index", "DashboardInventory");
                         }
                         else
                         {
