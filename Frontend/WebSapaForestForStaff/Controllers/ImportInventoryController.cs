@@ -25,7 +25,7 @@ namespace WebSapaForestForStaff.Controllers
             // Gọi các API
             var response = await _httpClient.GetAsync("api/InventoryIngredient");
             var responseIdPurchase = await _httpClient.GetAsync("api/PurchaseOrder");
-            var responseSupplier = await _httpClient.GetAsync("api/Supplier");
+            var responseSupplier = await _httpClient.GetAsync("/api/inventory/Supplier");
             var responseWarehouse = await _httpClient.GetAsync("api/Warehouse");
             var responseUnit = await _httpClient.GetAsync("api/Unit");
 

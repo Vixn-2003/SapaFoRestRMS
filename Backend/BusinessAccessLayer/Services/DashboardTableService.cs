@@ -79,13 +79,20 @@ namespace BusinessAccessLayer.Services
 
                 CustomerPhone = data.ActiveReservation?.Customer?.User?.Phone ?? null,
 
+    //            GrandTotal = data.ActiveReservation == null
+    //? 0
+    //: data.ActiveReservation.Orders
+    //    .SelectMany(o => o.OrderDetails)
+    //    .Where(od => od.Status == "Cooking" || od.Status == "Ready" || od.Status == "Done" || od.Status == "Pending")
+    //    .Sum(od => od.Quantity * od.UnitPrice),
+
                 GrandTotal = data.ActiveReservation == null
     ? 0
     : data.ActiveReservation.Orders
         .SelectMany(o => o.OrderDetails)
-        .Where(od => od.Status == "Cooking" || od.Status == "Ready" || od.Status == "Done")
-        .Sum(od => od.Quantity * od.UnitPrice),
-
+        .Where(od => od.Status != "Cancelled")
+        .Sum(od => (od.Quantity) * (od.UnitPrice) ),
+                reservationId = data.ActiveReservation?.ReservationId,
 
             }).ToList();
 
@@ -571,15 +578,15 @@ namespace BusinessAccessLayer.Services
                             Console.WriteLine("[DEBUG] Đây không phải là Combo, bỏ qua bước tách món.");
                         }
 
-                
+
 
                         var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(newDetail.OrderDetailId);
-                            if (!reserveResult.success)
-                            {
-                                // Log warning nhưng không fail
-                                Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {newDetail.OrderDetailId}: {reserveResult.message}");
-                            }
-                        
+                        if (!reserveResult.success)
+                        {
+                            // Log warning nhưng không fail
+                            Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {newDetail.OrderDetailId}: {reserveResult.message}");
+                        }
+
                         break;
 
                     case "Update":

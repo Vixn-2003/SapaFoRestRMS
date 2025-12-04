@@ -19,7 +19,7 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IPurchaseOrderRepository PurchaseOrder { get; }
         IStockTransactionRepository StockTransaction { get; }
         IManagerSupplierRepository Supplier { get; }
-
+        ISupplierRepository SupplierManager { get; }
         IAuditRepository AuditRepository { get; }
         IUnitRepository UnitRepository { get; }
         IWarehouseRepository Warehouse { get; }

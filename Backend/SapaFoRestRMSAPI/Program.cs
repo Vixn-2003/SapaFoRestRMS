@@ -20,7 +20,6 @@ using Microsoft.IdentityModel.Tokens;
 using SapaFoRestRMSAPI.Services;
 using System.Text;
 using SapaFoRestRMSAPI.Hubs;
-using Microsoft.AspNetCore.Http.Features;
 using BusinessAccessLayer.Services.Inventory;
 
 
@@ -254,6 +253,7 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 //DashBoardTable
 builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
 builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
+builder.Services.AddScoped<ISupplierManagerService, SupplierManagerService>();
 
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();

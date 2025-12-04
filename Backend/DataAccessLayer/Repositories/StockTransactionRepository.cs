@@ -44,15 +44,21 @@ namespace DataAccessLayer.Repositories
         public async Task<IEnumerable<StockTransaction>> GetAllExport()
         {
             return await _context.StockTransactions
-                .Where(p => p.Type == "Export")
-                .Include(t => t.Batch)
-                    .ThenInclude(b => b.Ingredient)
-                        .ThenInclude(i => i.Unit)
-                .Include(t => t.Batch.Warehouse)
-                .Include(t => t.Batch.PurchaseOrderDetail)
-                    .ThenInclude(pod => pod.PurchaseOrder)
-                        .ThenInclude(po => po.Supplier)
-                .ToListAsync();
+        .Where(p => p.Type == "Export"
+                 && p.Batch != null                
+                 && p.Batch.Ingredient != null        
+                 && p.Batch.Warehouse != null         
+                 && p.Batch.Ingredient.Unit != null)   
+        .Include(t => t.Batch)
+            .ThenInclude(b => b.Ingredient)
+                .ThenInclude(i => i.Unit)
+        .Include(t => t.Batch)
+            .ThenInclude(b => b.Warehouse)
+        .Include(t => t.Batch)
+            .ThenInclude(b => b.PurchaseOrderDetail)
+                .ThenInclude(pod => pod.PurchaseOrder)
+                    .ThenInclude(po => po.Supplier)
+        .ToListAsync();
         }
 
 
