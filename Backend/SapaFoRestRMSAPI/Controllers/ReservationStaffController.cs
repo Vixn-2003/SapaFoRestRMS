@@ -9,6 +9,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    //[Authorize(Roles = "Manager")]
     public class ReservationStaffController : ControllerBase
     {
         private readonly IReservationService _service;

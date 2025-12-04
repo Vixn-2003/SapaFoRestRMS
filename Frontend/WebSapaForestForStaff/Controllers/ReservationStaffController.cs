@@ -7,7 +7,6 @@ using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.Models;
 namespace WebSapaForestForStaff.Controllers
 {
-    [Authorize(Roles = "Manager")]
     public class ReservationStaffController : Controller
     {
         private readonly HttpClient _client;
@@ -80,6 +79,7 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> AssignTables(int id)
         {
+            
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!resResponse.IsSuccessStatusCode)
                 return NotFound();
@@ -183,6 +183,7 @@ namespace WebSapaForestForStaff.Controllers
         [HttpPost]
         public async Task<IActionResult> ResetTables(int reservationId)
         {
+            
             var res = await _client.PostAsync($"ReservationStaff/reset-tables/{reservationId}", null);
 
             if (!res.IsSuccessStatusCode)
@@ -201,6 +202,7 @@ namespace WebSapaForestForStaff.Controllers
         [HttpPost]
         public async Task<IActionResult> CancelReservation(int id, bool refund)
         {
+            
             var response = await _client.PutAsync(
                 $"ReservationStaff/cancel/{id}?refund={refund.ToString().ToLower()}",
                 null
@@ -222,6 +224,7 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Manager")]
         public IActionResult CreateReservation()
         {
             return View();
@@ -229,11 +232,13 @@ namespace WebSapaForestForStaff.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreateReservation(ReservationViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
+            
             // Gửi đúng API "ReservationStaff/add"
             var dto = new
             {
@@ -242,7 +247,8 @@ namespace WebSapaForestForStaff.Controllers
                 ReservationDate = model.ReservationDate,
                 ReservationTime = model.ReservationTime,
                 NumberOfGuests = model.NumberOfGuests,
-                Notes = model.Notes
+                Notes = model.Notes,
+                OtpCode = "0000"
             };
 
             var jsonContent = JsonConvert.SerializeObject(dto);
@@ -276,6 +282,7 @@ namespace WebSapaForestForStaff.Controllers
         [HttpGet]
         public async Task<IActionResult> EditReservation(int id)
         {
+            
             var response = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!response.IsSuccessStatusCode)
                 return NotFound();
@@ -305,6 +312,7 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View("EditReservation", model);
 
+            
             var dto = new
             {
                 model.ReservationDate,
@@ -347,6 +355,7 @@ namespace WebSapaForestForStaff.Controllers
             if (dto.DepositAmount <= 0)
                 return Json(new { success = false, message = "Số tiền đặt cọc không hợp lệ." });
 
+            
             // Lấy thông tin đặt bàn
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{dto.ReservationId}");
             if (!resResponse.IsSuccessStatusCode)

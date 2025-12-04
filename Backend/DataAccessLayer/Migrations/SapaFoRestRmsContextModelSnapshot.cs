@@ -939,6 +939,61 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Orders");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.OrderComboItem", b =>
+                {
+                    b.Property<int>("OrderComboItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderComboItemId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("(getdate())");
+
+                    b.Property<bool>("IsUrgent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrderDetailId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<DateTime?>("ReadyAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.HasKey("OrderComboItemId")
+                        .HasName("PK__OrderComboItem__OrderComboItemId");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.HasIndex("OrderDetailId");
+
+                    b.ToTable("OrderComboItems", (string)null);
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.OrderDetail", b =>
                 {
                     b.Property<int>("OrderDetailId")
@@ -1726,6 +1781,12 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal?>("ClosingBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ClosingDenominations")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1736,8 +1797,32 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("Difference")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
+
+                    b.Property<string>("HandoverNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("HandoverTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("HandoverToStaffId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("OpeningBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("OpeningDenominations")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PinCode")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RequiredEmployees")
                         .HasColumnType("int");
@@ -1747,6 +1832,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TemplateId")
                         .HasColumnType("int");
@@ -2759,6 +2847,27 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Reservation");
                 });
 
+            modelBuilder.Entity("DomainAccessLayer.Models.OrderComboItem", b =>
+                {
+                    b.HasOne("DomainAccessLayer.Models.MenuItem", "MenuItem")
+                        .WithMany()
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK__OrderComboItem__MenuItem__MenuItemId");
+
+                    b.HasOne("DomainAccessLayer.Models.OrderDetail", "OrderDetail")
+                        .WithMany("OrderComboItems")
+                        .HasForeignKey("OrderDetailId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK__OrderComboItem__OrderDetail__OrderDetailId");
+
+                    b.Navigation("MenuItem");
+
+                    b.Navigation("OrderDetail");
+                });
+
             modelBuilder.Entity("DomainAccessLayer.Models.OrderDetail", b =>
                 {
                     b.HasOne("DomainAccessLayer.Models.Combo", "Combo")
@@ -3026,7 +3135,7 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("DomainAccessLayer.Models.Staff", null)
+                    b.HasOne("DomainAccessLayer.Models.Staff", "Staff")
                         .WithMany("Shifts")
                         .HasForeignKey("StaffId");
 
@@ -3037,6 +3146,8 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Department");
+
+                    b.Navigation("Staff");
 
                     b.Navigation("Template");
                 });
@@ -3310,6 +3421,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("DomainAccessLayer.Models.OrderDetail", b =>
                 {
                     b.Navigation("KitchenTicketDetails");
+
+                    b.Navigation("OrderComboItems");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.Position", b =>

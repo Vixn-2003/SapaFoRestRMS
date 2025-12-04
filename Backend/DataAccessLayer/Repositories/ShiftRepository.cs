@@ -1,4 +1,4 @@
-﻿using DataAccessLayer.Dbcontext;
+using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;

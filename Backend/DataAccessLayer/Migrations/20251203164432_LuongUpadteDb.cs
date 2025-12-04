@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class reUpdateDatabaseNew : Migration
+    public partial class LuongUpadteDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -931,6 +931,17 @@ namespace DataAccessLayer.Migrations
                     StartTime = table.Column<TimeSpan>(type: "time", nullable: false),
                     EndTime = table.Column<TimeSpan>(type: "time", nullable: false),
                     RequiredEmployees = table.Column<int>(type: "int", nullable: false),
+                    OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ClosingBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    OpeningDenominations = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClosingDenominations = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Difference = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HandoverToStaffId = table.Column<int>(type: "int", nullable: true),
+                    HandoverNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HandoverTime = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PinCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StaffId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
@@ -1466,6 +1477,39 @@ namespace DataAccessLayer.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "OrderComboItems",
+                columns: table => new
+                {
+                    OrderComboItemId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OrderDetailId = table.Column<int>(type: "int", nullable: false),
+                    MenuItemId = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true, defaultValue: "Pending"),
+                    Quantity = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    StartedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    ReadyAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsUrgent = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__OrderComboItem__OrderComboItemId", x => x.OrderComboItemId);
+                    table.ForeignKey(
+                        name: "FK__OrderComboItem__MenuItem__MenuItemId",
+                        column: x => x.MenuItemId,
+                        principalTable: "MenuItems",
+                        principalColumn: "MenuItemId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK__OrderComboItem__OrderDetail__OrderDetailId",
+                        column: x => x.OrderDetailId,
+                        principalTable: "OrderDetails",
+                        principalColumn: "OrderDetailId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.InsertData(
                 table: "Roles",
                 columns: new[] { "RoleId", "RoleName" },
@@ -1652,6 +1696,16 @@ namespace DataAccessLayer.Migrations
                 name: "IX_MenuItems_CategoryId",
                 table: "MenuItems",
                 column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderComboItems_MenuItemId",
+                table: "OrderComboItems",
+                column: "MenuItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderComboItems_OrderDetailId",
+                table: "OrderComboItems",
+                column: "OrderDetailId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderDetails_ComboId",
@@ -1986,6 +2040,9 @@ namespace DataAccessLayer.Migrations
                 name: "MarketingCampaigns");
 
             migrationBuilder.DropTable(
+                name: "OrderComboItems");
+
+            migrationBuilder.DropTable(
                 name: "OrderHistories");
 
             migrationBuilder.DropTable(
@@ -2043,10 +2100,10 @@ namespace DataAccessLayer.Migrations
                 name: "ZaloMessages");
 
             migrationBuilder.DropTable(
-                name: "OrderDetails");
+                name: "KitchenTickets");
 
             migrationBuilder.DropTable(
-                name: "KitchenTickets");
+                name: "OrderDetails");
 
             migrationBuilder.DropTable(
                 name: "Vouchers");

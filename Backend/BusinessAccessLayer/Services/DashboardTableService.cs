@@ -24,6 +24,7 @@ namespace BusinessAccessLayer.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHubContext<ReservationHub> _hubContext;
         private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
+        private readonly IInventoryIngredientService _inventoryService;
 
         // ⭐️ SỬA LỖI 1 & 2: Cập nhật Constructor
         public DashboardTableService(
@@ -31,7 +32,8 @@ namespace BusinessAccessLayer.Services
             IOrderTableRepository orderTableRepo,
             IUnitOfWork unitOfWork,
             IHubContext<ReservationHub> hubContext,
-            SapaFoRestRmsContext context
+            SapaFoRestRmsContext context,
+            IInventoryIngredientService inventoryService
             )
         {
             _dashboardRepo = dashboardRepo;
@@ -39,6 +41,7 @@ namespace BusinessAccessLayer.Services
             _unitOfWork = unitOfWork;
             _hubContext = hubContext;
             _context = context;
+            _inventoryService = inventoryService;
         }
 
         public async Task<DashboardDataDto> GetDashboardDataAsync(string? areaName, int? floor, string? status, string? searchString, int page, int pageSize)
@@ -76,13 +79,20 @@ namespace BusinessAccessLayer.Services
 
                 CustomerPhone = data.ActiveReservation?.Customer?.User?.Phone ?? null,
 
+    //            GrandTotal = data.ActiveReservation == null
+    //? 0
+    //: data.ActiveReservation.Orders
+    //    .SelectMany(o => o.OrderDetails)
+    //    .Where(od => od.Status == "Cooking" || od.Status == "Ready" || od.Status == "Done" || od.Status == "Pending")
+    //    .Sum(od => od.Quantity * od.UnitPrice),
+
                 GrandTotal = data.ActiveReservation == null
     ? 0
     : data.ActiveReservation.Orders
         .SelectMany(o => o.OrderDetails)
-        .Where(od => od.Status == "Cooking" || od.Status == "Ready" || od.Status == "Done")
-        .Sum(od => od.Quantity * od.UnitPrice),
-
+        .Where(od => od.Status != "Cancelled")
+        .Sum(od => (od.Quantity) * (od.UnitPrice) ),
+                reservationId = data.ActiveReservation?.ReservationId,
 
             }).ToList();
 
@@ -490,9 +500,10 @@ namespace BusinessAccessLayer.Services
                 {
                     // --- CASE ADD: THÊM MÓN MỚI ---
                     case "Add":
+                        Console.WriteLine("--- [DEBUG] BẮT ĐẦU CASE ADD ---");
                         decimal price = 0;
 
-                        // Lấy giá chuẩn từ DB
+                        // 1. Lấy giá
                         if (itemDto.MenuItemId.HasValue)
                         {
                             var menu = await _dashboardRepo.GetMenuItemAsync(itemDto.MenuItemId.Value);
@@ -502,28 +513,82 @@ namespace BusinessAccessLayer.Services
                         {
                             var combo = await _dashboardRepo.GetComboAsync(itemDto.ComboId.Value);
                             price = (decimal)(combo?.Price ?? 0);
+                            Console.WriteLine($"[DEBUG] Đang add Combo ID: {itemDto.ComboId.Value} - Giá: {price}");
                         }
 
+                        // 2. Tạo OrderDetail
                         var newDetail = new OrderDetail
                         {
-                            // Quan trọng: Gán vào OrderId vừa tìm/tạo được ở trên
                             OrderId = currentOrder.OrderId,
-
-                            // Xử lý Logic ID: Chỉ 1 trong 2 được có giá trị, cái kia phải null
                             MenuItemId = (itemDto.ComboId.HasValue && itemDto.ComboId > 0) ? null : itemDto.MenuItemId,
                             ComboId = (itemDto.ComboId.HasValue && itemDto.ComboId > 0) ? itemDto.ComboId : null,
-
                             Quantity = itemDto.Quantity,
-                            UnitPrice = price,       // Tên đúng trong Model của bạn
-                            Notes = itemDto.Note,    // Tên đúng trong Model của bạn
-                            Status = "Pending",   // Trạng thái mặc định: Pending (sau khi gọi món)
-                            CreatedAt = DateTime.Now // Tên đúng trong Model của bạn
+                            UnitPrice = price,
+                            Notes = itemDto.Note,
+                            Status = "Pending",
+                            CreatedAt = DateTime.Now
                         };
 
                         await _dashboardRepo.AddOrderDetailAsync(newDetail);
+                        await _dashboardRepo.SaveChangesAsync();
+
+                        Console.WriteLine($"[DEBUG] Đã lưu OrderDetail. ID mới sinh ra là: {newDetail.OrderDetailId}");
+
+                        // 3. LOGIC INSERT ORDER COMBO ITEMS
+                        if (newDetail.ComboId.HasValue)
+                        {
+                            Console.WriteLine($"[DEBUG] Phát hiện đây là Combo (ID: {newDetail.ComboId}). Bắt đầu tìm món con...");
+
+                            // Lấy danh sách món con
+                            var comboComponents = await _dashboardRepo.GetComboItemsByComboIdAsync(newDetail.ComboId.Value);
+
+                            // KIỂM TRA QUAN TRỌNG
+                            if (comboComponents == null || !comboComponents.Any())
+                            {
+                                Console.WriteLine($"[DEBUG] ❌ CẢNH BÁO: Không tìm thấy món con nào trong bảng ComboItems cho ComboId = {newDetail.ComboId.Value}. Vui lòng kiểm tra Database bảng ComboItems!");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"[DEBUG] ✅ Tìm thấy {comboComponents.Count} món con. Bắt đầu Insert...");
+
+                                foreach (var component in comboComponents)
+                                {
+                                    var orderComboItem = new OrderComboItem
+                                    {
+                                        OrderDetailId = newDetail.OrderDetailId,
+                                        MenuItemId = component.MenuItemId,
+                                        Quantity = component.Quantity * newDetail.Quantity,
+                                        Status = "Pending",
+                                        CreatedAt = DateTime.Now,
+                                        Notes = newDetail.Notes,
+                                        IsUrgent = false
+                                    };
+
+                                    await _dashboardRepo.AddOrderComboItemAsync(orderComboItem);
+                                    Console.WriteLine($"[DEBUG] -> Đã Add vào Context món: {component.MenuItemId}");
+                                }
+
+                                // Save lần 2
+                                await _dashboardRepo.SaveChangesAsync();
+                                Console.WriteLine("[DEBUG] ✅ Đã gọi SaveChangesAsync() cho OrderComboItems.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("[DEBUG] Đây không phải là Combo, bỏ qua bước tách món.");
+                        }
+
+
+
+                        var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(newDetail.OrderDetailId);
+                        if (!reserveResult.success)
+                        {
+                            // Log warning nhưng không fail
+                            Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {newDetail.OrderDetailId}: {reserveResult.message}");
+                        }
+
                         break;
 
-                    // ⭐️ SỬA PHẦN NÀY ⭐️
                     case "Update":
                         // Tìm món trong DB theo ID gửi lên
                         var existingItem = await _dashboardRepo.GetOrderDetailByIdAsync(itemDto.OrderItemId);
@@ -540,18 +605,51 @@ namespace BusinessAccessLayer.Services
 
                                 // 2. GỌI HÀM UPDATE REPO (QUAN TRỌNG)
                                 await _dashboardRepo.UpdateOrderDetailAsync(existingItem);
+
+                                if (existingItem.ComboId.HasValue)
+                                {
+                                    // A. Lấy danh sách món con hiện tại trong Order này
+                                    var currentChildItems = await _dashboardRepo.GetOrderComboItemsByOrderDetailIdAsync(existingItem.OrderDetailId);
+
+                                    // B. Lấy công thức chuẩn của Combo (để biết định lượng 1 combo có bao nhiêu món con)
+                                    var comboDefinitions = await _dashboardRepo.GetComboItemsByComboIdAsync(existingItem.ComboId.Value);
+
+                                    if (currentChildItems != null && comboDefinitions != null)
+                                    {
+                                        foreach (var childItem in currentChildItems)
+                                        {
+                                            // Tìm xem món con này tương ứng với dòng định nghĩa nào (để lấy định lượng gốc)
+                                            var definition = comboDefinitions.FirstOrDefault(x => x.MenuItemId == childItem.MenuItemId);
+
+                                            if (definition != null)
+                                            {
+                                                // C. Tính lại số lượng:
+                                                // Số lượng con = (Định lượng gốc trong menu) * (Số lượng cha mới)
+                                                // Ví dụ: 1 Combo có 2 gà. Khách sửa thành 3 Combo -> Con = 2 * 3 = 6 gà.
+                                                childItem.Quantity = definition.Quantity * itemDto.Quantity;
+
+                                                // Cập nhật ghi chú nếu cần (đồng bộ với cha)
+                                                childItem.Notes = itemDto.Note;
+                                            }
+                                        }
+
+                                        // D. Lưu thay đổi của các món con xuống DB
+                                        // Vì các childItem đã được tracking bởi EF Core khi Query lên, 
+                                        // nên chỉ cần gọi SaveChangesAsync là đủ.
+                                        await _dashboardRepo.SaveChangesAsync();
+                                    }
+                                }
                             }
                         }
                         break;
 
-                    // ⭐️ SỬA PHẦN NÀY ⭐️
                     case "Delete":
                         var itemToDelete = await _dashboardRepo.GetOrderDetailByIdAsync(itemDto.OrderItemId);
 
                         if (itemToDelete != null && itemToDelete.Order.ReservationId == activeReservation.ReservationId)
                         {
                             // Soft Delete: Đổi trạng thái
-                            itemToDelete.Status = "Đã hủy"; // Hoặc "Cancelled" tùy DB
+                            itemToDelete.Status = "Cancelled"; // Hoặc "Cancelled" tùy DB
 
                             // GỌI HÀM UPDATE REPO
                             await _dashboardRepo.UpdateOrderDetailAsync(itemToDelete);

@@ -71,6 +71,9 @@
     <div id="toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999;"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.7/signalr.min.js"></script>
+    
+    <!-- ✅ LOAD SITE.JS - Contains showConfirmPopup function -->
+    <script src="~/js/site.js"></script>
 
     <!-- HEADER -->
     <div class="top-navbar pos-navbar">
@@ -86,6 +89,7 @@
                 <a href="/DashboardTable/ListOrder" class="menu-item">Đơn đặt bàn</a>
                 <a href="/DashboardTable/Index" class="menu-item">Sơ đồ bàn</a>
                 <a href="/OrderTable/AssistanceList" class="menu-item">Hỗ trợ</a>
+                <a href="/CashierFlow/ShiftManagement" class="menu-item">Quản lý Ca làm việc</a>
             </div>
         </div>
 
@@ -254,6 +258,9 @@
 
         });
     </script>
+
+    @* Render Scripts section from child views *@
+    @RenderSection("Scripts", required: false)
 
 </body>
 </html>

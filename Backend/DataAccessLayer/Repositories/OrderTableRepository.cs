@@ -163,7 +163,7 @@ namespace DataAccessLayer.Repositories
             // Dùng int? phòng trường hợp Floor bị null
             return await _context.Areas
 
-                .Select(a => (int?)a.Floor) // Ép kiểu a.Floor (int) thành (int?)
+                .Select(a => (int?)a.Floor) 
                 .Distinct()
                 .OrderBy(f => f)
                 .ToListAsync();
@@ -173,7 +173,7 @@ namespace DataAccessLayer.Repositories
         {
             // Kiểm tra xem bàn này CÓ SẴN một yêu cầu đang "Pending" không
             return await _context.AssistanceRequests
-                .AnyAsync(r => r.TableId == tableId && r.Status == "Pending");
+                .AnyAsync(r => r.TableId == tableId && r.Status.Trim().ToLower() == "Pending");
         }
 
         public async Task CreateAssistanceRequestAsync(AssistanceRequest request)
@@ -206,32 +206,31 @@ namespace DataAccessLayer.Repositories
 
         // [CHO NHÂN VIÊN] Lấy danh sách
         public async Task<(IEnumerable<AssistanceRequest> Items, int TotalCount)>
-    GetPendingRequestsForStaffAsync(string? sort, int pageIndex, int pageSize)
+GetPendingRequestsForStaffAsync(string? sort, int pageIndex, int pageSize)
         {
-            DateTime today = DateTime.Today;
-            DateTime tomorrow = today.AddDays(1);
+            // ❌ XÓA BỎ 2 DÒNG NÀY (Nguyên nhân gây lỗi qua ngày)
+            // DateTime today = DateTime.Today;
+            // DateTime tomorrow = today.AddDays(1);
 
             var query = _context.AssistanceRequests
                 .Include(r => r.Table)
-                    .ThenInclude(t => t.Area) // để staff xem "Bàn A1-05 - Khu A1"
-                .Where(r => r.Status == "Pending"
-                         && r.RequestTime >= today
-                         && r.RequestTime < tomorrow)
+                    .ThenInclude(t => t.Area)
+                // ✅ CHỈ LỌC THEO STATUS (Bỏ lọc thời gian)
+                .Where(r => r.Status == "Pending")
                 .AsNoTracking();
 
-            // ⭐ Sắp xếp theo yêu cầu
+            // Sắp xếp
             sort = sort?.ToLower();
-
             query = sort switch
             {
-                "oldest" => query.OrderBy(r => r.RequestTime),
-                _ => query.OrderByDescending(r => r.RequestTime) // default = newest
+                "oldest" => query.OrderBy(r => r.RequestTime), // Cũ nhất lên đầu (để xử lý trước)
+                _ => query.OrderByDescending(r => r.RequestTime)
             };
 
-            // ⭐ Tổng số dòng
+            // Tổng số dòng
             int totalCount = await query.CountAsync();
 
-            // ⭐ Phân trang
+            // Phân trang
             var items = await query
                 .Skip((pageIndex - 1) * pageSize)
                 .Take(pageSize)

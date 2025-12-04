@@ -470,8 +470,16 @@
 
                         <div class="col">
                             <a id="card-table-@table.TableId"
-                               asp-controller="DashboardTable" asp-action="OrderDetail" asp-route-id="@table.TableId"
-                               class="table-card @statusClass">
+                               href="#"
+                               class="table-card @statusClass table-card-link"
+                               data-table-id="@table.TableId"
+                               data-table-number="@table.TableNumber"
+                               data-customer-name="@(table.CustomerName ?? "Khách vãng lai")"
+                               data-guest-count="@table.GuestCount"
+                               data-grand-total="@table.GrandTotal"
+                               data-order-id="@(table.OrderId ?? 0)"
+                               data-status="@table.Status"
+                               onclick="handleTableClick(event, this)">
 
                                 <div class="card-header-custom">
                                     <span class="table-number">Bàn @table.TableNumber</span>
@@ -515,7 +523,7 @@
 
                                                     @table.GuestCount / @table.Capacity khách
                                                     <i class="fa-solid fa-people-group ms-1"></i>
-                                                    (Ghép bàn)
+                                                    (Cùng đơn #@table.reservationId)
 
                                                 </span>
                                             }
@@ -710,6 +718,76 @@
                 }
             });
         });
+
+        /**
+         * 🧾 HANDLE TABLE CARD CLICK
+         * Intercepts table click to show payment confirmation popup if order is in payment status
+         */
+        window.handleTableClick = async function(event, element) {
+            event.preventDefault();
+            
+            const tableId = element.dataset.tableId;
+            const orderId = parseInt(element.dataset.orderId) || 0;
+            const tableNumber = element.dataset.tableNumber;
+            const customerName = element.dataset.customerName;
+            const guestCount = parseInt(element.dataset.guestCount) || 0;
+            const grandTotal = parseFloat(element.dataset.grandTotal) || 0;
+            const status = element.dataset.status;
+
+            // Check if table has an active order in payment status
+            // For now, we'll check if orderId > 0 and status is Active
+            // You may need to add additional status check based on your order status enum
+            const isInPayment = orderId > 0 && status === "Active";
+
+            if (isInPayment && orderId > 0) {
+                // Show confirmation popup similar to OrderDetail
+                const confirmed = await showConfirmPopup(
+                    "🧾 Xác nhận tiếp tục xử lý thanh toán",
+                    `<div class="text-center mb-3">
+                        <h5 class="mb-3">Bàn này đang trong quá trình thanh toán. Bạn có muốn tiếp tục xử lý thanh toán không?</h5>
+                    </div>
+                    <div style="background: #f7fafc; padding: 16px; border-radius: 8px; text-align: left;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted"><i class="fa-solid fa-chair me-2"></i>Bàn:</span>
+                            <span class="fw-bold">${tableNumber}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted"><i class="fa-solid fa-user me-2"></i>Khách hàng:</span>
+                            <span class="fw-bold">${customerName}</span>
+                        </div>
+                        ${guestCount > 0 ? `
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted"><i class="fa-solid fa-users me-2"></i>Số khách:</span>
+                            <span class="fw-bold">${guestCount} khách</span>
+                        </div>` : ''}
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted"><i class="fa-solid fa-money-bill me-2"></i>Tổng tiền:</span>
+                            <span class="fw-bold text-success" style="font-size: 18px;">${grandTotal.toLocaleString('vi-VN')} ₫</span>
+                        </div>
+                    </div>
+                    <div class="alert alert-info d-flex align-items-start gap-2 mt-3 mb-0">
+                        <i class="fa-solid fa-info-circle mt-1"></i>
+                        <div class="small">
+                            <strong>Chọn "Tiếp tục thanh toán":</strong> Chuyển đến trang xác nhận và thanh toán<br>
+                            <strong>Chọn "Chỉnh sửa order":</strong> Quay lại trang chỉnh sửa món ăn
+                        </div>
+                    </div>`,
+                    "💳 Tiếp tục thanh toán",
+                    "✏️ Chỉnh sửa order"
+                );
+
+                if (confirmed) {
+                    // Redirect to ConfirmOrder page
+                    window.location.href = `/cashier-flow/orders/${orderId}`;
+                } else {
+                    // Redirect to OrderDetail page (edit mode)
+                    window.location.href = `/DashboardTable/OrderDetail/${tableId}`;
+                }
+            } else {
+                // Normal flow: redirect to OrderDetail
+                window.location.href = `/DashboardTable/OrderDetail/${tableId}`;
+            }
+        };
 
     });
 </script>

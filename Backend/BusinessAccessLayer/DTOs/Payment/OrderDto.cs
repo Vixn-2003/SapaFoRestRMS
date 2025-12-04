@@ -34,6 +34,10 @@ public class OrderDto
 
     public decimal? DiscountAmount { get; set; }
 
+    public decimal? DepositAmount { get; set; }
+
+    public bool? DepositPaid { get; set; }
+
     public string? Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }
