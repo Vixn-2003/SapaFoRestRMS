@@ -108,6 +108,25 @@
         font-weight: 500;
     }
 
+    .status-card .label .fa-bell {
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .status-card .label .fa-bell.ringing {
+        animation: bell-ring 1s infinite;
+        transform-origin: top center;
+    }
+
+    @@keyframes bell-ring {
+        0% { transform: rotate(0deg); }
+        15% { transform: rotate(15deg); }
+        30% { transform: rotate(-15deg); }
+        45% { transform: rotate(10deg); }
+        60% { transform: rotate(-10deg); }
+        75% { transform: rotate(5deg); }
+        100% { transform: rotate(0deg); }
+    }
+
     /* Filter Buttons - Đơn giản */
     .filter-btn {
         border: none;
@@ -585,7 +604,10 @@
                 <div class="col-3">
                     <div class="status-card">
                         <div class="count" id="readyCount">@Model.ReadyCount</div>
-                        <div class="label">Sẵn sàng lấy <i class="fas fa-bell"></i></div>
+                        <div class="label">
+                            Sẵn sàng lấy
+                            <i class="fas fa-bell @(Model.ReadyCount > 0 ? "ringing" : "")" id="readyBellIcon"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -702,10 +724,10 @@
                                             @if (isPending || isCooking)
                                             {
                                                 <div class="action-buttons-row mb-2">
-                                                    @if (item.CanRequestUrgent)
+                                                @if (item.CanRequestUrgent)
                                                     {
                                                         <button class="btn btn-urgent btn-action-item @(item.IsUrgent ? "active" : "")" 
-                                                                onclick="event.stopPropagation(); requestUrgent(@item.OrderDetailId)" 
+                                                                onclick="event.stopPropagation(); requestUrgent(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0))" 
                                                                 title="Làm gấp">
                                                             <i class="fas fa-fire"></i>
                                                             @(item.IsUrgent ? "Đã gấp" : "Làm gấp")
@@ -714,7 +736,7 @@
                                                     @if (item.CanCancel)
                                                     {
                                                         <button class="btn btn-cancel btn-action-item" 
-                                                                onclick="event.stopPropagation(); cancelItem(@item.OrderDetailId)" 
+                                                                onclick="event.stopPropagation(); cancelItem(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0))" 
                                                                 title="Hủy món">
                                                             <i class="fas fa-times"></i>
                                                             Hủy món
@@ -742,12 +764,12 @@
                                             }
                                             
                                             <!-- Ready Status - Button LẤY MÓN lớn -->
-                                            @if (isReadyStatus)
+                                                @if (isReadyStatus)
                                             {
                                                 @if (item.IsSplit)
                                                 {
-                                                    <!-- Đã tách rồi, không cần popup, lấy hết -->
-                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServedDirect(@item.OrderDetailId, @item.Quantity)">
+                                                    <!-- Đã tách rồi: vẫn dùng popup để xác nhận giống món lẻ -->
+                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServed(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0), @item.Quantity)">
                                                         <i class="fas fa-check-circle"></i>
                                                         LẤY MÓN
                                                     </button>
@@ -755,7 +777,7 @@
                                                 else
                                                 {
                                                     <!-- Chưa tách, cần popup để chọn số lượng -->
-                                                    <button class="btn-pickup" onclick="event.stopPropagation(); handleServed(@item.OrderDetailId, @item.Quantity)">
+                                                        <button class="btn-pickup" onclick="event.stopPropagation(); handleServed(@item.OrderDetailId, @(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0), @item.Quantity)">
                                                         <i class="fas fa-check-circle"></i>
                                                         LẤY MÓN
                                                     </button>
@@ -804,6 +826,7 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="pickupOrderDetailId" />
+                <input type="hidden" id="pickupOrderComboItemId" />
                 <div class="mb-3">
                     <label for="pickupMenuItemName" class="form-label">Món:</label>
                     <input type="text" class="form-control" id="pickupMenuItemName" readonly />

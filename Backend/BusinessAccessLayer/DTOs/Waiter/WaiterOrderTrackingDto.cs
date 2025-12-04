@@ -35,6 +35,10 @@ namespace BusinessAccessLayer.DTOs.Waiter
     public class OrderTrackingItemDto
     {
         public int OrderDetailId { get; set; }
+        /// <summary>
+        /// OrderComboItemId - null nếu là món lẻ, có giá trị nếu là món trong combo
+        /// </summary>
+        public int? OrderComboItemId { get; set; }
         public int OrderId { get; set; }
         public string MenuItemName { get; set; } = string.Empty;
         public int Quantity { get; set; }

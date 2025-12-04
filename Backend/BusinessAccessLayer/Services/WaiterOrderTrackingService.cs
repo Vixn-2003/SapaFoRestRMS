@@ -101,26 +101,35 @@ namespace BusinessAccessLayer.Services
                     {
                         foreach (var orderComboItem in orderDetail.OrderComboItems)
                         {
-                            var menuItemName = orderComboItem.MenuItem?.Name 
-                                ?? orderDetail.Combo?.Name 
+                            var mi = orderComboItem.MenuItem ?? orderDetail.MenuItem;
+                            var menuItemName = mi?.Name
+                                ?? orderDetail.Combo?.Name
                                 ?? "Combo item";
 
                             var itemQuantity = orderDetail.Quantity * orderComboItem.Quantity;
 
+                            // Trạng thái riêng theo từng món con
+                            var comboStatus = (orderComboItem.Status ?? status).Trim();
+                            var comboStatusLower = comboStatus.ToLower();
+                            var comboIsDone = comboStatusLower.Contains("done") ||
+                                              comboStatusLower.Contains("hoàn thành") ||
+                                              comboStatusLower.Contains("xong");
+
                             var comboItem = new OrderTrackingItemDto
                             {
-                                OrderDetailId = orderDetail.OrderDetailId, // vẫn dùng OrderDetailId để waiter thao tác
+                                OrderDetailId = orderDetail.OrderDetailId,
+                                OrderComboItemId = orderComboItem.OrderComboItemId,
                                 OrderId = order.OrderId,
                                 MenuItemName = menuItemName,
                                 Quantity = itemQuantity,
-                                Status = status, // trạng thái chung theo OrderDetail
+                                Status = comboStatus,
                                 Notes = orderComboItem.Notes ?? orderDetail.Notes,
                                 IsUrgent = orderComboItem.IsUrgent || orderDetail.IsUrgent,
                                 OrderTime = orderDetail.CreatedAt,
                                 WaitingMinutes = waitingMinutes,
-                                StartedAt = orderDetail.StartedAt,
-                                ReadyAt = orderDetail.ReadyAt,
-                                ServedAt = isDone ? (orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null,
+                                StartedAt = orderComboItem.StartedAt ?? orderDetail.StartedAt,
+                                ReadyAt = orderComboItem.ReadyAt ?? orderDetail.ReadyAt,
+                                ServedAt = comboIsDone ? (orderComboItem.ReadyAt ?? orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null,
                                 CanCancel = canCancel,
                                 CanReturn = false,
                                 CanRequestUrgent = canRequestUrgent,
@@ -157,31 +166,36 @@ namespace BusinessAccessLayer.Services
                         allItems.Add(item);
                         group.Items.Add(item);
                     }
+                }
+            }
 
-                    // Đếm theo status (tính theo từng OrderDetail)
-                    if (statusLower.Contains("pending") || statusLower.Contains("chờ"))
-                    {
+            // Tính lại counters dựa trên từng item (bao gồm món lẻ và từng món trong combo)
+            result.TotalCount = allItems.Count;
+
+            foreach (var item in allItems)
+            {
+                var normalizedStatus = NormalizeStatus(item.Status ?? "Pending");
+
+                switch (normalizedStatus)
+                {
+                    case "Pending":
                         result.WaitingKitchenCount++;
                         result.ProcessingCount++;
-                    }
-                    else if (statusLower.Contains("cooking") || statusLower.Contains("đang nấu") || 
-                             statusLower.Contains("processing") || statusLower.Contains("đang xử lý") ||
-                             statusLower.Contains("late") || statusLower.Contains("trễ"))
-                    {
+                        break;
+                    case "Cooking":
+                    case "Late":
                         result.CookingCount++;
                         result.ProcessingCount++;
-                    }
-                    else if (statusLower.Contains("ready") || statusLower.Contains("sẵn sàng"))
-                    {
+                        break;
+                    case "Ready":
                         result.ReadyCount++;
                         result.ProcessingCount++;
-                    }
-                    // Done items không đếm vào ProcessingCount, nhưng vẫn được thêm vào danh sách
+                        break;
+                    // Done/Cancelled/Returned không cộng vào ProcessingCount
                 }
             }
 
             result.OrderGroups = orderGroups.Values.ToList();
-            result.TotalCount = allItems.Count;
 
             return result;
         }
@@ -199,6 +213,8 @@ namespace BusinessAccessLayer.Services
                         Message = "Không tìm thấy món ăn"
                     };
                 }
+
+                // Nếu là món trong combo, có thể dùng OrderComboItemId sau này (hiện tại chỉ đánh dấu cấp OrderDetail)
 
                 // Kiểm tra status - chỉ có thể yêu cầu làm gấp khi chưa Done
                 var status = (orderDetail.Status ?? "Pending").Trim();
@@ -305,6 +321,43 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
+                // Nếu có OrderComboItemId → xử lý theo từng món trong combo
+                if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
+                {
+                    var comboItem = await _unitOfWork.OrderComboItems.GetByIdWithMenuItemAsync(request.OrderComboItemId.Value);
+                    if (comboItem == null)
+                    {
+                        return new MarkAsServedResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy món trong combo"
+                        };
+                    }
+
+                    var status = (comboItem.Status ?? "Pending").Trim();
+                    var normalizedStatus = NormalizeStatus(status);
+                    if (normalizedStatus != "Ready")
+                    {
+                        return new MarkAsServedResponse
+                        {
+                            Success = false,
+                            Message = "Chỉ có thể lấy món khi món trong combo đã sẵn sàng"
+                        };
+                    }
+
+                    // Đơn giản: đánh dấu món con trong combo là Done (đã phục vụ)
+                    comboItem.Status = "Done";
+                    await _unitOfWork.OrderComboItems.UpdateAsync(comboItem);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return new MarkAsServedResponse
+                    {
+                        Success = true,
+                        Message = "Đã đánh dấu món trong combo đã phục vụ"
+                    };
+                }
+
+                // Món lẻ (không phải combo) → giữ nguyên logic cũ
                 var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
                 if (orderDetail == null)
                 {
@@ -316,8 +369,8 @@ namespace BusinessAccessLayer.Services
                 }
 
                 // Kiểm tra status - chỉ có thể đánh dấu đã phục vụ khi món đã Ready
-                var status = (orderDetail.Status ?? "Pending").Trim();
-                var statusLower = status.ToLower();
+                var statusDetail = (orderDetail.Status ?? "Pending").Trim();
+                var statusLower = statusDetail.ToLower();
                 
                 if (!statusLower.Contains("ready") && !statusLower.Contains("sẵn sàng"))
                 {

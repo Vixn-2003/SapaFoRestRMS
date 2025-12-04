@@ -2,8 +2,12 @@
 const API_BASE = window.API_BASE_URL || 'https://localhost:7096/api';
 
 // Request Urgent
-function requestUrgent(orderDetailId) {
+function requestUrgent(orderDetailId, orderComboItemId) {
     document.getElementById('urgentOrderDetailId').value = orderDetailId;
+    const comboInput = document.getElementById('urgentOrderComboItemId');
+    if (comboInput) {
+        comboInput.value = orderComboItemId && orderComboItemId > 0 ? orderComboItemId : '';
+    }
     const modal = new bootstrap.Modal(document.getElementById('urgentModal'));
     modal.show();
 }
@@ -27,6 +31,7 @@ async function submitUrgentRequest() {
             },
             body: JSON.stringify({
                 orderDetailId: orderDetailId,
+                orderComboItemId: (document.getElementById('urgentOrderComboItemId')?.value || '') || null,
                 waiterUserId: getCurrentUserId(), // TODO: Get from session
                 reason: finalReason
             })
@@ -46,11 +51,15 @@ async function submitUrgentRequest() {
 }
 
 // Cancel Item
-function cancelItem(orderDetailId) {
+function cancelItem(orderDetailId, orderComboItemId) {
     if (!confirm('Bạn có chắc chắn muốn hủy món này? Món chưa được nấu, sẽ không tính tiền.')) {
         return;
     }
     document.getElementById('cancelOrderDetailId').value = orderDetailId;
+    const comboInput = document.getElementById('cancelOrderComboItemId');
+    if (comboInput) {
+        comboInput.value = orderComboItemId && orderComboItemId > 0 ? orderComboItemId : '';
+    }
     const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
     modal.show();
 }
@@ -74,6 +83,7 @@ async function submitCancelRequest() {
             },
             body: JSON.stringify({
                 orderDetailId: orderDetailId,
+                orderComboItemId: (document.getElementById('cancelOrderComboItemId')?.value || '') || null,
                 waiterUserId: getCurrentUserId(), // TODO: Get from session
                 reason: finalReason
             })
@@ -94,7 +104,7 @@ async function submitCancelRequest() {
 
 
 // Handle Served (Pick up item) - Show modal to select quantity (for non-split items)
-function handleServed(orderDetailId, maxQuantity) {
+function handleServed(orderDetailId, orderComboItemId, maxQuantity) {
     // Find the item to get its name
     const itemRow = document.querySelector(`[data-item-id="${orderDetailId}"]`);
     if (!itemRow) {
@@ -106,6 +116,10 @@ function handleServed(orderDetailId, maxQuantity) {
     
     // Set modal values
     document.getElementById('pickupOrderDetailId').value = orderDetailId;
+    const comboInput = document.getElementById('pickupOrderComboItemId');
+    if (comboInput) {
+        comboInput.value = orderComboItemId && orderComboItemId > 0 ? orderComboItemId : '';
+    }
     document.getElementById('pickupMenuItemName').value = itemName;
     document.getElementById('pickupQuantity').value = 1;
     document.getElementById('pickupQuantity').max = maxQuantity;
@@ -117,7 +131,7 @@ function handleServed(orderDetailId, maxQuantity) {
 }
 
 // Handle Served Direct (for split items - no popup needed, take all)
-async function handleServedDirect(orderDetailId, quantity) {
+async function handleServedDirect(orderDetailId, orderComboItemId, quantity) {
     if (!confirm(`Xác nhận đã lấy ${quantity} món và phục vụ khách?`)) {
         return;
     }
@@ -130,6 +144,7 @@ async function handleServedDirect(orderDetailId, quantity) {
             },
             body: JSON.stringify({
                 orderDetailId: orderDetailId,
+                orderComboItemId: orderComboItemId && orderComboItemId > 0 ? orderComboItemId : null,
                 waiterUserId: getCurrentUserId(), // TODO: Get from session
                 quantity: quantity // Lấy hết số lượng
             })
@@ -168,6 +183,7 @@ async function submitPickupRequest() {
             },
             body: JSON.stringify({
                 orderDetailId: orderDetailId,
+                orderComboItemId: (document.getElementById('pickupOrderComboItemId')?.value || '') || null,
                 waiterUserId: getCurrentUserId(), // TODO: Get from session
                 quantity: quantity
             })
