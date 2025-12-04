@@ -431,6 +431,9 @@ namespace BusinessAccessLayer.Services
                 await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
                 await _unitOfWork.SaveChangesAsync();
 
+                // Đồng bộ trạng thái cấp đơn sau khi món lẻ được cập nhật
+                await UpdateKitchenOrderStatusAsync(orderDetail.OrderId);
+
                 return new StatusUpdateResponse
                 {
                     Success = true,
@@ -511,6 +514,8 @@ namespace BusinessAccessLayer.Services
                     await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
                     await _unitOfWork.SaveChangesAsync();
 
+                    await UpdateKitchenOrderStatusAsync(orderDetail.OrderId);
+
                     return new StatusUpdateResponse
                     {
                         Success = true,
@@ -576,6 +581,8 @@ namespace BusinessAccessLayer.Services
                 orderDetail.Quantity = totalQuantity - cookingQuantity;
                 await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
                 await _unitOfWork.SaveChangesAsync();
+
+                await UpdateKitchenOrderStatusAsync(orderDetail.OrderId);
 
                 return new StatusUpdateResponse
                 {
@@ -1403,19 +1410,21 @@ namespace BusinessAccessLayer.Services
                 // Khôi phục về trạng thái "Pending"
                 orderDetail.Status = "Pending";
 
-                // Đảm bảo Order status là Processing hoặc Preparing
+                // Đảm bảo Order quay lại trạng thái có thể quản lý
                 if (orderDetail.OrderId != null)
                 {
                     var order = await _unitOfWork.Orders.GetByIdWithOrderDetailsAsync(orderDetail.OrderId);
                     if (order != null && order.Status == "Completed")
                     {
-                        order.Status = "Processing";
+                        order.Status = "Pending";
                         await _unitOfWork.Orders.UpdateAsync(order);
                     }
                 }
 
                 await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
                 await _unitOfWork.SaveChangesAsync();
+
+                await UpdateKitchenOrderStatusAsync(orderDetail.OrderId);
 
                 return new StatusUpdateResponse
                 {
@@ -1450,6 +1459,17 @@ namespace BusinessAccessLayer.Services
         /// ĐÃ ĐƠN GIẢN HÓA: không đụng tới inventory, chỉ đổi trạng thái trên OrderComboItems
         /// và nếu tất cả món con đã Ready/Done thì cập nhật OrderDetail cha.
         /// </summary>
+        private static readonly HashSet<string> KitchenManagedOrderStatuses = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Pending",
+            "Processing",
+            "Preparing",
+            "Cooking",
+            "Ready",
+            "Late",
+            "Done"
+        };
+
         private async Task<StatusUpdateResponse> UpdateOrderComboItemStatusAsync(UpdateItemStatusRequest request)
         {
             try
@@ -1549,33 +1569,13 @@ namespace BusinessAccessLayer.Services
                 await _unitOfWork.OrderComboItems.UpdateAsync(orderComboItem);
                 await _unitOfWork.SaveChangesAsync();
 
-                // Sau khi cập nhật một món con, nếu TẤT CẢ món con đã Ready/Done → cập nhật OrderDetail cha
+                // Sau khi cập nhật một món con, đồng bộ trạng thái OrderDetail cha và toàn bộ đơn
                 if (request.OrderDetailId > 0)
                 {
                     var allComboItems = await _unitOfWork.OrderComboItems.GetByOrderDetailIdAsync(request.OrderDetailId);
                     if (allComboItems != null && allComboItems.Count > 0)
                     {
-                        var allReadyOrDone = allComboItems.All(oci =>
-                        {
-                            var st = NormalizeStatus(oci.Status ?? "Pending");
-                            return st == "Ready" || st == "Done";
-                        });
-
-                        if (allReadyOrDone)
-                        {
-                            var parentDetail = await _unitOfWork.OrderDetails.GetByIdAsync(request.OrderDetailId);
-                            if (parentDetail != null)
-                            {
-                                var parentStatus = NormalizeStatus(parentDetail.Status ?? "Pending");
-                                if (parentStatus != "Ready" && parentStatus != "Done")
-                                {
-                                    parentDetail.Status = "Ready";
-                                    parentDetail.ReadyAt = DateTime.Now;
-                                    await _unitOfWork.OrderDetails.UpdateAsync(parentDetail);
-                                    await _unitOfWork.SaveChangesAsync();
-                                }
-                            }
-                        }
+                        await UpdateParentOrderDetailStatusAsync(request.OrderDetailId, allComboItems);
                     }
                 }
 
@@ -1609,6 +1609,165 @@ namespace BusinessAccessLayer.Services
                     Success = false,
                     Message = $"Lỗi: {ex.Message}"
                 };
+            }
+        }
+
+        private async Task UpdateParentOrderDetailStatusAsync(int orderDetailId, List<OrderComboItem> comboItems)
+        {
+            if (comboItems == null || comboItems.Count == 0)
+            {
+                return;
+            }
+
+            var parentDetail = await _unitOfWork.OrderDetails.GetByIdAsync(orderDetailId);
+            if (parentDetail == null)
+            {
+                return;
+            }
+
+            var currentParentStatus = NormalizeStatus(parentDetail.Status ?? "Pending");
+            // Không override khi waiter đã đánh dấu món đã phục vụ
+            if (currentParentStatus == "Done")
+            {
+                await UpdateKitchenOrderStatusAsync(parentDetail.OrderId);
+                return;
+            }
+
+            var childStatuses = comboItems
+                .Select(ci => NormalizeStatus(ci.Status ?? "Pending"))
+                .ToList();
+
+            string newStatus;
+            if (childStatuses.All(s => s == "Pending"))
+            {
+                newStatus = "Pending";
+            }
+            else if (childStatuses.All(s => s == "Ready" || s == "Done"))
+            {
+                newStatus = "Ready";
+            }
+            else if (childStatuses.Any(s => s == "Late"))
+            {
+                newStatus = "Late";
+            }
+            else
+            {
+                newStatus = "Cooking";
+            }
+
+            var hasChanges = false;
+            if (currentParentStatus != newStatus)
+            {
+                parentDetail.Status = newStatus;
+                hasChanges = true;
+            }
+
+            switch (newStatus)
+            {
+                case "Pending":
+                    if (parentDetail.StartedAt != null || parentDetail.ReadyAt != null)
+                    {
+                        parentDetail.StartedAt = null;
+                        parentDetail.ReadyAt = null;
+                        hasChanges = true;
+                    }
+                    break;
+                case "Cooking":
+                case "Late":
+                    if (!parentDetail.StartedAt.HasValue)
+                    {
+                        parentDetail.StartedAt = DateTime.Now;
+                        hasChanges = true;
+                    }
+                    if (parentDetail.ReadyAt != null)
+                    {
+                        parentDetail.ReadyAt = null;
+                        hasChanges = true;
+                    }
+                    break;
+                case "Ready":
+                    if (!parentDetail.StartedAt.HasValue)
+                    {
+                        parentDetail.StartedAt = DateTime.Now;
+                        hasChanges = true;
+                    }
+                    if (!parentDetail.ReadyAt.HasValue)
+                    {
+                        parentDetail.ReadyAt = DateTime.Now;
+                        hasChanges = true;
+                    }
+                    break;
+            }
+
+            if (hasChanges)
+            {
+                await _unitOfWork.OrderDetails.UpdateAsync(parentDetail);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            await UpdateKitchenOrderStatusAsync(parentDetail.OrderId);
+        }
+
+        private async Task UpdateKitchenOrderStatusAsync(int orderId)
+        {
+            if (orderId <= 0)
+            {
+                return;
+            }
+
+            var order = await _unitOfWork.Orders.GetByIdWithOrderDetailsAsync(orderId);
+            if (order == null || order.OrderDetails == null || !order.OrderDetails.Any())
+            {
+                return;
+            }
+
+            var currentStatus = string.IsNullOrWhiteSpace(order.Status) ? "Pending" : order.Status;
+            if (!KitchenManagedOrderStatuses.Contains(currentStatus))
+            {
+                return;
+            }
+
+            var detailStatuses = order.OrderDetails
+                .Select(od => NormalizeStatus(od.Status ?? "Pending"))
+                .ToList();
+
+            var allPending = detailStatuses.All(s => s == "Pending");
+            var anyLate = detailStatuses.Any(s => s == "Late");
+            var allDone = detailStatuses.All(s => s == "Done");
+            var allReadyOrDone = detailStatuses.All(s => s == "Ready" || s == "Done");
+            var anyCooking = detailStatuses.Any(s => s == "Cooking");
+
+            string newOrderStatus;
+            if (allPending)
+            {
+                newOrderStatus = "Pending";
+            }
+            else if (anyLate)
+            {
+                newOrderStatus = "Late";
+            }
+            else if (allDone)
+            {
+                newOrderStatus = "Done";
+            }
+            else if (allReadyOrDone)
+            {
+                newOrderStatus = "Ready";
+            }
+            else if (anyCooking)
+            {
+                newOrderStatus = "Cooking";
+            }
+            else
+            {
+                newOrderStatus = "Cooking";
+            }
+
+            if (!string.Equals(currentStatus, newOrderStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                order.Status = newOrderStatus;
+                await _unitOfWork.Orders.UpdateAsync(order);
+                await _unitOfWork.SaveChangesAsync();
             }
         }
 

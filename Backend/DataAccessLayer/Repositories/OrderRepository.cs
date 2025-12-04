@@ -11,6 +11,16 @@ namespace DataAccessLayer.Repositories
     public class OrderRepository : IOrderRepository
     {
         private readonly SapaFoRestRmsContext _context;
+        private static readonly string[] KitchenActiveStatuses = new[]
+        {
+            "Pending",
+            "Cooking",
+            "Ready",
+            "Late",
+            "Done",
+            "Processing",
+            "Preparing"
+        };
 
         public OrderRepository(SapaFoRestRmsContext context)
         {
@@ -107,7 +117,7 @@ namespace DataAccessLayer.Repositories
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
                             .ThenInclude(t => t.Area)
-                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => KitchenActiveStatuses.Contains(o.Status))
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -153,7 +163,7 @@ namespace DataAccessLayer.Repositories
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
                             .ThenInclude(t => t.Area)
-                .Where(o => (o.Status == "Processing" || o.Status == "Preparing" || o.Status == "Completed"))
+                .Where(o => KitchenActiveStatuses.Contains(o.Status) || o.Status == "Completed")
                 .Where(o => o.OrderDetails.Any(od => od.Status == "Done" || od.Status == "Hoàn thành"))
                 // Bỏ filter theo CreatedAt vì không chính xác (order có thể tạo từ lâu nhưng mới Done gần đây)
                 // Chỉ lấy orders được tạo trong vòng 24 giờ để tránh lấy quá nhiều dữ liệu cũ
@@ -183,7 +193,7 @@ namespace DataAccessLayer.Repositories
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
                             .ThenInclude(t => t.Area)
-                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => KitchenActiveStatuses.Contains(o.Status))
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -208,7 +218,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => KitchenActiveStatuses.Contains(o.Status))
                 .ToListAsync();
         }
 
@@ -234,7 +244,7 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => o.Status == "Pending" || o.Status == "Processing" || o.Status == "Preparing")
+                .Where(o => KitchenActiveStatuses.Contains(o.Status))
                 .ToListAsync();
         }
     }

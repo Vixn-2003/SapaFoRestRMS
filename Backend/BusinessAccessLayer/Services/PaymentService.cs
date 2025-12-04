@@ -41,7 +41,11 @@ public class PaymentService : IPaymentService
         "pending-payment",
         "WaitingForPayment",
         "Processing",
-        "Confirmed"  // Đơn đã được khách xác nhận, chờ thanh toán
+        "Confirmed",  // Đơn đã được khách xác nhận, chờ thanh toán
+        "Cooking",
+        "Ready",
+        "Late",
+        "Done"
     };
 
     private static readonly HashSet<string> ProcessedStatuses = new(StringComparer.OrdinalIgnoreCase)
