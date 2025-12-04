@@ -180,6 +180,33 @@ namespace BusinessAccessLayer.Mapping
             CreateMap<Transaction, TransactionDto>();
             CreateMap<Unit, UnitDTO>();
 
+
+            CreateMap<Supplier, SupplierListDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.SupplierId))
+            .ForMember(dest => dest.Code, opt => opt.MapFrom(src => src.CodeSupplier))
+            .ForMember(dest => dest.Contact, opt => opt.MapFrom(src => src.ContactInfo))
+            // Giả lập IsActive = true, bạn cần thêm trường này vào model Supplier nếu muốn quản lý
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+
+            // Các trường thống kê KHÔNG CÒN thuộc tính OnTimeRate
+            .ForMember(dest => dest.TotalOrders, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalValue, opt => opt.Ignore())
+            .ForMember(dest => dest.LastOrder, opt => opt.Ignore());
+
+            CreateMap<PurchaseOrder, OrderHistoryDto>()
+        .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.PurchaseOrderId))
+        .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.OrderDate))
+
+        // Bỏ qua Total và Items vì chúng được Service tính toán sau
+        .ForMember(dest => dest.Total, opt => opt.Ignore())
+        .ForMember(dest => dest.Items, opt => opt.Ignore());
+
+            CreateMap<Supplier, TopSupplierDto>()
+    .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+    .ForMember(dest => dest.Value, opt => opt.Ignore())
+    .ForMember(dest => dest.Orders, opt => opt.Ignore());
+
+
             CreateMap<StockTransaction, StockTransactionInventoryDTO>()
     // ===== Transaction =====
     .ForMember(dest => dest.BatchId, opt => opt.MapFrom(src => src.BatchId))
