@@ -371,7 +371,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 if (string.IsNullOrWhiteSpace(model.Reason))
                     return BadRequest(new { success = false, message = "Vui lòng nhập lý do kiểm kê" });
 
-                if (model.AdjustmentQuantity <= 0)
+                if (model.AdjustmentQuantity < 0)
                     return BadRequest(new { success = false, message = "Số lượng điều chỉnh phải lớn hơn 0" });
 
                 if (string.IsNullOrWhiteSpace(model.CreatorName) ||

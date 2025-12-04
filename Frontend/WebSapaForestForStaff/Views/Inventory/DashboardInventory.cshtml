@@ -1,0 +1,985 @@
+﻿@model List<WebSapaForestForStaff.DTOs.Inventory.StockTransactionInventoryDTO>
+@{
+    Layout = "~/Views/Shared/_LayoutInventory.cshtml";
+    ViewData["Title"] = "Dashboard Quản Lý Kho";
+    // Ví dụ: Lấy dữ liệu từ Server nếu có, nếu không JS sẽ dùng Mock Data
+}
+
+
+<style>
+    /* Reset & Base */
+    .wd-container * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .wd-page-wrapper {
+        min-height: 100vh;
+        background: linear-gradient(to bottom right, #f9fafb, #f3f4f6);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        color: #1f2937;
+    }
+
+    /* Layout & Spacing */
+    .wd-padding-8 {
+        padding: 32px;
+    }
+
+    .wd-padding-6 {
+        padding: 24px;
+    }
+
+    .wd-padding-4 {
+        padding: 16px;
+    }
+
+    .wd-space-y-6 > * + * {
+        margin-top: 24px;
+    }
+
+    .wd-space-y-3 > * + * {
+        margin-top: 12px;
+    }
+
+    .wd-space-y-1 > * + * {
+        margin-top: 4px;
+    }
+
+    .wd-mt-1 {
+        margin-top: 4px;
+    }
+
+    .wd-mt-0-5 {
+        margin-top: 2px;
+    }
+
+    .wd-mt-2 {
+        margin-top: 8px;
+    }
+
+    .wd-mb-1 {
+        margin-bottom: 4px;
+    }
+
+    .wd-mb-2 {
+        margin-bottom: 8px;
+    }
+
+    .wd-mb-4 {
+        margin-bottom: 16px;
+    }
+
+    .wd-mb-8 {
+        margin-bottom: 32px;
+    }
+
+    .wd-mr-2 {
+        margin-right: 8px;
+    }
+
+    .wd-pb-4 {
+        padding-bottom: 16px;
+    }
+
+    /* Grids & Flex */
+    .wd-flex {
+        display: flex;
+    }
+
+    .wd-flex-1 {
+        flex: 1 1 0%;
+    }
+
+    .wd-items-center {
+        align-items: center;
+    }
+
+    .wd-items-start {
+        align-items: flex-start;
+    }
+
+    .wd-justify-between {
+        justify-content: space-between;
+    }
+
+    .wd-justify-center {
+        justify-content: center;
+    }
+
+    .wd-gap-2 {
+        gap: 8px;
+    }
+
+    .wd-gap-3 {
+        gap: 12px;
+    }
+
+    .wd-gap-6 {
+        gap: 24px;
+    }
+
+    .wd-grid-4-col {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .wd-grid-2-col {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .wd-two-col-layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    /* Typography */
+    .wd-text-3xl {
+        font-size: 30px;
+    }
+
+    .wd-text-2xl {
+        font-size: 24px;
+    }
+
+    .wd-text-xl {
+        font-size: 20px;
+    }
+
+    .wd-text-lg {
+        font-size: 18px;
+    }
+
+    .wd-text-sm {
+        font-size: 14px;
+    }
+
+    .wd-text-xs {
+        font-size: 12px;
+    }
+
+    .wd-font-bold {
+        font-weight: 700;
+    }
+
+    .wd-font-semibold {
+        font-weight: 600;
+    }
+
+    .wd-font-medium {
+        font-weight: 500;
+    }
+
+    /* Colors & Backgrounds */
+    .wd-text-white {
+        color: white;
+    }
+
+    .wd-text-gray-800 {
+        color: #1f2937;
+    }
+
+    .wd-text-gray-700 {
+        color: #374151;
+    }
+
+    .wd-text-gray-600 {
+        color: #4b5563;
+    }
+
+    .wd-text-gray-500 {
+        color: #6b7280;
+    }
+
+    .wd-text-gray-400 {
+        color: #9ca3af;
+    }
+
+    .wd-text-blue-600 {
+        color: #2563eb;
+    }
+
+    .wd-text-blue-700 {
+        color: #1d4ed8;
+    }
+
+    .wd-text-green-600 {
+        color: #10b981;
+    }
+
+    .wd-text-green-700 {
+        color: #047857;
+    }
+
+    .wd-text-orange-500 {
+        color: #f97316;
+    }
+
+    .wd-text-orange-600 {
+        color: #ea580c;
+    }
+
+    .wd-text-red-500 {
+        color: #ef4444;
+    }
+
+    .wd-text-red-600 {
+        color: #dc2626;
+    }
+
+    .wd-text-purple-500 {
+        color: #a855f7;
+    }
+
+    .wd-text-purple-600 {
+        color: #9333ea;
+    }
+
+    .wd-text-purple-700 {
+        color: #7e22ce;
+    }
+
+    .wd-bg-white {
+        background-color: white;
+    }
+
+    .wd-bg-gray-100 {
+        background-color: #f3f4f6;
+    }
+
+    .wd-bg-blue-100 {
+        background-color: #dbeafe;
+    }
+
+    .wd-bg-green-50 {
+        background-color: #f0fdf4;
+    }
+
+    .wd-bg-green-100 {
+        background-color: #d1fae5;
+    }
+
+    .wd-bg-orange-50 {
+        background-color: #fff7ed;
+    }
+
+    .wd-bg-red-50 {
+        background-color: #fef2f2;
+    }
+
+    .wd-bg-purple-50 {
+        background-color: #faf5ff;
+    }
+
+    .wd-bg-purple-100 {
+        background-color: #e9d5ff;
+    }
+
+    .wd-bg-blue-500 {
+        background-color: #3b82f6;
+    }
+
+    .wd-bg-blue-600 {
+        background-color: #2563eb;
+    }
+
+    .wd-bg-green-500 {
+        background-color: #10b981;
+    }
+
+    .wd-bg-green-600 {
+        background-color: #059669;
+    }
+
+    .wd-bg-orange-600 {
+        background-color: #ea580c;
+    }
+
+    .wd-bg-red-500 {
+        background-color: #ef4444;
+    }
+
+    .wd-bg-purple-500 {
+        background-color: #a855f7;
+    }
+
+    .wd-bg-purple-600 {
+        background-color: #7c3aed;
+    }
+
+    .wd-bg-gray-600 {
+        background-color: #4b5563;
+    }
+
+    .wd-bg-gradient-blue {
+        background: linear-gradient(to bottom right, #3b82f6, #2563eb);
+    }
+
+    .wd-bg-gradient-green {
+        background: linear-gradient(to bottom right, #10b981, #059669);
+    }
+
+    .wd-bg-gradient-purple {
+        background: linear-gradient(to bottom right, #a855f7, #9333ea);
+    }
+
+    /* Borders & Shadows */
+    .wd-border {
+        border: 1px solid #e5e7eb;
+    }
+
+    .wd-border-b {
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .wd-border-gray-100 {
+        border-color: #f3f4f6;
+    }
+
+    .wd-shadow-sm {
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .wd-hover-shadow-md:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    .wd-rounded-xl {
+        border-radius: 12px;
+    }
+
+    .wd-rounded-lg {
+        border-radius: 8px;
+    }
+
+    .wd-rounded-full {
+        border-radius: 9999px;
+    }
+
+    /* Components */
+    .wd-header-bar {
+        background-color: white;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid #e5e7eb;
+        padding: 16px 32px;
+    }
+
+    .wd-btn-action, .wd-btn-primary {
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .wd-btn-action {
+        padding: 8px;
+        background: none;
+        position: relative;
+    }
+
+        .wd-btn-action:hover {
+            background-color: #f3f4f6;
+        }
+
+    .wd-btn-primary {
+        padding: 8px 16px;
+        background-color: #2563eb;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .wd-btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+
+    .wd-btn-link {
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+
+        .wd-btn-link:hover {
+            text-decoration: underline;
+        }
+
+    .wd-kpi-card {
+        background-color: white;
+        border: 1px solid #f3f4f6;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+        transition: box-shadow 0.2s;
+    }
+
+    .wd-kpi-card-icon-wrapper {
+        padding: 12px;
+        border-radius: 8px;
+    }
+
+    .wd-icon-bg-blue {
+        background: linear-gradient(to bottom right, #3b82f6, #2563eb);
+    }
+
+    .wd-icon-bg-orange {
+        background: linear-gradient(to bottom right, #f97316, #ea580c);
+    }
+
+    .wd-icon-bg-red {
+        background: linear-gradient(to bottom right, #ef4444, #dc2626);
+    }
+
+    .wd-icon-bg-purple {
+        background: linear-gradient(to bottom right, #a855f7, #9333ea);
+    }
+
+    .wd-task-panel-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .wd-task-grid {
+        padding: 24px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+    }
+
+    .wd-task-item {
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }
+
+        .wd-task-item.export {
+            background: linear-gradient(to right, #eff6ff, rgba(239, 246, 255, 0.5));
+            border-color: #dbeafe;
+        }
+
+            .wd-task-item.export:hover {
+                border-color: #93c5fd;
+            }
+
+        .wd-task-item.import {
+            background: linear-gradient(to right, #ecfdf5, rgba(236, 253, 245, 0.5));
+            border-color: #d1fae5;
+        }
+
+            .wd-task-item.import:hover {
+                border-color: #6ee7b7;
+            }
+
+        .wd-task-item.inventory {
+            background: linear-gradient(to right, #faf5ff, rgba(250, 245, 255, 0.5));
+            border-color: #e9d5ff;
+        }
+
+            .wd-task-item.inventory:hover {
+                border-color: #d8b4fe;
+            }
+
+    .wd-tag-priority {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    .wd-tag-high {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .wd-tag-arriving {
+        background-color: #10b981;
+        color: white;
+    }
+
+    .wd-tag-pending {
+        background-color: #e5e7eb;
+        color: #374151;
+    }
+
+    .wd-alerts-list {
+        max-height: 480px;
+        overflow-y: auto;
+        padding: 16px;
+    }
+
+    .wd-alert-item {
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: box-shadow 0.2s;
+    }
+
+        .wd-alert-item:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+    .wd-alert-urgent-expiry {
+        background-color: #fef2f2;
+        border-left-color: #ef4444;
+    }
+
+    .wd-alert-urgent-low {
+        background-color: #fff7ed;
+        border-left-color: #f97316;
+    }
+
+    .wd-alert-normal {
+        background-color: #fffbeb;
+        border-left-color: #facc15;
+    }
+
+    .wd-alert-time {
+        color: #ef4444;
+        font-weight: 700;
+    }
+
+    .wd-action-btn-quick {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid;
+        transition: all 0.2s;
+        cursor: pointer;
+        background: white;
+    }
+
+        .wd-action-btn-quick:hover > div {
+            transform: scale(1.1);
+        }
+
+        .wd-action-btn-quick > div {
+            transition: transform 0.2s;
+        }
+
+        .wd-action-btn-quick.blue {
+            background: linear-gradient(to bottom right, #eff6ff, #dbeafe);
+            border-color: #bfdbfe;
+        }
+
+        .wd-action-btn-quick.green {
+            background: linear-gradient(to bottom right, #ecfdf5, #d1fae5);
+            border-color: #a7f3d0;
+        }
+
+        .wd-action-btn-quick.purple {
+            background: linear-gradient(to bottom right, #faf5ff, #e9d5ff);
+            border-color: #d8b4fe;
+        }
+
+        .wd-action-btn-quick.orange {
+            background: linear-gradient(to bottom right, #fff7ed, #fed7aa);
+            border-color: #fdba74;
+        }
+
+        .wd-action-btn-quick.gray {
+            background: linear-gradient(to bottom right, #f9fafb, #f3f4f6);
+            border-color: #e5e7eb;
+        }
+
+    .wd-select {
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .wd-last-mb-0:last-child {
+        margin-bottom: 0;
+    }
+
+    .wd-last-pb-0:last-child {
+        padding-bottom: 0;
+    }
+
+    .wd-last-border-b-0:last-child {
+        border-bottom: none;
+    }
+
+    .wd-w-full {
+        width: 100%;
+    }
+
+    .wd-h-2 {
+        height: 8px;
+    }
+
+    .wd-w-2 {
+        width: 8px;
+    }
+</style>
+
+@* --- HTML STRUCTURE --- *@
+<div class="wd-page-wrapper wd-container">
+    <div class="wd-header-bar">
+        <div class="wd-flex wd-items-center wd-justify-between">
+            <div>
+                <h1 class="wd-text-2xl wd-font-bold wd-text-gray-800">Dashboard Quản Lý Kho</h1>
+                <p class="wd-text-sm wd-text-gray-500 wd-mt-1" id="wd-current-date">
+                    Đang tải...
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="wd-padding-8">
+        @* KPI Cards *@
+        <div class="wd-grid-4-col wd-gap-6 wd-mb-8">
+            <div class="wd-kpi-card wd-hover-shadow-md">
+                <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
+                    <div class="wd-kpi-card-icon-wrapper wd-icon-bg-blue">
+                        <svg class="wd-text-white" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"></path><path d="M4.73 6.97L12 3.65l7.27 3.32"></path></svg>
+                    </div>
+                    <span class="wd-text-xs wd-text-green-600 wd-bg-green-50 wd-px-2 wd-py-1 wd-rounded-full wd-font-medium">+2.5%</span>
+                </div>
+                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Tổng Giá Trị Kho</p>
+                <h3 class="wd-text-3xl wd-font-bold wd-text-gray-800" id="kpi-total-value">...</h3>
+            </div>
+
+            <div class="wd-kpi-card wd-hover-shadow-md">
+                <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
+                    <div class="wd-kpi-card-icon-wrapper wd-icon-bg-orange">
+                        <svg class="wd-text-white" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </div>
+                    <span class="wd-text-xs wd-text-orange-600 wd-bg-orange-50 wd-px-2 wd-py-1 wd-rounded-full wd-font-medium">Cần chú ý</span>
+                </div>
+                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Nguyên Liệu Sắp Hết</p>
+                <h3 class="wd-text-3xl wd-font-bold wd-text-orange-600" id="kpi-low-stock">...</h3>
+            </div>
+
+            <div class="wd-kpi-card wd-hover-shadow-md">
+                <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
+                    <div class="wd-kpi-card-icon-wrapper wd-icon-bg-red">
+                        <svg class="wd-text-white" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </div>
+                    <span class="wd-text-xs wd-text-red-600 wd-bg-red-50 wd-px-2 wd-py-1 wd-rounded-full wd-font-medium">Khẩn cấp</span>
+                </div>
+                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Sắp Hết Hạn Sử Dụng</p>
+                <h3 class="wd-text-3xl wd-font-bold wd-text-red-600" id="kpi-expiring-soon">...</h3>
+            </div>
+
+            <div class="wd-kpi-card wd-hover-shadow-md">
+                <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
+                    <div class="wd-kpi-card-icon-wrapper wd-icon-bg-purple">
+                        <svg class="wd-text-white" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    </div>
+                    <span class="wd-text-xs wd-text-purple-600 wd-bg-purple-50 wd-px-2 wd-py-1 wd-rounded-full wd-font-medium">Đang chờ</span>
+                </div>
+                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Đơn Chờ Xử Lý</p>
+                <h3 class="wd-text-3xl wd-font-bold wd-text-purple-600" id="kpi-pending-orders">...</h3>
+            </div>
+        </div>
+
+        @* Main Content - 2 Column Layout *@
+        <div class="wd-two-col-layout">
+            @* Left Column *@
+            <div class="wd-space-y-6">
+                @* Tasks Panel *@
+                <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
+                    <div class="wd-task-panel-header">
+                        <h2 class="wd-text-lg wd-font-bold wd-text-gray-800 wd-flex wd-items-center">
+                            <svg class="wd-mr-2 wd-text-purple-500" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            Công Việc Cần Xử Lý
+                        </h2>
+                        <button class="wd-text-sm wd-text-blue-600 wd-font-medium wd-btn-link">Xem tất cả →</button>
+                    </div>
+                    <div class="wd-task-grid" id="wd-pending-tasks"></div>
+                </div>
+
+                @* Bottom Left Grid *@
+                <div class="wd-grid-2-col wd-gap-6">
+                    @* Top Items *@
+                    <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
+                        <div class="wd-task-panel-header">
+                            <div>
+                                <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Top Nguyên Liệu</h2>
+                                <p class="wd-text-xs wd-text-gray-500 wd-mt-0-5">Tiêu hao 7 ngày qua</p>
+                            </div>
+                            <select class="wd-select" id="wd-top-items-select">
+                                <option value="7days">7 ngày</option>
+                                <option value="30days">30 ngày</option>
+                                <option value="90days">90 ngày</option>
+                            </select>
+                        </div>
+                        <div class="wd-padding-6" id="wd-top-items-list"></div>
+                    </div>
+
+                    @* Recent Activity *@
+                    <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
+                        <div class="wd-task-panel-header">
+                            <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Hoạt Động Gần Đây</h2>
+                            <p class="wd-text-xs wd-text-gray-500 wd-mt-0-5">Cập nhật liên tục</p>
+                        </div>
+                        <div class="wd-padding-6" id="wd-recent-activity-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            @* Right Column *@
+            <div class="wd-space-y-6">
+                @* Alerts *@
+                <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
+                    <div class="wd-task-panel-header">
+                        <h2 class="wd-text-lg wd-font-bold wd-text-gray-800 wd-flex wd-items-center">
+                            <svg class="wd-mr-2 wd-text-orange-500" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            Cảnh Báo Ưu Tiên
+                        </h2>
+                    </div>
+                    <div class="wd-alerts-list" id="wd-alerts-list"></div>
+                </div>
+
+                @* Quick Access *@
+                <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
+                    <div class="wd-task-panel-header">
+                        <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Truy Cập Nhanh</h2>
+                    </div>
+                    <div class="wd-padding-4 wd-grid-2-col wd-gap-3">
+                        <button class="wd-action-btn-quick green">
+                            <div class="wd-bg-green-600 wd-p-2 wd-rounded-lg wd-mb-2 wd-scale-110">
+                                <svg class="wd-text-white" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"></path></svg>
+                            </div>
+                            <span class="wd-text-xs wd-font-semibold wd-text-gray-700">Tạo Đơn Nhập</span>
+                        </button>
+                        <button class="wd-action-btn-quick gray">
+                            <div class="wd-bg-gray-600 wd-p-2 wd-rounded-lg wd-mb-2 wd-scale-110">
+                                <svg class="wd-text-white" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2z"></path></svg>
+                            </div>
+                            <span class="wd-text-xs wd-font-semibold wd-text-gray-700">QL Nguyên Liệu</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* --- JAVASCRIPT SECTION --- *@
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // ===== Utility Functions =====
+        const $ = selector => document.querySelector(selector);
+
+        // ====================================================================
+        // ===== I. MOCK DATA (Dữ liệu tĩnh) =====
+        // ====================================================================
+
+        const kpiData = {
+            totalValue: '125,500,000',
+            lowStock: 8,
+            expiringSoon: 5,
+            pendingOrders: 12
+        };
+
+        const alerts = [
+            { id: 1, name: 'Tôm sú', quantity: '2 kg', min: '10 kg', type: 'low', urgent: true, expiry: '' },
+            { id: 2, name: 'Thịt bò Úc', quantity: '5 kg', min: '15 kg', type: 'low', urgent: true, expiry: '' },
+            { id: 3, name: 'Rau xà lách', expiry: '2 ngày', quantity: '3 kg', type: 'expiry', urgent: true, min: '' },
+            { id: 4, name: 'Cà chua', expiry: '3 ngày', quantity: '8 kg', type: 'expiry', urgent: false, min: '' },
+            { id: 5, name: 'Sữa tươi', quantity: '4 lít', min: '8 lít', type: 'low', urgent: false, expiry: '' },
+            { id: 6, name: 'Bơ', expiry: '4 ngày', quantity: '2 kg', type: 'expiry', urgent: false, min: '' },
+        ];
+
+        const pendingTasks = {
+            export: [
+                { id: 'EX001', kitchen: 'Bếp Chính', items: 8, time: '10:30', priority: 'high' },
+                { id: 'EX002', kitchen: 'Bếp Phụ', items: 5, time: '11:00', priority: 'medium' },
+                { id: 'EX003', kitchen: 'Bếp Lẩu', items: 6, time: '11:30', priority: 'low' },
+            ],
+            import: [
+                { id: 'IM001', supplier: 'Hải Sản Tươi Sống', items: 12, time: '14:00', status: 'arriving' },
+                { id: 'IM002', supplier: 'Rau Sạch Đà Lạt', items: 6, time: '15:30', status: 'pending' },
+                { id: 'IM003', supplier: 'Thịt Sạch 3A', items: 8, time: '16:00', status: 'pending' },
+            ],
+            inventory: [
+                { id: 'KK001', area: 'Kho Lạnh #1', items: 25, deadline: 'Hôm nay', priority: 'high' },
+                { id: 'KK002', area: 'Kho Khô', items: 45, deadline: 'Ngày mai', priority: 'medium' },
+            ]
+        };
+
+        const topItems = [
+            { name: 'Thịt bò', usage: 85, trend: 'up', value: '15.2M' },
+            { name: 'Rau củ', usage: 72, trend: 'up', value: '8.5M' },
+            { name: 'Hải sản', usage: 68, trend: 'down', value: '22.1M' },
+            { name: 'Gia vị', usage: 45, trend: 'up', value: '4.3M' },
+            { name: 'Thịt gà', usage: 38, trend: 'up', value: '6.7M' },
+        ];
+
+        const recentActivity = [
+            { time: '09:45', action: 'Xuất kho', user: 'Nguyễn Văn A', detail: 'EX001 - Bếp Chính' },
+            { time: '09:20', action: 'Nhập kho', user: 'Trần Thị B', detail: 'IM105 - Hải sản' },
+            { time: '08:50', action: 'Kiểm kê', user: 'Lê Văn C', detail: 'KK099 - Kho lạnh' },
+        ];
+
+        // ====================================================================
+        // ===== II. RENDER FUNCTIONS =====
+        // ====================================================================
+
+        function renderKpiCards() {
+            document.getElementById('kpi-total-value').textContent = kpiData.totalValue + 'đ';
+            document.getElementById('kpi-low-stock').innerHTML = kpiData.lowStock + ' <span class="wd-text-lg wd-text-gray-400">món</span>';
+            document.getElementById('kpi-expiring-soon').innerHTML = kpiData.expiringSoon + ' <span class="wd-text-lg wd-text-gray-400">món</span>';
+            document.getElementById('kpi-pending-orders').innerHTML = kpiData.pendingOrders + ' <span class="wd-text-lg wd-text-gray-400">đơn</span>';
+        }
+
+        function renderPendingTasks() {
+            const container = document.getElementById('wd-pending-tasks');
+
+            const renderSection = (title, count, color, items, renderItem) => `
+                        <div>
+                            <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
+                                <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
+                                    <div class="wd-w-2 wd-h-2 wd-bg-${color}-500 wd-rounded-full wd-mr-2"></div> ${title}
+                                </h3>
+                                <span class="wd-bg-${color}-100 wd-text-${color}-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${count}</span>
+                            </div>
+                            <div class="wd-space-y-3">
+                                ${items.map(renderItem).join('')}
+                            </div>
+                        </div>
+                    `;
+
+
+            const importHtml = renderSection('Đơn Nhập', pendingTasks.import.length, 'green', pendingTasks.import, order => `
+                        <div class="wd-task-item import">
+                            <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                                <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
+                                <span class="wd-tag-priority ${order.status === 'arriving' ? 'wd-tag-arriving' : 'wd-tag-pending'}">
+                                    ${order.status === 'arriving' ? 'Đang đến' : 'Chờ'}
+                                </span>
+                            </div>
+                            <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.supplier}</p>
+                            <p class="wd-text-xs wd-text-gray-500">${order.items} món • ${order.time}</p>
+                        </div>
+                    `);
+
+            const inventoryHtml = renderSection('Kiểm Kê', pendingTasks.inventory.length, 'purple', pendingTasks.inventory, order => `
+                        <div class="wd-task-item inventory">
+                            <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                                <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
+                                ${order.priority === 'high' ? '<span class="wd-tag-priority wd-tag-high">Hôm nay</span>' : ''}
+                            </div>
+                            <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.area}</p>
+                            <p class="wd-text-xs wd-text-gray-500">${order.items} món • ${order.deadline}</p>
+                        </div>
+                    `);
+
+            container.innerHTML = exportHtml + importHtml + inventoryHtml;
+        }
+
+        function renderAlerts() {
+            const container = document.getElementById('wd-alerts-list');
+            let html = alerts.map(alert => {
+                const colorClass = alert.urgent
+                    ? alert.type === 'expiry' ? 'wd-alert-urgent-expiry' : 'wd-alert-urgent-low'
+                    : 'wd-alert-normal';
+
+                return `
+                            <div key="${alert.id}" class="wd-alert-item ${colorClass}">
+                                <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                                    <h4 class="wd-font-bold wd-text-gray-800 wd-text-sm">${alert.name}</h4>
+                                    ${alert.urgent ? '<span class="wd-tag-priority wd-tag-high">Gấp</span>' : ''}
+                                </div>
+                                <div class="wd-space-y-1">
+                                    <p class="wd-text-sm wd-text-gray-700">
+                                        Còn: <span class="wd-font-bold">${alert.quantity}</span>
+                                    </p>
+                                    ${alert.type === 'low' ? `<p class="wd-text-xs wd-text-gray-600">Tối thiểu: ${alert.min}</p>` : ''}
+                                    ${alert.type === 'expiry' ? `<p class="wd-text-sm wd-alert-time">⏰ HSD: ${alert.expiry}</p>` : ''}
+                                </div>
+                            </div>
+                        `;
+            }).join('');
+            container.innerHTML = html;
+        }
+
+        function renderTopItems() {
+            const container = document.getElementById('wd-top-items-list');
+            let html = topItems.map((item, idx) => {
+                const trendIcon = item.trend === 'up'
+                    ? '<svg class="wd-text-green-600" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>'
+                    : '<svg class="wd-text-red-600" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12V18z"/></svg>';
+
+                const barColorClass = idx === 0 ? 'wd-bg-gradient-blue' :
+                    idx === 1 ? 'wd-bg-gradient-green' : 'wd-bg-gradient-purple';
+
+                return `
+                            <div class="wd-mb-4 wd-last-mb-0">
+                                <div class="wd-flex wd-justify-between wd-items-center wd-mb-2">
+                                    <div class="wd-flex wd-items-center wd-gap-2">
+                                        <span class="wd-text-lg wd-font-bold wd-text-gray-400">#${idx + 1}</span>
+                                        <span class="wd-text-sm wd-font-semibold wd-text-gray-700">${item.name}</span>
+                                    </div>
+                                    <div class="wd-flex wd-items-center wd-gap-3">
+                                        <span class="wd-text-xs wd-text-gray-500">${item.value}</span>
+                                        <div class="wd-flex wd-items-center wd-gap-1">
+                                            <span class="wd-text-sm wd-font-bold wd-text-gray-600">${item.usage}%</span>
+                                            ${trendIcon}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="wd-w-full wd-bg-gray-100 wd-rounded-full wd-h-2">
+                                    <div class="wd-h-2 wd-rounded-full ${barColorClass}" style="width: ${item.usage}%"></div>
+                                </div>
+                            </div>
+                        `;
+            }).join('');
+            container.innerHTML = html;
+        }
+
+        function renderRecentActivity() {
+            const container = document.getElementById('wd-recent-activity-list');
+            let html = recentActivity.map((activity) => `
+                        <div class="wd-flex wd-items-start wd-gap-3 wd-mb-4 wd-pb-4 wd-border-b wd-border-gray-100 wd-last-mb-0 wd-last-pb-0 wd-last-border-b-0">
+                            <div class="wd-bg-blue-100 wd-p-2 wd-rounded-lg wd-mt-0-5">
+                                <svg class="wd-text-blue-600" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 13l5-5-5-5M17 8H6"></path></svg>
+                            </div>
+                            <div class="wd-flex-1">
+                                <div class="wd-flex wd-items-center wd-justify-between wd-mb-1">
+                                    <span class="wd-text-sm wd-font-semibold wd-text-gray-800">${activity.action}</span>
+                                    <span class="wd-text-xs wd-text-gray-400">${activity.time}</span>
+                                </div>
+                                <p class="wd-text-xs wd-text-gray-600">${activity.detail}</p>
+                                <p class="wd-text-xs wd-text-gray-400 wd-mt-0-5">Bởi: ${activity.user}</p>
+                            </div>
+                        </div>
+                    `).join('');
+
+            html += `<button class="wd-w-full wd-mt-2 wd-text-sm wd-text-blue-600 wd-font-medium wd-py-2 wd-hover-bg-blue-50 wd-rounded-lg wd-transition">Xem lịch sử đầy đủ</button>`;
+            container.innerHTML = html;
+        }
+
+        // ===== Initialization =====
+        function initializeDashboard() {
+            // Cập nhật ngày tháng trong header
+            const currentDate = new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('wd-current-date').innerHTML = `Chào buổi sáng, Nguyễn Văn A • ${currentDate}`;
+
+            // Render UI
+            renderKpiCards();
+            renderPendingTasks();
+            renderAlerts();
+            renderTopItems();
+            renderRecentActivity();
+        }
+
+        initializeDashboard();
+    });
+</script>

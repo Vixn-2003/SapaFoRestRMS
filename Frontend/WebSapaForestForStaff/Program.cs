@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using WebSapaForestForStaff.Controllers;
 using WebSapaForestForStaff.Hubs;
 using WebSapaForestForStaff.Services;
 using WebSapaForestForStaff.Services.Api;
@@ -34,6 +35,7 @@ builder.Services.AddHttpClient<IUserApiService, UserApiService>();
 builder.Services.AddHttpClient<IProfileApiService, ProfileApiService>();
 builder.Services.AddHttpClient<IPositionApiService, PositionApiService>();
 builder.Services.AddHttpClient<IPaymentApiService, PaymentApiService>();
+
 
 // Keep backward compatibility with old ApiService (can be removed after migration)
 builder.Services.AddHttpClient<ApiService>();
