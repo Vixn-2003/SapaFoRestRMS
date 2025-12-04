@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using BusinessAccessLayer.DTOs.Waiter;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
@@ -242,14 +243,20 @@ namespace BusinessAccessLayer.Services
                     if (orderComboItem.IsUrgent)
                     {
                         orderComboItem.IsUrgent = false;
+                        // Xóa các tag [LÀM GẤP: ...] khỏi ghi chú
+                        orderComboItem.Notes = CleanUrgentNotes(orderComboItem.Notes);
                     }
                     else
                     {
                         orderComboItem.IsUrgent = true;
+                        var baseNotes = CleanUrgentNotes(orderComboItem.Notes) ?? string.Empty;
                         if (!string.IsNullOrEmpty(request.Reason))
                         {
-                            var currentNotes = orderComboItem.Notes ?? "";
-                            orderComboItem.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                            orderComboItem.Notes = $"{baseNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                        else
+                        {
+                            orderComboItem.Notes = baseNotes;
                         }
                     }
 
@@ -274,14 +281,19 @@ namespace BusinessAccessLayer.Services
                     if (orderDetail.IsUrgent)
                     {
                         orderDetail.IsUrgent = false;
+                        orderDetail.Notes = CleanUrgentNotes(orderDetail.Notes);
                     }
                     else
                     {
                         orderDetail.IsUrgent = true;
+                        var baseNotes = CleanUrgentNotes(orderDetail.Notes) ?? string.Empty;
                         if (!string.IsNullOrEmpty(request.Reason))
                         {
-                            var currentNotes = orderDetail.Notes ?? "";
-                            orderDetail.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                            orderDetail.Notes = $"{baseNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                        else
+                        {
+                            orderDetail.Notes = baseNotes;
                         }
                     }
 
@@ -305,6 +317,22 @@ namespace BusinessAccessLayer.Services
                     Message = $"Lỗi: {ex.Message}"
                 };
             }
+        }
+
+        /// <summary>
+        /// Loại bỏ tất cả các đoạn tag [LÀM GẤP: ...] khỏi ghi chú để tránh bị nối nhiều lần.
+        /// Giữ lại các phần ghi chú khác của waiter.
+        /// </summary>
+        private string? CleanUrgentNotes(string? notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+            {
+                return notes;
+            }
+
+            // Xóa các đoạn " [LÀM GẤP: ...]" (tiếng Việt, có thể có khoảng trắng trước)
+            var cleaned = Regex.Replace(notes, @"\s*\[LÀM GẤP:[^\]]*\]", string.Empty, RegexOptions.IgnoreCase);
+            return cleaned.Trim();
         }
 
         public async Task<CancelOrderDetailResponse> CancelOrderDetailAsync(CancelOrderDetailDto request)
