@@ -102,7 +102,11 @@ namespace DataAccessLayer.Repositories
             existingItem.IsAvailable = menuItem.IsAvailable;
             existingItem.CourseType = menuItem.CourseType;
             existingItem.Description = menuItem.Description;
-            existingItem.ImageUrl = menuItem.ImageUrl;
+            if (!string.IsNullOrWhiteSpace(menuItem.ImageUrl))
+            {
+                // TH1: Có ảnh mới → cập nhật
+                existingItem.ImageUrl = menuItem.ImageUrl;
+            }
             existingItem.IsAds = menuItem.IsAds;
             existingItem.TimeCook = menuItem.TimeCook;
             existingItem.BillingType = menuItem.BillingType;

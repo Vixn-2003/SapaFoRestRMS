@@ -1,73 +1,140 @@
-﻿@{
-    ViewData["Title"] = "Nhập Hàng Vào Kho";
-    Layout = "_LayoutInventory";
+﻿@model WebSapaForestForStaff.DTOs.Inventory.ExportManagementViewModel
+@{
+    ViewData["Title"] = "Lịch Sử Xuất hàng";
+    Layout = "~/Views/Shared/_LayoutInventory.cshtml";
 }
 
-
 <style>
-    /* CSS riêng cho trang Export Management - tránh conflict với layout */
-    .export-page-wrapper {
-        min-height: 100vh;
-        padding: 1.5rem;
-    }
-
-    .export-max-container {
-        max-width: 90rem;
-        margin: 0 auto;
-    }
-
-    .export-card {
-        background-color: white;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-        margin-bottom: 1.5rem;
-        padding: 1.5rem;
-    }
-
-    .export-header-title {
-        font-size: 1.5rem;
-        font-weight: 700;
+    /* ==================== EXPORT MANAGEMENT ISOLATED STYLES ==================== */
+    /* Wrap everything in .export-mgmt to avoid conflicts */
+    
+    .export-mgmt {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #f3f4f6;
         color: #111827;
-        margin-bottom: 1rem;
+        min-height: 100vh;
     }
 
-    .export-stats-grid {
+    .export-mgmt *,
+    .export-mgmt *::before,
+    .export-mgmt *::after {
+        box-sizing: border-box;
+    }
+
+    /* ==================== HEADER ==================== */
+    .export-mgmt__header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .export-mgmt__title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        color: #111827;
+    }
+
+    /* ==================== STATS GRID ==================== */
+    .export-mgmt__stats-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
     }
 
-    .export-stat-item {
+    .export-mgmt__stat-card {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #3b82f6;
         display: flex;
         align-items: center;
+        gap: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .export-stat-icon {
-        width: 2.5rem;
-        height: 2.5rem;
-        margin-right: 0.75rem;
-        flex-shrink: 0;
+    .export-mgmt__stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
 
-    .export-stat-label {
+    .export-mgmt__stat-card--blue {
+        border-left-color: #3b82f6;
+    }
+
+    .export-mgmt__stat-card--orange {
+        border-left-color: #f97316;
+    }
+
+    .export-mgmt__stat-card--green {
+        border-left-color: #22c55e;
+    }
+
+    .export-mgmt__stat-card--warning {
+        border-left-color: #f59e0b;
+        background: #fffbeb;
+    }
+
+    .export-mgmt__stat-card--info {
+        border-left-color: #8b5cf6;
+    }
+
+    .export-mgmt__stat-icon {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .export-mgmt__stat-content {
+        flex: 1;
+    }
+
+    .export-mgmt__stat-label {
         font-size: 0.875rem;
         color: #6b7280;
+        margin-bottom: 0.5rem;
         display: block;
     }
 
-    .export-stat-value {
-        font-size: 1.5rem;
+    .export-mgmt__stat-value {
+        font-size: 1.875rem;
         font-weight: 700;
+        color: #111827;
+        line-height: 1;
         display: block;
     }
 
-    .export-filter-grid {
+    .export-mgmt__stat-status {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
+        display: block;
+    }
+
+    /* ==================== FILTERS SECTION ==================== */
+    .export-mgmt__filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .export-mgmt__filter-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 1rem;
     }
 
-    .export-form-group label {
+    .export-mgmt__filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .export-mgmt__filter-label {
         display: block;
         font-size: 0.875rem;
         font-weight: 500;
@@ -75,578 +142,1077 @@
         margin-bottom: 0.5rem;
     }
 
-    .export-form-control {
+    .export-mgmt__filter-input,
+    .export-mgmt__filter-select {
         width: 100%;
-        padding: 0.5rem 0.75rem;
+        padding: 0.625rem 0.75rem;
         border: 1px solid #d1d5db;
         border-radius: 0.5rem;
         font-size: 0.875rem;
-    }
-
-        .export-form-control:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-    .export-layout-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .export-table-wrapper {
-        background-color: white;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    }
-
-    .export-table-header {
-        padding: 1rem 1.5rem;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .export-table-title {
-        font-size: 1.125rem;
-        font-weight: 600;
+        background: white;
         color: #111827;
+        transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .export-table-scroll {
-        max-height: 600px;
+    .export-mgmt__filter-input:focus,
+    .export-mgmt__filter-select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* ==================== ALERT SECTION ==================== */
+    .export-mgmt__alerts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .export-mgmt__alert-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .export-mgmt__alert-header {
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+        font-size: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+        margin: 0;
+    }
+
+    .export-mgmt__alert-content {
+        padding: 1rem;
+        max-height: 250px;
         overflow-y: auto;
     }
 
-    .export-data-table {
-        width: 100%;
-        border-collapse: collapse;
+    .export-mgmt__alert-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-        .export-data-table thead {
-            background-color: #f9fafb;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .export-data-table th {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .export-data-table td {
-            padding: 0.75rem 1rem;
-            font-size: 0.875rem;
-            border-top: 1px solid #e5e7eb;
-        }
-
-        .export-data-table tbody tr:hover {
-            background-color: #f9fafb;
-        }
-
-    .export-badge {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        background-color: #dbeafe;
-        color: #1e40af;
+    .export-mgmt__alert-item:last-child {
+        margin-bottom: 0;
     }
 
-    .export-quantity {
-        font-weight: 600;
-        color: #ea580c;
+    .export-mgmt__top-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
     }
 
-    .export-expand-btn {
-        background: none;
-        border: none;
+    .export-mgmt__top-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .export-mgmt__rank {
+        font-weight: 700;
         color: #3b82f6;
-        cursor: pointer;
-        padding: 0;
+        min-width: 2rem;
     }
 
-        .export-expand-btn:hover {
-            color: #1e40af;
-        }
-
-    .export-detail-row {
-        background-color: #eff6ff;
-    }
-
-    .export-detail-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        padding: 1rem;
+    .export-mgmt__item-name {
+        flex: 1;
         font-size: 0.875rem;
     }
 
-    .export-detail-label {
-        color: #6b7280;
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-    }
-
-    .export-detail-value {
+    .export-mgmt__item-value {
+        font-weight: 600;
         color: #111827;
-        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
     }
 
-    .export-status-badge {
+    .export-mgmt__warehouse-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
+    }
+
+    .export-mgmt__warehouse-stat:last-child {
+        margin-bottom: 0;
+    }
+
+    .export-mgmt__badge {
         display: inline-block;
-        padding: 0.25rem 0.5rem;
+        padding: 0.25rem 0.625rem;
         border-radius: 9999px;
         font-size: 0.75rem;
-        background-color: #d1fae5;
+        font-weight: 500;
+    }
+
+    .export-mgmt__badge--danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .export-mgmt__badge--success {
+        background: #d1fae5;
         color: #065f46;
     }
 
-    .export-stats-sidebar {
-        background-color: white;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    /* ==================== TABLE SECTION ==================== */
+    .export-mgmt__table-section {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
     }
 
-    .export-stats-scroll {
+    .export-mgmt__section-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+        font-size: 1.125rem;
+        margin: 0;
+        background: #f9fafb;
+    }
+
+    .export-mgmt__table-wrapper {
+        overflow-x: auto;
         max-height: 600px;
         overflow-y: auto;
-        padding: 1rem;
     }
 
-    .export-stat-card {
-        border: 1px solid #e5e7eb;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        transition: box-shadow 0.2s;
-    }
-
-        .export-stat-card:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-    .export-stat-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 0.5rem;
-    }
-
-    .export-stat-card-name {
+    .export-mgmt__table {
+        width: 100%;
+        border-collapse: collapse;
         font-size: 0.875rem;
-        font-weight: 500;
-        color: #111827;
     }
 
-    .export-stat-card-icon {
-        width: 1rem;
-        height: 1rem;
+    .export-mgmt__table thead {
+        background: #f9fafb;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .export-mgmt__table th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .export-mgmt__table td {
+        padding: 0.875rem 1rem;
+        border-top: 1px solid #e5e7eb;
+        color: #374151;
+    }
+
+    .export-mgmt__table tbody tr {
+        transition: background-color 0.15s;
+    }
+
+    .export-mgmt__table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .export-mgmt__ingredient-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .export-mgmt__ingredient-name {
+        font-weight: 600;
+        color: #111827;
+        display: block;
+    }
+
+    .export-mgmt__ingredient-meta {
+        font-size: 0.75rem;
+        color: #6b7280;
+        display: block;
+    }
+
+    .export-mgmt__quantity-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #fee2e2;
+        color: #991b1b;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .export-mgmt__batch-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: #dbeafe;
+        color: #1e40af;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .export-mgmt__text-muted {
         color: #9ca3af;
     }
 
-    .export-stat-card-amount {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #ea580c;
+    /* ==================== COMPARISON SECTION ==================== */
+    .export-mgmt__comparison-section {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
     }
 
-    .export-stat-card-unit {
+    .export-mgmt__comparison-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+        font-size: 1.125rem;
+        margin: 0;
+        background: #f9fafb;
+    }
+
+    .export-mgmt__comparison-wrapper {
+        overflow-x: auto;
+        max-height: 500px; 
+        overflow-y: auto; 
+    }
+
+    .export-mgmt__comparison-table {
+        width: 100%;
+        border-collapse: collapse;
         font-size: 0.875rem;
-        color: #6b7280;
-        margin-left: 0.5rem;
     }
 
-    .export-empty-state {
+    .export-mgmt__comparison-table thead {
+        background: #f9fafb;
+    }
+
+    .export-mgmt__comparison-table th {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .export-mgmt__comparison-table td {
+        padding: 0.875rem 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .export-mgmt__trend-up {
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+    .export-mgmt__trend-down {
+        color: #22c55e;
+        font-weight: 600;
+    }
+
+    .export-mgmt__trend-neutral {
+        color: #6b7280;
+    }
+
+    .export-mgmt__text-center {
         text-align: center;
-        padding: 3rem 0;
     }
 
-    .export-empty-icon {
-        width: 4rem;
-        height: 4rem;
-        color: #d1d5db;
-        margin: 0 auto 1rem;
+    .export-mgmt__text-success {
+        color: #22c55e;
     }
 
-    .export-empty-text {
+    .export-mgmt__text-danger {
+        color: #ef4444;
+    }
+
+    /* ==================== EMPTY STATE ==================== */
+    .export-mgmt__empty {
+        padding: 3rem;
+        text-align: center;
+    }
+
+    .export-mgmt__empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .export-mgmt__empty-title {
+        font-size: 1.25rem;
         color: #6b7280;
+        margin-bottom: 0.5rem;
     }
 
-    .export-icon-inline {
-        width: 1rem;
-        height: 1rem;
-        display: inline-block;
-        vertical-align: middle;
-        margin-right: 0.5rem;
+    .export-mgmt__alert {
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-top: 1rem;
     }
 
-    /* Responsive */
+    .export-mgmt__alert--danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    /* ==================== RESPONSIVE ==================== */
     @@media (max-width: 1024px) {
-        .export-layout-grid {
-            grid-template-columns: 1fr;
+        .export-mgmt__stats-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         }
 
-        .export-stats-grid {
+        .export-mgmt__alerts {
             grid-template-columns: 1fr;
         }
     }
 
     @@media (max-width: 768px) {
-        .export-filter-grid {
+        .export-mgmt {
+            padding: 1rem;
+        }
+
+        .export-mgmt__title {
+            font-size: 1.5rem;
+        }
+
+        .export-mgmt__stats-grid {
             grid-template-columns: 1fr;
         }
 
-        .export-stats-grid {
+        .export-mgmt__filter-grid {
             grid-template-columns: 1fr;
         }
+
+        .export-mgmt__stat-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* ==================== LOADING STATE ==================== */
+    .export-mgmt__loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
+
+    @@keyframes export-mgmt-dots {
+        0%, 20% { content: "Đang tải dữ liệu."; }
+        40% { content: "Đang tải dữ liệu.."; }
+        60%, 100% { content: "Đang tải dữ liệu..."; }
+    }
+
+    .export-mgmt__alert-item {
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+        .export-mgmt__alert-item:last-child {
+            border-bottom: none;
+        }
+
+    .export-mgmt__alert-item-left {
+        flex: 1;
+    }
+
+    .export-mgmt__alert-item-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: #111827;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .export-mgmt__alert-item-detail {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    /* Top items specific */
+    .export-mgmt__top-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+        .export-mgmt__top-item:last-child {
+            border-bottom: none;
+        }
+
+    .export-mgmt__top-item-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: #111827;
+    }
+
+    .export-mgmt__top-item-value {
+        font-weight: 600;
+        color: #111827;
+        font-size: 0.875rem;
+    }
+
+    /* Warehouse stats specific */
+    .export-mgmt__warehouse-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+        .export-mgmt__warehouse-stat:last-child {
+            border-bottom: none;
+        }
+
+    .export-mgmt__warehouse-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: #111827;
+    }
+
+    .export-mgmt__warehouse-count {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .export-mgmt__alert-list {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .export-mgmt__stat-icon-wrapper {
+        width: 3.5rem;
+        height: 3.5rem;
+        background: #f3f4f6;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        flex-shrink: 0;
+    }
+
+    .export-mgmt__stat-card--blue .export-mgmt__stat-icon-wrapper {
+        background: #dbeafe;
+    }
+
+    .export-mgmt__stat-card--orange .export-mgmt__stat-icon-wrapper {
+        background: #ffedd5;
+    }
+
+    .export-mgmt__stat-card--green .export-mgmt__stat-icon-wrapper {
+        background: #d1fae5;
+    }
+
+    .export-mgmt__stat-card--warning .export-mgmt__stat-icon-wrapper {
+        background: #fef3c7;
+    }
+
+    .export-mgmt__stat-card--info .export-mgmt__stat-icon-wrapper {
+        background: #ede9fe;
     }
 </style>
 
-<div class="export-page-wrapper">
-    <div class="export-max-container">
-        <!-- Header với thống kê -->
-        <div class="export-card">
-            <h1 class="export-header-title">Quản lý đơn xuất nguyên liệu</h1>
-            <div class="export-stats-grid">
-                <div class="export-stat-item">
-                    <svg class="export-stat-icon" style="color: #3b82f6;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <div>
-                        <span class="export-stat-label">Tổng số đơn xuất</span>
-                        <span class="export-stat-value" style="color: #3b82f6;" id="total-orders">0</span>
-                    </div>
-                </div>
+<div class="export-mgmt">
+    <!-- Header -->
+    <div class="export-mgmt__header">
+        <h1 class="export-mgmt__title" style="
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 5px;
+">
+            Lịch Sử Xuất Hàng
+        </h1>
+        <p>Lịch sử xuất hàng cho nhà bếp </p>
+    </div>
 
-                <div class="export-stat-item">
-                    <svg class="export-stat-icon" style="color: #ea580c;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                    <div>
-                        <span class="export-stat-label">Tổng số lượng xuất</span>
-                        <span class="export-stat-value" style="color: #ea580c;" id="total-quantity">0</span>
-                    </div>
-                </div>
-
-                <div class="export-stat-item">
-                    <svg class="export-stat-icon" style="color: #22c55e;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <div>
-                        <span class="export-stat-label">Số loại nguyên liệu</span>
-                        <span class="export-stat-value" style="color: #22c55e;" id="total-ingredients">0</span>
-                    </div>
-                </div>
+    <!-- Stats Cards -->
+    <div class="export-mgmt__stats-grid">
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--blue">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Tổng xuất hôm nay</span>
+                <span class="export-mgmt__stat-value" id="todayExport">0</span>
+                <span class="export-mgmt__stat-status" id="todayCompare">Đang tải...</span>
             </div>
         </div>
 
-        <!-- Bộ lọc -->
-        <div class="export-card">
-            <div class="export-filter-grid">
-                <div class="export-form-group">
-                    <label>
-                        <svg class="export-icon-inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        Tìm kiếm
-                    </label>
-                    <input type="text"
-                           id="search-input"
-                           class="export-form-control"
-                           placeholder="Tìm theo ghi chú, nguyên liệu, lô hàng..." />
-                </div>
-
-                <div class="export-form-group">
-                    <label>
-                        <svg class="export-icon-inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Thời gian
-                    </label>
-                    <select id="date-range" class="export-form-control">
-                        <option value="all">Tất cả thời gian</option>
-                        <option value="7days">7 ngày qua</option>
-                        <option value="30days">30 ngày qua</option>
-                    </select>
-                </div>
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--orange">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Tổng xuất 7 ngày qua</span>
+                <span class="export-mgmt__stat-value" id="week7Export">0</span>
+                <span class="export-mgmt__stat-status" id="week7Compare">Đang tải...</span>
             </div>
         </div>
 
-        <!-- Layout 2 bảng -->
-        <div class="export-layout-grid">
-            <!-- Bảng đơn xuất -->
-            <div class="export-table-wrapper">
-                <div class="export-table-header">
-                    <h2 class="export-table-title">Danh sách đơn xuất</h2>
-                </div>
-                <div class="export-table-scroll">
-                    <table class="export-data-table">
-                        <thead>
-                            <tr>
-                                <th>Mã</th>
-                                <th>Nguyên liệu</th>
-                                <th>Lô</th>
-                                <th>Số lượng</th>
-                                <th>Thời gian</th>
-                                <th>Ghi chú</th>
-                                <th style="text-align: center;">Chi tiết</th>
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--green">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Tổng xuất 30 ngày qua</span>
+                <span class="export-mgmt__stat-value" id="month30Export">0</span>
+                <span class="export-mgmt__stat-status" id="month30Compare">Đang tải...</span>
+            </div>
+        </div>
+
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--warning">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Xuất bất thường (tăng >50%)</span>
+                <span class="export-mgmt__stat-value" id="abnormalExport">0</span>
+                <span class="export-mgmt__stat-status">So với TB 7 ngày</span>
+            </div>
+        </div>
+
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--info">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Tổng giao dịch xuất kho</span>
+                <span class="export-mgmt__stat-value">@Model.TotalTransactions</span>
+                <span class="export-mgmt__stat-status">Tất cả thời gian</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Section -->
+    <div class="export-mgmt__alerts">
+        <div class="export-mgmt__alert-card">
+            <h3 class="export-mgmt__alert-header">Xuất bất thường hôm nay</h3>
+            <div class="export-mgmt__alert-list" id="abnormalAlerts">Đang tính toán...</div>
+        </div>
+
+        <div class="export-mgmt__alert-card">
+            <h3 class="export-mgmt__alert-header">Top Mặt hàng xuất hôm nay</h3>
+            <div class="export-mgmt__alert-list" id="topIngredients">Đang tải...</div>
+        </div>
+
+        <div class="export-mgmt__alert-card">
+            <h3 class="export-mgmt__alert-header">Xuất theo kho hôm nay</h3>
+            <div class="export-mgmt__alert-list" id="warehouseStats">Đang tải...</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="export-mgmt__filters">
+        <div class="export-mgmt__filter-grid">
+            <div class="export-mgmt__filter-group">
+                <label class="export-mgmt__filter-label">Tìm kiếm</label>
+                <input type="text" class="export-mgmt__filter-input" id="searchInput" placeholder="Tìm theo tên, mã Mặt hàng..." />
+            </div>
+
+            <div class="export-mgmt__filter-group">
+                <label class="export-mgmt__filter-label">Khoảng thời gian</label>
+                <select class="export-mgmt__filter-select" id="dateFilter">
+                    <option value="all">Tất cả</option>
+                    <option value="today">Hôm nay</option>
+                    <option value="yesterday">Hôm qua</option>
+                    <option value="7days">7 ngày qua</option>
+                    <option value="30days">30 ngày qua</option>
+                </select>
+            </div>
+
+            <div class="export-mgmt__filter-group">
+                <label class="export-mgmt__filter-label">Kho</label>
+                <select class="export-mgmt__filter-select" id="warehouseFilter">
+                    <option value="">Tất cả kho</option>
+                    @foreach (var warehouse in Model.Warehouses)
+                    {
+                        <option value="@warehouse.Id">@warehouse.Name</option>
+                    }
+                </select>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="export-mgmt__table-section">
+        <h2 class="export-mgmt__section-header">Chi tiết đơn xuất (@Model.TotalTransactions giao dịch)</h2>
+
+        @if (Model.ExportData.Any())
+        {
+            <div class="export-mgmt__table-wrapper">
+                <table class="export-mgmt__table" id="exportTable">
+                    <thead>
+                        <tr>
+                            <th>Mặt hàng</th>
+                            <th>Số lượng</th>
+                            <th>Thời gian</th>
+                            <th>Kho</th>
+                            <th>Lô hàng</th>
+                            <th>Ghi chú</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.ExportData.OrderByDescending(x => x.TransactionDate))
+                        {
+                            <tr data-ingredient-id="@item.IngredientId"
+                                data-warehouse-id="@item.WarehouseId"
+                                data-date="@item.TransactionDate?.ToString("yyyy-MM-dd")">
+                                <td>
+                                    <div class="export-mgmt__ingredient-info">
+                                        <strong class="export-mgmt__ingredient-name">@item.IngredientName</strong>
+                                        <small class="export-mgmt__ingredient-meta">@item.IngredientCode </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="export-mgmt__quantity-badge">-@item.Quantity @item.UnitName</span>
+                                </td>
+                                <td>
+                                    @if (item.TransactionDate.HasValue)
+                                    {
+                                        @item.TransactionDate.Value.ToString("dd/MM/yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="export-mgmt__text-muted">Chưa có</span>
+                                    }
+                                </td>
+                                <td>@item.WarehouseName</td>
+                                <td>
+                                    <span class="export-mgmt__batch-badge">
+                                        @if (!string.IsNullOrEmpty(item.PurchaseOrderId))
+                                        {
+                                            @item.PurchaseOrderId
+                                        }
+                                        else
+                                        {
+                                            <span>#LOT-@item.BatchId</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Note))
+                                    {
+                                        @item.Note
+                                    }
+                                    else
+                                    {
+                                        <span class="export-mgmt__text-muted">-</span>
+                                    }
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody id="export-table-body">
-                            <!-- Data will be inserted here -->
-                        </tbody>
-                    </table>
-                    <div id="no-data" class="export-empty-state" style="display: none;">
-                        <svg class="export-empty-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                        <p class="export-empty-text">Không tìm thấy đơn xuất nào</p>
-                    </div>
-                </div>
+                        }
+                    </tbody>
+                </table>
             </div>
-            <!-- Thống kê -->
-            <div class="export-stats-sidebar">
-                <div class="export-table-header">
-                    <h2 class="export-table-title">Thống kê xuất theo nguyên liệu</h2>
-                </div>
-                <div class="export-stats-scroll" id="stats-container">
-                    <!-- Stats will be inserted here -->
-                </div>
+        }
+        else
+        {
+            <div class="export-mgmt__empty">
+                <h3 class="export-mgmt__empty-title">Không có dữ liệu xuất kho</h3>
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="export-mgmt__alert export-mgmt__alert--danger">@Model.ErrorMessage</div>
+                }
             </div>
+        }
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="export-mgmt__comparison-section">
+        <div class="export-mgmt__comparison-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600;">So sánh tiêu hao</h2>
+            <input type="text"
+                   id="comparisonSearch"
+                   placeholder="🔍 Tìm Mặt hàng..."
+                   style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; width: 250px;" />
+        </div>
+        <div class="export-mgmt__comparison-wrapper">
+            <table class="export-mgmt__comparison-table" id="comparisonTable">
+                <thead>
+                    <tr>
+                        <th>Mặt hàng</th>
+                        <th>Hôm nay</th>
+                        <th>TB 7 ngày</th>
+                        <th>% Chênh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="export-mgmt__text-center">Đang tính toán...</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<script>
-    let transactions = [];
-    
-    try {
-        const apiData = @Html.Raw(Json.Serialize(ViewBag.ExportData ?? new List<object>()));
-        
-        console.log('📥 Raw API Data:', apiData);
-        
-        // Kiểm tra apiData có phải là array không
-        if (!Array.isArray(apiData)) {
-            console.error('❌ API data không phải array:', apiData);
-            transactions = [];
-        } else {
-            transactions = apiData.map(item => {
-                // Log từng item để debug
-                console.log('Processing item:', item);
-                
-                return {
-                    id: item.transactionId || 0,
-                    ingredientId: item.ingredientId || 0,
-                    ingredientName: item.ingredientName || 'N/A',
-                    type: item.type || 'Export',
-                    quantity: parseFloat(item.quantity) || 0,
-                    date: item.transactionDate || new Date().toISOString(),
-                    note: item.note || 'Không có ghi chú',
-                    batchId: item.batchId || 0,
-                    batchName: item.purchaseOrderId ? `${item.purchaseOrderId}` : 'N/A',
-                    unitName: item.unitName || '',
-                    warehouseName: item.warehouseName || '',
-                    supplierName: item.supplierName || '',
-                    expiryDate: item.expiryDate || null,
-                    quantityRemaining: parseFloat(item.quantityRemaining) || 0,
-                    purchaseOrderId: item.purchaseOrderId || null,
-                    purchaseOrderStatus: item.purchaseOrderStatus || null
-                };
+    <script>
+        const exportData = @Html.Raw(Json.Serialize(Model.ExportData));
+
+        // Tính toán thống kê
+    function calculateStats() {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const fourteenDaysAgo = new Date(today);
+        fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const sixtyDaysAgo = new Date(today);
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        // Xuất hôm nay
+        const todayExports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= today;
+        });
+        const todayTotal = todayExports.reduce((sum, x) => sum + x.quantity, 0);
+
+        // Xuất hôm qua để so sánh
+        const yesterdayExports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= yesterday && transDate < today;
+        });
+        const yesterdayTotal = yesterdayExports.reduce((sum, x) => sum + x.quantity, 0);
+
+        const todayPercent = yesterdayTotal > 0 ? ((todayTotal / yesterdayTotal - 1) * 100).toFixed(0) : 0;
+        const todayArrow = todayPercent > 0 ? '↑' : todayPercent < 0 ? '↓' : '→';
+        const todayColor = todayPercent > 0 ? '#ef4444' : todayPercent < 0 ? '#22c55e' : '#6b7280';
+
+        document.getElementById('todayExport').textContent = `${todayTotal.toFixed(2)} đơn vị`;
+        document.getElementById('todayCompare').innerHTML = `<span style="color: ${todayColor}">${todayArrow} ${Math.abs(todayPercent)}% vs hôm qua</span>`;
+
+        // Xuất 7 ngày
+        const week7Exports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= sevenDaysAgo;
+        });
+        const week7Total = week7Exports.reduce((sum, x) => sum + x.quantity, 0);
+
+        // 7 ngày trước đó để so sánh
+        const prevWeek7Exports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= fourteenDaysAgo && transDate < sevenDaysAgo;
+        });
+        const prevWeek7Total = prevWeek7Exports.reduce((sum, x) => sum + x.quantity, 0);
+
+        const week7Percent = prevWeek7Total > 0 ? ((week7Total / prevWeek7Total - 1) * 100).toFixed(0) : 0;
+        const week7Arrow = week7Percent > 0 ? '↑' : week7Percent < 0 ? '↓' : '→';
+        const week7Color = week7Percent > 0 ? '#ef4444' : week7Percent < 0 ? '#22c55e' : '#6b7280';
+
+        document.getElementById('week7Export').textContent = `${week7Total.toFixed(2)} đơn vị`;
+        document.getElementById('week7Compare').innerHTML = `<span style="color: ${week7Color}">${week7Arrow} ${Math.abs(week7Percent)}% vs 7 ngày trước</span>`;
+
+        // Xuất 30 ngày
+        const month30Exports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= thirtyDaysAgo;
+        });
+        const month30Total = month30Exports.reduce((sum, x) => sum + x.quantity, 0);
+
+        // 30 ngày trước đó để so sánh
+        const prevMonth30Exports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= sixtyDaysAgo && transDate < thirtyDaysAgo;
+        });
+        const prevMonth30Total = prevMonth30Exports.reduce((sum, x) => sum + x.quantity, 0);
+
+        const month30Percent = prevMonth30Total > 0 ? ((month30Total / prevMonth30Total - 1) * 100).toFixed(0) : 0;
+        const month30Arrow = month30Percent > 0 ? '↑' : month30Percent < 0 ? '↓' : '→';
+        const month30Color = month30Percent > 0 ? '#ef4444' : month30Percent < 0 ? '#22c55e' : '#6b7280';
+
+        document.getElementById('month30Export').textContent = `${month30Total.toFixed(2)} đơn vị`;
+        document.getElementById('month30Compare').innerHTML = `<span style="color: ${month30Color}">${month30Arrow} ${Math.abs(month30Percent)}% vs 30 ngày trước</span>`;
+
+        calculateAbnormalExports(todayExports, week7Exports);
+        calculateTopIngredients(todayExports);
+        calculateWarehouseStats(todayExports);
+        calculateComparison();
+    }
+
+        // Phát hiện xuất bất thường
+        function calculateAbnormalExports(todayExports, week7Exports) {
+            const avgByIngredient = {};
+
+            // Tính trung bình 7 ngày
+            week7Exports.forEach(x => {
+                if (!avgByIngredient[x.ingredientId]) {
+                    avgByIngredient[x.ingredientId] = { total: 0, count: 0, name: x.ingredientName };
+                }
+                avgByIngredient[x.ingredientId].total += x.quantity;
+                avgByIngredient[x.ingredientId].count++;
             });
-            
-            console.log('✅ Mapped transactions:', transactions);
-            console.log('📊 Total:', transactions.length, 'items');
+
+            // Tìm xuất bất thường (> 150% trung bình)
+            const abnormal = [];
+            todayExports.forEach(x => {
+                const avg = avgByIngredient[x.ingredientId];
+                if (avg && avg.count > 0) {
+                    const avgQty = avg.total / avg.count;
+                    if (x.quantity > avgQty * 1.5) {
+                        abnormal.push({
+                            name: x.ingredientName,
+                            today: x.quantity,
+                            avg: avgQty,
+                            percent: ((x.quantity / avgQty - 1) * 100).toFixed(0)
+                        });
+                    }
+                }
+            });
+
+            document.getElementById('abnormalExport').textContent = `${abnormal.length} loại`;
+
+        if (abnormal.length > 0) {
+            const html = abnormal.map(a =>
+                `<div class="export-mgmt__alert-item">
+            <div class="export-mgmt__alert-item-left">
+                <div class="export-mgmt__alert-item-name">${a.name}</div>
+                <div class="export-mgmt__alert-item-detail">Hôm nay: ${a.today.toFixed(2)} | TB 7 ngày: ${a.avg.toFixed(2)}</div>
+            </div>
+            <span class="export-mgmt__badge export-mgmt__badge--danger">+${a.percent}%</span>
+        </div>`
+            ).join('');
+            document.getElementById('abnormalAlerts').innerHTML = html;
+        } else {
+            document.getElementById('abnormalAlerts').innerHTML = `
+            <div class="export-mgmt__empty" style="padding: 2rem;">
+                <div class="export-mgmt__empty-icon">📊</div>
+                <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu xuất bất thường</div>
+            </div>`;
+         }
         }
-    } catch (error) {
-        console.error('❌ Error parsing data:', error);
-        console.error('Stack:', error.stack);
-        transactions = [];
+
+        // Top Mặt hàng xuất hôm nay
+        function calculateTopIngredients(todayExports) {
+            const byIngredient = {};
+
+            todayExports.forEach(x => {
+                if (!byIngredient[x.ingredientId]) {
+                    byIngredient[x.ingredientId] = { name: x.ingredientName, total: 0, unit: x.unitName };
+                }
+                byIngredient[x.ingredientId].total += x.quantity;
+            });
+
+            const top = Object.values(byIngredient)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+
+        if (top.length > 0) {
+            const html = top.map((item, idx) =>
+                `<div class="export-mgmt__top-item">
+                <div class="export-mgmt__top-item-name">${idx + 1}. ${item.name}</div>
+                <div class="export-mgmt__top-item-value">${item.total.toFixed(2)} ${item.unit}</div>
+            </div>`
+            ).join('');
+            document.getElementById('topIngredients').innerHTML = html;
+        } else {
+            document.getElementById('topIngredients').innerHTML = `
+            <div class="export-mgmt__empty" style="padding: 2rem;">
+                <div class="export-mgmt__empty-icon">🏆</div>
+                <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
+            </div>`;
+        }
+        }
+
+        // Xuất theo kho hôm nay
+        function calculateWarehouseStats(todayExports) {
+            const byWarehouse = {};
+
+            todayExports.forEach(x => {
+                if (!byWarehouse[x.warehouseId]) {
+                    byWarehouse[x.warehouseId] = { name: x.warehouseName, count: 0 };
+                }
+                byWarehouse[x.warehouseId].count++;
+            });
+
+            const stats = Object.values(byWarehouse);
+
+        if (stats.length > 0) {
+            const html = stats.map(s =>
+                `<div class="export-mgmt__warehouse-stat">
+                <div class="export-mgmt__warehouse-name">${s.name}</div>
+                <div class="export-mgmt__warehouse-count">${s.count} giao dịch</div>
+            </div>`
+            ).join('');
+            document.getElementById('warehouseStats').innerHTML = html;
+        } else {
+            document.getElementById('warehouseStats').innerHTML = `
+            <div class="export-mgmt__empty" style="padding: 2rem;">
+                <div class="export-mgmt__empty-icon">🏢</div>
+                <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
+            </div>`;
+        }
+        }
+
+        // So sánh tiêu hao
+        function calculateComparison() {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            const todayExports = exportData.filter(x => new Date(x.transactionDate) >= today);
+            const week7Exports = exportData.filter(x => new Date(x.transactionDate) >= sevenDaysAgo);
+
+            const comparison = {};
+
+            // Hôm nay
+            todayExports.forEach(x => {
+                if (!comparison[x.ingredientId]) {
+                    comparison[x.ingredientId] = { name: x.ingredientName, today: 0, week: 0, unit: x.unitName };
+                }
+                comparison[x.ingredientId].today += x.quantity;
+            });
+
+            // 7 ngày
+            week7Exports.forEach(x => {
+                if (!comparison[x.ingredientId]) {
+                    comparison[x.ingredientId] = { name: x.ingredientName, today: 0, week: 0, unit: x.unitName };
+                }
+                comparison[x.ingredientId].week += x.quantity;
+            });
+
+            const rows = Object.values(comparison).map(c => {
+                const avg7 = c.week / 7;
+                const percent = avg7 > 0 ? ((c.today / avg7 - 1) * 100).toFixed(0) : 0;
+                const arrow = percent > 0 ? '⬆️' : percent < 0 ? '⬇️' : '➡️';
+            const colorClass = percent > 20 ? 'export-mgmt__trend-up' : percent < -20 ? 'export-mgmt__trend-down' : '';
+
+                return `<tr>
+                            <td>${c.name}</td>
+                            <td>${c.today.toFixed(2)} ${c.unit}</td>
+                            <td>${avg7.toFixed(2)} ${c.unit}</td>
+                            <td class="${colorClass}">${arrow} ${percent}%</td>
+                        </tr>`;
+            });
+
+        document.querySelector('#comparisonTable tbody').innerHTML = rows.length > 0 ? rows.join('') :
+            `<tr><td colspan="4" style="text-align: center; padding: 2rem;">
+            <div class="export-mgmt__empty-icon">📊</div>
+            <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu so sánh</div>
+        </td></tr>`;
     }
-    // ============================================
-    // CÁC HÀM XỬ LÝ (giữ nguyên)
-    // ============================================
-    let searchTerm = '';
-    let dateRange = 'all';
-    let expandedRow = null;
 
-    function filterAndSort() {
-        let filtered = transactions.filter(item => {
-            const matchSearch = item.note.toLowerCase().includes(searchTerm) ||
-                item.ingredientName.toLowerCase().includes(searchTerm) ||
-                item.batchName.toLowerCase().includes(searchTerm);
+    // Filter comparison table
+    document.getElementById('comparisonSearch').addEventListener('input', function () {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#comparisonTable tbody tr');
 
-            let matchDate = true;
-            if (dateRange !== 'all') {
-                const itemDate = new Date(item.date);
-                const today = new Date();
-                const daysDiff = (today - itemDate) / (1000 * 60 * 60 * 24);
-                if (dateRange === '7days') {
-                    matchDate = daysDiff <= 7;
-                } else if (dateRange === '30days') {
-                    matchDate = daysDiff <= 30;
+        let hasVisibleRow = false;
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const shouldShow = text.includes(searchText);
+            row.style.display = shouldShow ? '' : 'none';
+            if (shouldShow) hasVisibleRow = true;
+        });
+
+        // Hiển thị "Không tìm thấy" nếu không có kết quả
+        if (!hasVisibleRow && rows.length > 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.id = 'no-comparison-result';
+            emptyRow.innerHTML = `<td colspan="4" style="text-align: center; padding: 2rem; color: #6b7280;">
+                Không tìm thấy Mặt hàng "${searchText}"
+            </td>`;
+
+            // Xóa row cũ nếu có
+            const oldEmpty = document.getElementById('no-comparison-result');
+            if (oldEmpty) oldEmpty.remove();
+
+            document.querySelector('#comparisonTable tbody').appendChild(emptyRow);
+        } else {
+            const oldEmpty = document.getElementById('no-comparison-result');
+            if (oldEmpty) oldEmpty.remove();
+               }
+          });
+        
+
+        // Filters
+        document.getElementById('searchInput').addEventListener('input', filterTable);
+        document.getElementById('dateFilter').addEventListener('change', filterTable);
+        document.getElementById('warehouseFilter').addEventListener('change', filterTable);
+
+    function filterTable() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const dateFilter = document.getElementById('dateFilter').value;
+        const warehouseId = document.getElementById('warehouseFilter').value;
+
+        const rows = document.querySelectorAll('#exportTable tbody tr');
+
+        rows.forEach(row => {
+            let show = true;
+
+            // Search - CHỈ TÌM TÊN, MÃ Mặt hàng VÀ LÔ HÀNG
+            if (searchText) {
+                // Lấy tên Mặt hàng (cột 1)
+                const ingredientName = row.querySelector('.export-mgmt__ingredient-name')?.textContent.toLowerCase() || '';
+
+                // Lấy mã Mặt hàng (cột 1 - phần meta)
+                const ingredientCode = row.querySelector('.export-mgmt__ingredient-meta')?.textContent.toLowerCase() || '';
+
+                // Lấy lô hàng (cột 5)
+                const batchInfo = row.querySelector('.export-mgmt__batch-badge')?.textContent.toLowerCase() || '';
+
+                // Kiểm tra xem có khớp với bất kỳ trường nào không
+                const matchName = ingredientName.includes(searchText);
+                const matchCode = ingredientCode.includes(searchText);
+                const matchBatch = batchInfo.includes(searchText);
+
+                show = show && (matchName || matchCode || matchBatch);
+            }
+
+            // Date filter
+            if (dateFilter !== 'all') {
+                const rowDate = new Date(row.dataset.date);
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                switch (dateFilter) {
+                    case 'today':
+                        show = show && rowDate >= today;
+                        break;
+                    case 'yesterday':
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        show = show && rowDate >= yesterday && rowDate < today;
+                        break;
+                    case '7days':
+                        const sevenDays = new Date(today);
+                        sevenDays.setDate(sevenDays.getDate() - 7);
+                        show = show && rowDate >= sevenDays;
+                        break;
+                    case '30days':
+                        const thirtyDays = new Date(today);
+                        thirtyDays.setDate(thirtyDays.getDate() - 30);
+                        show = show && rowDate >= thirtyDays;
+                        break;
                 }
             }
 
-            return matchSearch && matchDate;
-        });
-
-        return filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-
-    function calculateStats(data) {
-        const stats = {};
-        data.forEach(item => {
-            if (!stats[item.ingredientName]) {
-                stats[item.ingredientName] = 0;
+            // Warehouse filter
+            if (warehouseId) {
+                show = show && row.dataset.warehouseId === warehouseId;
             }
-            stats[item.ingredientName] += item.quantity;
-        });
-        return Object.entries(stats).sort((a, b) => b[1] - a[1]);
-    }
 
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+            row.style.display = show ? '' : 'none';
         });
     }
 
-    function toggleRow(id) {
-        expandedRow = expandedRow === id ? null : id;
-        render();
-    }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', calculateStats);
+    </script>
 
-    function render() {
-        console.log('[ExportManagement] render() - Số lượng transactions:', transactions.length);
-        const filtered = filterAndSort();
-        console.log('[ExportManagement] render() - Số lượng sau filter:', filtered.length);
-        const stats = calculateStats(filtered);
-        const totalQuantity = filtered.reduce((sum, item) => sum + item.quantity, 0);
-
-        document.getElementById('total-orders').textContent = filtered.length;
-        document.getElementById('total-quantity').textContent = totalQuantity.toFixed(2);
-        document.getElementById('total-ingredients').textContent = stats.length;
-
-        const tbody = document.getElementById('export-table-body');
-        const noData = document.getElementById('no-data');
-
-        if (filtered.length === 0) {
-            tbody.innerHTML = '';
-            noData.style.display = 'block';
-        } else {
-            noData.style.display = 'none';
-            tbody.innerHTML = filtered.map(item => `
-                <tr>
-                     <td><strong>#${item.id || 'N/A'}</strong></td>
-        <td>
-            <strong>${item.ingredientName}</strong>
-            ${item.warehouseName ? `<br><small style="color: #6b7280;">📦 ${item.warehouseName}</small>` : ''}
-        </td>
-        <td><span class="export-badge">${item.batchName || 'N/A'}</span></td>
-        <td>
-            <span class="export-quantity">-${(item.quantity || 0).toFixed(2)}</span>
-            ${item.unitName ? `<small style="color: #6b7280;"> ${item.unitName}</small>` : ''}
-        </td>
-        <td>${formatDate(item.date)}</td>
-        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${item.note || 'Không có ghi chú'}
-        </td>
-                    <td style="text-align: center;">
-                        <button onclick="toggleRow(${item.id})" class="export-expand-btn">
-                            <svg style="width: 1.25rem; height: 1.25rem;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                ${expandedRow === item.id ?
-                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />' :
-                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />'
-                }
-                            </svg>
-                        </button>
-                    </td>
-                </tr>
-                ${expandedRow === item.id ? `
-                    <tr class="export-detail-row">
-                        <td colspan="7">
-                            <div class="export-detail-grid">
-                                <div>
-                                    <p class="export-detail-label">📋 Thông tin giao dịch:</p>
-                                    <p class="export-detail-value">• Mã giao dịch: <strong>#${item.id}</strong></p>
-                                    <p class="export-detail-value">• Mã nguyên liệu: <strong>${item.ingredientId}</strong></p>
-                                    <p class="export-detail-value">• Mã lô hàng: <strong>#${item.batchId}</strong></p>
-                                    <p class="export-detail-value">• Số lượng còn lại: <strong>${item.quantityRemaining ? item.quantityRemaining.toFixed(2) : 'N/A'} ${item.unitName || ''}</strong></p>
-                                    ${item.purchaseOrderId ? `<p class="export-detail-value">• Mã đơn nhập: <strong>${item.purchaseOrderId}</strong></p>` : ''}
-                                    ${item.purchaseOrderStatus ? `<p class="export-detail-value">• Trạng thái đơn: <span class="export-status-badge">${item.purchaseOrderStatus}</span></p>` : ''}
-                                </div>
-                                <div>
-                                    <p class="export-detail-label">🏢 Thông tin bổ sung:</p>
-                                    ${item.supplierName ? `<p class="export-detail-value">• Nhà cung cấp: <strong>${item.supplierName}</strong></p>` : ''}
-                                    ${item.warehouseName ? `<p class="export-detail-value">• Kho xuất: <strong>${item.warehouseName}</strong></p>` : ''}
-                                    ${item.expiryDate ? `<p class="export-detail-value">• Hạn sử dụng: <strong>${formatDate(item.expiryDate)}</strong></p>` : ''}
-                                    <p class="export-detail-label" style="margin-top: 10px;">📝 Ghi chú:</p>
-                                    <p class="export-detail-value" style="font-style: italic;">"${item.note}"</p>
-                                    <p class="export-detail-value">• Trạng thái: <span class="export-status-badge">✅ Đã xuất kho</span></p>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                ` : ''}
-            `).join('');
-        }
-
-        const statsContainer = document.getElementById('stats-container');
-        if (stats.length === 0) {
-            statsContainer.innerHTML = '<div class="export-empty-state"><p class="export-empty-text">Chưa có dữ liệu thống kê</p></div>';
-        } else {
-            statsContainer.innerHTML = stats.map(([name, qty]) => `
-                <div class="export-stat-card">
-                    <div class="export-stat-card-header">
-                        <span class="export-stat-card-name">${name}</span>
-                        <svg class="export-stat-card-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                    </div>
-                    <div>
-                        <span class="export-stat-card-amount">${qty.toFixed(2)}</span>
-                        <span class="export-stat-card-unit">units</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-    }
-
-    document.getElementById('search-input').addEventListener('input', (e) => {
-        searchTerm = e.target.value.toLowerCase();
-        render();
-    });
-
-    document.getElementById('date-range').addEventListener('change', (e) => {
-        dateRange = e.target.value;
-        render();
-    });
-
-    // Hiển thị lỗi nếu có
-    @if (ViewBag.ErrorMessage != null)
-    {
-        <text>
-        console.error('⚠️ API Error:', '@ViewBag.ErrorMessage');
-        alert('⚠️ Lỗi tải dữ liệu:\n@ViewBag.ErrorMessage');
-        </text>
-    }
-
-    // Khởi động
-    render();
-    console.log('📊 Thống kê:', {
-        'Tổng đơn': transactions.length,
-        'Dữ liệu mẫu': transactions.slice(0, 2)
-    });
-</script>

@@ -253,6 +253,7 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 //DashBoardTable
 builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
 builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
+builder.Services.AddScoped<ISupplierManagerService, SupplierManagerService>();
 
 
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
