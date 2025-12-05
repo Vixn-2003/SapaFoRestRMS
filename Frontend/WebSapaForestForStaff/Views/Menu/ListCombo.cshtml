@@ -1,6 +1,18 @@
-﻿@page
+﻿@using WebSapaForestForStaff.DTOs.ManagementCombo
+@model WebSapaForestForStaff.DTOs.ManagementCombo.PagedResult<WebSapaForestForStaff.DTOs.ManagementCombo.ComboDisplayDto>
 @{
     Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    var statusOptions = new List<(string Text, string Value)>
+    {
+        ("Tất cả trạng thái", ""),
+        ("Đang hoạt động", "true"),
+        ("Ngừng phục vụ", "false")
+    };
+    var selectedStatus = ViewData["Status"]?.ToString();
+    var topCombos = ViewBag.TopCombos as List<ComboDisplayDto>;
+    var lowCombos = ViewBag.LowCombos as List<ComboDisplayDto>;
+    var overview = ViewBag.Overview;
+    var period = ViewBag.Period as string;
 }
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -25,23 +37,97 @@
                             <div class="col-md-8">
                                 <div class="position-relative">
                                     <i class="mdi mdi-magnify position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: #6c757d;"></i>
-                                    <input type="text" id="searchCombo" class="form-control ps-5" placeholder="Tìm kiếm combo...">
+                                    <input type="text" id="searchCombo" class="form-control ps-5" placeholder="    Tìm kiếm combo..." value="@ViewData["Search"]">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <select id="filterStatus" class="form-select">
-                                    <option>Tất cả trạng thái</option>
-                                    <option>Đang hoạt động</option>
-                                    <option>Ngừng phục vụ</option>
+                                    @foreach (var option in statusOptions)
+                                    {
+                                        if (option.Value == selectedStatus)
+                                        {
+                                            <option value="@option.Value" selected>@option.Text</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@option.Value">@option.Text</option>
+                                        }
+                                    }
                                 </select>
+
                             </div>
                         </div>
                     </div>
                 </div>
-
                 <!-- Combo Cards -->
-                <div id="comboList" class="d-flex flex-column gap-3"></div>
+                <div id="comboList" class="d-flex flex-column gap-3">
+
+                    @if (Model?.Items != null && Model.Items.Any())
+                    {
+                        @foreach (var combo in Model.Items)
+                        {
+                            <div class="card combo-card border-2 border-warning hover-shadow cursor-pointer" style="border-color: #dc2626;" asp-controller="ManagerComboController" asp-action="EditCombo" onclick="selectCombo(@combo.ComboId)">
+                                <div class="card-body d-flex gap-3">
+                                    <div style="font-size: 4rem;">
+                                        <img src="@combo.ImageUrl" style="width:80px;height:80px; object-fit: cover; border-radius: 8px;" />
+                                    </div>
+                                    <div class="flex-fill">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h4 class="mb-0" style="color:red">@combo.ComboName</h4>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="h5 text-warning mb-0">@combo.Price.ToString("N0") đ</span>
+                                                <button class="btn btn-sm btn-outline-primary" asp-controller="ManagerComboController" asp-action="EditCombo" onclick="editCombo(@combo.ComboId)">
+                                                    <i class="mdi mdi-pencil"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <h7 style="font-size:12px">Các món có trong combo: </h7>
+                                        <div class="d-flex flex-wrap gap-2 mt-1">
+                                            @foreach (var dish in combo.MenuItems ?? Enumerable.Empty<string>())
+                                            {
+                                                <span class="badge bg-warning">@dish</span>
+                                            }
+                                        </div>
+                                        <div class="d-flex gap-3 mt-2">
+                                            <small class="text-muted"><strong>@combo.WeeklyUsed</strong> lượt gọi tuần này</small>
+                                            <small class="text-muted"><strong>@combo.MonthlyUsed</strong> lượt gọi tháng này</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">Chưa có combo nào để hiển thị.</p>
+                    }
+
+
+                    @if (Model?.TotalPages > 1)
+                    {
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center mt-3">
+                                <li class="page-item @(Model.PageIndex == 1 ? "disabled" : "")">
+                                    <a class="page-link" href="#" onclick="loadPage(@(Model.PageIndex - 1)); return false;">Previous</a>
+                                </li>
+
+                                @for (int i = 1; i <= Model.TotalPages; i++)
+                                {
+                                    <li class="page-item @(Model.PageIndex == i ? "active" : "")">
+                                        <a class="page-link" href="#" onclick="loadPage(@i); return false;">@i</a>
+                                    </li>
+                                }
+
+                                <li class="page-item @(Model.PageIndex == Model.TotalPages ? "disabled" : "")">
+                                    <a class="page-link" href="#" onclick="loadPage(@(Model.PageIndex + 1)); return false;">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    }
+
+                </div>
             </div>
+
 
             <!-- Right: Statistics -->
             <div class="col-lg-4">
@@ -51,8 +137,9 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="card-title mb-0">Thống kê Combo</h5>
                             <select id="timeFilter" class="form-select form-select-sm" style="width: auto;">
-                                <option value="week">Tuần qua</option>
-                                <option value="month">Tháng qua</option>
+                                <option value="week" selected="@(period == "week" ? "selected" : null)">Tuần qua</option>
+                                <option value="month" selected="@(period == "month" ? "selected" : null)">Tháng qua</option>
+
                             </select>
                         </div>
 
@@ -62,7 +149,18 @@
                                 <i class="mdi mdi-trending-up"></i>
                                 Combo được gọi nhiều nhất
                             </h6>
-                            <div id="topCombos" class="d-flex flex-column gap-2"></div>
+                            <div id="topCombos" class="d-flex flex-column gap-2">
+                                @foreach (var combo in topCombos)
+                                {
+                                    <div class="p-3 bg-success bg-opacity-10 rounded d-flex align-items-center gap-3">
+                                        <div class="flex-fill">
+                                            <div class="fw-semibold">@combo.ComboName</div>
+                                            <small class="text-muted">@((period == "week") ? combo.WeeklyUsed : combo.MonthlyUsed) lượt gọi</small>
+                                        </div>
+                                        <span style="font-size: 2rem;">@* emoji hoặc ảnh nếu có *@</span>
+                                    </div>
+                                }
+                            </div>
                         </div>
 
                         <!-- Low Combos -->
@@ -71,7 +169,18 @@
                                 <i class="mdi mdi-trending-down"></i>
                                 Combo ít được gọi
                             </h6>
-                            <div id="lowCombos" class="d-flex flex-column gap-2"></div>
+                            <div id="lowCombos" class="d-flex flex-column gap-2">
+                                @foreach (var combo in lowCombos)
+                                {
+                                    <div class="p-3 bg-danger bg-opacity-10 rounded d-flex align-items-center gap-3">
+                                        <div class="flex-fill">
+                                            <div class="fw-semibold">@combo.ComboName</div>
+                                            <small class="text-muted">@((period == "week") ? combo.WeeklyUsed : combo.MonthlyUsed) lượt gọi</small>
+                                        </div>
+                                        <span style="font-size: 2rem;">@* emoji hoặc ảnh nếu có *@</span>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -80,513 +189,86 @@
                 <div class="card bg-warning text-white">
                     <div class="card-body">
                         <h5 class="card-title text-white mb-3">Tổng quan</h5>
-                        <div id="overview" class="d-flex flex-column gap-3"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- View: Create/Edit Combo -->
-        <div id="viewForm" class="row" style="display: none;">
-            <div class="col-lg-12 mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h2 id="formTitle" class="text-2xl font-bold text-gray-800">Tạo Combo Mới</h2>
-                    <button id="btnCancelForm" class="btn btn-secondary">
-                        <i class="mdi mdi-close"></i> Hủy
-                    </button>
-                </div>
-            </div>
-
-            <!-- Form Info -->
-            <div class="col-lg-5">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4">Thông tin Combo</h5>
-
-                        <div class="mb-3">
-                            <label class="form-label">Tên Combo</label>
-                            <input type="text" id="comboName" class="form-control" placeholder="Nhập tên combo">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Giá bán (VNĐ)</label>
-                            <input type="number" id="comboPrice" class="form-control" placeholder="450000">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Mô tả</label>
-                            <textarea id="comboDesc" class="form-control" rows="3" placeholder="Mô tả về combo"></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Hình ảnh</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <button class="btn btn-warning">
-                                    <i class="mdi mdi-upload"></i> Tải ảnh lên
-                                </button>
-                                <span class="text-muted small">Chưa có ảnh nào được chọn</span>
+                        <div id="overview" class="d-flex flex-column gap-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Tổng combo đang hoạt động</span>
+                                <span class="h4 mb-0">@overview.totalActiveCombos</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tổng lượt gọi tuần này</span>
+                                <span class="h4 mb-0">@overview.totalOrdersWeek</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Tổng lượt gọi tháng này</span>
+                                <span class="h4 mb-0">@overview.totalOrdersMonth</span>
                             </div>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Món ăn trong Combo (<span id="dishCount">0</span>)</label>
-                            <div id="selectedDishes" class="border rounded p-3" style="min-height: 300px; max-height: 400px; overflow-y: auto;">
-                                <p class="text-muted text-center py-5">Chọn món ăn từ danh sách bên phải</p>
-                            </div>
-                        </div>
-
-                        <button id="btnSaveCombo" class="btn btn-warning w-100 py-2">
-                            <i class="mdi mdi-check"></i> Tạo Combo
-                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Top Dishes -->
-            <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4">Món Ăn Nổi Bật</h5>
 
-                        <div class="mb-4">
-                            <h6 class="text-success mb-2 d-flex align-items-center gap-2">
-                                <i class="mdi mdi-trending-up"></i>
-                                Top món được gọi nhiều
-                            </h6>
-                            <div id="topDishes" class="d-flex flex-column gap-2" style="max-height: 400px; overflow-y: auto;"></div>
-                        </div>
-
-                        <div>
-                            <h6 class="text-danger mb-2 d-flex align-items-center gap-2">
-                                <i class="mdi mdi-trending-down"></i>
-                                Món gọi ít tuần qua
-                            </h6>
-                            <div id="lowDishes" class="d-flex flex-column gap-2" style="max-height: 400px; overflow-y: auto;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- All Dishes -->
-            <div class="col-lg-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title mb-4">Tất cả Món Ăn</h5>
-
-                        <div class="mb-3">
-                            <div class="position-relative">
-                                <i class="mdi mdi-magnify position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); color: #6c757d;"></i>
-                                <input type="text" id="searchDish" class="form-control ps-5" placeholder="Tìm món ăn...">
-                            </div>
-                        </div>
-
-                        <div id="allDishes" class="d-flex flex-column gap-2" style="max-height: 700px; overflow-y: auto;"></div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
-</div>
 
-<style>
-    /* Custom styles to avoid conflicts */
-    #comboApp .cursor-pointer {
-        cursor: pointer;
-    }
-
-    #comboApp .hover-shadow:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    #comboApp .combo-card {
-        transition: all 0.3s ease;
-    }
-
-        #comboApp .combo-card:hover {
-            transform: translateY(-2px);
+    <style>
+        /* Custom styles to avoid conflicts */
+        #comboApp .cursor-pointer {
+            cursor: pointer;
         }
 
-    #comboApp .dish-item {
-        transition: background-color 0.2s ease;
-    }
-
-        #comboApp .dish-item:hover {
-            background-color: #fff3cd !important;
+        #comboApp .hover-shadow:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-    #comboApp .selected-ring {
-        box-shadow: 0 0 0 3px #ffc107;
-    }
-    /* ✅ FIX: Đảm bảo sidebar không bị ẩn bởi Tailwind */
-    .sidebar {
-        display: block !important;
-    }
-
-        .sidebar .collapse.show {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
+        #comboApp .combo-card {
+            transition: all 0.3s ease;
         }
 
-</style>
-
-<script>
-    // Data
-    const combos = [
-        {
-            id: 1,
-            name: 'Combo Gia Đình',
-            price: 450000,
-            description: 'Phù hợp cho 4-5 người',
-            dishes: ['Lẩu Thái', 'Gà nướng', 'Cơm chiên Dương Châu', 'Rau củ'],
-            image: '🍲',
-            status: 'active',
-            ordersThisWeek: 45,
-            ordersThisMonth: 180
-        },
-        {
-            id: 2,
-            name: 'Combo Couple',
-            price: 250000,
-            description: 'Lý tưởng cho 2 người',
-            dishes: ['Bò bít tết', 'Salad', 'Nước ngọt', 'Tráng miệng'],
-            image: '🥩',
-            status: 'active',
-            ordersThisWeek: 38,
-            ordersThisMonth: 155
-        },
-        {
-            id: 3,
-            name: 'Combo Văn Phòng',
-            price: 320000,
-            description: 'Cho nhóm 3-4 người',
-            dishes: ['Cơm gà xối mỡ', 'Canh bí đỏ', 'Rau luộc', 'Trái cây'],
-            image: '🍗',
-            status: 'active',
-            ordersThisWeek: 52,
-            ordersThisMonth: 210
-        },
-        {
-            id: 4,
-            name: 'Combo Tiệc Nhỏ',
-            price: 680000,
-            description: 'Phục vụ 6-8 người',
-            dishes: ['Tôm hùm nướng', 'Cá hấp', 'Mì xào', 'Lẩu hải sản'],
-            image: '🦞',
-            status: 'active',
-            ordersThisWeek: 15,
-            ordersThisMonth: 68
-        }
-    ];
-
-    const dishes = [
-        { id: 1, name: 'Lẩu Thái', price: 180000, ordersWeek: 85, trend: 'up' },
-        { id: 2, name: 'Bò bít tết', price: 150000, ordersWeek: 72, trend: 'up' },
-        { id: 3, name: 'Gà nướng', price: 120000, ordersWeek: 68, trend: 'up' },
-        { id: 4, name: 'Cơm chiên Dương Châu', price: 60000, ordersWeek: 95, trend: 'up' },
-        { id: 5, name: 'Tôm hùm nướng', price: 350000, ordersWeek: 25, trend: 'down' },
-        { id: 6, name: 'Cá hấp', price: 200000, ordersWeek: 30, trend: 'down' },
-        { id: 7, name: 'Salad', price: 45000, ordersWeek: 55, trend: 'up' },
-        { id: 8, name: 'Canh bí đỏ', price: 35000, ordersWeek: 42, trend: 'stable' },
-        { id: 9, name: 'Rau củ', price: 40000, ordersWeek: 38, trend: 'stable' },
-        { id: 10, name: 'Nước ngọt', price: 15000, ordersWeek: 120, trend: 'up' },
-        { id: 11, name: 'Tráng miệng', price: 35000, ordersWeek: 65, trend: 'up' },
-        { id: 12, name: 'Cơm gà xối mỡ', price: 75000, ordersWeek: 88, trend: 'up' },
-        { id: 13, name: 'Rau luộc', price: 25000, ordersWeek: 45, trend: 'stable' },
-        { id: 14, name: 'Trái cây', price: 50000, ordersWeek: 70, trend: 'up' },
-        { id: 15, name: 'Mì xào', price: 55000, ordersWeek: 52, trend: 'stable' },
-        { id: 16, name: 'Lẩu hải sản', price: 280000, ordersWeek: 35, trend: 'down' }
-    ];
-
-    // State
-    let currentView = 'list';
-    let selectedCombo = null;
-    let selectedDishes = [];
-    let isEditMode = false;
-    let editingComboId = null;
-
-    // Helpers
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-    };
-
-    // Render functions
-    function renderComboList() {
-        const container = document.getElementById('comboList');
-        container.innerHTML = combos.map(combo => `
-                <div class="card combo-card hover-shadow cursor-pointer ${selectedCombo?.id === combo.id ? 'selected-ring' : ''}" onclick="selectCombo(${combo.id})">
-                    <div class="card-body">
-                        <div class="d-flex gap-3">
-                            <div style="font-size: 4rem;">${combo.image}</div>
-                            <div class="flex-fill">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <h4 class="mb-1">${combo.name}</h4>
-                                        <p class="text-muted mb-0">${combo.description}</p>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="h4 text-warning mb-0">${formatPrice(combo.price)}</span>
-                                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); editCombo(${combo.id})">
-                                            <i class="mdi mdi-pencil"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="mb-2">
-                                    <small class="fw-semibold">Món ăn trong combo:</small>
-                                    <div class="d-flex flex-wrap gap-2 mt-1">
-                                        ${combo.dishes.map(dish => `<span class="badge bg-warning">${dish}</span>`).join('')}
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-3">
-                                    <small class="text-muted"><strong>${combo.ordersThisWeek}</strong> lượt gọi tuần này</small>
-                                    <small class="text-muted"><strong>${combo.ordersThisMonth}</strong> lượt gọi tháng này</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-    }
-
-    function renderStatistics() {
-        const timeFilter = document.getElementById('timeFilter').value;
-        const sortedTop = [...combos].sort((a, b) =>
-            timeFilter === 'week' ? b.ordersThisWeek - a.ordersThisWeek : b.ordersThisMonth - a.ordersThisMonth
-        ).slice(0, 3);
-
-        const sortedLow = [...combos].sort((a, b) =>
-            timeFilter === 'week' ? a.ordersThisWeek - b.ordersThisWeek : a.ordersThisMonth - b.ordersThisMonth
-        ).slice(0, 3);
-
-        document.getElementById('topCombos').innerHTML = sortedTop.map((combo, idx) => `
-                <div class="p-3 bg-success bg-opacity-10 rounded d-flex align-items-center gap-3">
-                    <span class="h4 text-success mb-0">#${idx + 1}</span>
-                    <div class="flex-fill">
-                        <div class="fw-semibold">${combo.name}</div>
-                        <small class="text-muted">${timeFilter === 'week' ? combo.ordersThisWeek : combo.ordersThisMonth} lượt gọi</small>
-                    </div>
-                    <span style="font-size: 2rem;">${combo.image}</span>
-                </div>
-            `).join('');
-
-        document.getElementById('lowCombos').innerHTML = sortedLow.map(combo => `
-                <div class="p-3 bg-danger bg-opacity-10 rounded d-flex align-items-center gap-3">
-                    <div class="flex-fill">
-                        <div class="fw-semibold">${combo.name}</div>
-                        <small class="text-muted">${timeFilter === 'week' ? combo.ordersThisWeek : combo.ordersThisMonth} lượt gọi</small>
-                    </div>
-                    <span style="font-size: 2rem;">${combo.image}</span>
-                </div>
-            `).join('');
-
-        document.getElementById('overview').innerHTML = `
-                <div class="d-flex justify-content-between">
-                    <span>Tổng combo đang hoạt động</span>
-                    <span class="h4 mb-0">${combos.length}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>Tổng lượt gọi tuần này</span>
-                    <span class="h4 mb-0">${combos.reduce((sum, c) => sum + c.ordersThisWeek, 0)}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>Tổng lượt gọi tháng này</span>
-                    <span class="h4 mb-0">${combos.reduce((sum, c) => sum + c.ordersThisMonth, 0)}</span>
-                </div>
-            `;
-    }
-
-    function renderDishLists() {
-        const topDishes = [...dishes].sort((a, b) => b.ordersWeek - a.ordersWeek).slice(0, 5);
-        const lowDishes = [...dishes].sort((a, b) => a.ordersWeek - b.ordersWeek).slice(0, 5);
-
-        document.getElementById('topDishes').innerHTML = topDishes.map(dish => `
-                <div class="p-3 bg-success bg-opacity-10 rounded cursor-pointer dish-item" onclick="addDish(${dish.id})">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-fill">
-                            <div class="fw-medium">${dish.name}</div>
-                            <small class="text-muted">${formatPrice(dish.price)}</small>
-                        </div>
-                        <span class="badge bg-success">${dish.ordersWeek} lần</span>
-                    </div>
-                </div>
-            `).join('');
-
-        document.getElementById('lowDishes').innerHTML = lowDishes.map(dish => `
-                <div class="p-3 bg-danger bg-opacity-10 rounded cursor-pointer dish-item" onclick="addDish(${dish.id})">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-fill">
-                            <div class="fw-medium">${dish.name}</div>
-                            <small class="text-muted">${formatPrice(dish.price)}</small>
-                        </div>
-                        <span class="badge bg-danger">${dish.ordersWeek} lần</span>
-                    </div>
-                </div>
-            `).join('');
-
-        renderAllDishes();
-    }
-
-    function renderAllDishes(searchTerm = '') {
-        const filtered = dishes.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
-        document.getElementById('allDishes').innerHTML = filtered.length > 0 ? filtered.map(dish => `
-                <div class="p-3 bg-light rounded cursor-pointer dish-item border" onclick="addDish(${dish.id})">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-fill">
-                            <div class="fw-medium">${dish.name}</div>
-                            <small class="text-muted">${formatPrice(dish.price)}</small>
-                        </div>
-                        <span class="badge bg-secondary">${dish.ordersWeek} lần</span>
-                    </div>
-                </div>
-            `).join('') : '<p class="text-center text-muted py-5">Không tìm thấy món ăn</p>';
-    }
-
-    function renderSelectedDishes() {
-        const container = document.getElementById('selectedDishes');
-        document.getElementById('dishCount').textContent = selectedDishes.length;
-
-        if (selectedDishes.length === 0) {
-            container.innerHTML = '<p class="text-muted text-center py-5">Chọn món ăn từ danh sách bên phải</p>';
-            return;
-        }
-
-        const totalPrice = selectedDishes.reduce((sum, d) => sum + d.price, 0);
-        container.innerHTML = `
-                ${selectedDishes.map(dish => `
-                    <div class="d-flex justify-content-between align-items-center bg-light p-3 rounded mb-2">
-                        <div>
-                            <div class="fw-medium">${dish.name}</div>
-                            <small class="text-muted">${formatPrice(dish.price)}</small>
-                        </div>
-                        <button class="btn btn-sm btn-danger" onclick="removeDish(${dish.id})">
-                            <i class="mdi mdi-delete"></i>
-                        </button>
-                    </div>
-                `).join('')}
-                <div class="pt-3 mt-3 border-top">
-                    <small class="text-muted">Tổng giá gốc: <strong>${formatPrice(totalPrice)}</strong></small>
-                </div>
-            `;
-    }
-
-    // Actions
-    function selectCombo(id) {
-        selectedCombo = combos.find(c => c.id === id);
-        renderComboList();
-    }
-
-    function editCombo(id) {
-        const combo = combos.find(c => c.id === id);
-        isEditMode = true;
-        editingComboId = id;
-
-        document.getElementById('comboName').value = combo.name;
-        document.getElementById('comboPrice').value = combo.price;
-        document.getElementById('comboDesc').value = combo.description;
-
-        selectedDishes = combo.dishes.map(dishName => {
-            return dishes.find(d => d.name === dishName) || { id: Math.random(), name: dishName, price: 0 };
-        });
-
-        document.getElementById('formTitle').textContent = 'Chỉnh sửa Combo';
-        document.getElementById('btnSaveCombo').innerHTML = '<i class="mdi mdi-check"></i> Cập nhật Combo';
-
-        showView('form');
-        renderSelectedDishes();
-    }
-
-    function addDish(id) {
-        const dish = dishes.find(d => d.id === id);
-        if (dish && !selectedDishes.find(d => d.id === id)) {
-            selectedDishes.push(dish);
-            renderSelectedDishes();
-            toastr.success(`Đã thêm ${dish.name} vào combo`);
-        }
-    }
-
-    function removeDish(id) {
-        selectedDishes = selectedDishes.filter(d => d.id !== id);
-        renderSelectedDishes();
-    }
-
-    function showView(view) {
-        currentView = view;
-        document.getElementById('viewList').style.display = view === 'list' ? 'flex' : 'none';
-        document.getElementById('viewForm').style.display = view === 'form' ? 'flex' : 'none';
-
-        if (view === 'form') {
-            renderDishLists();
-        }
-    }
-
-    function resetForm() {
-        document.getElementById('comboName').value = '';
-        document.getElementById('comboPrice').value = '';
-        document.getElementById('comboDesc').value = '';
-        selectedDishes = [];
-        isEditMode = false;
-        editingComboId = null;
-        document.getElementById('formTitle').textContent = 'Tạo Combo Mới';
-        document.getElementById('btnSaveCombo').innerHTML = '<i class="mdi mdi-check"></i> Tạo Combo';
-        renderSelectedDishes();
-    }
-
-    // Event listeners
-    document.getElementById('btnCreateCombo').addEventListener('click', () => {
-        resetForm();
-        showView('form');
-    });
-
-    document.getElementById('btnCancelForm').addEventListener('click', () => {
-        resetForm();
-        showView('list');
-    });
-
-    document.getElementById('btnSaveCombo').addEventListener('click', () => {
-        const name = document.getElementById('comboName').value;
-        const price = document.getElementById('comboPrice').value;
-        const desc = document.getElementById('comboDesc').value;
-
-        if (!name || !price || selectedDishes.length === 0) {
-            toastr.error('Vui lòng điền đầy đủ thông tin và chọn ít nhất 1 món ăn');
-            return;
-        }
-
-        if (isEditMode) {
-            toastr.success('Cập nhật combo thành công!');
-        } else {
-            toastr.success('Tạo combo mới thành công!');
-        }
-
-        resetForm();
-        showView('list');
-    });
-
-    document.getElementById('timeFilter').addEventListener('change', renderStatistics);
-
-    document.getElementById('searchDish').addEventListener('input', (e) => {
-        renderAllDishes(e.target.value);
-    });
-
-    // Initialize
-    renderComboList();
-    renderStatistics();
-
-    $(document).ready(function () {
-        // Mở menu "Thực đơn - Combo"
-        $('#menuComboSubMenu').addClass('show');
-        $('a[href="#menuComboSubMenu"]').addClass('active').attr('aria-expanded', 'true');
-
-        // Highlight menu item "Danh sách Combo"
-        $('a[asp-controller="ManagerCombo"][asp-action="Index"]').addClass('active');
-
-        // Ngăn menu tự đóng khi click trong trang
-        $('.sidebar .collapse').on('hide.bs.collapse', function (e) {
-            var currentPath = window.location.pathname.toLowerCase();
-            if (currentPath.includes('/managercombo') && this.id === 'menuComboSubMenu') {
-                e.preventDefault();
-                return false;
+            #comboApp .combo-card:hover {
+                transform: translateY(-2px);
             }
-        });
-    });
-</script>
+
+        #comboApp .dish-item {
+            transition: background-color 0.2s ease;
+        }
+
+            #comboApp .dish-item:hover {
+                background-color: #fff3cd !important;
+            }
+
+        #comboApp .selected-ring {
+            box-shadow: 0 0 0 3px #ffc107;
+        }
+        /* ✅ FIX: Đảm bảo sidebar không bị ẩn bởi Tailwind */
+        .sidebar {
+            display: block !important;
+        }
+
+            .sidebar .collapse.show {
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+
+    </style>
+
+    <script>
+                      function loadCombos(pageIndex = 1) {
+            const search = document.getElementById('searchCombo').value;
+            const status = document.getElementById('filterStatus').value;
+
+            fetch(`/ManagerCombo/LoadComboList?pageIndex=${pageIndex}&search=${search}&isAvailable=${status}`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('comboList').innerHTML = html;
+                });
+        }
+
+        document.getElementById('searchCombo').addEventListener('input', () => loadCombos());
+        document.getElementById('filterStatus').addEventListener('change', () => loadCombos());
+
+        function loadPage(pageIndex) {
+            loadCombos(pageIndex);
+        }
+    </script>
