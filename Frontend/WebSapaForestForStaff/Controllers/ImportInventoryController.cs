@@ -191,5 +191,27 @@ namespace WebSapaForestForStaff.Controllers
                 return StatusCode(500, new { success = false, message = $"Lỗi server: {ex.Message}" });
             }
         }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetSupplierComparison(int ingredientId, string compareBy = "price")
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/PurchaseOrderDetail/CompareSuppliers/{ingredientId}?compareBy={compareBy}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return NotFound("Không tìm thấy lịch sử giao dịch");
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                return Content(json, "application/json");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi lấy dữ liệu so sánh", error = ex.Message });
+            }
+        }
     }
 }

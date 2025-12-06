@@ -64,6 +64,10 @@
             gap: 15px;
             align-items: center;
             flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .filter-group {
@@ -798,11 +802,15 @@
 
             document.getElementById('allOrdersCount').textContent = `${orders.length} đơn`;
         }
-
         // HÀM CẢI TIẾN: Áp dụng bộ lọc
         function applyFilters() {
             const filtered = filterOrders();
+
+            // Lọc và render tất cả 3 bảng
             renderAllOrders(filtered);
+            renderProcessingOrdersFiltered(filtered);
+            renderCompletedHistoryFiltered(filtered);
+
             updateStatistics(filtered);
         }
 
@@ -815,6 +823,94 @@
             document.getElementById('searchInput').value = '';
             renderAllOrders();
             updateStatistics();
+        }
+
+        // Render đơn đang xử lý với dữ liệu đã lọc
+        function renderProcessingOrdersFiltered(filteredOrders) {
+            const processingOrders = filteredOrders.filter(p => {
+                const status = (p.Status || p.status || '').toLowerCase();
+                return status === 'processing' || status === 'pending';
+            });
+
+            const container = document.getElementById('processingOrdersList');
+            if (!container) return;
+
+            if (processingOrders.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Không có đơn hàng đang xử lý</div>';
+                document.getElementById('processingCount').textContent = '0 đơn hàng';
+                return;
+            }
+
+            container.innerHTML = processingOrders.map(order => {
+                const total = calculateTotal(order);
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierName = order.Supplier?.Name || 'Chưa xác định';
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+
+                return `
+                    <div class="order-item">
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">Mã đơn: ${orderId}</div>
+                                <div class="order-details">Nhà cung cấp: ${supplierName}</div>
+                            </div>
+                            <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                        </div>
+                        <div class="order-details">Ngày nhập: ${formatDate(orderDate)}</div>
+                        <div class="order-footer">
+                            <span class="order-price">${formatCurrency(total)}</span>
+                            <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('processingCount').textContent = `${processingOrders.length} đơn hàng`;
+        }
+
+        // Render đơn đã xử lý với dữ liệu đã lọc
+        function renderCompletedHistoryFiltered(filteredOrders) {
+            const completedOrders = filteredOrders.filter(p => {
+                const status = (p.Status || p.status || '').toLowerCase();
+                return status === 'completed' || status === 'cancelled';
+            });
+
+            const container = document.getElementById('completedOrdersList');
+            if (!container) return;
+
+            if (completedOrders.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Chưa có đơn hàng đã xử lý</div>';
+                document.getElementById('completedCount').textContent = '0 đơn';
+                return;
+            }
+
+            container.innerHTML = completedOrders.map(order => {
+                const total = calculateTotal(order);
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierName = order.Supplier?.Name || 'Chưa xác định';
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+
+                return `
+                    <div class="order-item">
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">Mã đơn: ${orderId}</div>
+                                <div class="order-details">Nhà cung cấp: ${supplierName}</div>
+                            </div>
+                            <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                        </div>
+                        <div class="order-details">Ngày nhập: ${formatDate(orderDate)}</div>
+                        <div class="order-footer">
+                            <span class="order-price">${formatCurrency(total)}</span>
+                            <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('completedCount').textContent = `${completedOrders.length} đơn`;
         }
 
         // Xem chi tiết đơn hàng

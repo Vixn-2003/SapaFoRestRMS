@@ -1,7 +1,7 @@
-﻿@{
+﻿@model WebSapaForestForStaff.Controllers.UnitWarehouseViewModel
+@{
     Layout = "~/Views/Shared/_LayoutInventory.cshtml";
     ViewData["Title"] = "Kho và đơn vị tính";
-
 }
 
 <!DOCTYPE html>
@@ -11,639 +11,612 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý Kho & Đơn vị tính</title>
     <style>
-        /* Reset riêng cho trang này - prefix whm (warehouse management) */
-        .whm-page-wrapper * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+    /* Reset & Base */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body.warehouse-unit-page {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+        min-height: 100vh;
+        padding: 20px;
+    }
+
+    /* Header */
+    .wh-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .wh-header h1 {
+        font-size: 32px;
+        font-weight: 800;
+        color: #0f172a;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Container */
+    .wh-container {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    /* Grid Layout */
+    .wh-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 25px;
+    }
+
+    @@media (max-width: 1200px) {
+        .wh-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Card */
+    .wh-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .wh-card:hover {
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+
+    /* Card Header */
+    .wh-card-header {
+        padding: 24px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .wh-card-header.warehouse-theme {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    }
+
+    .wh-card-header.unit-theme {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .wh-card-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .wh-card-title svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Add Button */
+    .wh-add-btn {
+        padding: 10px 20px;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .wh-add-btn.warehouse-btn {
+        color: #1e40af;
+    }
+
+    .wh-add-btn.unit-btn {
+        color: #047857;
+    }
+
+    .wh-add-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .wh-add-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Card Body */
+    .wh-card-body {
+        padding: 28px;
+    }
+
+    /* Form */
+    .wh-form {
+        margin-bottom: 20px;
+        padding: 20px;
+        border-radius: 12px;
+        animation: slideDown 0.3s ease;
+    }
+
+    @@keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .wh-form.warehouse-form {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border: 2px solid #93c5fd;
+    }
+
+    .wh-form.unit-form {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border: 2px solid #6ee7b7;
+    }
+
+    .wh-input,
+    .wh-select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 14px;
+        margin-bottom: 12px;
+        font-family: inherit;
+        transition: all 0.3s ease;
+    }
+
+    .wh-input:focus,
+    .wh-select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    /* Form Actions */
+    .wh-form-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .wh-btn {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .wh-btn-save {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    }
+
+    .wh-btn-save.unit-save {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        box-shadow: 0 4px 12px rgba(5,150,105,0.3);
+    }
+
+    .wh-btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37,99,235,0.4);
+    }
+
+    .wh-btn-cancel {
+        background: #cbd5e1;
+        color: #334155;
+    }
+
+    .wh-btn-cancel:hover {
+        background: #94a3b8;
+    }
+
+    /* Search */
+    .wh-search {
+        margin-bottom: 20px;
+    }
+
+    .wh-search-input {
+        width: 100%;
+        padding: 12px 16px 12px 44px;
+        border: 2px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: 14px center;
+        background-size: 20px;
+    }
+
+    .wh-search-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+
+    /* Table */
+    .wh-table-wrapper {
+        overflow-x: auto;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+    }
+
+    .wh-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .wh-table thead {
+        background: #f1f5f9;
+    }
+
+    .wh-table th {
+        padding: 14px 16px;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #cbd5e1;
+    }
+
+    .wh-table th.center {
+        text-align: center;
+    }
+
+    .wh-table th.sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .wh-table th.sortable:hover {
+        color: #0f172a;
+    }
+
+    .wh-table .sort-icon {
+        margin-left: 5px;
+        font-size: 10px;
+        color: #64748b;
+    }
+
+    .wh-table tbody tr {
+        border-bottom: 1px solid #e2e8f0;
+        transition: background 0.2s ease;
+    }
+
+    .wh-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .wh-table td {
+        padding: 16px;
+        font-size: 14px;
+        color: #1e293b;
+    }
+
+    .wh-table td.center {
+        text-align: center;
+    }
+
+    /* Badge */
+    .wh-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        min-width: 40px;
+    }
+
+    .wh-badge.warehouse-badge {
+        background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+        color: #1e3a8a;
+    }
+
+    .wh-badge.unit-badge {
+        background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+        color: #064e3b;
+    }
+
+    .wh-abbreviation {
+        display: inline-block;
+        padding: 4px 10px;
+        background: #e2e8f0;
+        color: #334155;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* View Button */
+    .wh-view-btn {
+        padding: 8px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .wh-view-btn:hover {
+        background: #e2e8f0;
+        transform: scale(1.1);
+    }
+
+    .wh-view-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .wh-view-btn.warehouse-view svg {
+        color: #2563eb;
+    }
+
+    .wh-view-btn.unit-view svg {
+        color: #059669;
+    }
+
+    /* Modal */
+    .wh-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15,23,42,0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .wh-modal {
+        background: white;
+        border-radius: 16px;
+        max-width: 650px;
+        width: 100%;
+        max-height: 80vh;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(15,23,42,0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .wh-modal-header {
+        padding: 24px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .wh-modal-header.warehouse-modal {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    }
+
+    .wh-modal-header.unit-modal {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+
+    .wh-modal-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+    }
+
+    .wh-modal-close {
+        padding: 8px;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .wh-modal-close:hover {
+        background: rgba(255,255,255,0.3);
+        transform: rotate(90deg);
+    }
+
+    .wh-modal-close svg {
+        width: 20px;
+        height: 20px;
+        color: white;
+    }
+
+    .wh-modal-body {
+        padding: 28px;
+        max-height: calc(80vh - 80px);
+        overflow-y: auto;
+    }
+
+    .wh-modal-info {
+        padding: 16px 20px;
+        border-radius: 10px;
+        margin-bottom: 24px;
+    }
+
+    .wh-modal-info.unit-info {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border: 1px solid #6ee7b7;
+    }
+
+    .wh-modal-info p {
+        font-size: 14px;
+        color: #334155;
+        margin: 0;
+    }
+
+    .wh-modal-info strong {
+        color: #0f172a;
+        font-weight: 600;
+    }
+
+    /* Empty State */
+    .wh-empty-state {
+        text-align: center;
+        padding: 50px 20px;
+        color: #64748b;
+    }
+
+    .wh-empty-state svg {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 16px;
+        opacity: 0.4;
+    }
+
+    .wh-empty-state p {
+        font-size: 15px;
+        margin: 0;
+    }
+
+    .wh-empty-row {
+        text-align: center;
+    }
+
+    .wh-empty-row td {
+        padding: 50px 20px !important;
+        color: #64748b;
+    }
+
+    /* List Item */
+    .wh-list-item {
+        padding: 16px 20px;
+        background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .wh-list-item:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        transform: translateX(2px);
+    }
+
+    .wh-list-number {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .wh-list-number.warehouse-num {
+        background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+        color: #1e3a8a;
+    }
+
+    .wh-list-number.unit-num {
+        background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+        color: #064e3b;
+    }
+
+    .wh-list-content {
+        flex: 1;
+    }
+
+    .wh-list-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 4px;
+    }
+
+    .wh-list-detail {
+        font-size: 13px;
+        color: #475569;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        body.warehouse-unit-page {
+            padding: 15px;
         }
 
-        .whm-page-wrapper {
-            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
-            min-height: 100vh;
-            padding: 35px;
+        .wh-header h1 {
+            font-size: 26px;
         }
 
-        /* Header Section */
-        .whm-page-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .whm-page-title {
-            font-size: 34px;
-            font-weight: 800;
-            color: #0f172a;
-            margin-bottom: 10px;
-            letter-spacing: -0.8px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Main Container */
-        .whm-content-wrapper {
-            max-width: 1700px;
-            margin: 0 auto;
-        }
-
-        /* Two Column Grid */
-        .whm-two-col-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
-        }
-
-        /* Panel Styles */
-        .whm-panel {
-            background: #ffffff;
-            border-radius: 18px;
-            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .whm-panel:hover {
-            box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12);
-            transform: translateY(-4px);
-        }
-
-        /* Panel Header */
-        .whm-panel-top {
-            padding: 26px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .whm-panel-top.theme-blue {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-        }
-
-        .whm-panel-top.theme-green {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        }
-
-        .whm-panel-heading {
-            font-size: 21px;
-            font-weight: 800;
-            color: #ffffff;
-            display: flex;
-            align-items: center;
+        .wh-card-header {
+            padding: 20px;
+            flex-direction: column;
             gap: 12px;
+            align-items: flex-start;
         }
 
-        .whm-panel-heading svg {
-            width: 26px;
-            height: 26px;
-        }
-
-        /* Action Button */
-        .whm-action-button {
-            padding: 11px 22px;
-            background: #ffffff;
-            border: none;
-            border-radius: 11px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
-        }
-
-        .whm-action-button.color-blue {
-            color: #1e40af;
-        }
-
-        .whm-action-button.color-green {
-            color: #047857;
-        }
-
-        .whm-action-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-        }
-
-        .whm-action-button:active {
-            transform: translateY(-1px);
-        }
-
-        .whm-action-button svg {
-            width: 19px;
-            height: 19px;
-        }
-
-        /* Panel Body */
-        .whm-panel-content {
-            padding: 32px;
-        }
-
-        /* Form Section */
-        .whm-input-form {
-            margin-bottom: 24px;
-            padding: 22px;
-            border-radius: 14px;
-            animation: whm-slideIn 0.35s ease;
-        }
-
-        .whm-input-form.style-blue {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border: 2px solid #93c5fd;
-        }
-
-        .whm-input-form.style-green {
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            border: 2px solid #6ee7b7;
-        }
-
-        @@keyframes whm-slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-15px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .whm-text-field {
+        .wh-add-btn {
             width: 100%;
-            padding: 13px 18px;
-            border: 2px solid #cbd5e1;
-            border-radius: 11px;
-            font-size: 15px;
-            margin-bottom: 14px;
-            transition: all 0.3s ease;
-            font-family: inherit;
-            background: #ffffff;
-        }
-
-        .whm-text-field:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-        }
-
-        .whm-dropdown {
-            width: 100%;
-            padding: 13px 18px;
-            border: 2px solid #cbd5e1;
-            border-radius: 11px;
-            font-size: 15px;
-            margin-bottom: 14px;
-            transition: all 0.3s ease;
-            font-family: inherit;
-            background: #ffffff;
-            cursor: pointer;
-        }
-
-        .whm-dropdown:focus {
-            outline: none;
-            border-color: #059669;
-            box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.12);
-        }
-
-        /* Form Action Buttons */
-        .whm-button-group {
-            display: flex;
-            gap: 12px;
-        }
-
-        .whm-button {
-            padding: 11px 26px;
-            border: none;
-            border-radius: 9px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .whm-button-primary {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-            color: #ffffff;
-            box-shadow: 0 5px 14px rgba(37, 99, 235, 0.35);
-        }
-
-        .whm-button-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.45);
-        }
-
-        .whm-button-primary.variant-green {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            box-shadow: 0 5px 14px rgba(5, 150, 105, 0.35);
-        }
-
-        .whm-button-primary.variant-green:hover {
-            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.45);
-        }
-
-        .whm-button-secondary {
-            background: #cbd5e1;
-            color: #334155;
-        }
-
-        .whm-button-secondary:hover {
-            background: #94a3b8;
-        }
-
-        /* Search Section */
-        .whm-search-box {
-            margin-bottom: 24px;
-        }
-
-        .whm-search-field {
-            width: 100%;
-            padding: 13px 18px 13px 48px;
-            border: 2px solid #cbd5e1;
-            border-radius: 11px;
-            font-size: 15px;
-            transition: all 0.3s ease;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'%3E%3C/path%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: 16px center;
-            background-size: 22px;
-        }
-
-        .whm-search-field:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-        }
-
-        /* Data Table */
-        .whm-data-container {
-            overflow-x: auto;
-            border-radius: 12px;
-            border: 1px solid #cbd5e1;
-        }
-
-        .whm-data-grid {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .whm-data-grid thead {
-            background: #f1f5f9;
-        }
-
-        .whm-data-grid th {
-            padding: 16px 18px;
-            text-align: left;
-            font-size: 14px;
-            font-weight: 800;
-            color: #334155;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            border-bottom: 2px solid #cbd5e1;
-        }
-
-        .whm-data-grid th.align-middle {
-            text-align: center;
-        }
-
-        .whm-data-grid th.can-sort {
-            cursor: pointer;
-            user-select: none;
-            transition: color 0.2s ease;
-        }
-
-        .whm-data-grid th.can-sort:hover {
-            color: #0f172a;
-        }
-
-        .whm-data-grid th.can-sort .arrow-icon {
-            margin-left: 7px;
-            font-size: 11px;
-            color: #64748b;
-        }
-
-        .whm-data-grid tbody tr {
-            border-bottom: 1px solid #e2e8f0;
-            transition: background-color 0.2s ease;
-        }
-
-        .whm-data-grid tbody tr:hover {
-            background-color: #f8fafc;
-        }
-
-        .whm-data-grid td {
-            padding: 18px;
-            font-size: 15px;
-            color: #1e293b;
-        }
-
-        .whm-data-grid td.align-middle {
-            text-align: center;
-        }
-
-        /* Badge Component */
-        .whm-count-badge {
-            display: inline-flex;
-            align-items: center;
             justify-content: center;
-            padding: 7px 16px;
-            border-radius: 22px;
-            font-size: 14px;
-            font-weight: 800;
-            min-width: 50px;
         }
 
-        .whm-count-badge.badge-blue {
-            background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-            color: #1e3a8a;
+        .wh-card-body {
+            padding: 20px;
         }
 
-        .whm-count-badge.badge-green {
-            background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
-            color: #064e3b;
-        }
-
-        .whm-short-text {
-            display: inline-block;
-            padding: 5px 12px;
-            background: #e2e8f0;
-            color: #334155;
-            border-radius: 7px;
-            font-family: 'Courier New', monospace;
+        .wh-table th,
+        .wh-table td {
+            padding: 12px;
             font-size: 13px;
-            font-weight: 700;
         }
-
-        /* View Icon Button */
-        .whm-icon-btn {
-            padding: 9px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            border-radius: 9px;
-            transition: all 0.25s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .whm-icon-btn:hover {
-            background: #e2e8f0;
-            transform: scale(1.15);
-        }
-
-        .whm-icon-btn svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .whm-icon-btn.icon-blue svg {
-            color: #2563eb;
-        }
-
-        .whm-icon-btn.icon-green svg {
-            color: #059669;
-        }
-
-        /* Popup Modal */
-        .whm-popup-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(5px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            padding: 25px;
-            animation: whm-fadeIn 0.35s ease;
-        }
-
-        @@keyframes whm-fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        .whm-popup-box {
-            background: #ffffff;
-            border-radius: 18px;
-            max-width: 700px;
-            width: 100%;
-            max-height: 85vh;
-            overflow: hidden;
-            box-shadow: 0 25px 70px rgba(15, 23, 42, 0.35);
-            animation: whm-slideUp 0.35s ease;
-        }
-
-        @@keyframes whm-slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .whm-popup-header {
-            padding: 26px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .whm-popup-header.header-blue {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-        }
-
-        .whm-popup-header.header-green {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        }
-
-        .whm-popup-heading {
-            font-size: 21px;
-            font-weight: 800;
-            color: #ffffff;
-        }
-
-        .whm-close-btn {
-            padding: 9px;
-            background: rgba(255, 255, 255, 0.25);
-            border: none;
-            border-radius: 9px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .whm-close-btn:hover {
-            background: rgba(255, 255, 255, 0.35);
-            transform: rotate(90deg);
-        }
-
-        .whm-close-btn svg {
-            width: 22px;
-            height: 22px;
-            color: #ffffff;
-        }
-
-        .whm-popup-body {
-            padding: 32px;
-            max-height: calc(85vh - 90px);
-            overflow-y: auto;
-        }
-
-        .whm-info-box {
-            padding: 18px 22px;
-            border-radius: 12px;
-            margin-bottom: 26px;
-        }
-
-        .whm-info-box.info-blue {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border: 1px solid #93c5fd;
-        }
-
-        .whm-info-box.info-green {
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            border: 1px solid #6ee7b7;
-        }
-
-        .whm-info-box p {
-            font-size: 15px;
-            color: #334155;
-        }
-
-        .whm-info-box strong {
-            color: #0f172a;
-            font-weight: 700;
-        }
-
-        .whm-no-data {
-            text-align: center;
-            padding: 60px 25px;
-            color: #64748b;
-        }
-
-        .whm-no-data svg {
-            width: 70px;
-            height: 70px;
-            margin-bottom: 18px;
-            opacity: 0.4;
-        }
-
-        .whm-no-data p {
-            font-size: 16px;
-        }
-
-        .whm-detail-item {
-            padding: 18px 22px;
-            background: #f8fafc;
-            border-radius: 12px;
-            border: 1px solid #cbd5e1;
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.25s ease;
-        }
-
-        .whm-detail-item:hover {
-            background: #f1f5f9;
-            border-color: #94a3b8;
-            transform: translateX(3px);
-        }
-
-        .whm-item-number {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 800;
-            flex-shrink: 0;
-        }
-
-        .whm-item-number.num-blue {
-            background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-            color: #1e3a8a;
-        }
-
-        .whm-item-number.num-green {
-            background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
-            color: #064e3b;
-        }
-
-        .whm-item-text {
-            flex: 1;
-        }
-
-        .whm-item-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: #0f172a;
-            margin-bottom: 5px;
-        }
-
-        .whm-item-subtitle {
-            font-size: 14px;
-            color: #475569;
-        }
-
-        /* Empty Row Message */
-        .whm-empty-message {
-            text-align: center;
-            padding: 60px 25px;
-        }
-
-        .whm-empty-message td {
-            color: #64748b;
-            font-size: 16px;
-        }
-
-        /* Responsive Design */
-        @@media (max-width: 1400px) {
-            .whm-two-col-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @@media (max-width: 768px) {
-            .whm-page-wrapper {
-                padding: 20px;
-            }
-
-            .whm-page-title {
-                font-size: 26px;
-            }
-
-            .whm-panel-top {
-                padding: 20px 24px;
-            }
-
-            .whm-panel-content {
-                padding: 24px;
-            }
-
-            .whm-data-grid th,
-            .whm-data-grid td {
-                padding: 14px;
-                font-size: 14px;
-            }
-        }
-    </style>
+    }
+</style>
 </head>
 <body class="warehouse-unit-page">
     <div class="wh-header">
@@ -729,8 +702,8 @@
                         <input type="text" id="unitName" class="wh-input" placeholder="Tên đơn vị...">
                         <input type="text" id="unitAbbr" class="wh-input" placeholder="Tên viết tắt...">
                         <select id="unitType" class="wh-select">
-                            <option value="Số tự nhiên">Số tự nhiên</option>
-                            <option value="Số thập phân">Số thập phân</option>
+                            <option value="1">Số tự nhiên</option>
+                            <option value="2">Số thập phân</option>
                         </select>
                         <div class="wh-form-actions">
                             <button class="wh-btn wh-btn-save unit-save" onclick="addUnit()">Lưu</button>
@@ -804,340 +777,360 @@
     </div>
 
     <script>
-        // Data
-        let warehouses = [
-            { 
-                id: 1, 
-                name: 'Kho nguyên liệu chính', 
-                batches: [
-                    { id: 1, name: 'Lô bột mì #001', quantity: '500 kg' },
-                    { id: 2, name: 'Lô đường #002', quantity: '300 kg' },
-                    { id: 3, name: 'Lô muối #003', quantity: '100 kg' }
-                ]
-            },
-            { 
-                id: 2, 
-                name: 'Kho phụ liệu', 
-                batches: [
-                    { id: 4, name: 'Lô hương liệu #004', quantity: '50 lít' },
-                    { id: 5, name: 'Lô màu thực phẩm #005', quantity: '20 lít' }
-                      ]
-        },
-        { 
-            id: 3, 
-            name: 'Kho bao bì', 
-            batches: [
-                { id: 6, name: 'Lô túi nilon #006', quantity: '1000 cái' }
-            ]
+        // ✅ Load dữ liệu từ server
+        let warehouses = @Html.Raw(Json.Serialize(Model.Warehouses.Select(w => new
+            {
+                id = w.WarehouseId,
+                name = w.Name,
+                isActive = w.IsActive,
+                batches = new List<object>() // Tạm thời empty, cần API riêng để lấy batches
+            })));
+
+        let units = @Html.Raw(Json.Serialize(Model.Units.Select(u => new
+            {
+                id = u.UnitId,
+                name = u.UnitName,
+                abbreviation = u.UnitName.Substring(0, Math.Min(3, u.UnitName.Length)), // Tạm thời lấy 3 ký tự đầu
+                inputType = u.UnitType == WebSapaForestForStaff.DTOs.Inventory.UnitType.Integer ? "Số tự nhiên" : "Số thập phân",
+                unitTypeEnum = (int)u.UnitType,
+                materials = new List<object>() // Tạm thời empty, cần API riêng để lấy materials
+            })));
+
+        let warehouseSortOrder = 'asc';
+        let unitSortOrder = 'asc';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            renderWarehouses();
+            renderUnits();
+        });
+
+        // =============== WAREHOUSE FUNCTIONS ===============
+        function showWarehouseForm() {
+            document.getElementById('warehouseForm').style.display = 'block';
+            document.getElementById('warehouseName').focus();
         }
-    ];
 
-    let units = [
-        { 
-            id: 1, 
-            name: 'Kilogram', 
-            abbreviation: 'kg', 
-            inputType: 'Số thập phân',
-            materials: [
-                { id: 1, name: 'Bột mì' },
-                { id: 2, name: 'Đường' },
-                { id: 3, name: 'Muối' }
-            ]
-        },
-        { 
-            id: 2, 
-            name: 'Lít', 
-            abbreviation: 'l', 
-            inputType: 'Số thập phân',
-            materials: [
-                { id: 4, name: 'Hương liệu' },
-                { id: 5, name: 'Màu thực phẩm' }
-            ]
-        },
-        { 
-            id: 3, 
-            name: 'Cái', 
-            abbreviation: 'cái', 
-            inputType: 'Số tự nhiên',
-            materials: [
-                { id: 6, name: 'Túi nilon' }
-            ]
+        function hideWarehouseForm() {
+            document.getElementById('warehouseForm').style.display = 'none';
+            document.getElementById('warehouseName').value = '';
         }
-    ];
 
-    let warehouseSortOrder = 'asc';
-    let unitSortOrder = 'asc';
+        // ✅ Thêm kho mới qua API
+        async function addWarehouse() {
+            const name = document.getElementById('warehouseName').value.trim();
+            if (!name) {
+                alert('Vui lòng nhập tên kho');
+                return;
+            }
 
-    // Initialize
-    document.addEventListener('DOMContentLoaded', function() {
-        renderWarehouses();
-        renderUnits();
-    });
+            try {
+                const response = await fetch('/UnitInventory/AddWarehouse', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        isActive: true
+                    })
+                });
 
-    // Warehouse Functions
-    function showWarehouseForm() {
-        document.getElementById('warehouseForm').style.display = 'block';
-        document.getElementById('warehouseName').focus();
-    }
+                const result = await response.json();
 
-    function hideWarehouseForm() {
-        document.getElementById('warehouseForm').style.display = 'none';
-        document.getElementById('warehouseName').value = '';
-    }
+                if (result.success) {
+                    alert(result.message);
 
-    function addWarehouse() {
-        const name = document.getElementById('warehouseName').value.trim();
-        if (name) {
-            warehouses.push({
-                id: warehouses.length + 1,
-                name: name,
-                batches: []
-            });
-            hideWarehouseForm();
+                    // ✅ Thêm vào array local
+                    warehouses.push({
+                        id: result.warehouse.warehouseId,
+                        name: result.warehouse.name,
+                        isActive: result.warehouse.isActive,
+                        batches: []
+                    });
+
+                    hideWarehouseForm();
+                    renderWarehouses();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+        function sortWarehouses() {
+            warehouseSortOrder = warehouseSortOrder === 'asc' ? 'desc' : 'asc';
+            document.getElementById('warehouseSortIcon').textContent = warehouseSortOrder === 'asc' ? '▲' : '▼';
             renderWarehouses();
         }
-    }
 
-    function sortWarehouses() {
-        warehouseSortOrder = warehouseSortOrder === 'asc' ? 'desc' : 'asc';
-        document.getElementById('warehouseSortIcon').textContent = warehouseSortOrder === 'asc' ? '▲' : '▼';
-        renderWarehouses();
-    }
-
-    function filterWarehouses() {
-        renderWarehouses();
-    }
-
-    function renderWarehouses() {
-        const searchTerm = document.getElementById('warehouseSearch').value.toLowerCase();
-        let filtered = warehouses.filter(w => w.name.toLowerCase().includes(searchTerm));
-        
-        filtered.sort((a, b) => {
-            if (warehouseSortOrder === 'asc') {
-                return a.name.localeCompare(b.name, 'vi');
-            } else {
-                return b.name.localeCompare(a.name, 'vi');
-            }
-        });
-
-        const tbody = document.getElementById('warehouseTableBody');
-        
-        if (filtered.length === 0) {
-            tbody.innerHTML = `
-                <tr class="wh-empty-row">
-                    <td colspan="4">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 50px; height: 50px; margin: 0 auto 10px; display: block; opacity: 0.3;">
-                            <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Không tìm thấy kho nào
-                    </td>
-                </tr>
-            `;
-            return;
+        function filterWarehouses() {
+            renderWarehouses();
         }
 
-        tbody.innerHTML = filtered.map((w, index) => `
-            <tr>
-                <td>${index + 1}</td>
-                <td><strong>${w.name}</strong></td>
-                <td class="center">
-                    <span class="wh-badge warehouse-badge">${w.batches.length}</span>
-                </td>
-                <td class="center">
-                    <button class="wh-view-btn warehouse-view" onclick="showWarehouseDetail(${w.id})">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                        </svg>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    }
+        function renderWarehouses() {
+            const searchTerm = document.getElementById('warehouseSearch').value.toLowerCase();
+            let filtered = warehouses.filter(w => w.name.toLowerCase().includes(searchTerm));
 
-    function showWarehouseDetail(id) {
-        const warehouse = warehouses.find(w => w.id === id);
-        if (!warehouse) return;
-
-        document.getElementById('warehouseModalTitle').textContent = `Chi tiết: ${warehouse.name}`;
-        
-        let content = '';
-        
-        if (warehouse.batches.length === 0) {
-            content = `
-                <div class="wh-empty-state">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                    </svg>
-                    <p>Không có lô nguyên liệu nào trong kho này</p>
-                </div>
-            `;
-        } else {
-            content = warehouse.batches.map((batch, index) => `
-                <div class="wh-list-item">
-                    <div class="wh-list-number warehouse-num">${index + 1}</div>
-                    <div class="wh-list-content">
-                        <div class="wh-list-name">${batch.name}</div>
-                        <div class="wh-list-detail">Số lượng: ${batch.quantity}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        document.getElementById('warehouseModalBody').innerHTML = content;
-        document.getElementById('warehouseModal').style.display = 'flex';
-    }
-
-    function closeWarehouseModal(event) {
-        if (!event || event.target.id === 'warehouseModal') {
-            document.getElementById('warehouseModal').style.display = 'none';
-        }
-    }
-
-    // Unit Functions
-    function showUnitForm() {
-        document.getElementById('unitForm').style.display = 'block';
-        document.getElementById('unitName').focus();
-    }
-
-    function hideUnitForm() {
-        document.getElementById('unitForm').style.display = 'none';
-        document.getElementById('unitName').value = '';
-        document.getElementById('unitAbbr').value = '';
-        document.getElementById('unitType').value = 'Số tự nhiên';
-    }
-
-    function addUnit() {
-        const name = document.getElementById('unitName').value.trim();
-        const abbr = document.getElementById('unitAbbr').value.trim();
-        const type = document.getElementById('unitType').value;
-        
-        if (name && abbr) {
-            units.push({
-                id: units.length + 1,
-                name: name,
-                abbreviation: abbr,
-                inputType: type,
-                materials: []
+            filtered.sort((a, b) => {
+                if (warehouseSortOrder === 'asc') {
+                    return a.name.localeCompare(b.name, 'vi');
+                } else {
+                    return b.name.localeCompare(a.name, 'vi');
+                }
             });
-            hideUnitForm();
+
+            const tbody = document.getElementById('warehouseTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                        <tr class="wh-empty-row">
+                            <td colspan="4">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 50px; height: 50px; margin: 0 auto 10px; display: block; opacity: 0.3;">
+                                    <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Không tìm thấy kho nào
+                            </td>
+                        </tr>
+                    `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((w, index) => `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${w.name}</strong></td>
+                        <td class="center">
+                            <span class="wh-badge warehouse-badge">${w.batches ? w.batches.length : 0}</span>
+                        </td>
+                        <td class="center">
+                            <button class="wh-view-btn warehouse-view" onclick="showWarehouseDetail(${w.id})">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
+        function showWarehouseDetail(id) {
+            const warehouse = warehouses.find(w => w.id === id);
+            if (!warehouse) return;
+
+            document.getElementById('warehouseModalTitle').textContent = `Chi tiết: ${warehouse.name}`;
+
+            let content = '';
+
+            if (!warehouse.batches || warehouse.batches.length === 0) {
+                content = `
+                        <div class="wh-empty-state">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                            </svg>
+                            <p>Không có lô nguyên liệu nào trong kho này</p>
+                        </div>
+                    `;
+            } else {
+                content = warehouse.batches.map((batch, index) => `
+                        <div class="wh-list-item">
+                            <div class="wh-list-number warehouse-num">${index + 1}</div>
+                            <div class="wh-list-content">
+                                <div class="wh-list-name">${batch.name}</div>
+                                <div class="wh-list-detail">Số lượng: ${batch.quantity}</div>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+
+            document.getElementById('warehouseModalBody').innerHTML = content;
+            document.getElementById('warehouseModal').style.display = 'flex';
+        }
+
+        function closeWarehouseModal(event) {
+            if (!event || event.target.id === 'warehouseModal') {
+                document.getElementById('warehouseModal').style.display = 'none';
+            }
+        }
+
+        // =============== UNIT FUNCTIONS ===============
+        function showUnitForm() {
+            document.getElementById('unitForm').style.display = 'block';
+            document.getElementById('unitName').focus();
+        }
+
+        function hideUnitForm() {
+            document.getElementById('unitForm').style.display = 'none';
+            document.getElementById('unitName').value = '';
+            document.getElementById('unitAbbr').value = '';
+            document.getElementById('unitType').value = '1'; // Integer
+        }
+
+        // ✅ Thêm đơn vị mới qua API
+        async function addUnit() {
+            const name = document.getElementById('unitName').value.trim();
+            const abbr = document.getElementById('unitAbbr').value.trim();
+            const type = parseInt(document.getElementById('unitType').value);
+
+            if (!name || !abbr) {
+                alert('Vui lòng nhập đầy đủ thông tin');
+                return;
+            }
+
+            try {
+                const response = await fetch('/UnitInventory/AddUnit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        unitName: name,
+                        unitType: type
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+
+                    // ✅ Thêm vào array local
+                    units.push({
+                        id: result.unit.unitId,
+                        name: result.unit.unitName,
+                        abbreviation: abbr, // Backend không trả về abbreviation, tạm dùng input
+                        inputType: type === 1 ? 'Số tự nhiên' : 'Số thập phân',
+                        unitTypeEnum: type,
+                        materials: []
+                    });
+
+                    hideUnitForm();
+                    renderUnits();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+        function sortUnits() {
+            unitSortOrder = unitSortOrder === 'asc' ? 'desc' : 'asc';
+            document.getElementById('unitSortIcon').textContent = unitSortOrder === 'asc' ? '▲' : '▼';
             renderUnits();
         }
-    }
 
-    function sortUnits() {
-        unitSortOrder = unitSortOrder === 'asc' ? 'desc' : 'asc';
-        document.getElementById('unitSortIcon').textContent = unitSortOrder === 'asc' ? '▲' : '▼';
-        renderUnits();
-    }
+        function filterUnits() {
+            renderUnits();
+        }
 
-    function filterUnits() {
-        renderUnits();
-    }
+        function renderUnits() {
+            const searchTerm = document.getElementById('unitSearch').value.toLowerCase();
+            let filtered = units.filter(u =>
+                u.name.toLowerCase().includes(searchTerm) ||
+                u.abbreviation.toLowerCase().includes(searchTerm)
+            );
 
-    function renderUnits() {
-        const searchTerm = document.getElementById('unitSearch').value.toLowerCase();
-        let filtered = units.filter(u => 
-            u.name.toLowerCase().includes(searchTerm) || 
-            u.abbreviation.toLowerCase().includes(searchTerm)
-        );
-        
-        filtered.sort((a, b) => {
-            if (unitSortOrder === 'asc') {
-                return a.name.localeCompare(b.name, 'vi');
+            filtered.sort((a, b) => {
+                if (unitSortOrder === 'asc') {
+                    return a.name.localeCompare(b.name, 'vi');
+                } else {
+                    return b.name.localeCompare(a.name, 'vi');
+                }
+            });
+
+            const tbody = document.getElementById('unitTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                        <tr class="wh-empty-row">
+                            <td colspan="6">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 50px; height: 50px; margin: 0 auto 10px; display: block; opacity: 0.3;">
+                                    <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Không tìm thấy đơn vị tính nào
+                            </td>
+                        </tr>
+                    `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((u, index) => `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${u.name}</strong></td>
+                        <td class="center">
+                            <span class="wh-abbreviation">${u.abbreviation}</span>
+                        </td>
+                        <td class="center">${u.inputType}</td>
+                        <td class="center">
+                            <span class="wh-badge unit-badge">${u.materials ? u.materials.length : 0}</span>
+                        </td>
+                        <td class="center">
+                            <button class="wh-view-btn unit-view" onclick="showUnitDetail(${u.id})">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+        }
+
+        function showUnitDetail(id) {
+            const unit = units.find(u => u.id === id);
+            if (!unit) return;
+
+            document.getElementById('unitModalTitle').textContent = `Chi tiết: ${unit.name} (${unit.abbreviation})`;
+
+            let content = `
+                    <div class="wh-modal-info unit-info">
+                        <p><strong>Kiểu nhập:</strong> ${unit.inputType}</p>
+                    </div>
+                `;
+
+            if (!unit.materials || unit.materials.length === 0) {
+                content += `
+                        <div class="wh-empty-state">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                            <p>Chưa có nguyên liệu nào sử dụng đơn vị này</p>
+                        </div>
+                    `;
             } else {
-                return b.name.localeCompare(a.name, 'vi');
+                content += unit.materials.map((material, index) => `
+                        <div class="wh-list-item">
+                            <div class="wh-list-number unit-num">${index + 1}</div>
+                            <div class="wh-list-content">
+                                <div class="wh-list-name">${material.name}</div>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+
+            document.getElementById('unitModalBody').innerHTML = content;
+            document.getElementById('unitModal').style.display = 'flex';
+        }
+
+        function closeUnitModal(event) {
+            if (!event || event.target.id === 'unitModal') {
+                document.getElementById('unitModal').style.display = 'none';
+            }
+        }
+
+        // Close modals on ESC key
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeWarehouseModal();
+                closeUnitModal();
             }
         });
-
-        const tbody = document.getElementById('unitTableBody');
-        
-        if (filtered.length === 0) {
-            tbody.innerHTML = `
-                <tr class="wh-empty-row">
-                    <td colspan="6">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 50px; height: 50px; margin: 0 auto 10px; display: block; opacity: 0.3;">
-                            <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Không tìm thấy đơn vị tính nào
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        tbody.innerHTML = filtered.map((u, index) => `
-            <tr>
-                <td>${index + 1}</td>
-                <td><strong>${u.name}</strong></td>
-                <td class="center">
-                    <span class="wh-abbreviation">${u.abbreviation}</span>
-                </td>
-                <td class="center">${u.inputType}</td>
-                <td class="center">
-                    <span class="wh-badge unit-badge">${u.materials.length}</span>
-                </td>
-                <td class="center">
-                    <button class="wh-view-btn unit-view" onclick="showUnitDetail(${u.id})">
-                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                        </svg>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    function showUnitDetail(id) {
-        const unit = units.find(u => u.id === id);
-        if (!unit) return;
-
-        document.getElementById('unitModalTitle').textContent = `Chi tiết: ${unit.name} (${unit.abbreviation})`;
-        
-        let content = `
-            <div class="wh-modal-info unit-info">
-                <p><strong>Kiểu nhập:</strong> ${unit.inputType}</p>
-            </div>
-        `;
-        
-        if (unit.materials.length === 0) {
-            content += `
-                <div class="wh-empty-state">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                    <p>Chưa có nguyên liệu nào sử dụng đơn vị này</p>
-                </div>
-            `;
-        } else {
-            content += unit.materials.map((material, index) => `
-                <div class="wh-list-item">
-                    <div class="wh-list-number unit-num">${index + 1}</div>
-                    <div class="wh-list-content">
-                        <div class="wh-list-name">${material.name}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        document.getElementById('unitModalBody').innerHTML = content;
-        document.getElementById('unitModal').style.display = 'flex';
-    }
-
-    function closeUnitModal(event) {
-        if (!event || event.target.id === 'unitModal') {
-            document.getElementById('unitModal').style.display = 'none';
-        }
-    }
-
-    // Close modals on ESC key
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeWarehouseModal();
-            closeUnitModal();
-        }
-    });
-</script>
+    </script>
 </body>
 </html>

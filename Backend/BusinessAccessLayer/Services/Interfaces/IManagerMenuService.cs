@@ -1,4 +1,5 @@
-﻿using BusinessAccessLayer.DTOs.Manager;
+﻿using BusinessAccessLayer.DTOs.Inventory;
+using BusinessAccessLayer.DTOs.Manager;
 using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
@@ -27,6 +28,6 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<int> CreateManagerMenu(ManagerMenuDTO menuDTO); 
         Task<ManagerMenuDTO?> GetMenuByName(string name);
 
-
+        
     }
 }

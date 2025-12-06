@@ -177,6 +177,7 @@ builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService
 builder.Services.AddHostedService<ReorderLevelBackgroundJob>();
 
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IPurchaseOrderDetailService, PurchaseOrderDetailService>();
 
 
 
