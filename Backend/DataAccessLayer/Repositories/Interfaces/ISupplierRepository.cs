@@ -19,5 +19,8 @@ namespace DataAccessLayer.Repositories.Interfaces
         // Lấy IQueryable để Service tiếp tục GroupBy và tính toán trên DB
         // Trả về IQueryable<PurchaseOrderDetail>
         Task<IQueryable<PurchaseOrderDetail>> GetSupplierOrderDetailsQuery(int supplierId);
+        Task<bool> DeleteSoftAsync(int supplierId);
+
+
     }
 }

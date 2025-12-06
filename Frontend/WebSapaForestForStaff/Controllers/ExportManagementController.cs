@@ -4,6 +4,7 @@ using System.Net.Http;
 using WebSapaForestForStaff.DTOs.Inventory;
 using WebSapaForestForStaff.DTOs;
 using System.Text.Json;
+using System.Text;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -55,6 +56,53 @@ namespace WebSapaForestForStaff.Controllers
             }
 
             return View("~/Views/Menu/ExportManagement.cshtml");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateExportStatus(int transactionId, string status)
+        {
+            try
+            {
+                // Gọi API backend để cập nhật StatusExport
+                var response = await _httpClient.PutAsync(
+                    $"api/ExportIngredient/UpdateStatus?transactionId={transactionId}&status={status}",
+                    null
+                );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var statusText = status switch
+                    {
+                        "Delivered" => "Đã giao",
+                        "Missing" => "Thiếu",
+                        "Received" => "Đã nhận",
+                        _ => status
+                    };
+
+                    return Json(new
+                    {
+                        success = true,
+                        message = $"Cập nhật thành công! Trạng thái: {statusText}",
+                        newStatus = status
+                    });
+                }
+                else
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Không thể cập nhật trạng thái"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Lỗi: " + ex.Message
+                });
+            }
         }
     }
 

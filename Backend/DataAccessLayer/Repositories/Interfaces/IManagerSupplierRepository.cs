@@ -9,6 +9,7 @@ namespace DataAccessLayer.Repositories.Interfaces
 {
     public interface IManagerSupplierRepository : IRepository<Supplier>
     {
-
+        Task<Supplier?> GetByCodeAsync(string code);  // ✅ THÊM
+        Task<bool> CheckCodeExistsAsync(string code);
     }
 }

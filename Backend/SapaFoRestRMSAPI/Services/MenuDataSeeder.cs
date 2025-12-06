@@ -1229,10 +1229,11 @@ namespace SapaFoRestRMSAPI.Services
                     var quantity = isMainIngredient 
                         ? random.Next(200, 501) // 200-500 cho nguyên liệu chính
                         : random.Next(100, 301); // 100-300 cho nguyên liệu phụ
-                    
+
                     var batch = new InventoryBatch
                     {
                         IngredientId = ingredient.IngredientId,
+                                                 PurchaseOrderDetailId = random.Next(1, 20),
                         WarehouseId = warehouse.WarehouseId,
                         QuantityRemaining = quantity,
                         QuantityReserved = 0,

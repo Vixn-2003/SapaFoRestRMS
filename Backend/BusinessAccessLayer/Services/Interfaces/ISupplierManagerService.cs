@@ -20,5 +20,6 @@ namespace BusinessAccessLayer.Services.Interfaces
 
         // Lấy Top Suppliers (Dashboard)
         Task<List<TopSupplierDto>> GetTopSuppliersAsync(DateTime startDate, DateTime endDate);
+        Task<bool> SoftDeleteSupplierAsync(int id);
     }
 }

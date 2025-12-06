@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace DataAccessLayer.Repositories
@@ -19,38 +18,67 @@ namespace DataAccessLayer.Repositories
             _context = context;
         }
 
-        public Task AddAsync(Supplier entity)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task DeleteAsync(int id)
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<IEnumerable<Supplier>> GetAllAsync()
         {
             return await _context.Suppliers
-                    .Include(s => s.PurchaseOrders) 
-                      .ThenInclude(po => po.PurchaseOrderDetails)
-                      .ThenInclude(x => x.Ingredient)
-                            .ToListAsync();
+                .Where(x => x.IsActive == true)
+                .Include(s => s.PurchaseOrders)
+                    .ThenInclude(po => po.PurchaseOrderDetails)
+                    .ThenInclude(x => x.Ingredient)
+                .ToListAsync();
         }
 
-        public Task<Supplier?> GetByIdAsync(int id)
+        public async Task<Supplier?> GetByIdAsync(int id)
         {
-            throw new NotImplementedException();
+            return await _context.Suppliers
+                .Where(s => s.SupplierId == id && s.IsActive == true)
+                .FirstOrDefaultAsync();
         }
 
-        public Task SaveChangesAsync()
+        // ✅ THÊM METHOD MỚI
+        public async Task<Supplier?> GetByCodeAsync(string code)
         {
-            throw new NotImplementedException();
+            return await _context.Suppliers
+                .Where(s => s.CodeSupplier == code && s.IsActive == true)
+                .FirstOrDefaultAsync();
         }
 
-        public Task UpdateAsync(Supplier entity)
+        // ✅ THÊM METHOD MỚI
+        public async Task<bool> CheckCodeExistsAsync(string code)
         {
-            throw new NotImplementedException();
+            return await _context.Suppliers
+                .AnyAsync(s => s.CodeSupplier == code && s.IsActive == true);
+        }
+
+        // ✅ IMPLEMENT METHOD
+        public async Task AddAsync(Supplier entity)
+        {
+            entity.IsActive = true;
+            await _context.Suppliers.AddAsync(entity);
+        }
+
+        // ✅ IMPLEMENT METHOD
+        public async Task UpdateAsync(Supplier entity)
+        {
+            _context.Suppliers.Update(entity);
+            await Task.CompletedTask;
+        }
+
+        // ✅ IMPLEMENT METHOD (Soft Delete)
+        public async Task DeleteAsync(int id)
+        {
+            var supplier = await GetByIdAsync(id);
+            if (supplier != null)
+            {
+                supplier.IsActive = false;
+                _context.Suppliers.Update(supplier);
+            }
+        }
+
+        // ✅ IMPLEMENT METHOD
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }

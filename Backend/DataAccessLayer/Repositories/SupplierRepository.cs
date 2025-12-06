@@ -22,7 +22,7 @@ namespace DataAccessLayer.Repositories
         public async Task<List<Supplier>> GetAllSuppliersAsync()
         {
             // Chỉ lấy Supplier, không cần Include gì cả
-            return await _context.Suppliers.ToListAsync();
+            return await _context.Suppliers.Where(x => x.IsActive == true).ToListAsync();
         }
 
         public async Task<List<PurchaseOrder>> GetSupplierPurchaseOrdersAsync(int supplierId)
@@ -46,6 +46,14 @@ namespace DataAccessLayer.Repositories
                 // Bỏ .AsQueryable() vì query đã là IQueryable, nhưng cần ép kiểu để phù hợp
                 .AsQueryable();
             return Task.FromResult<IQueryable<PurchaseOrderDetail>>(query);
+        }
+
+        public async Task<bool> DeleteSoftAsync(int supplierId)
+        {
+            var supplier = await _context.Suppliers.FindAsync(supplierId);
+            supplier.IsActive = false; 
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

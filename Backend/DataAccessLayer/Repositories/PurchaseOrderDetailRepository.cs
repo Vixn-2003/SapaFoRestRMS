@@ -46,5 +46,21 @@ namespace DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+
+        public async Task<IEnumerable<PurchaseOrderDetail>> GetByIngredientIdAsync(int ingredientId)
+        {
+            return await _context.PurchaseOrderDetails.Where(pod => pod.IngredientId == ingredientId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<PurchaseOrderDetail>> GetByIngredientIdWithDetailsAsync(int ingredientId)
+        {
+            return await _context.PurchaseOrderDetails.Include(pod => pod.PurchaseOrder)
+                    .ThenInclude(po => po.Supplier)
+                .Where(pod => pod.IngredientId == ingredientId &&
+                             pod.PurchaseOrder.Status == "Completed") // Chỉ lấy đơn đã xác nhận
+                .OrderByDescending(pod => pod.PurchaseOrder.OrderDate)
+                .ToListAsync();
+        }
     }
 }

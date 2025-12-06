@@ -67,6 +67,7 @@ namespace BusinessAccessLayer.Services
                 UserId = user.UserId,
                 FullName = user.FullName ?? "",
                 Email = user.Email,
+                Phone = user.Phone,
                 RoleId = user.RoleId,
                 RoleName = user.Role?.RoleName ?? string.Empty,
                 Token = GenerateJwtToken(user),

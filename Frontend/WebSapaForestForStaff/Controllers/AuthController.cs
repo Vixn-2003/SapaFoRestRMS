@@ -117,6 +117,7 @@ namespace WebSapaForestForStaff.Controllers
                 new Claim(ClaimTypes.Name, authResponse.FullName ?? ""),
                 new Claim(ClaimTypes.Email, authResponse.Email ?? ""),
                 new Claim(ClaimTypes.Role, GetRoleName(authResponse.RoleId)),
+                new Claim(ClaimTypes.MobilePhone, authResponse.Phone ?? ""),
                 new Claim("Token", authResponse.Token ?? "")
             };
                     
