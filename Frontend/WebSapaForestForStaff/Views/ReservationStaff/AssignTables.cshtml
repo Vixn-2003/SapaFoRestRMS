@@ -150,8 +150,11 @@
     </div>
 
     <div class="mt-4">
-        <button type="submit" class="btn btn-success me-2">✅ Xác nhận gán bàn</button>
-        <button type="submit" formaction="@Url.Action("ResetTables")" formmethod="post" class="btn btn-warning me-2">
+        <button type="submit" class="btn btn-success me-2" 
+        onclick="return confirm('Bạn có chắc muốn gán bàn cho khách này không?')">✅ Xác nhận gán bàn</button>
+
+        <button type="submit" formaction="@Url.Action("ResetTables")" formmethod="post" class="btn btn-warning me-2" 
+        onclick="return confirm('Bạn có chắc muốn reset toàn bộ bàn đã chọn không?')">
             🔄 Reset bàn
         </button>
         <a class="btn btn-secondary" href="@Url.Action("Index")">⬅ Quay lại</a>

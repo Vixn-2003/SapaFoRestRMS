@@ -6,6 +6,10 @@ namespace BusinessAccessLayer.DTOs.Waiter
     public class MarkAsServedDto
     {
         public int OrderDetailId { get; set; }
+        /// <summary>
+        /// OrderComboItemId - null nếu là món lẻ, có giá trị nếu là món trong combo
+        /// </summary>
+        public int? OrderComboItemId { get; set; }
         public int WaiterUserId { get; set; } // ID của waiter lấy món
         public int Quantity { get; set; } // Số lượng lấy (mặc định = Quantity của OrderDetail nếu không chỉ định)
     }

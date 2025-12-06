@@ -1,0 +1,25 @@
+<div class="modal fade" id="cancelUrgentModal" tabindex="-1" aria-labelledby="cancelUrgentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelUrgentModalLabel">
+                    <i class="fas fa-fire-extinguisher text-warning"></i> Hủy làm gấp
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cancelUrgentOrderDetailId" />
+                <input type="hidden" id="cancelUrgentOrderComboItemId" />
+                <p>Bạn có chắc chắn muốn <strong>hủy làm gấp</strong> cho món này không?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-warning" onclick="submitCancelUrgent()">
+                    <i class="fas fa-check"></i> Xác nhận hủy làm gấp
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+

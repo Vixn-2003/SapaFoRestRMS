@@ -151,8 +151,25 @@ namespace BusinessAccessLayer.Services
 
         /// <summary>
         /// Consume reserved batches when Nấu xong (status changes to Done)
+        /// Sử dụng Quantity của OrderDetail
         /// </summary>
         public async Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailAsync(int orderDetailId)
+        {
+            // Get order detail with menu item and recipes
+            var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(orderDetailId);
+            if (orderDetail == null)
+            {
+                return (false, "Không tìm thấy món ăn");
+            }
+
+            // Sử dụng Quantity để consume
+            return await ConsumeReservedBatchesForOrderDetailWithQuantityAsync(orderDetailId, orderDetail.Quantity);
+        }
+
+        /// <summary>
+        /// Consume reserved batches với số lượng cụ thể (dùng cho ConsumptionBased items với QuantityUsed)
+        /// </summary>
+        public async Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailWithQuantityAsync(int orderDetailId, int quantityToConsume)
         {
             try
             {
@@ -176,7 +193,7 @@ namespace BusinessAccessLayer.Services
                     return (true, "Món này không cần nguyên liệu");
                 }
 
-                var orderQuantity = orderDetail.Quantity;
+                var orderQuantity = quantityToConsume;
 
                 // For each ingredient in the recipe, consume from reserved batches
                 foreach (var recipe in recipes)

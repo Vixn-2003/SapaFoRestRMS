@@ -64,23 +64,53 @@ namespace WebSapaForestForStaff.Controllers
                 }
                 if (User.IsInRole("Staff"))
                 {
-                    // Check if Staff has Cashier position
-                    var positionsClaim = User.FindFirst("Positions")?.Value;
-                    if (!string.IsNullOrEmpty(positionsClaim))
+                    // Check Staff positions by PositionId
+                    // 1: Waiter/Waitress      -> DashboardTable
+                    // 2: Cashier              -> DashboardTable
+                    // 3: Kitchen Staff        -> KischenDisplay
+                    // 4: Inventory Staff      -> DashboardInventory
+                    var positionIdClaim = User.FindFirst("PositionId")?.Value;
+                    if (int.TryParse(positionIdClaim, out var primaryPositionId))
+                    {
+                        switch (primaryPositionId)
+                        {
+                            case 1: // Waiter/Waitress
+                            case 2: // Cashier
+                                return RedirectToAction("Index", "DashboardTable");
+                            case 3: // Kitchen Staff
+                                return RedirectToAction("Index", "KischenDisplay");
+                            case 4: // Inventory Staff
+                                return RedirectToAction("Index", "DashboardInventory");
+                        }
+                    }
+
+                    // Fallback: try list of PositionIds if available
+                    var positionIdsJson = User.FindFirst("PositionIds")?.Value;
+                    if (!string.IsNullOrEmpty(positionIdsJson))
                     {
                         try
                         {
-                            var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsClaim);
-                            if (positions != null && positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
+                            var positionIds = System.Text.Json.JsonSerializer.Deserialize<List<int>>(positionIdsJson) ?? new();
+                            if (positionIds.Contains(1) || positionIds.Contains(2))
                             {
                                 return RedirectToAction("Index", "DashboardTable");
+                            }
+                            if (positionIds.Contains(3))
+                            {
+                                return RedirectToAction("Index", "KischenDisplay");
+                            }
+                            if (positionIds.Contains(4))
+                            {
+                                return RedirectToAction("Index", "DashboardInventory");
                             }
                         }
                         catch
                         {
-                            // If parsing fails, fall through to default redirect
+                            // ignore and fall through
                         }
                     }
+
+                    // Default page for Staff if no matching position
                     return RedirectToAction("Index", "TableManage");
                 }
                 if (User.IsInRole("Customer"))
@@ -112,16 +142,27 @@ namespace WebSapaForestForStaff.Controllers
                 {
                     // Tạo claims để xác thực cookie
                     var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, authResponse.UserId.ToString()),
-                new Claim(ClaimTypes.Name, authResponse.FullName ?? ""),
-                new Claim(ClaimTypes.Email, authResponse.Email ?? ""),
-                new Claim(ClaimTypes.Role, GetRoleName(authResponse.RoleId)),
-                new Claim(ClaimTypes.MobilePhone, authResponse.Phone ?? ""),
-                new Claim("Token", authResponse.Token ?? "")
-            };
-                    
-                    // Lưu positions vào claims nếu có (dùng JSON để lưu list)
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, authResponse.UserId.ToString()),
+                        new Claim(ClaimTypes.Name, authResponse.FullName ?? ""),
+                        new Claim(ClaimTypes.Email, authResponse.Email ?? ""),
+                        new Claim(ClaimTypes.Role, GetRoleName(authResponse.RoleId)),
+                        new Claim(ClaimTypes.MobilePhone, authResponse.Phone ?? ""),
+                        new Claim("Token", authResponse.Token ?? "")
+                    };
+
+                    // Lưu position ids & names vào claims nếu có
+                    if (authResponse.PositionIds != null && authResponse.PositionIds.Any())
+                    {
+                        // Primary PositionId (dùng cho phân quyền nhanh)
+                        claims.Add(new Claim("PositionId", authResponse.PositionIds.First().ToString()));
+
+                        // Lưu list PositionIds dạng JSON
+                        var positionIdsJson = System.Text.Json.JsonSerializer.Serialize(authResponse.PositionIds);
+                        claims.Add(new Claim("PositionIds", positionIdsJson));
+                    }
+
+                    // (Tuỳ chọn) vẫn lưu Positions (tên) để hiển thị ở màn profile, nếu backend trả về
                     if (authResponse.Positions != null && authResponse.Positions.Any())
                     {
                         var positionsJson = System.Text.Json.JsonSerializer.Serialize(authResponse.Positions);
@@ -150,14 +191,35 @@ namespace WebSapaForestForStaff.Controllers
                     // 🔁 Redirect theo Role và Position
                     string redirectUrl;
                     
-                    // Check if Staff with Cashier position
-                    if (authResponse.RoleId == 4 && authResponse.Positions != null && 
-                        authResponse.Positions.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)))
+                    // Check Staff positions (RoleId = 4) theo PositionId
+                    if (authResponse.RoleId == 4 && authResponse.PositionIds != null && authResponse.PositionIds.Any())
                     {
-                        redirectUrl = returnUrl ?? Url.Action("Index", "DashboardTable");
+                        var positionIds = authResponse.PositionIds;
+
+                        // Id = 1,2 (Waiter/Waitress, Cashier) -> DashboardTable
+                        if (positionIds.Contains(1) || positionIds.Contains(2))
+                        {
+                            redirectUrl = returnUrl ?? Url.Action("Index", "DashboardTable");
+                        }
+                        // Id = 3 (Kitchen Staff) -> KischenDisplay
+                        else if (positionIds.Contains(3))
+                        {
+                            redirectUrl = returnUrl ?? Url.Action("Index", "KischenDisplay");
+                        }
+                        // Id = 4 (Inventory Staff) -> DashboardInventory
+                        else if (positionIds.Contains(4))
+                        {
+                            redirectUrl = returnUrl ?? Url.Action("Index", "DashboardInventory");
+                        }
+                        else
+                        {
+                            // Staff nhưng không match position cụ thể -> về trang TableManage mặc định
+                            redirectUrl = returnUrl ?? Url.Action("Index", "TableManage");
+                        }
                     }
                     else
                     {
+                        // Các Role khác (Owner/Admin/Manager/Customer)
                         redirectUrl = authResponse.RoleId switch
                         {
                             1 => returnUrl ?? Url.Action("Index", "Admin"),

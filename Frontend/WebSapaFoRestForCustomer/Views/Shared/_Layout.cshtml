@@ -145,6 +145,21 @@
                         <li class="nav-item"><a class="nav-link" asp-controller="Menu" asp-action="Index">Thực Đơn</a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="About" asp-action="Index">Giới thiệu</a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Contact" asp-action="Index">Ưu Đãi</a></li>
+                        <li class="nav-item">
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <a class="nav-link" asp-controller="Reservation" asp-action="ReservationList">
+                                    Đơn Đặt Bàn Của Bạn
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="nav-link" href="javascript:void(0);" onclick="openLoginModal();">
+                                    Đơn Đặt Bàn Của Bạn
+                                </a>
+                            }
+                        </li>
+
                     </ul>
                     <div class="d-flex align-items-center">
                         <div class="me-3 hotline">
@@ -401,7 +416,10 @@
                 toastr.error("Có lỗi xảy ra khi gửi OTP.");
             }
         });
-
+             function openLoginModal() {
+            var loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginModal.show();
+        }
     </script>
 
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>

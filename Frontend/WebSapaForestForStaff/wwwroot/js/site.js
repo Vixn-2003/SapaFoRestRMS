@@ -103,7 +103,7 @@ function dismissCashierConfirmModal(result) {
             modal.remove();
         }, 150);
     }
-
+    
     // Resolve the promise
     if (window._cashierConfirmResolve) {
         window._cashierConfirmResolve(result);

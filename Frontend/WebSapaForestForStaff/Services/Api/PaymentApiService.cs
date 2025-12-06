@@ -53,6 +53,11 @@ namespace WebSapaForestForStaff.Services.Api
             return await response.Content.ReadFromJsonAsync<OrderDetailDto>();
         }
 
+        /// <summary>
+        /// ⚠️ KHÔNG DÙNG CHO CASHIER FLOW NỮA
+        /// Method này có thể dùng cho waiter flow hoặc mục đích khác
+        /// Cashier KHÔNG xác nhận món, chỉ xử lý thanh toán
+        /// </summary>
         public async Task<ApiResult> ConfirmCustomerOrderAsync(ConfirmOrderRequest request)
         {
             var response = await SendWithAutoRefreshAsync(client =>
@@ -72,7 +77,17 @@ namespace WebSapaForestForStaff.Services.Api
             var response = await SendWithAutoRefreshAsync(client =>
                 client.PostAsJsonAsync(BuildApiUrl("/payment/payments/initiate"), request));
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                // Đọc message chi tiết từ API để hiển thị cho thu ngân
+                var message = await ReadApiMessageAsync(response) ?? "Không thể khởi tạo thanh toán.";
+                _logger.LogWarning("InitiatePaymentAsync failed for OrderId {OrderId} with status {StatusCode}: {Message}",
+                    request.OrderId, (int)response.StatusCode, message);
+
+                // Ném exception có message rõ ràng để controller bắt và hiển thị
+                throw new InvalidOperationException(message);
+            }
+
             return await response.Content.ReadFromJsonAsync<PaymentSessionDto>();
         }
 
@@ -145,6 +160,24 @@ namespace WebSapaForestForStaff.Services.Api
             }
 
             return result;
+        }
+
+        public async Task<DiscountApplyResponse?> ApplyDiscountAsync(DiscountRequest request)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl("/payment/discounts/validate"), request));
+
+            var result = new DiscountApplyResponse();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                result.Success = false;
+                result.Message = await ReadApiMessageAsync(response) ?? "Không thể áp dụng ưu đãi";
+                return result;
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<DiscountApplyResponse>();
+            return payload;
         }
 
         private async Task<List<OrderDto>> FetchOrdersByStatusAsync(string statusFilter)

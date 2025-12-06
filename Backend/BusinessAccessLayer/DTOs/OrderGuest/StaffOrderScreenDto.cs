@@ -22,6 +22,7 @@ namespace BusinessAccessLayer.DTOs.OrderGuest
         public List<OrderedItemDto> OrderedItems { get; set; } = new List<OrderedItemDto>();
         public decimal GrandTotal => OrderedItems.Sum(item => item.TotalPrice);
         public int? ActiveOrderId { get; set; }
+        public string? OrderStatus { get; set; } // Trạng thái order: "waiting-confirmation", "confirmed", etc.
 
         // --- Thông tin Menu (Bên trái) ---
         public List<MenuItemDto> MenuItems { get; set; } = new List<MenuItemDto>();

@@ -38,15 +38,21 @@ namespace BusinessAccessLayer.Services
         {
             var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
-                throw new UnauthorizedAccessException("Invalid email or password");
+                throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
 
+            // ✅ Tài khoản đã bị xóa khỏi hệ thống
             if (user.IsDeleted == true)
-                throw new UnauthorizedAccessException("This account has been deleted");
+                throw new UnauthorizedAccessException("Người dùng đã bị xóa khỏi hệ thống");
+
+            // ✅ Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = DeActive)
+            if (user.Status == 1)
+                throw new UnauthorizedAccessException("Tài khoản này đang không còn hoạt động trên hệ thống");
 
             // Staff must have at least one assigned position to be allowed to login
             var roleName = user.Role?.RoleName ?? string.Empty;
             List<string>? positions = null;
-            
+            List<int>? positionIds = null;
+
             if (string.Equals(roleName, "Staff", StringComparison.OrdinalIgnoreCase))
             {
                 var staff = await _dbContext.Staffs
@@ -57,9 +63,10 @@ namespace BusinessAccessLayer.Services
                 {
                     throw new UnauthorizedAccessException("Staff account has no assigned position. Please contact administrator.");
                 }
-                
-                // Get position names
+
+                // Get position names & ids
                 positions = staff.Positions.Select(p => p.PositionName).ToList();
+                positionIds = staff.Positions.Select(p => p.PositionId).ToList();
             }
 
             return new LoginResponse
@@ -72,7 +79,8 @@ namespace BusinessAccessLayer.Services
                 RoleName = user.Role?.RoleName ?? string.Empty,
                 Token = GenerateJwtToken(user),
                 RefreshToken = GenerateRefreshToken(user),
-                Positions = positions
+                Positions = positions,
+                PositionIds = positionIds
             };
         }
 
@@ -87,9 +95,14 @@ namespace BusinessAccessLayer.Services
                 throw new UnauthorizedAccessException("Invalid refresh token payload");
 
             var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult();
-            if (user == null || user.IsDeleted == true)
+            if (user == null)
                 throw new UnauthorizedAccessException("User not found");
 
+            if (user.IsDeleted == true)
+                throw new UnauthorizedAccessException("Người dùng đã bị xóa khỏi hệ thống");
+
+            if (user.Status == 1)
+                throw new UnauthorizedAccessException("Tài khoản này đang không còn hoạt động trên hệ thống");
             var response = new LoginResponse
             {
                 UserId = user.UserId,

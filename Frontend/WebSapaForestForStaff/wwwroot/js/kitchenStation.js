@@ -33,7 +33,9 @@ const API_BASE = getApiBaseUrl();
 let signalRConnection = null;
 let currentCategoryName = '';
 let currentData = null;
-let selectedCookingItems = new Set(); // Chỉ select items đang cooking để hoàn thành
+// Lưu cả orderDetailId và orderComboItemId để xử lý combo items
+// Format: "orderDetailId|orderComboItemId" hoặc "orderDetailId|" (nếu không có orderComboItemId)
+let selectedCookingItems = new Set(); // Set<string> - format: "orderDetailId|orderComboItemId"
 let retryCount = 0;
 const MAX_RETRIES = 3;
 
@@ -373,6 +375,22 @@ function renderStationItems(data) {
         cookingTable.innerHTML = cookingItems
             .map(item => createCookingTableRow(item))
             .join('');
+
+        // Gắn click để mở popup công thức cho từng món
+        const nameCells = cookingTable.querySelectorAll('.station-menu-item-name[data-menu-item-id]');
+        nameCells.forEach(el => {
+            el.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const menuItemIdAttr = this.getAttribute('data-menu-item-id');
+                const menuItemId = menuItemIdAttr ? parseInt(menuItemIdAttr) : NaN;
+                const menuItemName = this.textContent.trim();
+                if (!isNaN(menuItemId) && menuItemId > 0) {
+                    openRecipePopup(menuItemId, menuItemName);
+                } else {
+                    showError('Không tìm được thông tin công thức cho món này');
+                }
+            });
+        });
     } else {
         cookingTable.innerHTML = '<tr><td colspan="5" class="empty-state">Chưa có món nào được bếp phó fire</td></tr>';
     }
@@ -443,33 +461,49 @@ function createAllItemsCard(group) {
 // Create cooking table row (bên phải) - VỚI CHECKBOX ĐỂ HOÀN THÀNH
 function createCookingTableRow(item) {
     const rowClass = item.isUrgent ? 'urgent-row' : '';
-    const isChecked = selectedCookingItems.has(item.orderDetailId);
+    // Tạo key: "orderDetailId|orderComboItemId" hoặc "orderDetailId|" nếu không có orderComboItemId
+    const itemKey = `${item.orderDetailId}|${item.orderComboItemId || ''}`;
+    const isChecked = selectedCookingItems.has(itemKey);
     
     // Tính thời gian nấu còn lại (đếm ngược)
+    // Dùng orderComboItemId nếu có, ngược lại dùng orderDetailId
+    const itemId = item.orderComboItemId || item.orderDetailId;
     const timeCook = item.timeCook || 0; // Thời gian nấu (phút)
     const startedAt = item.startedAt ? new Date(item.startedAt) : null;
-    const countdownHtml = getCookingCountdown(startedAt, timeCook, item.orderDetailId);
+    const countdownHtml = getCookingCountdown(startedAt, timeCook, itemId);
 
     return `
-        <tr class="${rowClass}" data-order-detail-id="${item.orderDetailId}" data-time-cook="${timeCook}" data-started-at="${startedAt ? startedAt.toISOString() : ''}">
-            <td style="width: 50px;">
+        <tr class="${rowClass}" 
+            data-order-detail-id="${item.orderDetailId}" 
+            data-order-combo-item-id="${item.orderComboItemId || ''}"
+            data-menu-item-id="${item.menuItemId || ''}"
+            data-item-key="${itemKey}"
+            data-time-cook="${timeCook}" 
+            data-started-at="${startedAt ? startedAt.toISOString() : ''}">
+            <td style="width: 60px;">
                 <input type="checkbox" 
+                       style="width: 20px; height: 20px; cursor: pointer;"
                        ${isChecked ? 'checked' : ''} 
-                       onchange="toggleCookingItemSelection(${item.orderDetailId})">
+                       onchange="toggleCookingItemSelection('${itemKey}')">
             </td>
-            <td class="time-cell countdown-cell" data-order-detail-id="${item.orderDetailId}">${countdownHtml}</td>
-            <td>${item.tableNumber}</td>
-            <td>
-                <strong>${item.menuItemName}</strong> x${item.quantity}
-                ${item.isUrgent ? '<span class="badge bg-danger ms-2">CẦN LÀM NGAY</span>' : ''}
+            <td class="time-cell countdown-cell" data-item-id="${itemId}" style="font-size: 22px;">${countdownHtml}</td>
+            <td style="font-size: 18px; font-weight: 600;">${item.tableNumber}</td>
+            <td style="font-size: 18px;">
+                <strong class="station-menu-item-name"
+                        data-menu-item-id="${item.menuItemId || ''}"
+                        style="font-size: 20px; cursor: pointer; text-decoration: underline dotted;">
+                    ${item.menuItemName}
+                </strong>
+                <span style="font-size: 18px; color: #ff9800; font-weight: 600;">x${item.quantity}</span>
+                ${item.isUrgent ? '<span class="badge bg-danger ms-2" style="font-size: 14px; padding: 4px 8px;">CẦN LÀM NGAY</span>' : ''}
             </td>
-            <td class="notes-text">${item.notes || '-'}</td>
+            <td class="notes-text" style="font-size: 16px;">${item.notes || '-'}</td>
         </tr>
     `;
 }
 
 // Tính thời gian nấu còn lại (đếm ngược)
-function getCookingCountdown(startedAt, timeCook, orderDetailId) {
+function getCookingCountdown(startedAt, timeCook, itemId) {
     if (!startedAt || !timeCook || timeCook <= 0) {
         return `<span class="text-muted">-</span>`;
     }
@@ -489,15 +523,16 @@ function getCookingCountdown(startedAt, timeCook, orderDetailId) {
     
     const timeClass = isUrgent ? 'text-danger fw-bold' : (remainingSeconds <= 300 ? 'text-warning' : 'text-success');
     
-    return `<span class="${timeClass}" id="countdown-${orderDetailId}">${minutes}:${seconds.toString().padStart(2, '0')}</span>`;
+    return `<span class="${timeClass}" id="countdown-${itemId}">${minutes}:${seconds.toString().padStart(2, '0')}</span>`;
 }
 
 // Toggle cooking item selection
-function toggleCookingItemSelection(orderDetailId) {
-    if (selectedCookingItems.has(orderDetailId)) {
-        selectedCookingItems.delete(orderDetailId);
+// itemKey format: "orderDetailId|orderComboItemId" hoặc "orderDetailId|"
+function toggleCookingItemSelection(itemKey) {
+    if (selectedCookingItems.has(itemKey)) {
+        selectedCookingItems.delete(itemKey);
     } else {
-        selectedCookingItems.add(orderDetailId);
+        selectedCookingItems.add(itemKey);
     }
     console.log('[toggleCookingItemSelection] Selected:', Array.from(selectedCookingItems));
 }
@@ -511,8 +546,11 @@ function selectAllCookingItems(checkbox) {
     checkboxes.forEach(cb => {
         cb.checked = checkbox.checked;
         if (checkbox.checked) {
-            const orderDetailId = parseInt(cb.closest('tr').getAttribute('data-order-detail-id'));
-            selectedCookingItems.add(orderDetailId);
+            const row = cb.closest('tr');
+            const itemKey = row.getAttribute('data-item-key');
+            if (itemKey) {
+                selectedCookingItems.add(itemKey);
+            }
         }
     });
 
@@ -549,7 +587,7 @@ function updateTimers() {
     const countdownCells = document.querySelectorAll('.countdown-cell');
     
     countdownCells.forEach(cell => {
-        const orderDetailId = cell.getAttribute('data-order-detail-id');
+        const itemId = cell.getAttribute('data-item-id');
         const row = cell.closest('tr');
         if (!row) return;
         
@@ -562,7 +600,7 @@ function updateTimers() {
         }
         
         const startedAt = new Date(startedAtStr);
-        const countdownHtml = getCookingCountdown(startedAt, timeCook, orderDetailId);
+        const countdownHtml = getCookingCountdown(startedAt, timeCook, itemId);
         cell.innerHTML = countdownHtml;
     });
     
@@ -576,20 +614,46 @@ async function completeSelectedItems() {
         return;
     }
 
-    if (!confirm(`Xác nhận hoàn thành ${selectedCookingItems.size} món?`)) {
+    const confirmed = await showConfirmPopup(`Xác nhận hoàn thành ${selectedCookingItems.size} món?`, 'Xác nhận hoàn thành');
+    if (!confirmed) {
         return;
     }
 
     const itemsToComplete = Array.from(selectedCookingItems);
     console.log('[completeSelectedItems] Completing:', itemsToComplete);
 
-    const promises = itemsToComplete.map(orderDetailId =>
-        updateItemStatus(orderDetailId, 'Done')
-    );
+    // Parse itemKey: "orderDetailId|orderComboItemId" hoặc "orderDetailId|"
+    const promises = itemsToComplete.map(itemKey => {
+        const [orderDetailId, orderComboItemId] = itemKey.split('|');
+        return updateItemStatus(parseInt(orderDetailId), 'Ready', orderComboItemId ? parseInt(orderComboItemId) : null);
+    });
 
     try {
         await Promise.all(promises);
         showSuccess(`✓ Đã hoàn thành ${itemsToComplete.length} món`);
+        
+        // In ticket cho từng món đã hoàn thành (song song với delay nhỏ)
+        const printPromises = itemsToComplete.map((itemKey, index) => {
+            const [orderDetailId, orderComboItemId] = itemKey.split('|');
+            // Delay nhỏ giữa các lần in để tránh mở quá nhiều cửa sổ cùng lúc
+            return new Promise(resolve => {
+                setTimeout(async () => {
+                    try {
+                        await printItemTicket(parseInt(orderDetailId), orderComboItemId ? parseInt(orderComboItemId) : null);
+                    } catch (printError) {
+                        console.error('[completeSelectedItems] Print error:', printError);
+                        // Không throw để không ảnh hưởng đến việc hoàn thành món
+                    }
+                    resolve();
+                }, index * 500); // Delay 500ms giữa mỗi lần in
+            });
+        });
+        
+        // Đợi tất cả các ticket được in (không block UI)
+        Promise.all(printPromises).catch(err => {
+            console.error('[completeSelectedItems] Print promises error:', err);
+        });
+        
         selectedCookingItems.clear();
         loadStationItems();
     } catch (error) {
@@ -599,15 +663,17 @@ async function completeSelectedItems() {
 }
 
 // Update item status API
-async function updateItemStatus(orderDetailId, newStatus) {
+// orderComboItemId: null/undefined = món lẻ (OrderDetail), có giá trị = món trong combo (OrderComboItem)
+async function updateItemStatus(orderDetailId, newStatus, orderComboItemId = null) {
     try {
-        console.log(`[updateItemStatus] OrderDetailId=${orderDetailId}, NewStatus=${newStatus}`);
+        console.log(`[updateItemStatus] OrderDetailId=${orderDetailId}, OrderComboItemId=${orderComboItemId}, NewStatus=${newStatus}`);
 
         const response = await fetch(`${API_BASE}/KitchenDisplay/update-item-status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 orderDetailId: orderDetailId,
+                orderComboItemId: orderComboItemId,
                 newStatus: newStatus,
                 userId: 1 // TODO: Get from session
             })
@@ -631,6 +697,125 @@ async function updateItemStatus(orderDetailId, newStatus) {
     }
 }
 
+// Print item ticket khi hoàn thành món
+async function printItemTicket(orderDetailId, orderComboItemId = null) {
+    try {
+        console.log(`[printItemTicket] OrderDetailId=${orderDetailId}, OrderComboItemId=${orderComboItemId}`);
+
+        const response = await fetch(`${API_BASE}/KitchenDisplay/print-item-ticket`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                orderDetailId: orderDetailId,
+                orderComboItemId: orderComboItemId
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('[printItemTicket] Result:', result);
+
+        if (!result.success || !result.data) {
+            console.warn('[printItemTicket] No data to print');
+            return;
+        }
+
+        const ticket = result.data;
+        
+        // Tạo nội dung ticket để in
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Ticket - ${ticket.menuItemName}</title>
+                <style>
+                    @media print {
+                        @page { size: 80mm auto; margin: 0; }
+                        body { margin: 5mm; font-size: 12px; }
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 10px;
+                        font-size: 12px;
+                    }
+                    .ticket-header {
+                        text-align: center;
+                        border-bottom: 2px dashed #000;
+                        padding-bottom: 10px;
+                        margin-bottom: 10px;
+                    }
+                    .ticket-title {
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin-bottom: 5px;
+                    }
+                    .ticket-info {
+                        margin: 5px 0;
+                    }
+                    .ticket-item {
+                        margin: 10px 0;
+                        padding: 10px 0;
+                        border-bottom: 1px dashed #ccc;
+                    }
+                    .item-name {
+                        font-size: 14px;
+                        font-weight: bold;
+                        margin-bottom: 5px;
+                    }
+                    .item-details {
+                        font-size: 11px;
+                        color: #666;
+                    }
+                    .ticket-footer {
+                        text-align: center;
+                        margin-top: 15px;
+                        padding-top: 10px;
+                        border-top: 2px dashed #000;
+                        font-size: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="ticket-header">
+                    <div class="ticket-title">PHIẾU HOÀN THÀNH MÓN</div>
+                    <div class="ticket-info">Đơn: ${ticket.orderNumber}</div>
+                    <div class="ticket-info">Bàn: ${ticket.tableNumber}</div>
+                    <div class="ticket-info">Trạm: ${ticket.stationName}</div>
+                </div>
+                <div class="ticket-item">
+                    <div class="item-name">${ticket.menuItemName} x${ticket.quantity}</div>
+                    ${ticket.notes ? `<div class="item-details">Ghi chú: ${ticket.notes}</div>` : ''}
+                    <div class="item-details">Hoàn thành: ${new Date(ticket.completedAt).toLocaleString('vi-VN')}</div>
+                </div>
+                <div class="ticket-footer">
+                    <div>Cảm ơn bạn!</div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Mở cửa sổ in
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        // Đợi một chút để nội dung load xong, sau đó in
+        setTimeout(() => {
+            printWindow.print();
+            // Đóng cửa sổ sau khi in (tùy chọn)
+            // printWindow.close();
+        }, 250);
+    } catch (error) {
+        console.error('[printItemTicket] Error:', error);
+        // Không throw để không ảnh hưởng đến việc hoàn thành món
+    }
+}
+
 // Send back to sous chef - HỦY COOKING, TRẢ LẠI CHO BẾP PHÓ
 async function sendBackToSousChef() {
     if (selectedCookingItems.size === 0) {
@@ -638,16 +823,19 @@ async function sendBackToSousChef() {
         return;
     }
 
-    if (!confirm(`Xác nhận gửi lại ${selectedCookingItems.size} món cho bếp phó?`)) {
+    const confirmed = await showConfirmPopup(`Xác nhận gửi lại ${selectedCookingItems.size} món cho bếp phó?`, 'Gửi lại bếp phó');
+    if (!confirmed) {
         return;
     }
 
     const itemsToSendBack = Array.from(selectedCookingItems);
     console.log('[sendBackToSousChef] Sending back:', itemsToSendBack);
 
-    const promises = itemsToSendBack.map(orderDetailId =>
-        updateItemStatus(orderDetailId, 'Pending')
-    );
+    // Parse itemKey: "orderDetailId|orderComboItemId" hoặc "orderDetailId|"
+    const promises = itemsToSendBack.map(itemKey => {
+        const [orderDetailId, orderComboItemId] = itemKey.split('|');
+        return updateItemStatus(parseInt(orderDetailId), 'Pending', orderComboItemId ? parseInt(orderComboItemId) : null);
+    });
 
     try {
         await Promise.all(promises);
@@ -661,7 +849,7 @@ async function sendBackToSousChef() {
 }
 
 // Report missing ingredients
-function reportMissingIngredients() {
+async function reportMissingIngredients() {
     if (selectedCookingItems.size === 0) {
         showError('Vui lòng chọn ít nhất một món');
         return;
@@ -671,7 +859,8 @@ function reportMissingIngredients() {
 
     // TODO: Implement proper missing ingredients reporting
     // For now, just show a confirmation
-    if (confirm(`Xác nhận báo thiếu nguyên liệu cho ${count} món?`)) {
+    const confirmed = await showConfirmPopup(`Xác nhận báo thiếu nguyên liệu cho ${count} món?`, 'Báo thiếu nguyên liệu');
+    if (confirmed) {
         showSuccess(`⚠ Đã báo thiếu nguyên liệu cho ${count} món`);
         // Có thể gửi notification đến warehouse/manager
         selectedCookingItems.clear();
@@ -682,7 +871,14 @@ function reportMissingIngredients() {
 // Toast notifications
 function showSuccess(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.success(message);
+        toastr.success(message, '', {
+            closeButton: true,
+            progressBar: true,
+            timeOut: 5000,
+            extendedTimeOut: 0,
+            positionClass: 'toast-top-right',
+            escapeHtml: false
+        });
     } else {
         console.log('SUCCESS:', message);
     }
@@ -690,8 +886,162 @@ function showSuccess(message) {
 
 function showError(message) {
     if (typeof toastr !== 'undefined') {
-        toastr.error(message);
+        toastr.error(message, '', {
+            closeButton: true,
+            progressBar: true,
+            timeOut: 5000,
+            extendedTimeOut: 0,
+            positionClass: 'toast-top-right',
+            escapeHtml: false
+        });
     } else {
         console.error('ERROR:', message);
     }
+}
+
+// Popup hiển thị công thức món ăn
+async function openRecipePopup(menuItemId, menuItemName) {
+    try {
+        console.log('[openRecipePopup] menuItemId =', menuItemId);
+
+        const response = await fetch(`${API_BASE}/ManagerMenu/recipes/${menuItemId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const recipes = await response.json();
+
+        if (!recipes || recipes.length === 0) {
+            showError(`Món "${menuItemName}" chưa được cấu hình công thức`);
+            return;
+        }
+
+        const rowsHtml = recipes.map((r, index) => {
+            const ingredientName = r.ingredient?.name || r.ingredient?.IngredientName || 'Nguyên liệu';
+            const unitName = r.ingredient?.unit?.unitName || r.ingredient?.unit?.UnitName || '';
+            const qty = r.quantityNeeded ?? r.quantity ?? 0;
+
+            return `
+                <tr>
+                    <td style="padding: 6px 8px; text-align: center;">${index + 1}</td>
+                    <td style="padding: 6px 8px;">${ingredientName}</td>
+                    <td style="padding: 6px 8px; text-align: right;">${qty}</td>
+                    <td style="padding: 6px 8px;">${unitName}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const overlay = document.createElement('div');
+        overlay.className = 'recipe-popup-overlay';
+
+        overlay.innerHTML = `
+            <div class="recipe-popup">
+                <div class="recipe-popup-header">
+                    <div class="recipe-popup-icon">
+                        <i class="mdi mdi-book-open-page-variant"></i>
+                    </div>
+                    <div class="recipe-popup-title">
+                        Công thức: ${menuItemName}
+                    </div>
+                    <button type="button" class="recipe-popup-close">&times;</button>
+                </div>
+                <div class="recipe-popup-body">
+                    <table class="recipe-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nguyên liệu</th>
+                                <th>Số lượng</th>
+                                <th>Đơn vị</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="recipe-popup-footer">
+                    <button type="button" class="recipe-popup-btn recipe-popup-btn-close">Đóng</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const closePopup = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                }
+            }, 200);
+        };
+
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) {
+                closePopup();
+            }
+        });
+
+        overlay.querySelector('.recipe-popup-close')
+            .addEventListener('click', closePopup);
+        overlay.querySelector('.recipe-popup-btn-close')
+            .addEventListener('click', closePopup);
+    } catch (error) {
+        console.error('[openRecipePopup] Error:', error);
+        showError('Không tải được công thức món ăn');
+    }
+}
+
+// Custom Confirm Popup - Thay thế confirm() native
+function showConfirmPopup(message, title = 'Xác nhận') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-popup-overlay';
+        overlay.style.zIndex = '100000'; // Đảm bảo cao hơn modal (99999)
+        
+        overlay.innerHTML = `
+            <div class="confirm-popup">
+                <div class="confirm-popup-header">
+                    <div class="confirm-popup-icon">
+                        <i class="mdi mdi-alert"></i>
+                    </div>
+                    <h3 class="confirm-popup-title">${title}</h3>
+                </div>
+                <div class="confirm-popup-body">
+                    ${message.replace(/\n/g, '<br>')}
+                </div>
+                <div class="confirm-popup-footer">
+                    <button class="confirm-popup-btn confirm-popup-btn-cancel">Hủy</button>
+                    <button class="confirm-popup-btn confirm-popup-btn-confirm">Xác nhận</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        
+        // Force reflow để đảm bảo z-index được áp dụng
+        overlay.offsetHeight;
+
+        const confirmBtn = overlay.querySelector('.confirm-popup-btn-confirm');
+        const cancelBtn = overlay.querySelector('.confirm-popup-btn-cancel');
+
+        const close = (result) => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                }
+                resolve(result);
+            }, 200);
+        };
+
+        confirmBtn.addEventListener('click', () => close(true));
+        cancelBtn.addEventListener('click', () => close(false));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                close(false);
+            }
+        });
+    });
 }
