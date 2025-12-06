@@ -36,8 +36,9 @@ Thu ngân quầy (Cashier) chịu trách nhiệm:
 - ✅ Xử lý các tình huống phát sinh
 
 **⚠️ LƯU Ý QUAN TRỌNG:**
-- Thu ngân **CHỈ BẮT ĐẦU** quy trình thanh toán khi khách **ĐÃ ĂN XONG** và **RA QUẦY YÊU CẦU THANH TOÁN**
-- Sau khi khách xác nhận đơn hàng → **KHÔNG ĐƯỢC PHÉP THÊM MÓN** vào order nữa
+- **Waiter** xác nhận thanh toán khi khách **ĐÃ ĂN XONG** và **RA QUẦY YÊU CẦU THANH TOÁN**
+- Sau khi Waiter xác nhận đơn hàng (Order status = `confirmed`) → **KHÔNG ĐƯỢC PHÉP THÊM MÓN** vào order nữa
+- **Cashier** chỉ chuyển sang màn hình thanh toán sau khi Waiter đã xác nhận
 - Nếu khách muốn thêm món sau khi đã xác nhận → Phải **HOÀN TÁC XÁC NHẬN** trước, thêm món, rồi xác nhận lại
 
 ### 1.2. Luồng Chính (Happy Path)
@@ -45,13 +46,17 @@ Thu ngân quầy (Cashier) chịu trách nhiệm:
 ```
 [Tiền điều kiện: Khách ăn xong, ra quầy yêu cầu thanh toán]
     ↓
-[1] Chọn đơn hàng cần thanh toán
+[1] Waiter xác nhận thanh toán (OrderDetail.cshtml)
+    - Waiter nhấn nút "Xác Nhận Thanh Toán"
+    - Hệ thống gọi API: PUT /api/payment/orders/{orderId}/confirm
+    - Order status: waiting-confirmation → confirmed
     ↓
-[2] Xác nhận món với khách (Khách kiểm tra và xác nhận)
+[2] 🔒 ĐÃ KHÓA - Không thể thêm món nữa
     ↓
-[3] 🔒 ĐÃ KHÓA - Không thể thêm món nữa
+[3] Cashier nhấn "Thanh Toán Bàn" (OrderDetail.cshtml)
+    - Chuyển sang màn hình Payment.cshtml
     ↓
-[4] Chọn phương thức thanh toán
+[4] Chọn phương thức thanh toán (Payment.cshtml)
     ↓
 [5] Thực hiện thanh toán
     ↓
@@ -61,8 +66,9 @@ Thu ngân quầy (Cashier) chịu trách nhiệm:
 ```
 
 **Quy tắc quan trọng:**
-- ⏰ Thu ngân chỉ làm việc với đơn hàng khi khách **ĐÃ ĂN XONG**
-- 🔒 Sau bước [2] (xác nhận), đơn hàng bị **KHÓA** - không thể thêm/sửa món
+- ⏰ Waiter chỉ xác nhận khi khách **ĐÃ ĂN XONG** và **RA QUẦY YÊU CẦU THANH TOÁN**
+- 🔒 Sau bước [1] (Waiter xác nhận), đơn hàng bị **KHÓA** - không thể thêm/sửa món
+- 💳 Cashier chỉ chuyển sang màn hình thanh toán sau khi Waiter đã xác nhận
 - 🔄 Nếu cần thay đổi → Phải **hoàn tác xác nhận** → thêm món → xác nhận lại
 
 ### 1.3. Các Trạng Thái Đơn Hàng
@@ -336,20 +342,24 @@ T=5:    Waiter ghi order, gửi bếp
 T=20:   Bếp hoàn tất món, phục vụ cho khách
 T=45:   Khách ăn xong, yêu cầu thanh toán
         ↓
-T=46:   Thu ngân mở màn hình OrderSelection
-T=47:   Chọn đơn hàng, mở ConfirmOrder.cshtml
-T=48:   Xác nhận số lượng món với khách
-T=49:   Nhấn "Khách đã xác nhận"
-        ↓ (Status: waiting-confirmation → confirmed)
-T=50:   Nhấn "Thanh toán", mở Payment.cshtml
-T=51:   Khách chọn phương thức thanh toán
-T=52:   Thu tiền/xác nhận QR
-T=53:   Nhấn "Xác nhận thanh toán"
-        ↓ (Status: confirmed → paid)
-T=54:   Mở Receipt.cshtml, in hóa đơn
-T=55:   Giao hóa đơn cho khách
+T=46:   Waiter mở OrderDetail.cshtml (bàn của khách)
+T=47:   Waiter nhấn "Xác Nhận Thanh Toán"
+        - Gọi API: PUT /api/payment/orders/{orderId}/confirm
+        - Order status: waiting-confirmation → confirmed
+        - 🔒 Đơn hàng bị khóa, không thể thêm món
         ↓
-T=56:   Khách rời quán, hoàn tất
+T=48:   Cashier mở OrderDetail.cshtml (hoặc OrderSelection)
+T=49:   Cashier nhấn "Thanh Toán Bàn"
+        - Chuyển sang màn hình Payment.cshtml
+        ↓
+T=50:   Cashier chọn phương thức thanh toán (Payment.cshtml)
+T=51:   Thu tiền/xác nhận QR
+T=52:   Nhấn "Xác nhận thanh toán"
+        ↓ (Status: confirmed → pending-payment → paid)
+T=53:   Mở Receipt.cshtml, in hóa đơn
+T=54:   Giao hóa đơn cho khách
+        ↓
+T=55:   Khách rời quán, hoàn tất
 ```
 
 ---
@@ -395,94 +405,103 @@ T=56:   Khách rời quán, hoàn tất
 1. ✅ Xem danh sách đơn hàng
 2. ✅ Click vào đơn cần xử lý
 3. ✅ Hệ thống chuyển sang màn hình tương ứng:
-   - Nếu status = `waiting-confirmation` → ConfirmOrder.cshtml
-   - Nếu status = `confirmed` → ConfirmOrder.cshtml (có nút Thanh toán)
+   - Nếu status = `waiting-confirmation` → OrderDetail.cshtml (Waiter xác nhận)
+   - Nếu status = `confirmed` → OrderDetail.cshtml (Cashier nhấn "Thanh Toán Bàn") → Payment.cshtml
    - Nếu status = `paid` → Receipt.cshtml
 
 **Lưu Ý:**
 - ⚠️ Ưu tiên xử lý đơn cũ trước (theo thời gian tạo)
-- ⚠️ Đơn có badge 🟡 (vàng) = chờ xác nhận
-- ⚠️ Đơn có badge 🔵 (xanh) = đã xác nhận, cần thanh toán
+- ⚠️ Đơn có badge 🟡 (vàng) = chờ Waiter xác nhận
+- ⚠️ Đơn có badge 🔵 (xanh) = đã xác nhận, Cashier có thể thanh toán
 
 ---
 
-### BƯỚC 2: Xác Nhận Món Với Khách
+### BƯỚC 2: Waiter Xác Nhận Thanh Toán
 
-#### 3.2.1. Màn Hình: ConfirmOrder.cshtml
+#### 3.2.1. Màn Hình: OrderDetail.cshtml (Waiter)
 
-**URL:** `/cashier-flow/orders/{orderId}`
+**URL:** `/DashboardTable/OrderDetail/{tableId}`
 
-**Điều Kiện:** Order status = `waiting-confirmation`
+**Điều Kiện:** 
+- Order status = `waiting-confirmation`
+- User position = Waiter (userPositionId == 1)
 
 **Mục Đích:**
-- Kiểm tra lại món ăn/đồ uống khách đã dùng
-- Xác nhận số lượng thực tế (có thể khác số lượng đặt)
-- Ghi chú điều chỉnh nếu có
+- Waiter xác nhận đơn hàng sau khi khách đã ăn xong
+- Chuyển Order status từ `waiting-confirmation` → `confirmed`
+- Khóa đơn hàng, không cho phép thêm món nữa
 
 **Giao Diện:**
 
 ```
 ┌───────────────────────────────────────────────────────┐
-│  ← Quay lại          Đơn #1234 - Bàn B05             │
+│  ← Quay lại          Bàn B05                         │
 │  🟡 Chờ xác nhận     Khách: Nguyễn Văn A              │
 ├───────────────────────────────────────────────────────┤
-│  Danh Sách Món / Đồ Uống                              │
-├────┬──────────────┬────────┬────────────┬────────────┤
-│ STT│ Tên Món      │ SL Đặt │ SL Dùng    │ Thành Tiền │
-├────┼──────────────┼────────┼────────────┼────────────┤
-│ 1  │ Steak Sapa   │   2    │ [2▼]       │ 490,000đ   │
-│    │ Ghi chú: [Không hành         ]                   │
-├────┼──────────────┼────────┼────────────┼────────────┤
-│ 2  │ Trà sen      │   2    │ [1▼]       │  45,000đ   │
-│    │ Ghi chú: [Khách không dùng ly 2    ]             │
-├────┼──────────────┼────────┼────────────┼────────────┤
-│ 3  │ Lẩu cá hồi   │   1    │ [1▼]       │ 320,000đ   │
-│    │ Ghi chú: [                    ]                  │
-├────┴──────────────┴────────┴────────────┴────────────┤
+│  [Menu items...]                                      │
+├───────────────────────────────────────────────────────┤
+│  Danh Sách Món Đã Gọi                                 │
+│  ┌─────────────────────────────────────────────────┐ │
+│  │ 1. Steak Sapa          SL: 2   490,000đ        │ │
+│  │ 2. Trà sen             SL: 2    45,000đ        │ │
+│  │ 3. Lẩu cá hồi          SL: 1   320,000đ        │ │
+│  └─────────────────────────────────────────────────┘ │
 │                                Tạm tính:   855,000đ   │
 │                                VAT (10%):   85,500đ   │
 │                           Phí dịch vụ (5%): 42,750đ   │
 │  ───────────────────────────────────────────────────  │
 │                    Tổng cộng thanh toán: 983,250đ     │
 ├───────────────────────────────────────────────────────┤
-│              [Khách đã xác nhận]                      │
+│  [✅ Xác Nhận Thanh Toán]  (Chỉ hiện với Waiter)     │
 └───────────────────────────────────────────────────────┘
 ```
 
 **Quy Trình Xác Nhận:**
 
-1. **Bước 2.1: Kiểm tra món với khách**
+1. **Bước 2.1: Waiter kiểm tra với khách**
    ```
-   Thu ngân: "Chào anh/chị, cho em xác nhận món ạ:
-             - 2 phần Steak Sapa
-             - 2 ly Trà sen
-             - 1 phần Lẩu cá hồi
-             Anh/chị có dùng hết không ạ?"
+   Waiter: "Chào anh/chị, anh/chị đã ăn xong chưa ạ?
+           Em xác nhận đơn để chuyển sang bước thanh toán nhé?"
    
-   Khách:    "Trà sen em chỉ dùng 1 ly thôi, ly còn lại không dùng."
+   Khách:  "Được, em đã ăn xong rồi."
    ```
 
-2. **Bước 2.2: Điều chỉnh số lượng**
-   - Click vào dropdown "SL Dùng" của món Trà sen
-   - Chọn "1" thay vì "2"
-   - Nhập ghi chú: "Khách không dùng ly 2"
-   - Hệ thống tự động tính lại tổng tiền
+2. **Bước 2.2: Waiter nhấn nút "Xác Nhận Thanh Toán"**
+   - Hiển thị popup xác nhận với thông tin đơn hàng
+   - Waiter xác nhận lại
 
-3. **Bước 2.3: Xác nhận với khách**
-   ```
-   Thu ngân: "Vậy tổng cộng là 983,250đ ạ. Anh/chị xác nhận ạ?"
-   Khách:    "Được, đúng rồi."
-   ```
+3. **Bước 2.3: Hệ thống xử lý**
+   - Gọi API: `PUT /api/payment/orders/{orderId}/confirm`
+   - Payload:
+     ```json
+     {
+       "orderId": 1234,
+       "items": [
+         {
+           "orderDetailId": 101,
+           "quantityUsed": 2,
+           "isRemoved": false
+         },
+         {
+           "orderDetailId": 102,
+           "quantityUsed": 2,
+           "isRemoved": false
+         }
+       ],
+       "notes": null
+     }
+     ```
+   - Backend cập nhật:
+     * `order.Status = "confirmed"`
+     * `order.ConfirmedAt = DateTime.UtcNow`
+     * `order.ConfirmedByStaffId = {waiter_staff_id}`
+     * 🔒 **Đơn hàng bị khóa - không thể thêm món nữa**
 
-4. **Bước 2.4: Hoàn tất xác nhận**
-   - Click nút **"Khách đã xác nhận"**
-   - Hệ thống:
-     * Lưu số lượng thực tế vào database
-     * Cập nhật `order.Status = "confirmed"`
-     * Ghi timestamp `order.ConfirmedAt = DateTime.UtcNow`
-     * Lưu `order.ConfirmedByStaffId = {cashier_staff_id}`
-     * Hiển thị toast: "✅ Đã xác nhận đơn hàng thành công"
-     * Page reload, hiển thị nút "Hoàn tác xác nhận" và "Thanh toán"
+4. **Bước 2.4: Kết quả**
+   - Hiển thị toast: "✅ Đã xác nhận đơn hàng thành công! Đơn hàng đã được khóa và sẵn sàng cho thu ngân thanh toán."
+   - Page reload
+   - Order status chuyển sang `confirmed`
+   - Nút "Xác Nhận Thanh Toán" biến mất (vì đã xác nhận rồi)
 
 **Validation:**
 - ⚠️ Bắt buộc nhập số lượng cho tất cả các món
@@ -533,15 +552,15 @@ Content-Type: application/json
 
 ---
 
-### BƯỚC 3: Hoàn Tác Xác Nhận (Nếu Cần)
+### BƯỚC 3A: Hoàn Tác Xác Nhận (Nếu Cần)
 
-#### 3.3.1. Tình Huống Cần Hoàn Tác
+#### 3.3A.1. Tình Huống Cần Hoàn Tác
 
 **Các trường hợp:**
-1. ❌ Thu ngân xác nhận nhầm số lượng
+1. ❌ Waiter xác nhận nhầm số lượng
 2. ❌ Khách phát hiện thiếu món sau khi xác nhận
 3. ❌ Khách muốn thêm món sau khi đã xác nhận
-4. ❌ Thu ngân nhấn nhầm nút "Khách đã xác nhận"
+4. ❌ Waiter nhấn nhầm nút "Xác Nhận Thanh Toán"
 
 **Điều Kiện:**
 - ✅ Order status = `confirmed`
@@ -550,8 +569,9 @@ Content-Type: application/json
 
 **Quy Trình:**
 
-1. **Bước 3.1: Mở modal hoàn tác**
+1. **Bước 3A.1: Mở modal hoàn tác**
    - Click nút **"Hoàn tác xác nhận"** (màu vàng, icon undo)
+   - **Lưu ý:** Chỉ Waiter mới có thể hoàn tác xác nhận (vì Waiter là người xác nhận)
    - Modal xuất hiện:
 
 ```
@@ -628,13 +648,53 @@ Content-Type: application/json
 
 ---
 
+### BƯỚC 3: Cashier Chuyển Sang Màn Hình Thanh Toán
+
+#### 3.3.1. Màn Hình: OrderDetail.cshtml (Cashier)
+
+**URL:** `/DashboardTable/OrderDetail/{tableId}`
+
+**Điều Kiện:** 
+- Order status = `confirmed` (đã được Waiter xác nhận)
+- User position = Cashier (userPositionId == 2)
+
+**Mục Đích:**
+- Cashier chuyển sang màn hình thanh toán để xử lý thanh toán
+
+**Quy Trình:**
+
+1. **Bước 3.1: Cashier mở OrderDetail.cshtml**
+   - Cashier có thể mở từ:
+     * Dashboard bàn (OrderDetail.cshtml)
+     * Danh sách đơn hàng (OrderSelection.cshtml) → Click vào đơn đã confirmed
+
+2. **Bước 3.2: Cashier nhấn nút "Thanh Toán Bàn"**
+   - Hiển thị popup xác nhận với thông tin đơn hàng:
+     * Bàn số
+     * Khách hàng
+     * Số lượng món
+     * Tạm tính
+   - Cashier xác nhận
+
+3. **Bước 3.3: Hệ thống chuyển sang Payment.cshtml**
+   - Redirect: `window.location.href = '/cashier-flow/payment/{orderId}'`
+   - Không cần gọi API confirm nữa (vì Waiter đã confirm rồi)
+   - Màn hình Payment.cshtml hiển thị với Order status = `confirmed`
+
+**Lưu Ý:**
+- ⚠️ Chỉ Cashier mới thấy nút "Thanh Toán Bàn"
+- ⚠️ Đơn hàng phải ở trạng thái `confirmed` mới có thể thanh toán
+- ⚠️ Nếu đơn chưa được Waiter xác nhận → Cashier không thể thanh toán
+
+---
+
 ### BƯỚC 4: Chọn Phương Thức Thanh Toán
 
 #### 3.4.1. Màn Hình: Payment.cshtml
 
 **URL:** `/cashier-flow/payment/{orderId}`
 
-**Điều Kiện:** Order status = `confirmed`
+**Điều Kiện:** Order status = `confirmed` (đã được Waiter xác nhận)
 
 **Giao Diện:**
 
