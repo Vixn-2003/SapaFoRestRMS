@@ -219,6 +219,77 @@ namespace WebSapaForestForStaff.Controllers
             return RedirectToAction(nameof(Receipt), new { orderId = request.OrderId });
         }
 
+        /// <summary>
+        /// POST: Xử lý thanh toán tiền mặt
+        /// </summary>
+        [HttpPost("payment/cash")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessCashPayment(CashPaymentRequest request)
+        {
+            if (request == null || request.OrderId <= 0)
+            {
+                TempData["ErrorMessage"] = "Dữ liệu thanh toán không hợp lệ.";
+                return RedirectToAction(nameof(Payment), new { id = request?.OrderId ?? 0 });
+            }
+
+            try
+            {
+                var token = GetToken();
+                if (string.IsNullOrEmpty(token))
+                {
+                    TempData["ErrorMessage"] = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+                    return RedirectToAction("Login", "Auth");
+                }
+
+                _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+                var apiUrl = $"{GetApiBaseUrl()}/Payment/cash";
+                var response = await _httpClient.PostAsJsonAsync(apiUrl, new
+                {
+                    orderId = request.OrderId,
+                    amountReceived = request.AmountReceived,
+                    notes = request.Notes
+                });
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    var errorData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(errorContent, new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    var errorMessage = errorData.TryGetProperty("message", out var msg) 
+                        ? msg.GetString() 
+                        : "Không thể xử lý thanh toán. Vui lòng thử lại.";
+
+                    TempData["ErrorMessage"] = errorMessage;
+                    return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+                }
+
+                var transaction = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                var refundAmount = transaction.TryGetProperty("refundAmount", out var refund) && refund.ValueKind == System.Text.Json.JsonValueKind.Number
+                    ? refund.GetDecimal()
+                    : (decimal?)null;
+
+                if (refundAmount.HasValue && refundAmount.Value > 0)
+                {
+                    TempData["SuccessMessage"] = $"✅ Thanh toán thành công! Đã trả lại tiền thừa: {refundAmount.Value:N0} ₫";
+                }
+                else
+                {
+                    TempData["SuccessMessage"] = "✅ Thanh toán thành công!";
+                }
+
+                return RedirectToAction(nameof(Receipt), new { orderId = request.OrderId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi xử lý thanh toán: {ex.Message}";
+                return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+            }
+        }
+
         [HttpGet("receipt/{orderId}")]
         public async Task<IActionResult> Receipt(int orderId)
         {

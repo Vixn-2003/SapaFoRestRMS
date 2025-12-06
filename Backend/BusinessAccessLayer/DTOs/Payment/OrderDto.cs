@@ -38,6 +38,11 @@ public class OrderDto
 
     public bool? DepositPaid { get; set; }
 
+    /// <summary>
+    /// Số tiền cần trả lại cho khách khi tiền cọc lớn hơn tổng tiền thanh toán
+    /// </summary>
+    public decimal? DepositRefundAmount { get; set; }
+
     public string? Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }

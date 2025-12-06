@@ -138,5 +138,10 @@ public interface IPaymentService
     /// Validate xem món có thể hủy không
     /// </summary>
     Task<(bool CanCancel, string Reason)> ValidateCanCancelItemAsync(int orderDetailId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Hủy toàn bộ đơn hàng và giải phóng bàn (khi khách rời đi trước khi món làm)
+    /// </summary>
+    Task<bool> CancelOrderAsync(int orderId, string reason, int? userId = null, CancellationToken ct = default);
 }
 

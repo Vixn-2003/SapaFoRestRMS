@@ -51,6 +51,7 @@
         Discount = Model.DiscountAmount,
         DepositAmount = Model.DepositAmount,
         DepositPaid = Model.DepositPaid,
+        DepositRefundAmount = Model.DepositRefundAmount,
         Total = Model.TotalAmount,
         Items = (Model.Items ?? new List<WebSapaForestForStaff.DTOs.Payment.OrderItemDto>()).Select(i => new
         {
@@ -484,6 +485,21 @@
                                     <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
                                 </tr>
                             }
+                            @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
+                            {
+                                <tr class="table-warning">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
+                                        Tiền cần trả lại cho khách
+                                        <small class="text-muted d-block">
+                                            Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
+                                        +@Model.DepositRefundAmount.Value.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
                             <tr class="table-success">
                                 <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
                                     <span class="d-flex align-items-center gap-2">
@@ -491,7 +507,14 @@
                                         <span class="fs-5">Tổng cộng thanh toán</span>
                                     </span>
                                     <small class="text-muted d-block mt-1">
-                                        Tạm tính + VAT + Phí phục vụ - Giảm giá - Đặt cọc (nếu có)
+                                        @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
+                                        {
+                                            <text>Đã thanh toán đủ bằng tiền cọc. Cần trả lại: @Model.DepositRefundAmount.Value.ToString("N0") ₫</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Tạm tính + VAT + Phí phục vụ - Giảm giá - Đặt cọc (nếu có)</text>
+                                        }
                                     </small>
                                 </td>
                                 <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
@@ -515,6 +538,17 @@
     <input type="hidden" name="OrderId" value="@Model.OrderId" />
     <input type="hidden" name="PaymentMethod" id="paymentMethodInput" />
     <input type="hidden" name="Amount" id="paymentAmountInput" value="@Model.TotalAmount" />
+</form>
+
+<form id="cashPaymentForm"
+      asp-action="ProcessCashPayment"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrderId" id="cashPaymentOrderId" />
+    <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
+    <input type="hidden" name="Notes" id="cashPaymentNotes" />
 </form>
 </div>
 
@@ -568,12 +602,37 @@
         // Cash payment logic
         function openCashPaymentModal() {
             populateOrderSummary('cash');
-            document.getElementById('amountReceived').value = '';
-            document.getElementById('changeDisplay').classList.add('d-none');
-            document.getElementById('underpaidWarning').classList.add('d-none');
-            document.getElementById('refundConfirmation').classList.add('d-none');
-            document.getElementById('refundConfirmed').checked = false;
-            document.getElementById('confirmCashPaymentBtn').disabled = true;
+            const total = parseFloat(orderContext.Total ?? 0);
+            const depositRefund = parseFloat(orderContext.DepositRefundAmount ?? 0);
+            
+            // ✅ XỬ LÝ TRƯỜNG HỢP DEPOSIT > TOTAL
+            if (total === 0 && depositRefund > 0) {
+                // Đã thanh toán đủ bằng tiền cọc, chỉ cần trả lại tiền thừa
+                document.getElementById('amountReceived').value = '0';
+                document.getElementById('amountReceived').disabled = true;
+                document.getElementById('changeDisplay').classList.remove('d-none');
+                document.getElementById('refundAmount').textContent = formatCurrency(depositRefund);
+                document.getElementById('refundAmount').parentElement.innerHTML = `
+                    <i class="bi bi-arrow-left-right me-2 fs-4 text-warning"></i>
+                    <div>
+                        <strong class="text-warning">Tiền cần trả lại cho khách (từ tiền cọc):</strong>
+                        <span class="fs-4 ms-2 text-warning fw-bold" id="refundAmount">${formatCurrency(depositRefund)}</span>
+                    </div>
+                `;
+                document.getElementById('underpaidWarning').classList.add('d-none');
+                document.getElementById('refundConfirmation').classList.remove('d-none');
+                document.getElementById('refundConfirmed').checked = false;
+                document.getElementById('confirmCashPaymentBtn').disabled = true;
+            } else {
+                // Trường hợp bình thường
+                document.getElementById('amountReceived').value = '';
+                document.getElementById('amountReceived').disabled = false;
+                document.getElementById('changeDisplay').classList.add('d-none');
+                document.getElementById('underpaidWarning').classList.add('d-none');
+                document.getElementById('refundConfirmation').classList.add('d-none');
+                document.getElementById('refundConfirmed').checked = false;
+                document.getElementById('confirmCashPaymentBtn').disabled = true;
+            }
             cashModal.show();
         }
 
@@ -628,12 +687,42 @@
         }
 
         function confirmCashPayment() {
-            const received = parseFloat(document.getElementById('amountReceived').value ?? 0);
-            if (!received || received < orderContext.Total) {
-                showToast('Vui lòng nhập số tiền hợp lệ.', 'warning');
-                return;
+            const total = parseFloat(orderContext.Total ?? 0);
+            const depositRefund = parseFloat(orderContext.DepositRefundAmount ?? 0);
+            const orderId = orderContext.OrderId;
+            
+            // ✅ XỬ LÝ TRƯỜNG HỢP DEPOSIT > TOTAL
+            if (total === 0 && depositRefund > 0) {
+                // Đã thanh toán đủ bằng tiền cọc, chỉ cần xác nhận đã trả lại tiền
+                if (!document.getElementById('refundConfirmed').checked) {
+                    showToast('Vui lòng xác nhận đã trả lại tiền cho khách hàng.', 'warning');
+                    return;
+                }
+                
+                // Submit form với AmountReceived = 0
+                document.getElementById('cashPaymentOrderId').value = orderId;
+                document.getElementById('cashPaymentAmountReceived').value = '0';
+                document.getElementById('cashPaymentNotes').value = `Đã thanh toán đủ bằng tiền cọc. Trả lại tiền thừa: ${depositRefund.toLocaleString('vi-VN')} ₫`;
+                document.getElementById('cashPaymentForm').submit();
+            } else {
+                // Trường hợp bình thường
+                const received = parseFloat(document.getElementById('amountReceived').value ?? 0);
+                if (!received || received < total) {
+                    showToast('Vui lòng nhập số tiền hợp lệ.', 'warning');
+                    return;
+                }
+                
+                if (received > total && !document.getElementById('refundConfirmed').checked) {
+                    showToast('Vui lòng xác nhận đã trả lại tiền thối cho khách hàng.', 'warning');
+                    return;
+                }
+                
+                // Submit form với AmountReceived
+                document.getElementById('cashPaymentOrderId').value = orderId;
+                document.getElementById('cashPaymentAmountReceived').value = received;
+                document.getElementById('cashPaymentNotes').value = document.getElementById('paymentNotes')?.value || '';
+                document.getElementById('cashPaymentForm').submit();
             }
-            submitPayment('cash', orderContext.Total);
         }
 
         // QR payment logic
