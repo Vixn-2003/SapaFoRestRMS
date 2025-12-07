@@ -1,10 +1,34 @@
 ﻿@using WebSapaForestForStaff.DTOs;
 @using WebSapaForestForStaff.DTOs.Inventory;
+@using System.Security.Claims
+
 @{
     Layout = "_LayoutInventory";
-    ViewData["Title"] = "Quản Lý Nhập Hàng";
-}
+    ViewData["Title"] = "Quản lý Nguyên liệu";
 
+    // ✅ LẤY THÔNG TIN TỪ CLAIMS
+    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+    var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Không xác định";
+    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+    var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    var userPhone = User.FindFirst(ClaimTypes.MobilePhone)?.Value ?? ""; // ✅ THÊM DÒNG NÀY
+
+    // ✅ LẤY POSITIONS (nếu có)
+    var positionsJson = User.FindFirst("Positions")?.Value;
+    var userPosition = "Nhân viên kho";
+    if (!string.IsNullOrEmpty(positionsJson))
+    {
+        try
+        {
+            var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsJson);
+            userPosition = positions != null && positions.Any() ? string.Join(", ", positions) : "Nhân viên";
+        }
+        catch
+        {
+            userPosition = "Nhân viên kho";
+        }
+    }
+}
 @model WebSapaForestForStaff.DTOs.InventoryPagedViewModel
 
 <style>
@@ -4247,9 +4271,12 @@ function closeAlert() {
 
     // Mock user data - TODO: thay bằng session data thật
     const currentUserData = {
-        name: 'Trần Thị C',
-        position: 'Nhân viên kho',
-        phone: '0988365468'
+        userId: '@userId',
+        name: '@userName',
+        email: '@userEmail',
+        role: '@userRole',
+        position: '@userPosition',
+        phone: '@userPhone'
     };
 
     function toggleAuditButtons() {
@@ -4578,12 +4605,10 @@ function closeAlert() {
         const placeholder = document.getElementById('confirmerPlaceholder');
 
         if (checked) {
-    // TODO: Lấy từ session thật
-            // const userData = JSON.parse(sessionStorage.getItem('currentUser'));
-
+            // ✅ LẤY THÔNG TIN TỪ currentUserData (đã có từ Claims)
             document.getElementById('confirmerName').value = currentUserData.name;
             document.getElementById('confirmerPosition').value = currentUserData.position;
-            document.getElementById('confirmerPhone').value = currentUserData.phone;
+            document.getElementById('confirmerPhone').value = currentUserData.phone || '';
 
             form.style.display = 'block';
             placeholder.style.display = 'none';
@@ -4680,7 +4705,6 @@ function closeAlert() {
             return;
         }
 
-        // ✅ 2. PREPARE FORM DATA
         const formData = new FormData();
 
         // BatchId
@@ -4697,11 +4721,10 @@ function closeAlert() {
         // Số lượng gốc
         formData.append('OriginalQuantity', currentAuditBatch.quantity);
 
-        // ✅ HẠN SỬ DỤNG - ƯU TIÊN NGÀY MỚI, NẾU KHÔNG CÓ THÌ LẤY NGÀY CŨ
+        // ✅ HẠN SỬ DỤNG
         if (newExpiryDate) {
-            formData.append('ExpiryDate', newExpiryDate); // YYYY-MM-DD
+            formData.append('ExpiryDate', newExpiryDate);
         } else if (currentAuditBatch.expiryDate && currentAuditBatch.expiryDate !== 'N/A') {
-            // Chuyển format DD/MM/YYYY sang YYYY-MM-DD
             const parts = currentAuditBatch.expiryDate.split('/');
             if (parts.length === 3) {
                 const formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
@@ -4709,16 +4732,25 @@ function closeAlert() {
             }
         }
 
-        // CreatorId - TODO: Lấy từ session thật
-        formData.append('CreatorId', '2');
+        // ✅ THÔNG TIN NGƯỜI TẠO (từ Claims)
+        formData.append('CreatorId', currentUserData.userId);
+        formData.append('CreatorName', currentUserData.name);
+        formData.append('CreatorEmail', currentUserData.email); // ✅ THÊM
+        formData.append('CreatorPosition', currentUserData.position);
+        formData.append('CreatorRole', currentUserData.role); // ✅ THÊM
+        formData.append('CreatorPhone', document.getElementById('confirmerPhone').value || 'N/A');
 
-        // Thời gian tạo đơn (CreatedAt)
-        formData.append('CreatedAt', currentAuditBatch.auditDateTime.toISOString());
+        // Thời gian tạo đơn
+        formData.append('CreatedAt',
+            new Date().toLocaleString('sv-SE', {
+                timeZone: 'Asia/Ho_Chi_Minh'
+            }).replace(' ', 'T')
+        );
 
         // Lý do kiểm kê
         formData.append('Reason', reason);
 
-
+        // Số lượng điều chỉnh
         let adjustmentQty = quantity;
         let isAddition = false;
 
@@ -4733,13 +4765,13 @@ function closeAlert() {
             isAddition = false;
         } else if (auditType === 'noChange') {
             adjustmentQty = 0;
-            isAddition = false; 
+            isAddition = false;
         }
 
         formData.append('AdjustmentQuantity', adjustmentQty.toString());
         formData.append('IsAddition', isAddition.toString());
 
-        // ✅ 4. XÁC ĐỊNH IngredientStatus
+        // ✅ XÁC ĐỊNH IngredientStatus
         const statusBadgeHTML = currentAuditBatch.status;
         let ingredientStatus = 'normal';
 
@@ -4753,19 +4785,16 @@ function closeAlert() {
 
         formData.append('IngredientStatus', ingredientStatus);
 
-        // ✅ 5. THÔNG TIN NGƯỜI TẠO ĐƠN
-        formData.append('CreatorName', document.getElementById('confirmerName').value);
-        formData.append('CreatorPosition', document.getElementById('confirmerPosition').value);
-        formData.append('CreatorPhone', document.getElementById('confirmerPhone').value);
-
-        // ✅ 6. FILE ẢNH MINH CHỨNG
+        // ✅ FILE ẢNH MINH CHỨNG
         formData.append('ImageFile', imageFile);
 
-        // ✅ 7. LOG DỮ LIỆU
+        // ✅ LOG DỮ LIỆU
         console.log('=== AUDIT SUBMISSION DATA ===');
+        console.log('UserId:', currentUserData.userId);
+        console.log('UserName:', currentUserData.name);
+        console.log('UserEmail:', currentUserData.email);
+        console.log('UserPosition:', currentUserData.position);
         console.log('BatchId:', currentAuditBatch.batchId);
-        console.log('PurchaseOrderId:', currentAuditBatch.batchCode);
-        console.log('NewExpiryDate:', newExpiryDate || 'Không thay đổi');
         console.log('AdjustmentQuantity:', adjustmentQty);
         console.log('IsAddition:', isAddition);
 

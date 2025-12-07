@@ -27,9 +27,16 @@ public class ReceiptService : IReceiptService
         _webRootPath = webRootPath ?? throw new ArgumentNullException(nameof(webRootPath));
         _logger = logger;
         _configuration = configuration;
-        
-        // Set QuestPDF license (free for non-commercial use)
-        QuestPDF.Settings.License = LicenseType.Community;
+    }
+
+    /// <summary>
+    /// Làm tròn lên mệnh giá 1000 VND
+    /// Ví dụ: 157600 → 158000, 157400 → 158000, 157000 → 157000
+    /// </summary>
+    private static decimal RoundUpToThousand(decimal amount)
+    {
+        if (amount <= 0) return 0;
+        return Math.Ceiling(amount / 1000m) * 1000m;
     }
 
     public async Task<string> GenerateReceiptPdfAsync(int orderId, CancellationToken ct = default)
@@ -65,6 +72,38 @@ public class ReceiptService : IReceiptService
                     continue;
                 }
 
+                // ✅ LOGIC MỚI: Chỉ tính tiền món có Status = "Cooking", "Done", "Ready"
+                // Không tính tiền món có Status = "Pending"
+                var status = (od.Status ?? "").Trim();
+                var statusLower = status.ToLower();
+                
+                // Danh sách status được phép thanh toán
+                var billableStatuses = new[] { "cooking", "done", "ready", "served", "đang chế biến", "đã xong", "sẵn sàng" };
+                bool isBillable = billableStatuses.Any(s => statusLower == s);
+
+                // ✅ XỬ LÝ COMBO: Nếu là combo, kiểm tra OrderComboItems
+                if (od.ComboId.HasValue && od.OrderComboItems != null && od.OrderComboItems.Any())
+                {
+                    // Nếu có ít nhất 1 món trong combo đã sẵn sàng (Cooking/Done/Ready) thì thanh toán toàn bộ combo
+                    bool hasReadyComboItem = od.OrderComboItems.Any(oci =>
+                    {
+                        var comboItemStatus = (oci.Status ?? "").Trim().ToLower();
+                        return billableStatuses.Any(s => comboItemStatus == s);
+                    });
+
+                    if (!hasReadyComboItem)
+                    {
+                        // Combo chưa có món nào sẵn sàng → không tính tiền
+                        continue;
+                    }
+                    // Nếu có món sẵn sàng → tính tiền toàn bộ combo (logic bên dưới)
+                }
+                else if (!isBillable)
+                {
+                    // Món lẻ chưa sẵn sàng (Status = "Pending") → không tính tiền
+                    continue;
+                }
+
                 int billableQuantity;
                 
                 // Apply billing logic based on item type
@@ -83,13 +122,23 @@ public class ReceiptService : IReceiptService
             }
         }
         
-        var vatAmount = subtotal * 0.1m; // 10% VAT
-        var serviceFee = subtotal * 0.05m; // 5% service fee
+        // ✅ Làm tròn Subtotal lên mệnh giá 1000
+        subtotal = RoundUpToThousand(subtotal);
         
-        // Get discount from latest payment if available
-        var discountAmount = order.Payments?.OrderByDescending(p => p.PaymentDate ?? DateTime.MinValue).FirstOrDefault()?.DiscountAmount ?? 0;
+        // Tính VAT (10%) từ Subtotal đã làm tròn
+        var vatAmount = RoundUpToThousand(subtotal * 0.1m);
         
+        // Tính phí dịch vụ (5%) từ Subtotal đã làm tròn
+        var serviceFee = RoundUpToThousand(subtotal * 0.05m);
+        
+        // Get discount from latest payment if available và làm tròn
+        var discountAmount = RoundUpToThousand(
+            order.Payments?.OrderByDescending(p => p.PaymentDate ?? DateTime.MinValue).FirstOrDefault()?.DiscountAmount ?? 0
+        );
+        
+        // Tính tổng cộng và làm tròn
         var totalAmount = order.TotalAmount ?? (subtotal + vatAmount + serviceFee - discountAmount);
+        totalAmount = RoundUpToThousand(totalAmount);
 
         // Get payment method from latest transaction
         var latestTransaction = order.Transactions?.OrderByDescending(t => t.CreatedAt).FirstOrDefault();

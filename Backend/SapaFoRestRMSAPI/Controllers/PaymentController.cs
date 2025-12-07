@@ -144,6 +144,35 @@ public class PaymentController : ControllerBase
     }
 
     /// <summary>
+    /// Owner/Manager/Staff: Hủy toàn bộ đơn hàng và giải phóng bàn (khi khách rời đi trước khi món làm)
+    /// DELETE /api/payment/orders/{orderId}/cancel
+    /// </summary>
+    [HttpDelete("orders/{orderId}/cancel")]
+    public async Task<IActionResult> CancelOrder(int orderId, [FromBody] CancelOrderRequestDto? request = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var reason = request?.Reason ?? "Khách rời đi trước khi món làm";
+            var userId = GetUserIdFromClaims();
+
+            await _paymentService.CancelOrderAsync(orderId, reason, userId, ct);
+            return Ok(new { message = "Đã hủy đơn hàng và giải phóng bàn thành công." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi hủy đơn hàng", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Owner/Manager/Staff: Lấy tóm tắt đơn hàng cho payment screen
     /// GET /api/payment/order/{orderId}
     /// Step 1-2: Load order summary with calculated totals
@@ -197,7 +226,7 @@ public class PaymentController : ControllerBase
     /// POST /api/payment/discounts/validate
     /// </summary>
     [HttpPost("discounts/validate")]
-    public async Task<IActionResult> ValidateDiscount([FromBody] DiscountRequestDto request, CancellationToken ct = default)
+        public async Task<IActionResult> ValidateDiscount([FromBody] DiscountRequestDto request, CancellationToken ct = default)
     {
         try
         {
@@ -212,6 +241,10 @@ public class PaymentController : ControllerBase
                 message = "Áp dụng ưu đãi thành công",
                 order = order 
             });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {

@@ -1,5 +1,57 @@
+@model WebSapaForestForStaff.DTOs.Payment.OrderDetailDto
+@using System.Collections.Generic
+
+@{
+    var availableVouchers = ViewData["AvailableVouchers"] as List<dynamic> ?? new List<dynamic>();
+}
+
+<style>
+    .voucher-list-container {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .voucher-item {
+        border: 1px solid #e3e6ef;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+    }
+    .voucher-item:hover {
+        border-color: #0f8b83;
+        box-shadow: 0 4px 12px rgba(15, 139, 131, 0.15);
+        transform: translateY(-2px);
+    }
+    .voucher-item.selected {
+        border-color: #0f8b83;
+        background: #f0faf9;
+    }
+    .voucher-code {
+        font-weight: 700;
+        color: #0f8b83;
+        font-size: 1.1rem;
+    }
+    .voucher-discount {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #dc3545;
+    }
+    .voucher-desc {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+    .voucher-condition {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 4px;
+    }
+</style>
+
 <div class="modal fade" id="promotionModal" tabindex="-1" aria-labelledby="promotionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="promotionModalLabel">
@@ -7,44 +59,160 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-4">
-                    <label for="discountCode" class="form-label fw-bold">
-                        <i class="bi bi-upc-scan me-2"></i>Nhập mã giảm giá
-                    </label>
-                    <div class="input-group">
-                        <input type="text"
-                               class="form-control"
-                               id="discountCode"
-                               placeholder="Nhập mã giảm giá...">
-                        <button class="btn btn-primary" type="button" onclick="validateDiscountCode()">
-                            <i class="bi bi-check-circle me-2"></i>Áp dụng
-                        </button>
-                    </div>
-                    <div id="discountCodeMessage" class="mt-2"></div>
-                </div>
+            <form asp-action="ApplyDiscount" asp-controller="CashierPaymentFlow" method="post" id="applyDiscountForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="OrderId" value="@Model.OrderId" />
+                
+                <div class="modal-body">
+                    <div class="row g-4">
+                        <!-- Cột trái: Form nhập mã voucher -->
+                        <div class="col-md-5">
+                            @if (!string.IsNullOrEmpty(ViewData["DiscountErrorMessage"] as string))
+                            {
+                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    @ViewData["DiscountErrorMessage"]
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(ViewData["DiscountSuccessMessage"] as string))
+                            {
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    @ViewData["DiscountSuccessMessage"]
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            }
 
-                <hr>
-
-                <div>
-                    <h6 class="fw-bold mb-3">
-                        <i class="bi bi-gift me-2"></i>Chương trình ưu đãi hiện có
-                    </h6>
-                    <div class="promotion-list" id="promotionList">
-                        <div class="text-center py-3">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                <span class="visually-hidden">Đang tải...</span>
+                            <div class="mb-4">
+                                <label for="VoucherCode" class="form-label fw-bold">
+                                    <i class="bi bi-upc-scan me-2"></i>Nhập mã giảm giá
+                                </label>
+                                <div class="input-group">
+                                    <input type="text"
+                                           class="form-control"
+                                           id="VoucherCode"
+                                           name="VoucherCode"
+                                           placeholder="Nhập mã giảm giá..."
+                                           value="@(ViewData["VoucherCode"] as string ?? "")"
+                                           required>
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-check-circle me-2"></i>Áp dụng
+                                    </button>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Nhập mã voucher hoặc chọn từ danh sách bên phải.
+                                </small>
                             </div>
+
+                            <hr>
+
+                            <div>
+                                <h6 class="fw-bold mb-3">
+                                    <i class="bi bi-gift me-2"></i>Thông tin giảm giá hiện tại
+                                </h6>
+                                @if (Model.DiscountAmount > 0)
+                                {
+                                    <div class="alert alert-info mb-0">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <i class="bi bi-tags me-2"></i>
+                                                <strong>Đã áp dụng giảm giá:</strong>
+                                                <span class="text-danger fw-bold">-@Model.DiscountAmount.ToString("N0") ₫</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-muted small">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Chưa có mã giảm giá nào được áp dụng. Vui lòng nhập mã hoặc chọn từ danh sách.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Cột phải: Danh sách voucher có sẵn -->
+                        <div class="col-md-7">
+                            <h6 class="fw-bold mb-3">
+                                <i class="bi bi-list-ul me-2"></i>Danh sách voucher khả dụng
+                                <span class="badge bg-primary ms-2">@availableVouchers.Count</span>
+                            </h6>
+                            
+                            @if (availableVouchers.Any())
+                            {
+                                <div class="voucher-list-container">
+                                    @foreach (var voucher in availableVouchers)
+                                    {
+                                        var discountText = voucher.DiscountType == "Phần trăm" 
+                                            ? $"{voucher.DiscountValue}%" 
+                                            : $"{voucher.DiscountValue:N0} ₫";
+                                        var conditionText = voucher.MinOrderValue.HasValue 
+                                            ? $"Đơn tối thiểu {voucher.MinOrderValue.Value:N0} ₫" 
+                                            : "Không giới hạn";
+                                        
+                                        <div class="voucher-item" onclick="selectVoucher('@voucher.Code')">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <div class="voucher-code">@voucher.Code</div>
+                                                    @if (!string.IsNullOrEmpty(voucher.Description))
+                                                    {
+                                                        <div class="voucher-desc">@voucher.Description</div>
+                                                    }
+                                                    <div class="voucher-condition">
+                                                        <i class="bi bi-info-circle me-1"></i>@conditionText
+                                                        @if (voucher.MaxDiscount.HasValue && voucher.DiscountType == "Phần trăm")
+                                                        {
+                                                            <span> • Tối đa @voucher.MaxDiscount.Value.ToString("N0") ₫</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <div class="voucher-discount">-@discountText</div>
+                                                    <small class="text-muted">Giảm giá</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    <p class="mb-0">Không có voucher nào khả dụng cho đơn hàng này.</p>
+                                    <small>Vui lòng nhập mã voucher thủ công ở cột bên trái.</small>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-2"></i>Đóng
-                </button>
-            </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Đóng
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+
+<script>
+    function selectVoucher(code) {
+        document.getElementById('VoucherCode').value = code;
+        // Highlight selected voucher
+        document.querySelectorAll('.voucher-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+        
+        // Auto submit form sau 300ms để user thấy được highlight
+        setTimeout(() => {
+            document.getElementById('applyDiscountForm').submit();
+        }, 300);
+    }
+</script>
 

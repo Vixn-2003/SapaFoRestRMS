@@ -777,8 +777,8 @@
                 );
 
                 if (confirmed) {
-                    // Redirect to ConfirmOrder page
-                    window.location.href = `/cashier-flow/orders/${orderId}`;
+                    // ✅ MỚI: Redirect thẳng tới Payment page (bỏ qua ConfirmOrder)
+                    window.location.href = `/cashier-flow/payment/${orderId}`;
                 } else {
                     // Redirect to OrderDetail page (edit mode)
                     window.location.href = `/DashboardTable/OrderDetail/${tableId}`;

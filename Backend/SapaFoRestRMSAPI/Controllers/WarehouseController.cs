@@ -34,5 +34,12 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, "An error occurred while getting the warehouse");
             }
         }
+
+        [HttpGet("warehouse/{warehouseId}")]
+        public async Task<IActionResult> GetBatchesByWarehouse(int warehouseId)
+        {
+            var batches = await _warehouseService.GetBatchesByWarehouseAsync(warehouseId);
+            return Ok(batches);
+        }
     }
 }

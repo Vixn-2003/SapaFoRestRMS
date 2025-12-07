@@ -3,6 +3,7 @@ using BusinessAccessLayer.DTOs.Inventory;
 using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,5 +48,64 @@ namespace BusinessAccessLayer.Services
         {
             throw new NotImplementedException();
         }
+
+        public async Task<bool> CreateSupplier(CreateSupplierDTO dto)
+        {
+            try
+            {
+                // Kiểm tra mã trùng
+                var exists = await _unitOfWork.Supplier.CheckCodeExistsAsync(dto.CodeSupplier);
+                if (exists)
+                {
+                    throw new InvalidOperationException("Mã nhà cung cấp đã tồn tại");
+                }
+
+                var supplier = _mapper.Map<Supplier>(dto);
+                await _unitOfWork.Supplier.AddAsync(supplier);
+                await _unitOfWork.Supplier.SaveChangesAsync();
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // ✅ IMPLEMENT UPDATE
+        public async Task<bool> UpdateSupplier(int id, UpdateSupplierDTO dto)
+        {
+            try
+            {
+                var existingSupplier = await _unitOfWork.Supplier.GetByIdAsync(id);
+                if (existingSupplier == null)
+                {
+                    throw new InvalidOperationException("Không tìm thấy nhà cung cấp");
+                }
+
+                // Cập nhật các trường (không bao gồm Code)
+                existingSupplier.Name = dto.Name;
+                existingSupplier.ContactInfo = dto.ContactInfo;
+                existingSupplier.Phone = dto.Phone;
+                existingSupplier.Email = dto.Email;
+                existingSupplier.Address = dto.Address;
+
+                await _unitOfWork.Supplier.UpdateAsync(existingSupplier);
+                await _unitOfWork.Supplier.SaveChangesAsync();
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // ✅ IMPLEMENT CHECK CODE
+        public async Task<bool> CheckCodeExists(string code)
+        {
+            return await _unitOfWork.Supplier.CheckCodeExistsAsync(code);
+        }
+
     }
 }

@@ -126,5 +126,124 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, "An error occurred while fetching supplier products.");
             }
         }
+
+
+        // --- API XÓA (SOFT DELETE) ---
+        /// <summary>
+        /// Xóa nhà cung cấp (chuyển isActive = false)
+        /// Route: DELETE api/inventory/supplier/{id}
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteSupplier(int id)
+        {
+            try
+            {
+                var result = await _supplierManager.SoftDeleteSupplierAsync(id);
+                if (result)
+                {
+                    return Ok(new { message = "Đã xóa nhà cung cấp thành công." });
+                }
+                return NotFound(new { message = "Không tìm thấy nhà cung cấp." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while deleting supplier.");
+            }
+        }
+
+
+        // ✅ API KIỂM TRA MÃ TRÙNG
+        /// <summary>
+        /// Kiểm tra mã nhà cung cấp đã tồn tại chưa
+        /// Route: GET api/inventory/supplier/check-code/{code}
+        /// </summary>
+        [HttpGet("check-code/{code}")]
+        public async Task<ActionResult<bool>> CheckCodeExists(string code)
+        {
+            try
+            {
+                var exists = await _managerSupplier.CheckCodeExists(code);
+                return Ok(exists);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Lỗi khi kiểm tra mã nhà cung cấp.");
+            }
+        }
+
+        // ✅ API TẠO MỚI NHÀ CUNG CẤP
+        /// <summary>
+        /// Tạo nhà cung cấp mới
+        /// Route: POST api/inventory/supplier
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierDTO dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                // Kiểm tra mã trùng
+                var codeExists = await _managerSupplier.CheckCodeExists(dto.CodeSupplier);
+                if (codeExists)
+                {
+                    return BadRequest(new { message = "Mã nhà cung cấp đã tồn tại." });
+                }
+
+                var result = await _managerSupplier.CreateSupplier(dto);
+                
+                if (result)
+                {
+                    return Ok(new { message = "Tạo nhà cung cấp thành công." });
+                }
+                
+                return BadRequest(new { message = "Lỗi khi tạo nhà cung cấp." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi không xác định.", error = ex.Message });
+            }
+        }
+
+        // ✅ API CẬP NHẬT NHÀ CUNG CẤP
+        /// <summary>
+        /// Cập nhật thông tin nhà cung cấp (không cho phép sửa mã)
+        /// Route: PUT api/inventory/supplier/{id}
+        /// </summary>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateSupplier(int id, [FromBody] UpdateSupplierDTO dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var result = await _managerSupplier.UpdateSupplier(id, dto);
+                
+                if (result)
+                {
+                    return Ok(new { message = "Cập nhật nhà cung cấp thành công." });
+                }
+                
+                return NotFound(new { message = "Không tìm thấy nhà cung cấp." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi không xác định.", error = ex.Message });
+            }
+        }
     }
 }

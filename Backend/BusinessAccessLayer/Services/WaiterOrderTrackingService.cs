@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using BusinessAccessLayer.DTOs.Waiter;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
@@ -19,13 +20,33 @@ namespace BusinessAccessLayer.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null)
+        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null, List<int>? tableIds = null)
         {
             var now = DateTime.Now;
             var result = new WaiterOrderTrackingDto();
 
             // Lấy tất cả active orders với order details
-            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            var allActiveOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            
+            // Filter theo tableIds nếu có
+            List<Order> activeOrders;
+            if (tableIds != null && tableIds.Any())
+            {
+                activeOrders = allActiveOrders.Where(order =>
+                {
+                    // Lấy tableIds từ reservation
+                    var reservationTableIds = order.Reservation?.ReservationTables?
+                        .Select(rt => rt.TableId)
+                        .ToList() ?? new List<int>();
+                    
+                    // Kiểm tra xem có bàn nào trong danh sách filter không
+                    return reservationTableIds.Any(tableId => tableIds.Contains(tableId));
+                }).ToList();
+            }
+            else
+            {
+                activeOrders = allActiveOrders;
+            }
 
             var allItems = new List<OrderTrackingItemDto>();
             var orderGroups = new Dictionary<int, OrderTrackingGroupDto>();
@@ -111,9 +132,14 @@ namespace BusinessAccessLayer.Services
                             // Trạng thái riêng theo từng món con
                             var comboStatus = (orderComboItem.Status ?? status).Trim();
                             var comboStatusLower = comboStatus.ToLower();
+                            var normalizedComboStatus = NormalizeStatus(comboStatus);
                             var comboIsDone = comboStatusLower.Contains("done") ||
                                               comboStatusLower.Contains("hoàn thành") ||
                                               comboStatusLower.Contains("xong");
+
+                            // Quyền Hủy / Làm gấp theo trạng thái món con
+                            var canCancelItem = normalizedComboStatus == "Pending";
+                            var canRequestUrgentItem = normalizedComboStatus != "Done";
 
                             var comboItem = new OrderTrackingItemDto
                             {
@@ -130,9 +156,9 @@ namespace BusinessAccessLayer.Services
                                 StartedAt = orderComboItem.StartedAt ?? orderDetail.StartedAt,
                                 ReadyAt = orderComboItem.ReadyAt ?? orderDetail.ReadyAt,
                                 ServedAt = comboIsDone ? (orderComboItem.ReadyAt ?? orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null,
-                                CanCancel = canCancel,
+                                CanCancel = canCancelItem,
                                 CanReturn = false,
-                                CanRequestUrgent = canRequestUrgent,
+                                CanRequestUrgent = canRequestUrgent && canRequestUrgentItem,
                                 IsSplit = isSplit
                             };
 
@@ -242,14 +268,20 @@ namespace BusinessAccessLayer.Services
                     if (orderComboItem.IsUrgent)
                     {
                         orderComboItem.IsUrgent = false;
+                        // Xóa các tag [LÀM GẤP: ...] khỏi ghi chú
+                        orderComboItem.Notes = CleanUrgentNotes(orderComboItem.Notes);
                     }
                     else
                     {
                         orderComboItem.IsUrgent = true;
+                        var baseNotes = CleanUrgentNotes(orderComboItem.Notes) ?? string.Empty;
                         if (!string.IsNullOrEmpty(request.Reason))
                         {
-                            var currentNotes = orderComboItem.Notes ?? "";
-                            orderComboItem.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                            orderComboItem.Notes = $"{baseNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                        else
+                        {
+                            orderComboItem.Notes = baseNotes;
                         }
                     }
 
@@ -274,14 +306,19 @@ namespace BusinessAccessLayer.Services
                     if (orderDetail.IsUrgent)
                     {
                         orderDetail.IsUrgent = false;
+                        orderDetail.Notes = CleanUrgentNotes(orderDetail.Notes);
                     }
                     else
                     {
                         orderDetail.IsUrgent = true;
+                        var baseNotes = CleanUrgentNotes(orderDetail.Notes) ?? string.Empty;
                         if (!string.IsNullOrEmpty(request.Reason))
                         {
-                            var currentNotes = orderDetail.Notes ?? "";
-                            orderDetail.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                            orderDetail.Notes = $"{baseNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                        else
+                        {
+                            orderDetail.Notes = baseNotes;
                         }
                     }
 
@@ -305,6 +342,22 @@ namespace BusinessAccessLayer.Services
                     Message = $"Lỗi: {ex.Message}"
                 };
             }
+        }
+
+        /// <summary>
+        /// Loại bỏ tất cả các đoạn tag [LÀM GẤP: ...] khỏi ghi chú để tránh bị nối nhiều lần.
+        /// Giữ lại các phần ghi chú khác của waiter.
+        /// </summary>
+        private string? CleanUrgentNotes(string? notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+            {
+                return notes;
+            }
+
+            // Xóa các đoạn " [LÀM GẤP: ...]" (tiếng Việt, có thể có khoảng trắng trước)
+            var cleaned = Regex.Replace(notes, @"\s*\[LÀM GẤP:[^\]]*\]", string.Empty, RegexOptions.IgnoreCase);
+            return cleaned.Trim();
         }
 
         public async Task<CancelOrderDetailResponse> CancelOrderDetailAsync(CancelOrderDetailDto request)

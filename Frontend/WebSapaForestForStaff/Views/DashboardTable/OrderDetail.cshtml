@@ -9,9 +9,8 @@
     var tableId = ViewData["TableId"] ?? Model.TableId;
     var categories = ViewData["Categories"] as List<WebSapaForestForStaff.DTOs.OrderGuest.CategoryDto>;
     var hasActiveOrder = Model.ActiveOrderId.HasValue;
-    var checkoutUrl = hasActiveOrder
-        ? Url.Action(nameof(CashierPaymentFlowController.OrderDetail), "CashierPaymentFlow", new { id = Model.ActiveOrderId })
-        : string.Empty;
+    var userPositionId = ViewData["UserPositionId"] as int? ?? 0; // 1 = Waiter, 2 = Cashier
+    var orderStatus = Model.OrderStatus ?? ""; // Status của order hiện tại
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
@@ -661,13 +660,28 @@
         </div>
     </div>
 
-    <div class="d-flex gap-2">
-        <button class="btn-save-order flex-fill" style="display:none">
-            Lưu Order
+    <div class="d-flex gap-2 flex-column">
+        <div class="d-flex gap-2">
+            <button class="btn-save-order flex-fill" style="display:none">
+                Lưu Order
+            </button>
+            @if (userPositionId == 1)  // Waiter
+            {
+                <button class="btn-checkout flex-fill" onclick="handleWaiterConfirmPayment()">
+                    Xác Nhận Thanh Toán <i class="fa-solid fa-check ms-2"></i>
+                </button>
+            }
+
+            @if (userPositionId == 2)  // Cashier
+            {
+                <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
+                    Thanh Toán Bàn <i class="fa-solid fa-chevron-right ms-2"></i>
+                </button>
+            }
+        </div>
+        <button class="btn btn-outline-danger w-100" onclick="handleCancelOrder()" style="margin-top: 8px;">
+            <i class="fa-solid fa-times-circle me-2"></i>Hủy đơn
         </button>
-                        <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
-                            Tạo đơn <i class="fa-solid fa-chevron-right ms-2"></i>
-                        </button>
     </div>
 </div>
 
@@ -750,6 +764,9 @@
     })))');
 
     window.__TABLE_ID__ = '@(ViewData["TableId"] ?? Model.TableId)';
+    window.__USER_POSITION_ID__ = @userPositionId; // 1 = Waiter, 2 = Cashier
+    window.__ORDER_STATUS__ = '@orderStatus'; // Order status (raw from backend)
+    window.__ACTIVE_ORDER_ID__ = @(Model.ActiveOrderId ?? 0);
 
     
 </script>
@@ -759,8 +776,8 @@
 
 <script>
     // Khởi tạo biến JS từ Razor
-    cartItems = window.__INITIAL_ORDER_DATA__ || [];
-    tableId = window.__TABLE_ID__;
+        cartItems = window.__INITIAL_ORDER_DATA__ || [];
+        tableId = window.__TABLE_ID__;
 
     // Modal Bootstrap
     var modalDelEl = document.getElementById('confirmDeleteModal');
@@ -774,37 +791,193 @@
 
     // Render giỏ hàng lần đầu
     renderCart();
+
     /**
-     * 🧾 CREATE PAYMENT ORDER CONFIRMATION
-     * Shows confirmation popup before creating payment order and redirecting to ConfirmOrder page
+     * 👨‍🍳 WAITER CONFIRM PAYMENT
+     * Waiter xác nhận đơn hàng và chuyển Order status sang "Confirmed"
+     * Sau khi xác nhận, đơn hàng sẽ được khóa và không thể thêm món nữa
      */
-    async function handleCreatePaymentOrder() {
+    async function handleWaiterConfirmPayment() {
         // Check if there are any items in the cart
         const visibleItems = cartItems.filter(x => !x.isDeleted);
-
+        
         if (visibleItems.length === 0) {
-            alert('Chưa có món nào trong đơn hàng. Vui lòng thêm món trước khi tạo đơn thanh toán.');
+            alert('Chưa có món nào trong đơn hàng. Vui lòng thêm món trước khi xác nhận thanh toán.');
             return;
         }
 
         // Check if there are unsaved changes
         const hasUnsavedChanges = cartItems.some(x => x.isNew || x.isDirty);
         if (hasUnsavedChanges) {
-            alert('Bạn có thay đổi chưa lưu. Vui lòng lưu đơn hàng trước khi tạo thanh toán.');
+            alert('Bạn có thay đổi chưa lưu. Vui lòng lưu đơn hàng trước khi tiếp tục.');
             return;
         }
 
-        // Get order details for display
+        const activeOrderId = window.__ACTIVE_ORDER_ID__;
+        if (activeOrderId <= 0) {
+            alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
+            return;
+        }
+
         const tableNumber = '@Model.TableNumber';
         const customerName = '@(Model.CustomerName ?? "Khách vãng lai")';
         const totalQty = visibleItems.reduce((sum, item) => sum + item.quantity, 0);
         const totalAmount = visibleItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        // Show confirmation popup
+        // Tính toán số lượng món theo trạng thái
+        let qtyServedAndCooking = 0;  // Đã phục vụ và đang nấu (Status = Cooking, Done, Ready)
+        let qtyNotCooked = 0;         // Chưa nấu (Status = Pending)
+        let qtyReplaced = 0;          // Đã gọi thay thế
+
+        visibleItems.forEach(item => {
+            const status = (item.status || '').toString().trim();
+            const statusLower = status.toLowerCase();
+            
+            // Đã phục vụ & đang nấu: Status = "Cooking", "Done", "Ready"
+            const isReady = statusLower === 'cooking' || 
+                           statusLower === 'done' || 
+                           statusLower === 'ready' ||
+                           statusLower === 'served' ||
+                           statusLower === 'đang chế biến' ||
+                           statusLower === 'đã xong' ||
+                           statusLower === 'sẵn sàng';
+            
+            // Chưa nấu: Status = "Pending"
+            const isPending = statusLower === 'pending' || 
+                            statusLower === 'đã gửi' || 
+                            status === '';
+
+            if (isReady) {
+                qtyServedAndCooking += item.quantity;
+            } else if (isPending) {
+                qtyNotCooked += item.quantity;
+            }
+
+            // Món đã gọi thay thế: món mới được thêm vào sau khi đã có order (isNew = true)
+            if (item.isNew) {
+                qtyReplaced += item.quantity;
+            }
+        });
+
         const confirmed = await showConfirmPopup(
-            "🧾 Xác nhận tạo đơn thanh toán",
+            "✅ Xác nhận thanh toán",
             `<div class="text-center mb-3">
-                <h5 class="mb-3">Khách hàng đã ăn xong và cần thanh toán hóa đơn?</h5>
+                <h5 class="mb-3">Xác nhận đơn hàng để chuyển sang bước thanh toán?</h5>
+            </div>
+            <div style="background: #f7fafc; padding: 16px; border-radius: 8px; text-align: left;">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-chair me-2"></i>Bàn:</span>
+                    <span class="fw-bold">${tableNumber}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-user me-2"></i>Khách hàng:</span>
+                    <span class="fw-bold">${customerName}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-utensils me-2"></i>Số lượng món đã gọi:</span>
+                    <span class="fw-bold text-primary">${totalQty} món</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-check-circle me-2"></i>Đã phục vụ & đang nấu:</span>
+                    <span class="fw-bold text-success">${qtyServedAndCooking} món</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-clock me-2"></i>Chưa nấu:</span>
+                    <span class="fw-bold text-warning">${qtyNotCooked} món</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-rotate me-2"></i>Đã gọi thay thế:</span>
+                    <span class="fw-bold text-info">${qtyReplaced} món</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted"><i class="fa-solid fa-money-bill me-2"></i>Tạm tính:</span>
+                    <span class="fw-bold text-success" style="font-size: 18px;">${totalAmount.toLocaleString('vi-VN')} ₫</span>
+                </div>
+            </div>
+            <div class="alert alert-warning d-flex align-items-start gap-2 mt-3 mb-0">
+                <i class="fa-solid fa-triangle-exclamation mt-1"></i>
+                <div class="small">
+                    <strong>Lưu ý:</strong> Sau khi xác nhận, đơn hàng sẽ bị khóa và không thể thêm món nữa. 
+                    Thu ngân sẽ xử lý thanh toán sau đó.
+                </div>
+            </div>`,
+            "✅ Xác nhận",
+            "❌ Hủy"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            // Gọi API backend để chuyển trạng thái Order sang Confirmed
+            const payload = {
+                orderId: activeOrderId,
+                items: visibleItems.map(item => ({
+                    orderDetailId: item.id,
+                    quantityUsed: item.quantity,
+                    isRemoved: false
+                })),
+                notes: null
+            };
+
+            const response = await fetch(`https://localhost:7096/api/Payment/orders/${activeOrderId}/confirm`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Không thể xác nhận đơn hàng');
+            }
+
+            const result = await response.json();
+            
+            // Hiển thị thông báo thành công
+            showToast('✅ Đã xác nhận đơn hàng thành công! Đơn hàng đã được khóa và sẵn sàng cho thu ngân thanh toán.', 'success');
+            
+            // Reload trang để cập nhật trạng thái
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } catch (error) {
+            console.error('Lỗi khi xác nhận đơn hàng:', error);
+            alert('Lỗi: ' + (error.message || 'Không thể xác nhận đơn hàng. Vui lòng thử lại.'));
+        }
+    }
+
+    /**
+     * 💳 CASHIER CREATE PAYMENT ORDER
+     * Cashier chuyển sang màn hình thanh toán
+     * Đơn hàng phải đã được Waiter xác nhận (status = "Confirmed") trước đó
+     */
+    async function handleCreatePaymentOrder() {
+        // Check if there are any items in the cart
+        const visibleItems = cartItems.filter(x => !x.isDeleted);
+        
+        if (visibleItems.length === 0) {
+            alert('Chưa có món nào trong đơn hàng. Vui lòng thêm món trước khi thanh toán.');
+            return;
+        }
+
+        const activeOrderId = window.__ACTIVE_ORDER_ID__;
+        if (activeOrderId <= 0) {
+            alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
+            return;
+        }
+
+        const tableNumber = '@Model.TableNumber';
+        const customerName = '@(Model.CustomerName ?? "Khách vãng lai")';
+        const totalQty = visibleItems.reduce((sum, item) => sum + item.quantity, 0);
+        const totalAmount = visibleItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        const confirmed = await showConfirmPopup(
+            "💳 Thanh toán bàn",
+            `<div class="text-center mb-3">
+                <h5 class="mb-3">Chuyển sang màn hình thanh toán?</h5>
             </div>
             <div style="background: #f7fafc; padding: 16px; border-radius: 8px; text-align: left;">
                 <div class="d-flex justify-content-between mb-2">
@@ -827,23 +1000,99 @@
             <div class="alert alert-info d-flex align-items-start gap-2 mt-3 mb-0">
                 <i class="fa-solid fa-info-circle mt-1"></i>
                 <div class="small">
-                    <strong>Bước tiếp theo:</strong> Xác nhận món ăn và số lượng sử dụng với khách hàng trước khi thanh toán.
+                    Sau khi xác nhận, hệ thống sẽ chuyển sang màn hình thanh toán để xử lý thanh toán.
                 </div>
             </div>`,
-            "✅ Xác nhận",
+            "💳 Thanh toán bàn",
             "❌ Hủy"
         );
 
-        if (confirmed) {
-            // Get the active order ID
-            const activeOrderId = @(Model.ActiveOrderId ?? 0);
+        if (!confirmed) {
+            return;
+        }
 
-            if (activeOrderId > 0) {
-                // Redirect to ConfirmOrder page
-                window.location.href = `/cashier-flow/orders/${activeOrderId}`;
-            } else {
-                alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
+        // Redirect tới màn hình Payment (không cần confirm nữa vì Waiter đã confirm rồi)
+        window.location.href = `/cashier-flow/payment/${activeOrderId}`;
+    }
+
+    /**
+     * 🚫 HỦY ĐƠN HÀNG
+     * Hủy toàn bộ đơn hàng và giải phóng bàn (khi khách rời đi trước khi món làm)
+     */
+    async function handleCancelOrder() {
+        const activeOrderId = window.__ACTIVE_ORDER_ID__;
+        if (activeOrderId <= 0) {
+            alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
+            return;
+        }
+
+        const tableNumber = '@Model.TableNumber';
+        const customerName = '@(Model.CustomerName ?? "Khách vãng lai")';
+
+        // Hiển thị popup xác nhận
+        const confirmed = await showConfirmPopup(
+            "🚫 Hủy đơn hàng",
+            `<div class="text-center mb-3">
+                <h5 class="mb-3 text-danger">Bạn có chắc muốn hủy đơn hàng này?</h5>
+            </div>
+            <div style="background: #fff5f5; padding: 16px; border-radius: 8px; text-align: left; border: 1px solid #fecaca;">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-chair me-2"></i>Bàn:</span>
+                    <span class="fw-bold">${tableNumber}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-user me-2"></i>Khách hàng:</span>
+                    <span class="fw-bold">${customerName}</span>
+                </div>
+            </div>
+            <div class="alert alert-warning d-flex align-items-start gap-2 mt-3 mb-0">
+                <i class="fa-solid fa-triangle-exclamation mt-1"></i>
+                <div class="small">
+                    <strong>Lưu ý:</strong> Hành động này sẽ:
+                    <ul class="mb-0 mt-2" style="padding-left: 20px;">
+                        <li>Hủy toàn bộ đơn hàng</li>
+                        <li>Giải phóng bàn đã đặt</li>
+                        <li>Không thể hoàn tác</li>
+                    </ul>
+                </div>
+            </div>`,
+            "🚫 Hủy đơn",
+            "❌ Không"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            // Gọi API hủy đơn
+            const response = await fetch(`https://localhost:7096/api/Payment/orders/${activeOrderId}/cancel`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    reason: "Khách rời đi trước khi món làm"
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Không thể hủy đơn hàng');
             }
+
+            const result = await response.json();
+            
+            // Hiển thị thông báo thành công
+            showToast('✅ Đã hủy đơn hàng và giải phóng bàn thành công!', 'success');
+            
+            // Redirect về trang danh sách bàn sau 1.5 giây
+            setTimeout(() => {
+                window.location.href = '/DashboardTable/Index';
+            }, 1500);
+        } catch (error) {
+            console.error('Lỗi khi hủy đơn hàng:', error);
+            alert('Lỗi: ' + (error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại.'));
         }
     }
 </script>
