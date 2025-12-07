@@ -407,7 +407,62 @@ public class PaymentService : IPaymentService
                 // Chỉ cập nhật QuantityUsed (SL thực tế khách dùng)
                 // Giữ nguyên detail.Quantity (đây là SL ban đầu đặt)
                 detail.QuantityUsed = confirmed.QuantityUsed < 0 ? 0 : confirmed.QuantityUsed;
-                detail.Status = "Confirmed";
+                detail.Status = "Done";
+            }
+        }
+
+        // ✅ TỰ ĐỘNG CHUYỂN TRẠNG THÁI CÁC MÓN CÓ STATUS "Cooking", "Done", "Ready" THÀNH "Done"
+        // Các món này sẽ được lấy ra để thanh toán
+        var billableStatuses = new[] { "Cooking", "Done", "Ready", "cooking", "done", "ready" };
+        
+        foreach (var detail in order.OrderDetails)
+        {
+            // Bỏ qua món đã bị hủy hoặc đã được xử lý trong request.Items
+            if (detail.Status == "Removed" || detail.Status == "Cancelled")
+            {
+                continue;
+            }
+
+            var currentStatus = (detail.Status ?? "").Trim();
+            
+            // ✅ XỬ LÝ MÓN LẺ (KHÔNG PHẢI COMBO)
+            if (!detail.ComboId.HasValue)
+            {
+                // Nếu món có status Cooking/Done/Ready → chuyển thành Done
+                if (billableStatuses.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
+                {
+                    detail.Status = "Done";
+                    
+                    // Nếu là món ConsumptionBased và chưa có QuantityUsed → set QuantityUsed = Quantity
+                    if (detail.MenuItem?.BillingType == ItemBillingType.ConsumptionBased && 
+                        !detail.QuantityUsed.HasValue)
+                    {
+                        detail.QuantityUsed = detail.Quantity;
+                    }
+                }
+            }
+            // ✅ XỬ LÝ COMBO
+            else if (detail.ComboId.HasValue)
+            {
+                // Nếu combo có status Cooking/Done/Ready → chuyển thành Done
+                if (billableStatuses.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
+                {
+                    detail.Status = "Done";
+                    
+                    // ✅ CHUYỂN TRẠNG THÁI TẤT CẢ MÓN CON TRONG COMBO THÀNH "Done"
+                    if (detail.OrderComboItems != null && detail.OrderComboItems.Any())
+                    {
+                        foreach (var comboItem in detail.OrderComboItems)
+                        {
+                            var comboItemStatus = (comboItem.Status ?? "").Trim();
+                            // Chỉ chuyển các món con có status Cooking/Done/Ready thành Done
+                            if (billableStatuses.Any(s => string.Equals(s, comboItemStatus, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                comboItem.Status = "Done";
+                            }
+                        }
+                    }
+                }
             }
         }
 

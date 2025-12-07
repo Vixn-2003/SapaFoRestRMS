@@ -676,9 +676,10 @@
                 // ✅ Kiểm tra status: Nếu đã "Confirmed" thì hiển thị nút "Hoàn tác xác nhận"
                 @if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
                 {
-                    <button class="btn-checkout flex-fill" style="background-color: #ffc107; border-color: #ffc107;" onclick="handleUndoConfirmPayment()">
-                        <i class="fa-solid fa-undo me-2"></i>Hoàn tác xác nhận
+                    <button class="btn-checkout flex-fill" style="background-color: #ffc107; border-color: #ffc107;">
+                     Đơn đã được phục vụ xác nhận
                     </button>
+
                 }
                 else
                 {
@@ -895,7 +896,7 @@
         const qtyCancelled = @Model.QtyCancelled;
 
         const confirmed = await showConfirmPopup(
-            "✅ Xác nhận thanh toán",
+            "Xác nhận thanh toán",
             `<div class="text-center mb-3">
                 <h5 class="mb-3">Xác nhận đơn hàng để chuyển sang bước thanh toán?</h5>
             </div>
@@ -936,8 +937,8 @@
                     Thu ngân sẽ xử lý thanh toán sau đó.
                 </div>
             </div>`,
-            "✅ Xác nhận",
-            "❌ Hủy"
+            " Xác nhận",
+            "Hủy"
         );
 
         if (!confirmed) {
@@ -1075,7 +1076,7 @@
      * Hoàn tác xác nhận đơn hàng (chuyển status từ "Confirmed" về "WaitingConfirmation")
      * Cho phép waiter sửa lại đơn hàng nếu xác nhận sai
      */
-    async function handleUndoConfirmPayment() {
+  @*   async function handleUndoConfirmPayment() {
         const activeOrderId = window.__ACTIVE_ORDER_ID__;
         if (activeOrderId <= 0) {
             alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
@@ -1134,7 +1135,7 @@
             console.error('Lỗi khi hoàn tác xác nhận đơn hàng:', error);
             alert('Lỗi: ' + (error.message || 'Không thể hoàn tác xác nhận đơn hàng. Vui lòng thử lại.'));
         }
-    }
+    } *@
 
     /**
      * 🚫 HỦY ĐƠN HÀNG
