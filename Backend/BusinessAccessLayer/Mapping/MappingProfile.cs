@@ -239,7 +239,7 @@ namespace BusinessAccessLayer.Mapping
     .ForMember(dest => dest.QuantityRemaining, opt => opt.MapFrom(src => src.Batch.QuantityRemaining))
     .ForMember(dest => dest.ExpiryDate, opt => opt.MapFrom(src => src.Batch.ExpiryDate))
     .ForMember(dest => dest.BatchCreatedAt, opt => opt.MapFrom(src => src.Batch.CreatedAt))
-    .ForMember(dest => dest.StatusExport, opt => opt.MapFrom(src => src.StatusExport))
+    
 
     // ===== Ingredient =====
     .ForMember(dest => dest.IngredientId, opt => opt.MapFrom(src => src.Batch.IngredientId))
