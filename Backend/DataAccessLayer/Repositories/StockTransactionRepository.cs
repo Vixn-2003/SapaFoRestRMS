@@ -66,26 +66,6 @@ namespace DataAccessLayer.Repositories
             return await _context.StockTransactions
                 .FirstOrDefaultAsync(x => x.TransactionId == transactionId);
         }
-
-        public async Task<bool> UpdateStatusExportAsync(int transactionId, string statusExport)
-        {
-            try
-            {
-                var transaction = await _context.StockTransactions
-                    .FirstOrDefaultAsync(x => x.TransactionId == transactionId);
-
-                if (transaction == null)
-                    return false;
-
-                transaction.StatusExport = statusExport;
-
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+      
     }
 }
