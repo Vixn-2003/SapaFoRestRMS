@@ -296,6 +296,38 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
+        /// <summary>
+        /// Hoàn tác xác nhận đơn hàng (chuyển status từ "Confirmed" về "WaitingConfirmation")
+        /// POST /DashboardTable/UndoConfirmOrder
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UndoConfirmOrder([FromBody] UndoConfirmRequest request)
+        {
+            if (!ModelState.IsValid || request.OrderId <= 0)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.UndoConfirmOrderAsync(request.OrderId, request);
+                
+                if (result.Success)
+                {
+                    return Ok(new { message = result.Message ?? "Đã hoàn tác xác nhận đơn hàng thành công" });
+                }
+                else
+                {
+                    return BadRequest(new { message = result.Message ?? "Không thể hoàn tác xác nhận đơn hàng" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
 
 
 

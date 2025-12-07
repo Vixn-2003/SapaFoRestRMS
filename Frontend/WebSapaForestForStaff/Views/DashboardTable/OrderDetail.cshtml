@@ -1,5 +1,6 @@
 ﻿@model WebSapaForestForStaff.DTOs.OrderGuest.StaffOrderScreenDto
 @using WebSapaForestForStaff.Controllers
+@using System
 @{
     ViewData["Title"] = $"Chi tiết bàn: {Model.TableNumber}";
 
@@ -10,7 +11,12 @@
     var categories = ViewData["Categories"] as List<WebSapaForestForStaff.DTOs.OrderGuest.CategoryDto>;
     var hasActiveOrder = Model.ActiveOrderId.HasValue;
     var userPositionId = ViewData["UserPositionId"] as int? ?? 0; // 1 = Waiter, 2 = Cashier
-    var orderStatus = Model.OrderStatus ?? ""; // Status của order hiện tại
+    // ✅ Chuẩn hóa status về "Confirmed" (chữ C viết hoa) thay vì "confirmed"
+    var orderStatus = Model.OrderStatus ?? "";
+    if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("confirmed", StringComparison.OrdinalIgnoreCase))
+    {
+        orderStatus = "Confirmed";
+    }
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
@@ -667,9 +673,19 @@
             </button>
             @if (userPositionId == 1)  // Waiter
             {
-                <button class="btn-checkout flex-fill" onclick="handleWaiterConfirmPayment()">
-                    Xác Nhận Thanh Toán <i class="fa-solid fa-check ms-2"></i>
-                </button>
+                // ✅ Kiểm tra status: Nếu đã "Confirmed" thì hiển thị nút "Hoàn tác xác nhận"
+                @if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
+                {
+                    <button class="btn-checkout flex-fill" style="background-color: #ffc107; border-color: #ffc107;" onclick="handleUndoConfirmPayment()">
+                        <i class="fa-solid fa-undo me-2"></i>Hoàn tác xác nhận
+                    </button>
+                }
+                else
+                {
+                    <button class="btn-checkout flex-fill" onclick="handleWaiterConfirmPayment()">
+                        Xác Nhận Thanh Toán <i class="fa-solid fa-check ms-2"></i>
+                    </button>
+                }
             }
 
             @if (userPositionId == 2)  // Cashier
@@ -754,6 +770,41 @@
 @Html.AntiForgeryToken()
 
 @* Khởi tạo dữ liệu từ server *@
+<script>
+    // ✅ Định nghĩa showToast function (global) để sử dụng trong handleWaiterConfirmPayment
+    function showToast(message, type = 'success') {
+        // Tạo container nếu chưa có
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+            document.body.appendChild(container);
+        }
+
+        const bgClass = type === 'success' ? 'bg-success' : (type === 'error' || type === 'danger' ? 'bg-danger' : 'bg-info');
+        const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' || type === 'danger' ? 'fa-circle-exclamation' : 'fa-circle-info');
+
+        const toastHtml = `
+            <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>`;
+        container.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Auto hide sau 3 giây
+        setTimeout(() => {
+            const toastElement = container.lastElementChild;
+            if (toastElement) {
+                toastElement.classList.remove('show');
+                setTimeout(() => toastElement.remove(), 300);
+            }
+        }, 3000);
+    }
+</script>
+
 <script>
     window.__INITIAL_ORDER_DATA__ = JSON.parse('@Html.Raw(Json.Serialize(Model.OrderedItems.Select(x => new {
         id = x.OrderDetailId,
@@ -989,6 +1040,72 @@
 
         // Redirect tới màn hình Payment (không cần confirm nữa vì Waiter đã confirm rồi)
         window.location.href = `/cashier-flow/payment/${activeOrderId}`;
+    }
+
+    /**
+     * ↩️ HOÀN TÁC XÁC NHẬN ĐƠN HÀNG
+     * Hoàn tác xác nhận đơn hàng (chuyển status từ "Confirmed" về "WaitingConfirmation")
+     * Cho phép waiter sửa lại đơn hàng nếu xác nhận sai
+     */
+    async function handleUndoConfirmPayment() {
+        const activeOrderId = window.__ACTIVE_ORDER_ID__;
+        if (activeOrderId <= 0) {
+            alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
+            return;
+        }
+
+        const tableNumber = '@Model.TableNumber';
+        const customerName = '@(Model.CustomerName ?? "Khách vãng lai")';
+
+        // Hiển thị popup xác nhận với input lý do
+        const reason = prompt(
+            `Bạn có chắc muốn hoàn tác xác nhận đơn hàng?\n\n` +
+            `Bàn: ${tableNumber}\n` +
+            `Khách hàng: ${customerName}\n\n` +
+            `Vui lòng nhập lý do hoàn tác (ít nhất 10 ký tự):`,
+            ""
+        );
+
+        if (!reason || reason.trim().length < 10) {
+            if (reason !== null) { // User đã nhập nhưng không đủ ký tự
+                alert('Lý do hoàn tác phải có ít nhất 10 ký tự. Vui lòng thử lại.');
+            }
+            return;
+        }
+
+        try {
+            // ✅ Gọi qua Controller thay vì gọi API trực tiếp
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            const response = await fetch('/DashboardTable/UndoConfirmOrder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify({
+                    staffId: 0, // Backend sẽ tự resolve từ userId trong claims
+                    reason: reason.trim()
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Không thể hoàn tác xác nhận đơn hàng');
+            }
+
+            const result = await response.json();
+            
+            // Hiển thị thông báo thành công
+            showToast('✅ Đã hoàn tác xác nhận đơn hàng thành công! Bạn có thể chỉnh sửa đơn hàng.', 'success');
+            
+            // Reload trang để cập nhật trạng thái
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } catch (error) {
+            console.error('Lỗi khi hoàn tác xác nhận đơn hàng:', error);
+            alert('Lỗi: ' + (error.message || 'Không thể hoàn tác xác nhận đơn hàng. Vui lòng thử lại.'));
+        }
     }
 
     /**
