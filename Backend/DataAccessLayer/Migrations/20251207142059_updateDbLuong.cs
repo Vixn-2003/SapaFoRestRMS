@@ -8,11 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-<<<<<<<< HEAD:Backend/DataAccessLayer/Migrations/20251205022103_updatedatabaseByDuc.cs
-    public partial class updatedatabaseByDuc : Migration
-========
-    public partial class VinxUpdateDBMergeLastDemo : Migration
->>>>>>>> c7978f9355adc1d9f7c3c864dee2f93431dc8bfc:Backend/DataAccessLayer/Migrations/20251204103021_VinxUpdateDBMergeLastDemo.cs
+    public partial class updateDbLuong : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1430,7 +1426,8 @@ namespace DataAccessLayer.Migrations
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     TransactionDate = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())"),
                     Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    BatchId = table.Column<int>(type: "int", nullable: true)
+                    BatchId = table.Column<int>(type: "int", nullable: true),
+                    StatusExport = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {

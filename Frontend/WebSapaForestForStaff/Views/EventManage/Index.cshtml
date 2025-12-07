@@ -6,6 +6,7 @@
     var pageSize = ViewBag.PageSize ?? 10;
     var search = ViewBag.Search as string ?? "";
     int totalPages = (int)Math.Ceiling((double)total / pageSize);
+    Layout = "_LayoutManager";
 }
 
 <h2>Quản lý Sự kiện</h2>

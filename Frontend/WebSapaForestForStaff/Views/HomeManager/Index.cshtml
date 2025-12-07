@@ -8,24 +8,50 @@
 
     <div class="card-grid">
 
-        <!-- Quản lý đơn đặt bàn -->
-        <a href="/ReservationStaff" class="card">
+        <a href="/ReservationStaff" class="card card-has-badge">
+            <span class="badge-pending">@ViewBag.PendingCount</span>
+
             <div class="card-icon">
                 <i class="fas fa-concierge-bell"></i>
             </div>
+
             <h3>Quản lý đơn đặt bàn</h3>
             <p>Xem, xác nhận, sắp xếp và quản lý thông tin đặt bàn của khách hàng.</p>
         </a>
 
-        <!-- Quản lý nhân viên -->
-        <a href="/Users/index" class="card">
+
+
+    
+        <a href="/TableManage/index" class="card">
             <div class="card-icon">
                 <i class="fas fa-user-tie"></i>
             </div>
-            <h3>Các Mục Quản lí Khác</h3>
-            <p>Khác</p>
+            <h3>Quản Lí Bàn </h3>
+            <p>Xem Danh sách bàn , kiểm tra trạng thái bàn , thêm ,sửa , xóa bàn khi cần </p>
         </a>
-
+       
+        <a href="/AreaManage/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản Lí Khu vực bàn  </h3>
+            <p>Xem danh sách Khu vực , thêm , sửa , xóa  khi cần </p>
+        </a> 
+        <a href="/EventManage/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản Lí Sự kiện  </h3>
+            <p>Xem danh sách Sự kiện , theo dõi trạng thái, thêm , cập nhật sự kiện , điều chỉnh hiển thị lên trang chủ của nhà hàng </p>
+        </a>
+        <a href="/SystemLogo/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản Lí Logo </h3>
+            <p>Xem danh sách Logo, theo dõi trạng thái, thêm , cập nhật logo , điều chỉnh hiển thị lên trang chủ của nhà hàng </p>
+        </a>
+      
     </div>
 </div>
 
@@ -88,5 +114,45 @@
         font-size: 15px;
         color: #555;
         line-height: 1.5;
+    }
+
+    /* Badge góc phải */
+    .card-has-badge {
+        position: relative;
+    }
+
+    .badge-pending {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #e74c3c;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-size: 15px;
+        font-weight: 800;
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.7);
+        animation: blinking 1.3s infinite;
+    }
+
+    /* Hiệu ứng nháy nháy */
+    @@keyframes blinking {
+        0%
+
+    {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.4;
+        transform: scale(1.1);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
     }
 </style>
