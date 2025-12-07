@@ -471,7 +471,10 @@ namespace BusinessAccessLayer.Services
                 reservation.Status
             };
         }
-
+        public Task<int> GetPendingCountAsync()
+        {
+            return _reservationRepository.GetPendingCountAsync();
+        }
 
     }
 }

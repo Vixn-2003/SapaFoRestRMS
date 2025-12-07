@@ -43,6 +43,9 @@ let currentStatusFilter = 'all'; // 'all', 'Pending', 'Cooking', 'Late', 'Ready'
                 }, 500);
             });
 
+            // Load ingredient shortage data
+            loadIngredientShortage();
+
             // Auto-refresh every 30 seconds
             setInterval(() => {
                 if (currentViewMode === 'theo-tung-mon') {
@@ -56,6 +59,9 @@ let currentStatusFilter = 'all'; // 'all', 'Pending', 'Cooking', 'Late', 'Ready'
                 if (completedColumn && !completedColumn.classList.contains('hidden')) {
                     loadRecentlyFulfilledOrders();
                 }
+
+                // Auto-refresh ingredient shortage
+                loadIngredientShortage();
             }, 30000);
 
             // Update timers every minute
@@ -3007,5 +3013,119 @@ async function recallOrderDetail(orderDetailId, itemName) {
     } catch (error) {
         console.error('Error recalling order detail:', error);
         showError('Lỗi kết nối: ' + error.message);
+    }
+}
+
+// Load ingredient shortage list
+async function loadIngredientShortage() {
+    try {
+        const response = await fetch(`${API_BASE}/InventoryIngredient/shortage`);
+        if (!response.ok) {
+            throw new Error('Failed to load ingredient shortage');
+        }
+
+        const result = await response.json();
+        if (result.success && result.data && result.data.length > 0) {
+            renderIngredientShortage(result.data);
+        } else {
+            // Hide panel if no shortage
+            const panel = document.getElementById('shortageAlertPanel');
+            if (panel) {
+                panel.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading ingredient shortage:', error);
+        // Hide panel on error
+        const panel = document.getElementById('shortageAlertPanel');
+        if (panel) {
+            panel.style.display = 'none';
+        }
+    }
+}
+
+// Render ingredient shortage list
+function renderIngredientShortage(shortageList) {
+    const panel = document.getElementById('shortageAlertPanel');
+    const body = document.getElementById('shortageAlertBody');
+    const countBadge = document.getElementById('shortageCount');
+
+    if (!panel || !body || !countBadge) {
+        return;
+    }
+
+    // Show panel
+    panel.style.display = 'block';
+
+    // Update count
+    countBadge.textContent = shortageList.length;
+
+    // Group by menu item
+    const grouped = {};
+    shortageList.forEach(item => {
+        const key = `${item.orderDetailId}_${item.menuItemName}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                orderDetailId: item.orderDetailId,
+                menuItemName: item.menuItemName,
+                orderId: item.orderId,
+                tableName: item.tableName,
+                isUrgent: item.isUrgent,
+                ingredients: []
+            };
+        }
+        grouped[key].ingredients.push({
+            ingredientName: item.ingredientName,
+            unitName: item.unitName,
+            requiredQuantity: item.requiredQuantity,
+            reservedQuantity: item.reservedQuantity,
+            shortageQuantity: item.shortageQuantity
+        });
+    });
+
+    // Render grouped items
+    let html = '';
+    Object.values(grouped).forEach(group => {
+        const urgentBadge = group.isUrgent ? '<span class="urgent-badge-shortage">ƯU TIÊN</span>' : '';
+        html += `
+            <div class="shortage-item ${group.isUrgent ? 'urgent' : ''}">
+                <div class="shortage-item-info">
+                    <div class="shortage-item-name">
+                        ${escapeHtml(group.menuItemName)}${urgentBadge}
+                        ${group.tableName ? `<small class="text-muted"> - Bàn ${escapeHtml(group.tableName)}</small>` : ''}
+                    </div>
+                    <div class="shortage-item-details">
+                        ${group.ingredients.map(ing => 
+                            `${escapeHtml(ing.ingredientName)}: Cần ${formatNumber(ing.requiredQuantity)} ${ing.unitName || ''}, Đã reserve ${formatNumber(ing.reservedQuantity)} ${ing.unitName || ''}`
+                        ).join('<br>')}
+                    </div>
+                </div>
+                <div class="shortage-item-quantity">
+                    ${group.ingredients.map(ing => 
+                        `<div class="shortage-quantity-badge">Thiếu ${formatNumber(ing.shortageQuantity)} ${ing.unitName || ''}</div>`
+                    ).join('<br style="margin-top: 4px;">')}
+                </div>
+            </div>
+        `;
+    });
+
+    body.innerHTML = html;
+}
+
+// Toggle shortage panel
+function toggleShortagePanel() {
+    const body = document.getElementById('shortageAlertBody');
+    const icon = document.getElementById('shortageToggleIcon');
+    
+    if (!body || !icon) {
+        return;
+    }
+
+    if (body.classList.contains('collapsed')) {
+        body.classList.remove('collapsed');
+        icon.className = 'mdi mdi-chevron-up';
+    } else {
+        body.classList.add('collapsed');
+        icon.className = 'mdi mdi-chevron-down';
     }
 }

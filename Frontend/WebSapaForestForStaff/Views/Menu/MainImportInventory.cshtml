@@ -10,6 +10,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"]</title>
+
+
+    <link rel="stylesheet" href="~/css/importWarehouse/reportImport.css" />
     <style>
         * {
             margin: 0;
@@ -42,7 +45,7 @@
 
         .btn-add {
             position: absolute;
-            top: 20px;
+            top: 40px;
             right: 40px;
             background: #10b981;
             color: white;
@@ -400,9 +403,55 @@
     <div class="header">
         <h1>Quản Lý Nhập Hàng</h1>
         <p>Tổng quan và quản lý đơn nhập hàng</p>
-        <button class="btn-add" onclick="window.location.href='@Url.Action("Index", "ImportInventory")'">
-            <span>+ Tạo đơn nhập mới</span>
-        </button>
+
+        <!-- ✅ THÊM: Nhóm nút ở góc phải -->
+        <div class="header-actions">
+            <!-- Dropdown chọn khoảng thời gian -->
+            <select id="reportPeriod" class="report-period-select">
+                <option value="today">Hôm nay</option>
+                <option value="7days">7 ngày qua</option>
+                <option value="30days">30 ngày qua</option>
+                <option value="thisMonth">Tháng này</option>
+                <option value="lastMonth">Tháng trước</option>
+                <option value="custom">Tùy chỉnh</option>
+            </select>
+
+            <!-- Button Báo cáo -->
+            <button class="btn-report" onclick="generateReport()">
+                <i class="fas fa-file-pdf"></i>
+                <span>Xuất báo cáo</span>
+            </button>
+
+            <!-- Button Tạo đơn mới -->
+            <button class="btn-add" onclick="window.location.href='@Url.Action("Index", "ImportInventory")'">
+                <i class="fas fa-plus"></i>
+                <span>Tạo đơn nhập mới</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ✅ THÊM: Modal chọn ngày tùy chỉnh -->
+    <div id="customDateModal" class="custom-date-modal" style="display: none;">
+        <div class="modal-content-custom">
+            <div class="modal-header-custom">
+                <h3>Chọn khoảng thời gian</h3>
+                <button onclick="closeCustomDateModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body-custom">
+                <div class="date-input-group">
+                    <label>Từ ngày:</label>
+                    <input type="date" id="customDateFrom" class="date-input">
+                </div>
+                <div class="date-input-group">
+                    <label>Đến ngày:</label>
+                    <input type="date" id="customDateTo" class="date-input">
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button onclick="closeCustomDateModal()" class="btn-cancel">Hủy</button>
+                <button onclick="applyCustomDate()" class="btn-apply">Áp dụng</button>
+            </div>
+        </div>
     </div>
 
     <!-- ===== STATS CARDS MỚI ===== -->
@@ -972,5 +1021,6 @@
             if (sortFilter) sortFilter.addEventListener('change', applyFilters);
         });
     </script>
+    <script src="~/js/importWarehouse/reportImport.js"></script>
 </body>
 </html>

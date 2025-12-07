@@ -32,6 +32,6 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<object> GetReservationsByCustomerAsync(int customerId);
         Task<object> UpdateReservationAsync(int reservationId, ReservationUpdateDto dto);
         Task<object> CancelReservationByCustomerAsync(int reservationId);
-
+        Task<int> GetPendingCountAsync();
     }
 }

@@ -29,5 +29,8 @@ namespace BusinessAccessLayer.Services.Interfaces
         
         // Kitchen ingredient pickup
         Task<List<BusinessAccessLayer.DTOs.Kitchen.IngredientPickupDTO>> GetIngredientPickupListAsync(string? categoryName = null);
+        
+        // Ingredient shortage detection
+        Task<List<BusinessAccessLayer.DTOs.Kitchen.IngredientShortageDTO>> GetIngredientShortageListAsync();
     }
 }

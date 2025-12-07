@@ -168,7 +168,11 @@ namespace DataAccessLayer.Repositories
                 .OrderByDescending(r => r.ReservationDate)
                 .ToListAsync();
         }
-
+        public async Task<int> GetPendingCountAsync()
+        {
+            return await _context.Reservations
+                                 .CountAsync(r => r.Status == "Pending");
+        }
 
         public async Task SaveChangesAsync()
         {

@@ -564,10 +564,10 @@
 
         <!-- Materials Section -->
         <div class="materials-section">
-            <h3 class="section-title">Chi tiết nguyên liệu xuất kho</h3>
+            <h3 class="section-title">Chi tiết mặt hàng xuất kho</h3>
 
             <button class="add-material-btn" onclick="addMaterial()">
-                + Thêm nguyên liệu
+                + Thêm mặt hàng
             </button>
 
             <div class="table-container">
@@ -576,8 +576,8 @@
                         <thead>
                             <tr>
                                 <th style="width: 50px;">STT</th>
-                                <th style="width: 120px;">Mã nguyên liệu</th>
-                                <th>Tên nguyên liệu</th>
+                                <th style="width: 120px;">Mã mặt hàng</th>
+                                <th>Tên mặt hàng</th>
                                 <th style="width: 100px;">Số lượng</th>
                                 <th style="width: 80px;">Đơn vị</th>
                                 <th style="width: 120px;">Đơn giá</th>
@@ -815,7 +815,7 @@
             row.innerHTML = `
                     <td>${materialCount}</td>
                     <td><input type="text" placeholder="Mã NL"></td>
-                    <td><input type="text" placeholder="Tên nguyên liệu"></td>
+                    <td><input type="text" placeholder="Tên mặt hàng"></td>
                     <td><input type="number" value="0" onchange="calculateTotal()"></td>
                     <td><input type="text" placeholder="Đơn vị"></td>
                     <td><input type="text" placeholder="Đơn giá"></td>

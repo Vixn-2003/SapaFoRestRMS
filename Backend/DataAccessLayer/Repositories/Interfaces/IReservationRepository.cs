@@ -27,7 +27,7 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<Reservation?> GetReservationByIdAsync(int reservationId);
         Task<List<Reservation>> GetReservationsByPhoneAndDateAndSlotAsync(string phone, DateTime date, string slot);
         Task<List<Reservation>> GetReservationsByCustomerAsync(int customerId);
-
+        Task<int> GetPendingCountAsync();
         Task SaveChangesAsync();
     }
 

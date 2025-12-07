@@ -552,10 +552,10 @@
                 </div>
                 <div>
                     <a class="navbar-brand brand-logo" href="/HomeManager/Index">
-                        <img src="~/assets/images/logo.svg" alt="logo" />
+                        <img src="~/assets/images/MainLogo.png" alt="logo" style="height:60px;" />
                     </a>
                     <a class="navbar-brand brand-logo-mini" href="/HomeManager/Index">
-                        <img src="~/assets/images/logo-mini.svg" alt="logo" />
+                        <img src="~/assets/images/MainLogo.png" alt="logo" style="height:60px;" />
                     </a>
                 </div>
             </div>
@@ -607,7 +607,7 @@
                     <li class="nav-item menu-items">
                         <a class="nav-link" asp-controller="ReservationStaff" asp-action="Index">
                             <span class="menu-icon"><i class="mdi mdi-calendar-check"></i></span>
-                            <span class="menu-title">Đặt bàn</span>
+                            <span class="menu-title"> Đơn Đặt bàn</span>
 
                             <i class="menu-arrow"></i>
                         </a>
@@ -622,32 +622,19 @@
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
                             <i class="menu-icon mdi mdi-card-text-outline"></i>
-                            <span class="menu-title">Quản lý đơn</span>
+                            <span class="menu-title">Quản lý Nhân Viên</span>
                             <i class="menu-arrow"></i>
                         </a>
-                        <div class="collapse" id="form-elements">
-                            <ul class="nav flex-column sub-menu">
-                                <li class="nav-item"><a class="nav-link" href="pages/forms/basic_elements.html">Basic Elements</a></li>
-                            </ul>
-                        </div>
+                       
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="CashierPaymentFlow" asp-action="OrderSelection">
-                            <i class="menu-icon mdi mdi-receipt"></i>
-                            <span class="menu-title">Xử lý hóa đơn</span>
-                        </a>
-                    </li>
+                  
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
                             <i class="menu-icon mdi mdi-chart-line"></i>
                             <span class="menu-title">Thống kê</span>
                             <i class="menu-arrow"></i>
                         </a>
-                        <div class="collapse" id="charts">
-                            <ul class="nav flex-column sub-menu">
-                                <li class="nav-item"> <a class="nav-link" href="pages/charts/chartjs.html">ChartJs</a></li>
-                            </ul>
-                        </div>
+                       
                     </li>
                     <li class="nav-item">
     <a class="nav-link" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
