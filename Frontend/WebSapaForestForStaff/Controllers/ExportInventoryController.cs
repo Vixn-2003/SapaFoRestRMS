@@ -39,12 +39,12 @@ namespace WebSapaForestForStaff.Controllers
                 }
                 else
                 {
-                    viewModel.ErrorMessage = $"API Error: {response.StatusCode}";
+                    viewModel.ErrorMessage = $"Không có dữ liệu nào";
                 }
             }
             catch (Exception ex)
             {
-                viewModel.ErrorMessage = $"Lỗi: {ex.Message}";
+                viewModel.ErrorMessage = $"Không có dữ liệu nào";
             }
 
             return View("~/Views/Menu/ExportManagement.cshtml", viewModel);

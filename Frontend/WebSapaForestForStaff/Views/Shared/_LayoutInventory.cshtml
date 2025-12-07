@@ -87,13 +87,27 @@
             background: rgba(0, 0, 0, 0.2);
         }
 
-        .layout-sidebar .sidebar-logo h1 {
-            color: #22c55e;
-            font-size: 24px;
-            font-weight: 700;
+        .layout-sidebar .sidebar-logo {
+            /* Căn giữa nội dung logo */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .layout-sidebar .sidebar-brand-logo {
+            max-width: 100%; /* Không tràn ra ngoài */
+            height: auto; /* Giữ tỷ lệ ảnh */
+            max-height: 50px; /* Giới hạn chiều cao tối đa, bạn có thể chỉnh số này to nhỏ tùy ý */
+            object-fit: contain;
             margin-bottom: 5px;
-            white-space: nowrap;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
+        }
+
+        /* Xử lý khi Sidebar thu nhỏ (Collapsed) */
+        .layout-sidebar.collapsed .sidebar-brand-logo {
+            max-height: 30px; /* Thu nhỏ logo khi sidebar đóng lại */
+            opacity: 1; /* Giữ hiển thị logo (hoặc chỉnh thành 0 nếu muốn ẩn hẳn) */
         }
 
         .layout-sidebar .sidebar-logo p {
@@ -447,8 +461,8 @@
             </button>
 
             <div class="sidebar-logo">
-                <h1>SAPA FOREST</h1>
-                <p>Quản lý kho</p>
+                <img src="~/assets/images/MainLogo.png" alt="Sapa Forest Logo" class="sidebar-brand-logo">
+                <p>Quản lý kho Sapa FoRest</p>
             </div>
 
             <nav class="sidebar-menu">

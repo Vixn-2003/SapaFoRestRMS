@@ -4396,9 +4396,9 @@ function closeAlert() {
                 quantity: quantity,
                 expiryDate: expiryDate,
                 createdDate: createdDate,
-                createdDateObj: createdDateObj, // ✅ Thêm Date object
-                warehouseName: warehouseName, // ✅ Thêm tên kho
-                warehouseId: warehouseId, // ✅ Thêm ID kho
+                createdDateObj: createdDateObj, 
+                warehouseName: warehouseName, 
+                warehouseId: warehouseId, 
                 status: statusBadge,
                 auditDateTime: currentDateTime
             };
@@ -5259,7 +5259,7 @@ function closeAlert() {
                         qtyExcludingExpired: formatNumber(qtyExcludingExpired),
                         reorderLevel: formatNumber(reorderLevel)
                     };
-                    console.log(`✅ Found urgent restock: ${code}`, extraInfo);
+                    console.log(` Found urgent restock: ${code}`, extraInfo);
                 }
             }
             else if (statusText.includes('dưới tối thiểu')) {

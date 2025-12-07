@@ -2576,7 +2576,14 @@
         const recentSupplierList = @Html.Raw(JsonConvert.SerializeObject(Model.RecentSupplierDTOs));
         const urgentIngredientList = @Html.Raw(JsonConvert.SerializeObject(Model.UrgentIngredientDTOs));
 
-        console.log('✅ Data loaded:', {
+        const currentUser = {
+            id: parseInt('@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value' || '0'),
+            name: '@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value',
+            phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value',
+            email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value'
+        };
+
+        console.log('Data loaded:', {
             suppliers: supplierList?.length || 0,
             ingredients: ingredientList?.length || 0,
             warehouses: warehouseList?.length || 0,
@@ -3488,18 +3495,27 @@
                     return;
                 }
 
+                // ✅ KIỂM TRA THÔNG TIN USER TỪ CLAIMS
+                if (!currentUser || !currentUser.id) {
+                    showToast('error', 'Lỗi', 'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+                    return;
+                }
+
                 // ✅ 2. CHUẨN BỊ DỮ LIỆU
                 const importCode = document.getElementById('importCodeInput').value;
                 const importDate = document.querySelector('input[type="datetime-local"]').value;
                 const supplierId = ipSelectedSupplier ? ipSelectedSupplier.SupplierId : 0;
 
+                // ✅ SỬ DỤNG THÔNG TIN TỪ CLAIMS
                 const creator = {
-                    id: 1,
-                    name: 'Nguyễn Văn C',
-                    phone: '0123456789'
+                    id: currentUser.id,
+                    name: currentUser.name,
+                    phone: currentUser.phone
                 };
+
+                // Checker có thể để cố định hoặc lấy từ chỗ khác
                 const checker = {
-                    id: 2,
+                    id: 2, // Hoặc lấy từ API/Claims khác nếu cần
                     name: 'Trần Thị E',
                     phone: '0123456788'
                 };
@@ -3511,8 +3527,8 @@
                 formData.append('ImportCode', importCode);
                 formData.append('ImportDate', importDate);
                 formData.append('SupplierId', supplierId.toString());
-                formData.append('CreatorId', creator.id);
-                formData.append('CheckerId', checker.id);
+                formData.append('CreatorId', creator.id.toString()); // ✅ ID từ Claims
+                formData.append('CheckerId', checker.id.toString());
                 formData.append('ProofFile', proofFile);
 
                 const importListFormatted = ipImportList.map(item => ({
@@ -3526,51 +3542,36 @@
                     ExpiryDate: item.expiryDate
                 }));
 
-                const generatedCode = generateNewImportCode();
-                document.getElementById('importCodeInput').value = generatedCode;
-                console.log('Auto-generated import code:', generatedCode);
-
-                renderSupplierList(supplierList);
-                ipRenderImportTable();
-
                 const importListJson = JSON.stringify(importListFormatted);
                 formData.append('ImportList', importListJson);
 
-                // ✅ 5. LOG ĐỂ DEBUG (QUAN TRỌNG!)
+                // ✅ 4. LOG ĐỂ DEBUG
                 console.log('=== DEBUGGING INFO ===');
+                console.log('Creator from Claims:', creator);
                 console.log('ipImportList:', ipImportList);
                 console.log('importListFormatted:', importListFormatted);
                 console.log('ImportList JSON:', importListJson);
-                console.log('ImportList JSON length:', importListJson.length);
-                console.log('FormData entries:');
-                for (let pair of formData.entries()) {
-                    if (pair[1] instanceof File) {
-                        console.log(pair[0] + ': File - ' + pair[1].name + ' (' + pair[1].size + ' bytes)');
-                    } else {
-                        console.log(pair[0] + ':', pair[1]);
-                    }
-                }
 
                 try {
-                    // ✅ 6. HIỂN THỊ LOADING
+                    // ✅ 5. HIỂN THỊ LOADING
                     showLoading();
 
-                    // ✅ 7. GỬI REQUEST
+                    // ✅ 6. GỬI REQUEST
                     const response = await fetch('/ImportInventory/SubmitImport', {
                         method: 'POST',
                         body: formData
                     });
 
                     console.log('Response status:', response.status);
-                    console.log('Response ok:', response.ok);
 
-                    // ✅ 8. XỬ LÝ KẾT QUẢ
+                    // ✅ 7. XỬ LÝ KẾT QUẢ
                     if (response.ok) {
                         const result = await response.json();
                         console.log('✅ Success result:', result);
                         showToast('success', 'Thành công!', result.message || 'Yêu cầu xác nhận đơn nhập hàng đã được tạo thành công!');
                         hideLoading();
-                        // ✅ 9. RESET FORM SAU KHI THÀNH CÔNG
+
+                        // ✅ 8. RESET FORM SAU KHI THÀNH CÔNG
                         ipImportList = [];
                         ipSelectedSupplier = null;
                         ipRenderImportTable();
@@ -3581,31 +3582,24 @@
                         document.getElementById('creatorInfo').style.display = 'none';
                         fileInput.value = '';
                         document.getElementById('proofPreview').innerHTML = '';
-
                         document.getElementById('importCodeInput').value = generateNewImportCode();
                     } else {
-                        // ✅ 10. XỬ LÝ LỖI TỪ SERVER
                         let errorMessage = 'Không thể gửi đơn nhập hàng.';
-
                         try {
                             const errorData = await response.json();
-                            console.log('❌ Error result:', errorData);
+                            console.log('Error result:', errorData);
                             errorMessage = errorData.message || errorMessage;
                         } catch (e) {
-                            // Nếu response không phải JSON, đọc text
                             const errorText = await response.text();
-                            console.log('❌ Error text:', errorText);
+                            console.log('Error text:', errorText);
                             errorMessage = errorText || errorMessage;
                         }
-
                         showToast('error', 'Lỗi!', errorMessage);
                         hideLoading();
                     }
 
                 } catch (err) {
-                    console.error('❌ Fetch error:', err);
-                    console.error('Error details:', err.message);
-                    console.error('Stack trace:', err.stack);
+                    console.error('Fetch error:', err);
                     showToast('error', 'Lỗi kết nối!', 'Không thể kết nối đến server: ' + err.message);
                     hideLoading();
                 }
@@ -3634,8 +3628,23 @@
             const checkIcon = document.getElementById('creatorCheckIcon');
 
             if (checkbox.checked) {
+                // ✅ KIỂM TRA XEM ĐÃ CÓ THÔNG TIN USER CHƯA
+                if (!currentUser || !currentUser.id) {
+                    showToast('error', 'Lỗi', 'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+                    checkbox.checked = false;
+                    return;
+                }
+
                 // Hiển thị thông tin
                 creatorInfo.style.display = 'block';
+
+                // ✅ CẬP NHẬT THÔNG TIN NGƯỜI DÙNG TỪ currentUser (Claims)
+                const nameElement = creatorInfo.querySelector('.creator-info-row:nth-child(1) .value');
+                const phoneElement = creatorInfo.querySelector('.creator-info-row:nth-child(2) .value');
+                const timeElement = document.getElementById('creatorTime');
+
+                if (nameElement) nameElement.textContent = currentUser.name || 'N/A';
+                if (phoneElement) phoneElement.textContent = currentUser.phone || 'N/A';
 
                 // Cập nhật thời gian
                 const now = new Date();
@@ -3647,18 +3656,19 @@
                     minute: '2-digit',
                     second: '2-digit'
                 });
-                document.getElementById('creatorTime').textContent = timeString;
+                if (timeElement) timeElement.textContent = timeString;
 
                 // Đổi màu icon
                 checkIcon.style.color = '#a855f7';
+
+                showToast('success', 'Đã xác nhận', `Người tạo: ${currentUser.name}`);
             } else {
                 // Ẩn thông tin
                 creatorInfo.style.display = 'none';
-
-                // Đổi màu icon về mặc định
                 checkIcon.style.color = '#9ca3af';
             }
         }
+
 
 
 
