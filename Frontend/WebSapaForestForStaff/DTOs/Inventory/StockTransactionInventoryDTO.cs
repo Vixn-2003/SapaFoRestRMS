@@ -8,8 +8,6 @@
         public decimal Quantity { get; set; }
         public DateTime? TransactionDate { get; set; }
         public string? Note { get; set; }
-
-        public string? StatusExport { get; set; }
         public int BatchId { get; set; }
         public decimal QuantityRemaining { get; set; }
         public DateOnly? ExpiryDate { get; set; }

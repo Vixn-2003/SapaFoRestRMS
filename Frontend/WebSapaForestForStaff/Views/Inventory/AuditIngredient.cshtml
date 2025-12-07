@@ -1090,6 +1090,31 @@
         background: #9333ea;
         color: white;
     }
+
+    .audit-section-red {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-left-color: #ef4444;
+    }
+
+        .audit-section-red h3 {
+            color: #991b1b;
+        }
+
+        .audit-section-red label {
+            color: #991b1b;
+        }
+
+        .audit-section-red value {
+            color: #7f1d1d;
+            font-weight: 600;
+        }
+
+
+    .audit-status-cancelled {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #ef4444;
+    }
 </style>
 
 <div class="audit-list-container">
@@ -1099,7 +1124,7 @@
             <div class="audit-list-title-left">
                 <div class="audit-list-title">
                     <h1>Quản lý đơn kiểm kê</h1>
-                    <p class="audit-list-subtitle">Quản lý các đơn kiểm kê nguyên liệu</p>
+                    <p class="audit-list-subtitle">Quản lý các đơn kiểm kê mặt hàng</p>
                 </div>
             </div>
             <div class="audit-list-stats">
@@ -1132,7 +1157,7 @@
                     <span class="audit-search-icon">&#128269;</span>
                     <input type="text"
                            id="searchInput"
-                           placeholder="Mã đơn, tên nguyên liệu, mã lô..."
+                           placeholder="Mã đơn, tên mặt hàng, mã lô..."
                            class="audit-form-input with-icon" />
                 </div>
             </div>
@@ -1143,7 +1168,7 @@
                 <select id="sortByFilter" class="audit-form-select">
                     <option value="time">Thời gian (Mới nhất)</option>
                     <option value="code">Mã đơn (A-Z)</option>
-                    <option value="ingredient">Tên nguyên liệu (A-Z)</option>
+                    <option value="ingredient">Tên mặt hàng (A-Z)</option>
                 </select>
             </div>
 
@@ -1170,7 +1195,7 @@
                 <tr>
                     <th>Mã đơn</th>
                     <th>Mã lô</th>
-                    <th>Nguyên liệu</th>
+                    <th>mặt hàng</th>
                     <th class="text-center">Điều chỉnh</th>
                     <th>Người tạo</th>
                     <th>Thời gian</th>
@@ -1611,30 +1636,30 @@
 
         const ingredientStatusBadge = getIngredientStatusBadge(audit.ingredientStatus);
 
-        const confirmerSection = audit.auditStatus === 'completed' ? `
-            <div class="audit-info-section audit-section-green">
-                <h3>
-                    &#9989; Người xác nhận
-                </h3>
-                <div class="audit-info-grid">
-                    <div class="audit-info-item">
-                        <label>Họ tên</label>
-                        <value>${audit.confirmerName || '---'}</value>
-                    </div>
-                    <div class="audit-info-item">
-                        <label>Chức vụ</label>
-                        <value>${audit.confirmerPosition || '---'}</value>
-                    </div>
-                    <div class="audit-info-item">
-                        <label>SĐT</label>
-                        <value>${audit.confirmerPhone || '---'}</value>
-                    </div>
+        const confirmerSection = (audit.auditStatus === 'completed' || audit.auditStatus === 'cancelled') ? `
+        <div class="audit-info-section ${audit.auditStatus === 'completed' ? 'audit-section-green' : 'audit-section-red'}">
+            <h3>
+                ${audit.auditStatus === 'completed' ? '✅ Người xác nhận' : '❌ Người từ chối'}
+            </h3>
+            <div class="audit-info-grid">
+                <div class="audit-info-item">
+                    <label>Họ tên</label>
+                    <value>${audit.confirmerName || 'Chưa có thông tin'}</value>
                 </div>
-                <div style="margin-top: 1rem; font-size: 0.875rem; color: #047857;">
-                    &#128197; Thời gian: ${audit.confirmedAt || '---'}
+                <div class="audit-info-item">
+                    <label>Chức vụ</label>
+                    <value>${audit.confirmerPosition || 'Chưa có thông tin'}</value>
+                </div>
+                <div class="audit-info-item">
+                    <label>SĐT</label>
+                    <value>${audit.confirmerPhone || 'Chưa có thông tin'}</value>
                 </div>
             </div>
-        ` : '';
+            <div style="margin-top: 1rem; font-size: 0.875rem; color: ${audit.auditStatus === 'completed' ? '#047857' : '#991b1b'};">
+                📅 Thời gian: ${audit.confirmedAt || 'Chưa có thông tin'}
+            </div>
+        </div>
+    ` : '';
 
         const imageSection = `
         <div class="audit-info-section" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-left: 4px solid #8b5cf6;">
@@ -1738,15 +1763,17 @@
                             <h2>Chi tiết đơn kiểm kê</h2>
                             <p>Mã đơn: ${audit.auditId}</p>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            ${audit.auditStatus === 'processing' ?
-                '<span class="audit-status-badge audit-status-processing">&#128337; Đang xử lý</span>' :
-                '<span class="audit-status-badge audit-status-completed">&#9989; Đã xử lý</span>'
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+        ${audit.auditStatus === 'processing' ?
+                '<span class="audit-status-badge audit-status-processing">⏳ Đang xử lý</span>' :
+                audit.auditStatus === 'completed' ?
+                    '<span class="audit-status-badge audit-status-completed">✅ Đã xử lý</span>' :
+                    '<span class="audit-status-badge audit-status-cancelled">❌ Đã từ chối</span>'
             }
-                            <button class="audit-modal-close" onclick="closeAuditModal()">
-                                &times;
-                            </button>
-                        </div>
+        <button class="audit-modal-close" onclick="closeAuditModal()">
+            &times;
+        </button>
+    </div>
                     </div>
                 </div>
 
@@ -1754,7 +1781,7 @@
                     <!-- Thông tin lô -->
                     <div class="audit-info-section audit-section-purple">
                         <h3>
-                            &#128230; Thông tin lô nguyên liệu
+                            &#128230; Thông tin lô mặt hàng
                         </h3>
                         <div class="audit-info-grid">
                             <div class="audit-info-item">
@@ -1762,11 +1789,11 @@
                                 <value>${audit.purchaseOrderId}</value>
                             </div>
                             <div class="audit-info-item">
-                                <label>Mã nguyên liệu</label>
+                                <label>Mã mặt hàng</label>
                                 <value>${audit.ingredientCode}</value>
                             </div>
                             <div class="audit-info-item">
-                                <label>Tên nguyên liệu</label>
+                                <label>Tên mặt hàng</label>
                                 <value>${audit.ingredientName}</value>
                             </div>
                             <div class="audit-info-item">

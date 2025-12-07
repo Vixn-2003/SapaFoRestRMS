@@ -1185,7 +1185,6 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.IngredientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__StockTran__Ingre__3F115E1A");
-            entity.Property(e => e.StatusExport).HasMaxLength(500);
         });
 
         modelBuilder.Entity<Supplier>(entity =>

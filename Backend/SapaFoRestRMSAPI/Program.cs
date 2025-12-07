@@ -422,11 +422,11 @@ using (var scope = app.Services.CreateScope())
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
     //await DataSeeder.SeedPositionsAsync(ctx);
-    //await DataSeeder.SeedTestCustomerAsync(ctx);
+    await DataSeeder.SeedTestCustomerAsync(ctx);
     //await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
     //await MenuDataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
-    //await MenuDataSeeder.SeedKitchenOrdersAsync(ctx);
-    
+    await MenuDataSeeder.SeedKitchenOrdersAsync(ctx);
+
     // 🔹 Seed thêm dữ liệu workflow thu ngân + combo cho bếp (gồm Order 3–8)
     //await DataSeeder.SeedCashierWorkflowTestAsync(ctx);
     //await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing

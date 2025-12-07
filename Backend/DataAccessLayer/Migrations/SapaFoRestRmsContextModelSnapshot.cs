@@ -1996,10 +1996,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<string>("StatusExport")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<DateTime?>("TransactionDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
