@@ -7,7 +7,10 @@
     var total = ViewBag.TotalCount ?? 0;
     var totalPages = (int)Math.Ceiling((double)total / pageSize);
 }
+@{
 
+    Layout = "_LayoutManager";
+}
 <h2 class="mb-3">Danh sách khu vực</h2>
 <a asp-action="Create" class="btn btn-success mb-3">+ Thêm khu vực</a>
 

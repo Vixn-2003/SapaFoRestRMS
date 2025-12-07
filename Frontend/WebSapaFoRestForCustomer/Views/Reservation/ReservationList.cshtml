@@ -185,9 +185,9 @@
                         <td>${r.notes || ''}</td>
                         <td>
                             <button class="btn btn-sm btn-warning me-2" onclick="openEdit(${r.reservationId})"
-                                ${r.status === 'Cancelled' ? 'disabled' : ''}>Sửa</button>
+                                        ${r.status !== 'Pending' ? 'disabled' : ''}>Sửa</button>
                             <button class="btn btn-sm btn-danger" onclick="cancelReservation(${r.reservationId})"
-                                ${r.status === 'Cancelled' ? 'disabled' : ''}>Hủy</button>
+                                ${r.status !== 'Pending' ? 'disabled' : ''}>Hủy</button>
                         </td>
                     </tr>
                 `);
