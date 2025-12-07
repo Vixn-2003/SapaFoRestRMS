@@ -27,14 +27,15 @@ namespace WebSapaForestForStaff.Controllers
              int pageSize = 10)
         {
             // Mặc định lấy ngày hôm nay nếu không có filter
-            if (!reservationDate.HasValue)
-                reservationDate = DateTime.Today;
+            //if (!reservationDate.HasValue)
+            //    reservationDate = DateTime.Today;
 
             var queryParts = new List<string>();
             if (!string.IsNullOrEmpty(status)) queryParts.Add($"status={Uri.EscapeDataString(status)}");
             if (!string.IsNullOrEmpty(customerName)) queryParts.Add($"customerName={Uri.EscapeDataString(customerName)}");
             if (!string.IsNullOrEmpty(phone)) queryParts.Add($"phone={Uri.EscapeDataString(phone)}");
-            queryParts.Add($"date={reservationDate:yyyy-MM-dd}");
+            if (reservationDate.HasValue)
+                queryParts.Add($"date={reservationDate.Value:yyyy-MM-dd}");
             if (!string.IsNullOrEmpty(timeSlot)) queryParts.Add($"timeSlot={Uri.EscapeDataString(timeSlot)}");
             queryParts.Add($"page={page}");
             queryParts.Add($"pageSize={pageSize}");

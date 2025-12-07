@@ -2,6 +2,9 @@
 @{
     ViewData["Title"] = "Lịch Sử Xuất hàng";
     Layout = "~/Views/Shared/_LayoutInventory.cshtml";
+    
+    // Ensure Model is never null
+    var viewModel = Model ?? new WebSapaForestForStaff.DTOs.Inventory.ExportManagementViewModel();
 }
 
 <style>
@@ -696,7 +699,7 @@
         <div class="export-mgmt__stat-card export-mgmt__stat-card--info">
             <div class="export-mgmt__stat-content">
                 <span class="export-mgmt__stat-label">Tổng giao dịch xuất kho</span>
-                <span class="export-mgmt__stat-value">@Model.TotalTransactions</span>
+                <span class="export-mgmt__stat-value">@viewModel.TotalTransactions</span>
                 <span class="export-mgmt__stat-status">Tất cả thời gian</span>
             </div>
         </div>
@@ -743,7 +746,7 @@
                 <label class="export-mgmt__filter-label">Kho</label>
                 <select class="export-mgmt__filter-select" id="warehouseFilter">
                     <option value="">Tất cả kho</option>
-                    @foreach (var warehouse in Model.Warehouses)
+                    @foreach (var warehouse in viewModel.Warehouses)
                     {
                         <option value="@warehouse.Id">@warehouse.Name</option>
                     }
@@ -772,7 +775,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model.ExportData.OrderByDescending(x => x.TransactionDate))
+                        @foreach (var item in viewModel.ExportData.OrderByDescending(x => x.TransactionDate))
                         {
                             <tr data-ingredient-id="@item.IngredientId"
                                 data-warehouse-id="@item.WarehouseId"
@@ -829,9 +832,9 @@
         {
             <div class="export-mgmt__empty">
                 <h3 class="export-mgmt__empty-title">Không có dữ liệu xuất kho</h3>
-                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                @if (!string.IsNullOrEmpty(viewModel.ErrorMessage))
                 {
-                    <div class="export-mgmt__alert export-mgmt__alert--danger">@Model.ErrorMessage</div>
+                    <div class="export-mgmt__alert export-mgmt__alert--danger">@viewModel.ErrorMessage</div>
                 }
             </div>
         }

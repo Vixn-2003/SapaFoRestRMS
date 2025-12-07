@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using BusinessAccessLayer.DTOs.Inventory;
+using BusinessAccessLayer.DTOs.Kitchen;
 using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using CloudinaryDotNet;
@@ -307,6 +308,218 @@ namespace BusinessAccessLayer.Services
             {
                 return (false, $"Lỗi khi giải phóng nguyên liệu: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Lấy danh sách nguyên liệu cần lấy từ lô hàng cho các món đang nấu, filter theo category
+        /// </summary>
+        public async Task<List<IngredientPickupDTO>> GetIngredientPickupListAsync(string? categoryName = null)
+        {
+            var result = new List<IngredientPickupDTO>();
+
+            // Lấy tất cả active orders
+            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForStationAsync();
+
+            // Lấy tất cả OrderDetails có status = "Cooking" hoặc "Late"
+            var cookingOrderDetails = activeOrders
+                .SelectMany(o => o.OrderDetails)
+                .Where(od => od.Status != null && 
+                             (od.Status.Equals("Cooking", StringComparison.OrdinalIgnoreCase) || 
+                              od.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            // Filter theo CategoryMenu nếu có
+            if (!string.IsNullOrWhiteSpace(categoryName))
+            {
+                // Decode HTML entities
+                var decodedCategoryName = System.Net.WebUtility.HtmlDecode(categoryName);
+                if (decodedCategoryName.Contains("&#"))
+                {
+                    decodedCategoryName = System.Text.RegularExpressions.Regex.Replace(
+                        decodedCategoryName,
+                        @"&#x([0-9A-Fa-f]+);",
+                        m => {
+                            var hex = m.Groups[1].Value;
+                            var code = Convert.ToInt32(hex, 16);
+                            return char.ConvertFromUtf32(code);
+                        }
+                    );
+                    decodedCategoryName = System.Text.RegularExpressions.Regex.Replace(
+                        decodedCategoryName,
+                        @"&#(\d+);",
+                        m => {
+                            var dec = int.Parse(m.Groups[1].Value);
+                            return char.ConvertFromUtf32(dec).ToString();
+                        }
+                    );
+                }
+                decodedCategoryName = decodedCategoryName.Trim();
+
+                cookingOrderDetails = cookingOrderDetails
+                    .Where(od => od.MenuItem != null && 
+                                 od.MenuItem.Category != null &&
+                                 od.MenuItem.Category.CategoryName != null &&
+                                 od.MenuItem.Category.CategoryName.Equals(decodedCategoryName, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            // Với mỗi OrderDetail, lấy recipes và tính toán nguyên liệu cần lấy
+            foreach (var orderDetail in cookingOrderDetails)
+            {
+                if (orderDetail.MenuItem == null) continue;
+
+                // Tìm Order chứa OrderDetail này để lấy thông tin Table
+                var parentOrder = activeOrders.FirstOrDefault(o => o.OrderId == orderDetail.OrderId);
+                var tableName = parentOrder?.Reservation?.ReservationTables?.FirstOrDefault()?.Table?.TableNumber;
+
+                // Lấy recipes cho menu item này
+                var recipes = await _unitOfWork.MenuItem.GetRecipeByMenuItem(orderDetail.MenuItem.MenuItemId);
+                if (!recipes.Any()) continue;
+
+                var orderQuantity = orderDetail.Quantity;
+
+                // Với mỗi recipe, tính toán nguyên liệu cần và lấy batches đã reserve
+                foreach (var recipe in recipes)
+                {
+                    if (recipe.Ingredient == null) continue;
+
+                    var totalNeeded = recipe.QuantityNeeded * orderQuantity;
+
+                    // Lấy các batches đã reserve cho ingredient này (FEFO)
+                    var reservedBatches = await _unitOfWork.InventoryIngredient.GetReservedBatchesByIngredientAsync(recipe.IngredientId);
+                    
+                    if (!reservedBatches.Any()) continue;
+
+                    // Phân bổ số lượng cần lấy từ mỗi batch (theo logic FEFO, giống như khi reserve)
+                    decimal remainingToAllocate = totalNeeded;
+
+                    foreach (var batch in reservedBatches)
+                    {
+                        if (remainingToAllocate <= 0) break;
+
+                        // Số lượng có thể lấy từ batch này (không vượt quá số đã reserve)
+                        var availableFromBatch = Math.Min(batch.QuantityReserved, remainingToAllocate);
+                        
+                        if (availableFromBatch <= 0) continue;
+
+                        // Lấy thông tin warehouse
+                        var warehouse = batch.Warehouse;
+
+                        // Tạo DTO
+                        var pickupDto = new IngredientPickupDTO
+                        {
+                            OrderDetailId = orderDetail.OrderDetailId,
+                            MenuItemName = orderDetail.MenuItem.Name,
+                            OrderQuantity = orderQuantity,
+                            OrderId = orderDetail.OrderId,
+                            TableName = tableName,
+                            
+                            IngredientId = recipe.IngredientId,
+                            IngredientName = recipe.Ingredient.Name,
+                            UnitName = recipe.Ingredient.Unit?.UnitName,
+                            
+                            BatchId = batch.BatchId,
+                            WarehouseId = warehouse?.WarehouseId ?? 0,
+                            WarehouseName = warehouse?.Name ?? "Không xác định",
+                            ExpiryDate = batch.ExpiryDate,
+                            QuantityToPick = availableFromBatch,
+                            QuantityReserved = batch.QuantityReserved,
+                            IsUrgent = orderDetail.IsUrgent
+                        };
+
+                        result.Add(pickupDto);
+                        remainingToAllocate -= availableFromBatch;
+                    }
+                }
+            }
+
+            // Sắp xếp: món ưu tiên (IsUrgent = true) hiển thị trước, sau đó theo tên món
+            return result
+                .OrderByDescending(r => r.IsUrgent)
+                .ThenBy(r => r.MenuItemName)
+                .ThenBy(r => r.IngredientName)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Phát hiện và trả về danh sách nguyên liệu thiếu cho các món đang nấu
+        /// </summary>
+        public async Task<List<IngredientShortageDTO>> GetIngredientShortageListAsync()
+        {
+            var result = new List<IngredientShortageDTO>();
+
+            // Lấy tất cả active orders
+            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForStationAsync();
+
+            // Lấy tất cả OrderDetails có status = "Cooking" hoặc "Late"
+            var cookingOrderDetails = activeOrders
+                .SelectMany(o => o.OrderDetails)
+                .Where(od => od.Status != null && 
+                             (od.Status.Equals("Cooking", StringComparison.OrdinalIgnoreCase) || 
+                              od.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            // Với mỗi OrderDetail, kiểm tra thiếu nguyên liệu
+            foreach (var orderDetail in cookingOrderDetails)
+            {
+                if (orderDetail.MenuItem == null) continue;
+
+                // Tìm Order chứa OrderDetail này để lấy thông tin Table
+                var parentOrder = activeOrders.FirstOrDefault(o => o.OrderId == orderDetail.OrderId);
+                var tableName = parentOrder?.Reservation?.ReservationTables?.FirstOrDefault()?.Table?.TableNumber;
+
+                // Lấy recipes cho menu item này
+                var recipes = await _unitOfWork.MenuItem.GetRecipeByMenuItem(orderDetail.MenuItem.MenuItemId);
+                if (!recipes.Any()) continue;
+
+                var orderQuantity = orderDetail.Quantity;
+
+                // Với mỗi recipe, kiểm tra thiếu nguyên liệu
+                foreach (var recipe in recipes)
+                {
+                    if (recipe.Ingredient == null) continue;
+
+                    var totalNeeded = recipe.QuantityNeeded * orderQuantity;
+
+                    // Lấy các batches đã reserve cho ingredient này
+                    var reservedBatches = await _unitOfWork.InventoryIngredient.GetReservedBatchesByIngredientAsync(recipe.IngredientId);
+                    
+                    // Tính tổng số lượng đã reserve
+                    var totalReserved = reservedBatches.Sum(b => b.QuantityReserved);
+
+                    // Nếu số lượng cần lớn hơn số lượng đã reserve thì thiếu
+                    if (totalNeeded > totalReserved)
+                    {
+                        var shortageQuantity = totalNeeded - totalReserved;
+
+                        var shortageDto = new IngredientShortageDTO
+                        {
+                            OrderDetailId = orderDetail.OrderDetailId,
+                            MenuItemName = orderDetail.MenuItem.Name,
+                            OrderId = orderDetail.OrderId,
+                            TableName = tableName,
+                            
+                            IngredientId = recipe.IngredientId,
+                            IngredientName = recipe.Ingredient.Name,
+                            UnitName = recipe.Ingredient.Unit?.UnitName,
+                            
+                            RequiredQuantity = totalNeeded,
+                            ReservedQuantity = totalReserved,
+                            ShortageQuantity = shortageQuantity,
+                            IsUrgent = orderDetail.IsUrgent
+                        };
+
+                        result.Add(shortageDto);
+                    }
+                }
+            }
+
+            // Sắp xếp: món ưu tiên (IsUrgent = true) hiển thị trước, sau đó theo tên món
+            return result
+                .OrderByDescending(r => r.IsUrgent)
+                .ThenBy(r => r.MenuItemName)
+                .ThenBy(r => r.IngredientName)
+                .ToList();
         }
     }
 }

@@ -22,6 +22,8 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> Index()
         {
+            var viewModel = new ExportManagementViewModel();
+
             try
             {
                 var response = await _httpClient.GetAsync("api/ExportIngredient");
@@ -39,23 +41,23 @@ namespace WebSapaForestForStaff.Controllers
 
                     Console.WriteLine($"Deserialized: {exports?.Count ?? 0} items");
 
-                    ViewBag.ExportData = exports ?? new List<StockTransactionInventoryDTO>();
+                    viewModel.ExportData = exports ?? new List<StockTransactionInventoryDTO>();
                 }
                 else
                 {
                     Console.WriteLine($"API Error: {response.StatusCode}");
-                    ViewBag.ExportData = new List<StockTransactionInventoryDTO>();
-                    ViewBag.ErrorMessage = $"API Error: {response.StatusCode}";
+                    viewModel.ExportData = new List<StockTransactionInventoryDTO>();
+                    viewModel.ErrorMessage = $"API Error: {response.StatusCode}";
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception: {ex.Message}");
-                ViewBag.ExportData = new List<StockTransactionInventoryDTO>();
-                ViewBag.ErrorMessage = $"Lỗi: {ex.Message}";
+                viewModel.ExportData = new List<StockTransactionInventoryDTO>();
+                viewModel.ErrorMessage = $"Lỗi: {ex.Message}";
             }
 
-            return View("~/Views/Menu/ExportManagement.cshtml");
+            return View("~/Views/Menu/ExportManagement.cshtml", viewModel);
         }
 
         [HttpPost]

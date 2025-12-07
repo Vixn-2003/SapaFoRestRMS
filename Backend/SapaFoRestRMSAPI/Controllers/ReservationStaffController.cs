@@ -174,5 +174,11 @@ namespace SapaFoRestRMSAPI.Controllers
                 });
             }
         }
+        [HttpGet("reservations/pending-count")]
+        public async Task<IActionResult> GetPendingCount()
+        {
+            int count = await _service.GetPendingCountAsync();
+            return Ok(new { pendingCount = count });
+        }
     }
 }

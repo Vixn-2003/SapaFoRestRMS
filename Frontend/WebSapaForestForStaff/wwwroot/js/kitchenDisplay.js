@@ -43,6 +43,9 @@ let currentStatusFilter = 'all'; // 'all', 'Pending', 'Cooking', 'Late', 'Ready'
                 }, 500);
             });
 
+            // Load ingredient shortage data
+            loadIngredientShortage();
+
             // Auto-refresh every 30 seconds
             setInterval(() => {
                 if (currentViewMode === 'theo-tung-mon') {
@@ -56,6 +59,9 @@ let currentStatusFilter = 'all'; // 'all', 'Pending', 'Cooking', 'Late', 'Ready'
                 if (completedColumn && !completedColumn.classList.contains('hidden')) {
                     loadRecentlyFulfilledOrders();
                 }
+
+                // Auto-refresh ingredient shortage
+                loadIngredientShortage();
             }, 30000);
 
             // Update timers every minute
@@ -1604,6 +1610,29 @@ function closeOrderModal() {
     selectedModalItems.clear();
 }
 
+// Get status text for modal display (lowercase, in parentheses)
+function getModalStatusText(status) {
+    if (!status) return '(chờ)';
+    
+    const statusLower = status.toLowerCase().trim();
+    
+    // Xử lý cả tiếng Anh và tiếng Việt
+    if (statusLower.includes('pending') || statusLower.includes('chờ') || statusLower.includes('chờ bếp'))
+        return '(chờ)';
+    if (statusLower.includes('cooking') || statusLower.includes('chế biến') || statusLower.includes('đang nấu'))
+        return '(đang nấu)';
+    if (statusLower.includes('late') || statusLower.includes('trễ'))
+        return '(trễ)';
+    if (statusLower.includes('ready') || statusLower.includes('sẵn sàng'))
+        return '(sẵn sàng)';
+    if (statusLower.includes('done') || statusLower.includes('hoàn thành') || statusLower.includes('xong'))
+        return '(hoàn thành)';
+    if (statusLower.includes('cancelled') || statusLower.includes('hủy') || statusLower.includes('đã hủy'))
+        return '(đã hủy)';
+    
+    return `(${status})`;
+}
+
 // Render modal items
 // Render danh sách món trong modal
 function renderModalItems(items) {
@@ -1631,6 +1660,10 @@ function renderModalItems(items) {
         const isDone = status.includes('done') || status.includes('hoàn thành') || status.includes('xong');
         const isReady = status.includes('ready') || status.includes('sẵn sàng');
         const isDisabled = isDone; // Ready vẫn cho phép thao tác (để hủy sẵn sàng)
+        
+        // Lấy trạng thái để hiển thị trong tên món
+        const statusText = getModalStatusText(item.status || 'Pending');
+        const menuItemNameWithStatus = `${item.menuItemName}${statusText}`;
 
         return `
             <li class="order-modal-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}" 
@@ -1644,9 +1677,7 @@ function renderModalItems(items) {
                            onchange="toggleModalItemCheckbox(${itemKey}, ${itemQuantity}, event)"
                            onclick="event.stopPropagation()">
                     <span class="order-modal-item-text" style="flex: 1; ${isDisabled ? 'opacity: 0.6;' : ''}">
-                        <strong>${item.menuItemName}</strong>
-                        ${isDone ? '<span style="color: #1b5e20; font-size: 12px; margin-left: 8px; font-weight: 600;">(Đã hoàn thành)</span>' : ''}
-                        ${isReady && !isDone ? '<span style="color: #2e7d32; font-size: 12px; margin-left: 8px;">(Sẵn sàng)</span>' : ''}
+                        <strong>${menuItemNameWithStatus}</strong>
                         ${item.specialInstructions || item.notes ?
                 `<span style="color: #d32f2f; font-size: 14px; display: block; margin-top: 4px;"> (${item.specialInstructions || item.notes})</span>` : ''}
                     </span>
@@ -1699,7 +1730,8 @@ function updateModalQuantity(orderKey, newValue, maxQuantity, event) {
 }
 
 // Toggle modal item checkbox
-function toggleModalItemCheckbox(orderDetailId, maxQuantity, event) {
+// itemKey có thể là orderComboItemId (món combo) hoặc orderDetailId (món lẻ)
+function toggleModalItemCheckbox(itemKey, maxQuantity, event) {
     if (event) {
         event.stopPropagation();
     }
@@ -1707,8 +1739,8 @@ function toggleModalItemCheckbox(orderDetailId, maxQuantity, event) {
     const checkbox = event?.target;
     const isChecked = checkbox?.checked || false;
     
-    // Find the quantity input for this order detail
-    const quantityInput = document.querySelector(`.modal-quantity-input[data-order-detail-id="${orderDetailId}"]`);
+    // Tìm input bằng data-item-id (vì đó là itemKey - có thể là orderComboItemId hoặc orderDetailId)
+    const quantityInput = document.querySelector(`.modal-quantity-input[data-item-id="${itemKey}"]`);
     const maxQty = parseInt(maxQuantity) || 0;
     
     if (quantityInput) {
@@ -1716,11 +1748,11 @@ function toggleModalItemCheckbox(orderDetailId, maxQuantity, event) {
             // If checked, set quantity to max
             const quantity = maxQty > 0 ? maxQty : 1;
             quantityInput.value = quantity;
-            updateModalQuantity(orderDetailId, quantity, maxQty, null);
+            updateModalQuantity(itemKey, quantity, maxQty, null);
         } else {
             // If unchecked, set quantity to 0
             quantityInput.value = 0;
-            updateModalQuantity(orderDetailId, 0, maxQty, null);
+            updateModalQuantity(itemKey, 0, maxQty, null);
         }
     }
 }
@@ -1758,19 +1790,32 @@ function selectAllItems() {
         return !isDone; // ✅ Chỉ bỏ Done, Ready vẫn cho phép chọn (để hủy sẵn sàng)
     });
 
+    // Sử dụng itemKey (orderComboItemId hoặc orderDetailId) để kiểm tra và set
     const allSelected = cookableItems.length > 0 && cookableItems.every(item => {
-        const qty = selectedModalItems.get(item.orderDetailId) || 0;
+        const itemKey = item.orderComboItemId || item.orderDetailId;
+        const qty = selectedModalItems.get(itemKey) || 0;
         return qty > 0;
     });
 
     if (allSelected) {
-        // Deselect all
+        // Deselect all - xóa tất cả và cập nhật input
         selectedModalItems.clear();
+        // Cập nhật tất cả input về 0
+        document.querySelectorAll('.modal-quantity-input').forEach(input => {
+            input.value = 0;
+        });
     } else {
         // Select all cookable items with max quantity
         cookableItems.forEach(item => {
+            const itemKey = item.orderComboItemId || item.orderDetailId;
             const maxQty = item.quantity || 1;
-            selectedModalItems.set(item.orderDetailId, maxQty);
+            selectedModalItems.set(itemKey, maxQty);
+            
+            // Cập nhật trực tiếp giá trị input để UI hiển thị đúng
+            const quantityInput = document.querySelector(`.modal-quantity-input[data-item-id="${itemKey}"]`);
+            if (quantityInput) {
+                quantityInput.value = maxQty;
+            }
         });
     }
 
@@ -2968,5 +3013,119 @@ async function recallOrderDetail(orderDetailId, itemName) {
     } catch (error) {
         console.error('Error recalling order detail:', error);
         showError('Lỗi kết nối: ' + error.message);
+    }
+}
+
+// Load ingredient shortage list
+async function loadIngredientShortage() {
+    try {
+        const response = await fetch(`${API_BASE}/InventoryIngredient/shortage`);
+        if (!response.ok) {
+            throw new Error('Failed to load ingredient shortage');
+        }
+
+        const result = await response.json();
+        if (result.success && result.data && result.data.length > 0) {
+            renderIngredientShortage(result.data);
+        } else {
+            // Hide panel if no shortage
+            const panel = document.getElementById('shortageAlertPanel');
+            if (panel) {
+                panel.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading ingredient shortage:', error);
+        // Hide panel on error
+        const panel = document.getElementById('shortageAlertPanel');
+        if (panel) {
+            panel.style.display = 'none';
+        }
+    }
+}
+
+// Render ingredient shortage list
+function renderIngredientShortage(shortageList) {
+    const panel = document.getElementById('shortageAlertPanel');
+    const body = document.getElementById('shortageAlertBody');
+    const countBadge = document.getElementById('shortageCount');
+
+    if (!panel || !body || !countBadge) {
+        return;
+    }
+
+    // Show panel
+    panel.style.display = 'block';
+
+    // Update count
+    countBadge.textContent = shortageList.length;
+
+    // Group by menu item
+    const grouped = {};
+    shortageList.forEach(item => {
+        const key = `${item.orderDetailId}_${item.menuItemName}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                orderDetailId: item.orderDetailId,
+                menuItemName: item.menuItemName,
+                orderId: item.orderId,
+                tableName: item.tableName,
+                isUrgent: item.isUrgent,
+                ingredients: []
+            };
+        }
+        grouped[key].ingredients.push({
+            ingredientName: item.ingredientName,
+            unitName: item.unitName,
+            requiredQuantity: item.requiredQuantity,
+            reservedQuantity: item.reservedQuantity,
+            shortageQuantity: item.shortageQuantity
+        });
+    });
+
+    // Render grouped items
+    let html = '';
+    Object.values(grouped).forEach(group => {
+        const urgentBadge = group.isUrgent ? '<span class="urgent-badge-shortage">ƯU TIÊN</span>' : '';
+        html += `
+            <div class="shortage-item ${group.isUrgent ? 'urgent' : ''}">
+                <div class="shortage-item-info">
+                    <div class="shortage-item-name">
+                        ${escapeHtml(group.menuItemName)}${urgentBadge}
+                        ${group.tableName ? `<small class="text-muted"> - Bàn ${escapeHtml(group.tableName)}</small>` : ''}
+                    </div>
+                    <div class="shortage-item-details">
+                        ${group.ingredients.map(ing => 
+                            `${escapeHtml(ing.ingredientName)}: Cần ${formatNumber(ing.requiredQuantity)} ${ing.unitName || ''}, Đã reserve ${formatNumber(ing.reservedQuantity)} ${ing.unitName || ''}`
+                        ).join('<br>')}
+                    </div>
+                </div>
+                <div class="shortage-item-quantity">
+                    ${group.ingredients.map(ing => 
+                        `<div class="shortage-quantity-badge">Thiếu ${formatNumber(ing.shortageQuantity)} ${ing.unitName || ''}</div>`
+                    ).join('<br style="margin-top: 4px;">')}
+                </div>
+            </div>
+        `;
+    });
+
+    body.innerHTML = html;
+}
+
+// Toggle shortage panel
+function toggleShortagePanel() {
+    const body = document.getElementById('shortageAlertBody');
+    const icon = document.getElementById('shortageToggleIcon');
+    
+    if (!body || !icon) {
+        return;
+    }
+
+    if (body.classList.contains('collapsed')) {
+        body.classList.remove('collapsed');
+        icon.className = 'mdi mdi-chevron-up';
+    } else {
+        body.classList.add('collapsed');
+        icon.className = 'mdi mdi-chevron-down';
     }
 }

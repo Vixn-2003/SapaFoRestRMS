@@ -67,5 +67,23 @@ namespace WebSapaFoRestForStaff.Controllers
 
             return View(viewModel);
         }
+
+        /// <summary>
+        /// Ingredient pickup screen (filtered by category name)
+        /// GET: /KitchenDisplay/IngredientPickup?categoryName=Xào
+        /// </summary>
+        public IActionResult IngredientPickup(string categoryName)
+        {
+            var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
+            var apiBase = apiBaseUrl.Replace("/api", "");
+            var signalRHubUrl = $"{apiBase}/kitchenHub";
+
+            // Set ViewBag for View compatibility
+            ViewBag.CategoryName = categoryName ?? "";
+            ViewBag.ApiBaseUrl = apiBaseUrl;
+            ViewBag.SignalRHubUrl = signalRHubUrl;
+
+            return View();
+        }
     }
 }

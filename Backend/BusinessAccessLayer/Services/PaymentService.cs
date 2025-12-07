@@ -510,16 +510,17 @@ public class PaymentService : IPaymentService
         {
             foreach (var od in order.OrderDetails)
             {
-                // Bỏ qua món đã bị xóa
-                if (od.Status == "Removed")
+                // Bỏ qua món đã bị xóa hoặc đã hủy
+                var status = (od.Status ?? "").Trim();
+                var statusLower = status.ToLower();
+                
+                if (statusLower == "removed" || statusLower == "cancelled" || statusLower == "đã hủy")
                 {
                     continue;
                 }
 
                 // ✅ LOGIC MỚI: Chỉ tính tiền món có Status = "Cooking", "Done", "Ready"
                 // Không tính tiền món có Status = "Pending"
-                var status = (od.Status ?? "").Trim();
-                var statusLower = status.ToLower();
                 
                 // Danh sách status được phép thanh toán
                 var billableStatuses = new[] { "cooking", "done", "ready", "served", "đang chế biến", "đã xong", "sẵn sàng" };
@@ -528,8 +529,21 @@ public class PaymentService : IPaymentService
                 // ✅ XỬ LÝ COMBO: Nếu là combo, kiểm tra OrderComboItems
                 if (od.ComboId.HasValue && od.OrderComboItems != null && od.OrderComboItems.Any())
                 {
+                    // Bỏ qua các món đã bị hủy trong combo khi kiểm tra
+                    var activeComboItems = od.OrderComboItems.Where(oci =>
+                    {
+                        var comboItemStatus = (oci.Status ?? "").Trim().ToLower();
+                        return comboItemStatus != "cancelled" && comboItemStatus != "đã hủy" && comboItemStatus != "removed";
+                    }).ToList();
+
+                    // Nếu không còn món nào active trong combo → không tính tiền
+                    if (!activeComboItems.Any())
+                    {
+                        continue;
+                    }
+
                     // Nếu có ít nhất 1 món trong combo đã sẵn sàng (Cooking/Done/Ready) thì thanh toán toàn bộ combo
-                    bool hasReadyComboItem = od.OrderComboItems.Any(oci =>
+                    bool hasReadyComboItem = activeComboItems.Any(oci =>
                     {
                         var comboItemStatus = (oci.Status ?? "").Trim().ToLower();
                         return billableStatuses.Any(s => comboItemStatus == s);

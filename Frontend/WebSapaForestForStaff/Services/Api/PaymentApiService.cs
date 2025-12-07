@@ -180,6 +180,39 @@ namespace WebSapaForestForStaff.Services.Api
             return payload;
         }
 
+        public async Task<ApiResult> CancelOrderAsync(int orderId, string reason)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.DeleteAsync(BuildApiUrl($"/payment/orders/{orderId}/cancel?reason={Uri.EscapeDataString(reason)}")));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể hủy đơn hàng";
+                return new ApiResult(false, message);
+            }
+            return new ApiResult(true, "Đã hủy đơn hàng thành công");
+        }
+
+        public async Task<ApiResult> UndoConfirmOrderAsync(int orderId, UndoConfirmRequest request)
+        {
+            // Backend API nhận OrderId từ route và request body chỉ có StaffId và Reason
+            var requestBody = new
+            {
+                StaffId = request.StaffId,
+                Reason = request.Reason
+            };
+
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PutAsJsonAsync(BuildApiUrl($"/payment/orders/{orderId}/undo-confirm"), requestBody));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể hoàn tác xác nhận đơn hàng";
+                return new ApiResult(false, message);
+            }
+            return new ApiResult(true, "Đã hoàn tác xác nhận đơn hàng thành công");
+        }
+
         private async Task<List<OrderDto>> FetchOrdersByStatusAsync(string statusFilter)
         {
             var response = await SendWithAutoRefreshAsync(client =>

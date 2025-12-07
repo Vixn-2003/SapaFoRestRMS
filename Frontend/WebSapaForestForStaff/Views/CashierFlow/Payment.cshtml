@@ -369,7 +369,34 @@
         <div class="card flex-grow-1">
             <div class="card-header fw-bold">
                 Danh sách món ăn / đồ uống
-                <span class="badge bg-primary ms-2">@((Model.Items?.Count ?? 0)) món</span>
+                @{
+                    var billableCount = Model.Items?.Where(i =>
+                    {
+                        var status = (i.KitchenStatus ?? "").Trim().ToLower();
+                        
+                        // Bỏ qua các món đã bị hủy
+                        if (status == "cancelled" || status == "đã hủy" || status == "removed")
+                        {
+                            return false;
+                        }
+                        
+                        // ✅ LOGIC COMBO: Nếu là combo và status = "Pending" thì không đếm
+                        if (i.ComboId.HasValue)
+                        {
+                            // Combo ở trạng thái "Pending" → không đếm
+                            if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
+                            {
+                                return false;
+                            }
+                            // Combo có status khác "Pending" → đếm
+                            return true;
+                        }
+                        
+                        // ✅ MÓN LẺ: Đếm tất cả (trừ cancelled/removed đã filter ở trên)
+                        return true;
+                    }).Count() ?? 0;
+                }
+                <span class="badge bg-primary ms-2">@billableCount món</span>
             </div>
             <div class="card-body p-0 d-flex flex-column">
                 <div class="table-responsive order-items-scroll">
@@ -394,27 +421,65 @@
                                 }
                                 else
                                 {
-                                    foreach (var item in Model.Items)
+                                    // ✅ Filter logic:
+                                    // 1. Món lẻ: Hiển thị tất cả (trừ cancelled/removed)
+                                    // 2. Combo: Chỉ hiển thị nếu có ít nhất 1 món trong combo không ở trạng thái "Pending"
+                                    var billableItems = Model.Items.Where(i =>
                                     {
-                                        var usedQuantity = item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity;
+                                        var status = (i.KitchenStatus ?? "").Trim().ToLower();
+                                        
+                                        // Bỏ qua các món đã bị hủy
+                                        if (status == "cancelled" || status == "đã hủy" || status == "removed")
+                                        {
+                                            return false;
+                                        }
+                                        
+                                        // ✅ LOGIC COMBO: Nếu là combo và status = "Pending" thì không hiển thị
+                                        if (i.ComboId.HasValue)
+                                        {
+                                            // Combo ở trạng thái "Pending" → không hiển thị
+                                            if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
+                                            {
+                                                return false;
+                                            }
+                                            // Combo có status khác "Pending" (Cooking, Done, Ready, etc.) → hiển thị
+                                            return true;
+                                        }
+                                        
+                                        // ✅ MÓN LẺ: Hiển thị tất cả (trừ cancelled/removed đã filter ở trên)
+                                        return true;
+                                    }).ToList();
+
+                                    if (!billableItems.Any())
+                                    {
                                         <tr>
-                                            <td class="text-center">@index</td>
-                                            <td>
-                                                @if (!string.IsNullOrEmpty(item.ComboName))
-                                                {
-                                                    <div>@item.ComboName</div>
-                                                    <div class="text-muted small fst-italic">Combo</div>
-                                                }
-                                                else
-                                                {
-                                                    @item.MenuItemName
-                                                }
-                                            </td>
-                                            <td class="text-center">@usedQuantity</td>
-                                            <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
-                                            <td class="text-end fw-bold">@item.TotalPrice.ToString("N0") ₫</td>
+                                            <td colspan="5" class="text-center text-muted py-4">Không có món nào cần thanh toán.</td>
                                         </tr>
-                                        index++;
+                                    }
+                                    else
+                                    {
+                                        foreach (var item in billableItems)
+                                        {
+                                            var usedQuantity = item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity;
+                                            <tr>
+                                                <td class="text-center">@index</td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(item.ComboName))
+                                                    {
+                                                        <div>@item.ComboName</div>
+                                                        <div class="text-muted small fst-italic">Combo</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @item.MenuItemName
+                                                    }
+                                                </td>
+                                                <td class="text-center">@usedQuantity</td>
+                                                <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
+                                                <td class="text-end fw-bold">@item.TotalPrice.ToString("N0") ₫</td>
+                                            </tr>
+                                            index++;
+                                        }
                                     }
                                 }
                             }

@@ -489,6 +489,42 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// GET: api/InventoryIngredient/kitchen-pickup?categoryName=Xào
+        /// Lấy danh sách nguyên liệu cần lấy từ lô hàng cho các món đang nấu, filter theo category
+        /// </summary>
+        [HttpGet("kitchen-pickup")]
+        public async Task<IActionResult> GetKitchenIngredientPickup([FromQuery] string? categoryName = null)
+        {
+            try
+            {
+                var pickupList = await _inventoryIngredientService.GetIngredientPickupListAsync(categoryName);
+                return Ok(new { success = true, data = pickupList });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET: api/InventoryIngredient/shortage
+        /// Lấy danh sách nguyên liệu thiếu cho các món đang nấu (hiển thị ở màn hình KDS cho bếp phó)
+        /// </summary>
+        [HttpGet("shortage")]
+        public async Task<IActionResult> GetIngredientShortage()
+        {
+            try
+            {
+                var shortageList = await _inventoryIngredientService.GetIngredientShortageListAsync();
+                return Ok(new { success = true, data = shortageList });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         private async Task<string> GenerateAuditId()
         {
             // Format: AUD-YYYYMMDD-XXXX

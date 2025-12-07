@@ -1197,7 +1197,6 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.CodeSupplier).HasMaxLength(50);
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
         });
 
         // Cấu hình AuditInventory
