@@ -20,13 +20,33 @@ namespace BusinessAccessLayer.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null)
+        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null, List<int>? tableIds = null)
         {
             var now = DateTime.Now;
             var result = new WaiterOrderTrackingDto();
 
             // Lấy tất cả active orders với order details
-            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            var allActiveOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            
+            // Filter theo tableIds nếu có
+            List<Order> activeOrders;
+            if (tableIds != null && tableIds.Any())
+            {
+                activeOrders = allActiveOrders.Where(order =>
+                {
+                    // Lấy tableIds từ reservation
+                    var reservationTableIds = order.Reservation?.ReservationTables?
+                        .Select(rt => rt.TableId)
+                        .ToList() ?? new List<int>();
+                    
+                    // Kiểm tra xem có bàn nào trong danh sách filter không
+                    return reservationTableIds.Any(tableId => tableIds.Contains(tableId));
+                }).ToList();
+            }
+            else
+            {
+                activeOrders = allActiveOrders;
+            }
 
             var allItems = new List<OrderTrackingItemDto>();
             var orderGroups = new Dictionary<int, OrderTrackingGroupDto>();

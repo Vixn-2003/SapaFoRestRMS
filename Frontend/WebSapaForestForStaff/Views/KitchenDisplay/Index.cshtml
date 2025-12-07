@@ -567,6 +567,7 @@
             display: flex;
             flex-direction: column;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
 
         .order-modal-header {
@@ -575,6 +576,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .order-modal-header-left {
@@ -637,7 +639,9 @@
         .order-modal-body {
             padding: 20px;
             flex: 1;
-            overflow: visible;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
         }
 
         .order-modal-items {
@@ -686,6 +690,7 @@
             flex-wrap: nowrap;
             overflow-x: auto;
             min-width: 0;
+            flex-shrink: 0;
         }
 
         .btn-modal {
