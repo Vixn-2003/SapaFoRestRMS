@@ -16,7 +16,7 @@
 
       // "applicationUrl": "https://localhost:1523",
 
-      "applicationUrl": "http://192.168.1.116:5123",
+      "applicationUrl": "http://192.168.1.129:5123",
       //"applicationUrl": "http://localhost:5054",
 
       "launchUrl": "Auth/Login",
