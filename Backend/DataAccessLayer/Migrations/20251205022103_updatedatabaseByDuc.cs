@@ -8,7 +8,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
+<<<<<<<< HEAD:Backend/DataAccessLayer/Migrations/20251205022103_updatedatabaseByDuc.cs
+    public partial class updatedatabaseByDuc : Migration
+========
     public partial class VinxUpdateDBMergeLastDemo : Migration
+>>>>>>>> c7978f9355adc1d9f7c3c864dee2f93431dc8bfc:Backend/DataAccessLayer/Migrations/20251204103021_VinxUpdateDBMergeLastDemo.cs
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -143,7 +147,8 @@ namespace DataAccessLayer.Migrations
                     Address = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    CodeSupplier = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    CodeSupplier = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {

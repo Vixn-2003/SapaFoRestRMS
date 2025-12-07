@@ -11,5 +11,8 @@ namespace DataAccessLayer.Repositories.Interfaces
     {
         Task<IEnumerable<PurchaseOrderDetail>> GetPurchaseOrderDetails(string purchaseOrderId);
         Task<bool> AddIdNewIngredient(int idDetailOrder, int idIngredient);
+
+        Task<IEnumerable<PurchaseOrderDetail>> GetByIngredientIdAsync(int ingredientId);
+        Task<IEnumerable<PurchaseOrderDetail>> GetByIngredientIdWithDetailsAsync(int ingredientId);
     }
 }

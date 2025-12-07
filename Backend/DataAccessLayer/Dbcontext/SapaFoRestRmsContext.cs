@@ -1185,6 +1185,7 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.IngredientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__StockTran__Ingre__3F115E1A");
+            entity.Property(e => e.StatusExport).HasMaxLength(500);
         });
 
         modelBuilder.Entity<Supplier>(entity =>
@@ -1197,6 +1198,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(20);
             entity.Property(e => e.CodeSupplier).HasMaxLength(50);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
         });
 
         // Cấu hình AuditInventory

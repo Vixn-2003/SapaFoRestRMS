@@ -19,5 +19,9 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<bool> DeleteSupplierByMenuItemId(int idSupplier);
 
         Task<bool> AddRecipe(SupplierDTO dto);
+
+        Task<bool> CreateSupplier(CreateSupplierDTO dto);  
+        Task<bool> UpdateSupplier(int id, UpdateSupplierDTO dto);
+        Task<bool> CheckCodeExists(string code);
     }
 }

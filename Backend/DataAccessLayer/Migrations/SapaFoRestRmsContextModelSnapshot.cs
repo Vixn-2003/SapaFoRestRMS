@@ -1996,6 +1996,10 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<string>("StatusExport")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime?>("TransactionDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
@@ -2040,6 +2044,11 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("Email")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("Name")
                         .IsRequired()

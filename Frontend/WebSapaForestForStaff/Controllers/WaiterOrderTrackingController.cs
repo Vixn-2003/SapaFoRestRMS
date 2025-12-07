@@ -13,10 +13,16 @@ namespace WebSapaForestForStaff.Controllers
             _httpClientFactory = httpClientFactory;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? tableIds = null)
         {
             var httpClient = _httpClientFactory.CreateClient("BackendApi");
             var apiUrl = "https://localhost:7096/api/WaiterOrderTracking";
+            
+            // Add tableIds to query string if provided
+            if (!string.IsNullOrWhiteSpace(tableIds))
+            {
+                apiUrl += $"?tableIds={Uri.EscapeDataString(tableIds)}";
+            }
 
             WaiterOrderTrackingDto model = new WaiterOrderTrackingDto();
 

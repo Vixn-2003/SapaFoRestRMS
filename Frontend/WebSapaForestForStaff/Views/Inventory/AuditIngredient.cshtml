@@ -1,7 +1,7 @@
 ﻿@model WebSapaForestForStaff.DTOs.Inventory.AuditInventoryPagedViewModel
 @{
     Layout = "_LayoutInventory";
-    ViewData["Title"] = "Danh sách đơn kiểm kê";
+    ViewData["Title"] = "Quản lý đơn kiểm kê";
 }
 
 <style>
@@ -1038,16 +1038,67 @@
         transform: translateY(0) scale(1);
     }
 }
-    
+
+    /* Tab Styles */
+    .audit-tabs-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .audit-tab {
+        padding: 1rem 2rem;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+        .audit-tab:hover {
+            color: #9333ea;
+            background: #faf5ff;
+        }
+
+        .audit-tab.active {
+            color: #9333ea;
+            border-bottom-color: #9333ea;
+            background: #faf5ff;
+        }
+
+    .audit-tab-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 0.5rem;
+        background: #e5e7eb;
+        color: #374151;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-left: 0.5rem;
+    }
+
+    .audit-tab.active .audit-tab-badge {
+        background: #9333ea;
+        color: white;
+    }
 </style>
 
 <div class="audit-list-container">
     <div class="audit-list-header">
+        <!-- TIÊU ĐỀ -->
         <div class="audit-list-title-section">
             <div class="audit-list-title-left">
-
                 <div class="audit-list-title">
-                    <h1>Danh sách đơn kiểm kê</h1>
+                    <h1>Quản lý đơn kiểm kê</h1>
                     <p class="audit-list-subtitle">Quản lý các đơn kiểm kê nguyên liệu</p>
                 </div>
             </div>
@@ -1057,43 +1108,62 @@
             </div>
         </div>
 
+        <!-- TABS -->
+        <div class="audit-tabs-container">
+            <button class="audit-tab" data-tab="processing" onclick="switchTab('processing')">
+                Đang xử lý
+                <span class="audit-tab-badge" id="processingCount">0</span>
+            </button>
+            <button class="audit-tab" data-tab="completed" onclick="switchTab('completed')">
+                Đã xử lý
+                <span class="audit-tab-badge" id="completedCount">0</span>
+            </button>
+            <button class="audit-tab active" data-tab="all" onclick="switchTab('all')">
+                Tất cả
+                <span class="audit-tab-badge" id="allCount">0</span>
+            </button>
+        </div>
+
+        <!-- FILTERS -->
         <div class="audit-filter-grid">
             <div class="audit-form-group" style="grid-column: span 2;">
                 <label class="audit-form-label">Tìm kiếm</label>
                 <div class="audit-search-wrapper">
                     <span class="audit-search-icon">&#128269;</span>
-                    <input type="text" 
+                    <input type="text"
                            id="searchInput"
                            placeholder="Mã đơn, tên nguyên liệu, mã lô..."
                            class="audit-form-input with-icon" />
                 </div>
             </div>
 
+            <!-- SẮP XẾP THEO -->
             <div class="audit-form-group">
-                <label class="audit-form-label">Trạng thái</label>
-                <select id="statusFilter" class="audit-form-select">
-                    <option value="">Tất cả</option>
-                    <option value="processing">Đang xử lý</option>
-                    <option value="completed">Đã xử lý</option>
+                <label class="audit-form-label">Sắp xếp theo</label>
+                <select id="sortByFilter" class="audit-form-select">
+                    <option value="time">Thời gian (Mới nhất)</option>
+                    <option value="code">Mã đơn (A-Z)</option>
+                    <option value="ingredient">Tên nguyên liệu (A-Z)</option>
                 </select>
             </div>
 
             <div class="audit-form-group">
                 <label class="audit-form-label">Từ ngày</label>
-                <input type="date" 
+                <input type="date"
                        id="dateFromFilter"
                        class="audit-form-input" />
             </div>
 
             <div class="audit-form-group">
                 <label class="audit-form-label">Đến ngày</label>
-                <input type="date" 
+                <input type="date"
                        id="dateToFilter"
                        class="audit-form-input" />
             </div>
         </div>
     </div>
 
+    <!-- BẢNG DỮ LIỆU -->
     <div class="audit-table-container">
         <table class="audit-table">
             <thead>
@@ -1124,7 +1194,7 @@
                 {
                     @foreach (var audit in Model.Audits)
                     {
-                        <tr class="audit-row" 
+                        <tr class="audit-row"
                             data-audit-id="@audit.AuditId"
                             data-audit-code="@audit.AuditId"
                             data-purchase-order-id="@audit.PurchaseOrderId"
@@ -1149,7 +1219,7 @@
                             data-ingredient-status="@(audit.IngredientStatus ?? "normal")"
                             data-expiry-date="@(audit.ExpiryDate ?? "")">
                             <td>
-                                <span class="audit-id">@audit.AuditId</span>
+                                <span class="audit-code">@audit.AuditId</span>
                             </td>
                             <td>
                                 <span class="audit-batch-code">@audit.PurchaseOrderId</span>
@@ -1254,151 +1324,248 @@
 </div>
 
 <script>
-    // Global variables
-    let currentPage = 1;
-    const itemsPerPage = 10;
-    let allRows = [];
-    let filteredRows = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let allRows = [];
+        let filteredRows = [];
+        let currentTab = 'all'; // Mặc định tab "Tất cả"
 
-    document.addEventListener('DOMContentLoaded', function() {
-        allRows = Array.from(document.querySelectorAll('.audit-row'));
-        filteredRows = [...allRows];
-        updatePagination();
-        
-        // Real-time search
-        document.getElementById('searchInput').addEventListener('input', applyFilters);
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
-        document.getElementById('dateToFilter').addEventListener('change', applyFilters);
-    });
+        document.addEventListener('DOMContentLoaded', function () {
+            allRows = Array.from(document.querySelectorAll('.audit-row'));
 
-    function applyFilters() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-        const status = document.getElementById('statusFilter').value;
-        const dateFrom = document.getElementById('dateFromFilter').value;
-        const dateTo = document.getElementById('dateToFilter').value;
+            // Sắp xếp mặc định theo thời gian (mới nhất lên đầu)
+            sortRowsByTime(allRows, true);
 
-        filteredRows = allRows.filter(row => {
-            // Lấy các giá trị từ data attributes
-            const auditCode = (row.dataset.auditCode || '').toLowerCase();
-            const purchaseOrderId = (row.dataset.purchaseOrderId || '').toLowerCase();
-            const ingredientName = (row.dataset.ingredientName || '').toLowerCase();
-            const ingredientCode = (row.dataset.ingredientCode || '').toLowerCase();
-            const auditStatus = row.dataset.auditStatus || '';
-            const createdAt = row.dataset.createdAt || '';
+            filteredRows = [...allRows];
 
-            // Search filter - tìm kiếm trong mã đơn, mã lô, tên và mã nguyên liệu
-            const matchSearch = !searchTerm || 
-                auditCode.includes(searchTerm) ||
-                purchaseOrderId.includes(searchTerm) ||
-                ingredientName.includes(searchTerm) ||
-                ingredientCode.includes(searchTerm);
+            // Cập nhật số lượng cho các tab
+            updateTabCounts();
 
-            // Status filter
-            const matchStatus = !status || auditStatus === status;
+            // Mặc định hiển thị tab "Tất cả"
+            switchTab('all');
 
-            // Date filter
-            let matchDate = true;
-            if (dateFrom || dateTo) {
-                const rowDate = parseDate(createdAt);
-                if (!rowDate) {
-                    matchDate = false;
-                } else {
-                if (dateFrom) {
-                    const fromDate = new Date(dateFrom);
-                        fromDate.setHours(0, 0, 0, 0);
-                    matchDate = matchDate && rowDate >= fromDate;
-                }
-                if (dateTo) {
-                    const toDate = new Date(dateTo);
-                        toDate.setHours(23, 59, 59, 999);
-                    matchDate = matchDate && rowDate <= toDate;
-                }
-            }
-            }
-
-            return matchSearch && matchStatus && matchDate;
+            // Event listeners
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('sortByFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateToFilter').addEventListener('change', applyFilters);
         });
 
-        currentPage = 1;
-        updatePagination();
-    }
+        // Đếm số lượng đơn theo trạng thái
+        function updateTabCounts() {
+            const processingCount = allRows.filter(row => row.dataset.auditStatus === 'processing').length;
+            const completedCount = allRows.filter(row => row.dataset.auditStatus === 'completed').length;
+            const allCount = allRows.length;
 
-    function parseDate(dateStr) {
-        if (!dateStr) return null;
-
-        try {
-        // Parse "dd/MM/yyyy HH:mm" format
-        const parts = dateStr.split(' ');
-            if (parts.length < 1) return null;
-
-        const dateParts = parts[0].split('/');
-            if (dateParts.length !== 3) return null;
-
-            const day = parseInt(dateParts[0]);
-            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
-            const year = parseInt(dateParts[2]);
-
-            const date = new Date(year, month, day);
-
-            // Validate date
-            if (isNaN(date.getTime())) return null;
-
-            return date;
-        } catch (error) {
-            console.error('Error parsing date:', dateStr, error);
-            return null;
-        }
-    }
-
-    function updatePagination() {
-        // Hide all rows
-        allRows.forEach(row => row.classList.add('hidden'));
-
-        // Show filtered rows for current page
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = Math.min(startIndex + itemsPerPage, filteredRows.length);
-        
-        for (let i = startIndex; i < endIndex; i++) {
-            filteredRows[i].classList.remove('hidden');
+            document.getElementById('processingCount').textContent = processingCount;
+            document.getElementById('completedCount').textContent = completedCount;
+            document.getElementById('allCount').textContent = allCount;
         }
 
-        // Update pagination info
-        document.getElementById('showingFrom').textContent = filteredRows.length > 0 ? startIndex + 1 : 0;
-        document.getElementById('showingTo').textContent = endIndex;
-        document.getElementById('totalVisible').textContent = filteredRows.length;
-        document.getElementById('totalAuditsCount').textContent = filteredRows.length;
+        // Chuyển tab
+        function switchTab(tab) {
+            currentTab = tab;
 
-        // Update page number
-        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-        document.getElementById('currentPageBtn').textContent = filteredRows.length > 0 ? currentPage : 0;
+            // Cập nhật active state cho tabs
+            document.querySelectorAll('.audit-tab').forEach(tabEl => {
+                if (tabEl.dataset.tab === tab) {
+                    tabEl.classList.add('active');
+                } else {
+                    tabEl.classList.remove('active');
+                }
+            });
 
-        // Enable/disable pagination buttons
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-
-        if (currentPage <= 1) {
-            prevBtn.classList.add('disabled');
-        } else {
-            prevBtn.classList.remove('disabled');
+            // Reset về trang 1 và áp dụng filters
+            currentPage = 1;
+            applyFilters();
         }
 
-        if (currentPage >= totalPages) {
-            nextBtn.classList.add('disabled');
-        } else {
-            nextBtn.classList.remove('disabled');
-        }
-    }
+        // Áp dụng filters
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const sortBy = document.getElementById('sortByFilter').value;
+            const dateFrom = document.getElementById('dateFromFilter').value;
+            const dateTo = document.getElementById('dateToFilter').value;
 
-    function changePage(direction) {
-        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-        const newPage = currentPage + direction;
+            filteredRows = allRows.filter(row => {
+                // Lọc theo tab
+                if (currentTab !== 'all') {
+                    const status = row.dataset.auditStatus;
+                    if (status !== currentTab) return false;
+                }
 
-        if (newPage >= 1 && newPage <= totalPages) {
-            currentPage = newPage;
+                // Lấy các giá trị từ data attributes
+                const auditCode = (row.dataset.auditCode || '').toLowerCase();
+                const purchaseOrderId = (row.dataset.purchaseOrderId || '').toLowerCase();
+                const ingredientName = (row.dataset.ingredientName || '').toLowerCase();
+                const ingredientCode = (row.dataset.ingredientCode || '').toLowerCase();
+                const createdAt = row.dataset.createdAt || '';
+
+                // Search filter
+                const matchSearch = !searchTerm ||
+                    auditCode.includes(searchTerm) ||
+                    purchaseOrderId.includes(searchTerm) ||
+                    ingredientName.includes(searchTerm) ||
+                    ingredientCode.includes(searchTerm);
+
+                // Date filter
+                let matchDate = true;
+                if (dateFrom || dateTo) {
+                    const rowDate = parseDate(createdAt);
+                    if (!rowDate) {
+                        matchDate = false;
+                    } else {
+                        if (dateFrom) {
+                            const fromDate = new Date(dateFrom);
+                            fromDate.setHours(0, 0, 0, 0);
+                            matchDate = matchDate && rowDate >= fromDate;
+                        }
+                        if (dateTo) {
+                            const toDate = new Date(dateTo);
+                            toDate.setHours(23, 59, 59, 999);
+                            matchDate = matchDate && rowDate <= toDate;
+                        }
+                    }
+                }
+
+                return matchSearch && matchDate;
+            });
+
+            // Sắp xếp
+            sortFilteredRows(sortBy);
+
+            currentPage = 1;
             updatePagination();
         }
-    }
+
+        // Sắp xếp rows đã lọc
+        function sortFilteredRows(sortBy) {
+            switch (sortBy) {
+                case 'time':
+                    sortRowsByTime(filteredRows, true); // true = mới nhất lên đầu
+                    break;
+                case 'code':
+                    filteredRows.sort((a, b) => {
+                        const codeA = a.dataset.auditCode || '';
+                        const codeB = b.dataset.auditCode || '';
+                        return codeA.localeCompare(codeB);
+                    });
+                    break;
+                case 'ingredient':
+                    filteredRows.sort((a, b) => {
+                        const nameA = a.dataset.ingredientName || '';
+                        const nameB = b.dataset.ingredientName || '';
+                        return nameA.localeCompare(nameB, 'vi');
+                    });
+                    break;
+            }
+        }
+
+        // Sắp xếp theo thời gian
+        function sortRowsByTime(rows, newestFirst = true) {
+            rows.sort((a, b) => {
+                const dateA = parseDate(a.dataset.createdAt);
+                const dateB = parseDate(b.dataset.createdAt);
+
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+
+                return newestFirst ? dateB - dateA : dateA - dateB;
+            });
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+
+            try {
+                const parts = dateStr.split(' ');
+                if (parts.length < 1) return null;
+
+                const dateParts = parts[0].split('/');
+                if (dateParts.length !== 3) return null;
+
+                const day = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]) - 1;
+                const year = parseInt(dateParts[2]);
+
+                // Nếu có giờ phút
+                let hours = 0, minutes = 0;
+                if (parts.length > 1) {
+                    const timeParts = parts[1].split(':');
+                    if (timeParts.length === 2) {
+                        hours = parseInt(timeParts[0]);
+                        minutes = parseInt(timeParts[1]);
+                    }
+                }
+
+                const date = new Date(year, month, day, hours, minutes);
+
+                if (isNaN(date.getTime())) return null;
+
+                return date;
+            } catch (error) {
+                console.error('Error parsing date:', dateStr, error);
+                return null;
+            }
+        }
+
+        function updatePagination() {
+            // Hide all rows
+            allRows.forEach(row => row.classList.add('hidden'));
+
+            // Show filtered rows for current page
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredRows.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                filteredRows[i].classList.remove('hidden');
+            }
+
+            // Update pagination info
+            document.getElementById('showingFrom').textContent = filteredRows.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('showingTo').textContent = endIndex;
+            document.getElementById('totalVisible').textContent = filteredRows.length;
+
+            // Cập nhật số ở tab hiện tại
+            const currentTabElement = document.querySelector(`.audit-tab[data-tab="${currentTab}"]`);
+            if (currentTabElement) {
+                const badge = currentTabElement.querySelector('.audit-tab-badge');
+                if (badge) {
+                    document.getElementById('totalAuditsCount').textContent = filteredRows.length;
+                }
+            }
+
+            // Update page number
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+            document.getElementById('currentPageBtn').textContent = filteredRows.length > 0 ? currentPage : 0;
+
+            // Enable/disable pagination buttons
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (currentPage <= 1) {
+                prevBtn.classList.add('disabled');
+            } else {
+                prevBtn.classList.remove('disabled');
+            }
+
+            if (currentPage >= totalPages) {
+                nextBtn.classList.add('disabled');
+            } else {
+                nextBtn.classList.remove('disabled');
+            }
+        }
+
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+            const newPage = currentPage + direction;
+
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                updatePagination();
+            }
+        }
 
     function showAuditDetail(row) {
         const originalQuantity = parseFloat(row.dataset.originalQuantity);
@@ -1790,7 +1957,7 @@
             title: 'Xác nhận đơn kiểm kê',
             message: 'Bạn có chắc chắn muốn XÁC NHẬN đơn kiểm kê này?',
             warning: null,
-            buttonText: '✅ Xác nhận',
+            buttonText: 'Xác nhận',
             buttonClass: 'confirm-modal-btn-confirm'
         });
 
@@ -1811,7 +1978,7 @@
                 confirmerName: currentUser.fullName,
                 confirmerPhone: currentUser.phone,
                 confirmerPosition: currentUser.position,
-                confirmedAt: new Date().toISOString()
+                confirmedAt: new Date().toLocaleString('vi-VN')
             };
 
             console.log('Sending confirm request:', requestData);

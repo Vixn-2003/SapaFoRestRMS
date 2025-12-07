@@ -107,5 +107,11 @@ namespace BusinessAccessLayer.Services
 
             throw new NotImplementedException("Hàm GetTopSuppliersAsync cần được triển khai trong Repository để tối ưu hóa truy vấn.");
         }
+
+        public async Task<bool> SoftDeleteSupplierAsync(int supplierId)
+        {
+            var supplier = await _unitOfWork.SupplierManager.DeleteSoftAsync(supplierId);
+            return supplier;
+        }
     }
 }
