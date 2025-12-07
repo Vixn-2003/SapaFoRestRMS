@@ -1747,17 +1747,53 @@
             };
 
             // --- Fetch Utility ---
-            async function fetchData(url) {
+            async function fetchData(url, options = {}) {
+                const showEmptyToast = options.showEmptyToast !== false; // Mặc định là true
+                const silent = options.silent || false; // Không hiển thị toast nào
+
                 try {
-                    // Thêm một lớp loading UI ở đây nếu cần
                     const response = await fetch(url);
-                    if (!response.ok) {
-                        throw new Error(`Lỗi HTTP ${response.status}: Không thể tải dữ liệu.`);
+
+                    // ✅ XỬ LÝ 404 - KHÔNG HIỂN THỊ LỖI
+                    if (response.status === 404) {
+                        console.warn(`Data not found (404): ${url}`);
+                        if (showEmptyToast && !silent) {
+                            showToast('warning', 'Dữ liệu trống', 'Không có dữ liệu để hiển thị');
+                        }
+                        return null;
                     }
-                    return await response.json();
+
+                    // ✅ XỬ LÝ CÁC LỖI KHÁC (500, 400, v.v.)
+                    if (!response.ok) {
+                        console.error(`HTTP Error ${response.status}: ${url}`);
+
+                        // Chỉ hiển thị lỗi nghiêm trọng (500+)
+                        if (response.status >= 500 && !silent) {
+                            showToast('error', 'Lỗi server', 'Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.');
+                        }
+                        return null;
+                    }
+
+                    const data = await response.json();
+
+                    // ✅ KIỂM TRA DỮ LIỆU RỖNG
+                    if (!data || (Array.isArray(data) && data.length === 0)) {
+                        console.info(`Empty data returned from: ${url}`);
+                        if (showEmptyToast && !silent) {
+                            showToast('warning', 'Dữ liệu trống', 'Không có dữ liệu để hiển thị');
+                        }
+                        return Array.isArray(data) ? [] : null;
+                    }
+
+                    return data;
+
                 } catch (error) {
-                    console.error("Fetch API failed:", url, error);
-                    showToast('error', 'Lỗi tải dữ liệu', error.message);
+                    console.error("Fetch error:", url, error);
+
+                    // Chỉ hiển thị lỗi network/connection
+                    if (!silent) {
+                        showToast('error', 'Lỗi kết nối', 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+                    }
                     return null;
                 }
             }
@@ -1927,30 +1963,25 @@ function validatePhone(phone) {
             // ====================================================================
 
             async function fetchAndInitializeData() {
-                // Lấy danh sách tổng hợp
-                const summaryData = await fetchData(ENDPOINTS.SUMMARY_LIST);
-                if (summaryData) {
-                    window.SUPPLIERS_DATA = summaryData;
-                } else {
-                    window.SUPPLIERS_DATA = [];
-                }
+                // ✅ LẤY DANH SÁCH NHÀ CUNG CẤP - KHÔNG HIỂN THỊ TOAST
+                const summaryData = await fetchData(ENDPOINTS.SUMMARY_LIST, { silent: true });
+                window.SUPPLIERS_DATA = summaryData || [];
 
-                // Lấy Top Suppliers thật
-                const topSuppliersData = await fetchData(ENDPOINTS.TOP_SUPPLIERS);
-                if (topSuppliersData) {
-                    state.topSuppliers = topSuppliersData;
-                }
+                // ✅ LẤY TOP SUPPLIERS - KHÔNG HIỂN THỊ TOAST
+                const topSuppliersData = await fetchData(ENDPOINTS.TOP_SUPPLIERS, { silent: true });
+                state.topSuppliers = topSuppliersData || [];
 
-                // Lấy Recent Transactions thật
-                const recentTransactionsData = await fetchData(ENDPOINTS.RECENT_TRANSACTIONS);
-                if (recentTransactionsData) {
-                    state.recentTransactions = recentTransactionsData;
-                }
+                // ✅ LẤY RECENT TRANSACTIONS - KHÔNG HIỂN THỊ TOAST
+                const recentTransactionsData = await fetchData(ENDPOINTS.RECENT_TRANSACTIONS, { silent: true });
+                state.recentTransactions = recentTransactionsData || [];
 
-                // ✅ LẤY THỐNG KÊ THÁNG NÀY
-                const monthlyStatsData = await fetchData(ENDPOINTS.MONTHLY_STATS);
-                if (monthlyStatsData) {
-                    state.monthlyStats = monthlyStatsData;
+                // ✅ LẤY THỐNG KÊ THÁNG - KHÔNG HIỂN THỊ TOAST
+                const monthlyStatsData = await fetchData(ENDPOINTS.MONTHLY_STATS, { silent: true });
+                state.monthlyStats = monthlyStatsData;
+
+                // ✅ CHỈ HIỂN THỊ 1 TOAST DUY NHẤT NẾU TẤT CẢ ĐỀU NULL
+                if (!summaryData && !topSuppliersData && !recentTransactionsData && !monthlyStatsData) {
+                    showToast('warning', 'Không có dữ liệu', 'Hệ thống chưa có dữ liệu nhà cung cấp');
                 }
 
                 render();
@@ -1958,35 +1989,29 @@ function validatePhone(phone) {
 
             // --- B. Fetch Dữ liệu Chi tiết khi chuyển View ---
             async function fetchDetailData(supplierId, subTab) {
-                // Đặt nội dung Loading
                 renderSubContent(); // Hiển thị loading
 
                 let data = null;
                 if (subTab === 'orders') {
-                    data = await fetchData(ENDPOINTS.ORDERS_HISTORY(supplierId));
-                    if (data) {
-                        // Cập nhật state KHÔNG gọi render toàn bộ
-                        state.orderHistory = data;
-                        renderSubContent(); // Chỉ render lại sub-content
-                    }
+                    // ✅ KHÔNG HIỂN THỊ TOAST KHI TẢI
+                    data = await fetchData(ENDPOINTS.ORDERS_HISTORY(supplierId), { silent: true });
+                    state.orderHistory = data || [];
+                    renderSubContent();
                 } else if (subTab === 'products') {
-                    data = await fetchData(ENDPOINTS.PRODUCTS_SUPPLIED(supplierId));
-                    if (data) {
-                        state.ingredients = data;
-                        renderSubContent(); // Chỉ render lại sub-content
-                    }
+                    // ✅ KHÔNG HIỂN THỊ TOAST KHI TẢI
+                    data = await fetchData(ENDPOINTS.PRODUCTS_SUPPLIED(supplierId), { silent: true });
+                    state.ingredients = data || [];
+                    renderSubContent();
                 }
-                // Stats tab là static, không cần fetch
             }
 
 
             async function fetchAllTransactions() {
-                const data = await fetchData(ENDPOINTS.ALL_RECENT_TRANSACTIONS);
-                if (data) {
-                    state.allTransactions = data;
-                    state.filteredTransactions = data;
-                    renderTransactionsModal();
-                }
+                // ✅ KHÔNG HIỂN THỊ TOAST KHI TẢI
+                const data = await fetchData(ENDPOINTS.ALL_RECENT_TRANSACTIONS, { silent: true });
+                state.allTransactions = data || [];
+                state.filteredTransactions = data || [];
+                renderTransactionsModal();
             }
 
             // ✅ HÀM LỌC VÀ SẮP XẾP GIAO DỊCH
@@ -2104,9 +2129,11 @@ function validatePhone(phone) {
                 const transactionsSubtextElement = $('#stat-transactions-subtext');
 
                 if (totalElement) totalElement.textContent = total;
-                if (totalSubtextElement) totalSubtextElement.textContent = 'Đang hoạt động';
+                if (totalSubtextElement) {
+                    totalSubtextElement.textContent = total > 0 ? 'Đang hoạt động' : 'Chưa có nhà cung cấp';
+                }
 
-                // ✅ HIỂN THỊ DỮ LIỆU TỪNG API THÁNG NÀY
+                // ✅ HIỂN THỊ DỮ LIỆU THỐNG KÊ THÁNG
                 if (state.monthlyStats) {
                     if (transactionsElement) {
                         transactionsElement.textContent = state.monthlyStats.ordersThisMonth;
@@ -2116,17 +2143,26 @@ function validatePhone(phone) {
                     }
                 } else {
                     if (transactionsElement) transactionsElement.textContent = '0';
-                    if (transactionsSubtextElement) transactionsSubtextElement.textContent = 'Tháng hiện tại';
+                    if (transactionsSubtextElement) transactionsSubtextElement.textContent = 'Chưa có giao dịch';
                 }
 
-
-                // Phần render danh sách suppliers (giữ nguyên)
+                // Phần render danh sách suppliers
                 const filteredSuppliers = filterSuppliers();
                 const container = $('#sm-supplier-cards-container');
                 let html = '';
 
                 if (filteredSuppliers.length === 0) {
-                    html = `<div style="text-align: center; color: #6b7280; padding: 40px; background: white; border-radius: 8px;">Không tìm thấy nhà cung cấp phù hợp.</div>`;
+                    const message = suppliers.length === 0
+                        ? 'Hệ thống chưa có nhà cung cấp nào. Nhấn "Thêm nhà cung cấp" để bắt đầu.'
+                        : 'Không tìm thấy nhà cung cấp phù hợp với từ khóa tìm kiếm.';
+
+                    html = `<div style="text-align: center; color: #6b7280; padding: 40px; background: white; border-radius: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 16px; opacity: 0.5;">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <p style="font-size: 16px; margin-bottom: 8px;">${message}</p>
+                </div>`;
                 } else {
                     html = filteredSuppliers.map(supplier => `
                     <div class="sm-supplier-card" data-supplier-id="${supplier.id}">
@@ -2145,7 +2181,7 @@ function validatePhone(phone) {
                                     </div>
                                     <div>
                                         <p><span>Địa chỉ:</span> ${supplier.address || 'N/A'}</p>
-                                        <p><span>Đơn hàng cuối:</span> ${supplier.lastOrder ? new Date(supplier.lastOrder).toLocaleDateString('vi-VN') : 'N/A'}</p>
+                                        <p><span>Đơn hàng cuối:</span> ${supplier.lastOrder ? new Date(supplier.lastOrder).toLocaleDateString('vi-VN') : 'Chưa có'}</p>
                                     </div>
                                 </div>
                                 <div class="sm-stats-footer">
@@ -2163,9 +2199,9 @@ function validatePhone(phone) {
                                 <button class="sm-action-btn sm-btn-view" title="Xem chi tiết" onclick="viewSupplierDetail(${supplier.id})">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </button>
-                                        <button class="sm-action-btn sm-btn-edit" title="Chỉnh sửa" onclick="editSupplier(${supplier.id})">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        </button>
+                                <button class="sm-action-btn sm-btn-edit" title="Chỉnh sửa" onclick="editSupplier(${supplier.id})">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                </button>
                                 <button class="sm-action-btn sm-btn-delete" title="Xóa" onclick="deleteSupplier(${supplier.id})">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 11v6M14 11v6M2 6h20M5 6l1.5 14h11L19 6M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
                                 </button>
@@ -2174,6 +2210,7 @@ function validatePhone(phone) {
                     </div>
                 `).join('');
                 }
+
                 container.innerHTML = html;
 
                 requestAnimationFrame(() => {
@@ -2279,7 +2316,14 @@ function validatePhone(phone) {
                 const suppliers = state.topSuppliers || [];
 
                 if (suppliers.length === 0) {
-                    container.innerHTML = '<div class="sm-list-item" style="text-align: center; color: #9ca3af;">Chưa có dữ liệu</div>';
+                    container.innerHTML = `
+                    <div class="sm-list-item" style="text-align: center; color: #9ca3af; padding: 24px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 12px; opacity: 0.4;">
+                            <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
+                        </svg>
+                        <p style="font-size: 14px;">Chưa có dữ liệu xếp hạng</p>
+                    </div>
+                `;
                     return;
                 }
 
@@ -2288,19 +2332,19 @@ function validatePhone(phone) {
                     const value = formatMillion(supplier.value);
 
                     return `
-                <div class="sm-list-item sm-clickable-supplier"
-                     onclick="highlightSupplierByCode('${supplier.code}')"
-                     title="Click để xem trong danh sách">
-                    <div class="sm-rank-content">
-                        <div class="sm-rank-badge ${rankClass}">${index + 1}</div>
-                        <div class="sm-rank-info">
-                            <p class="sm-item-name">${supplier.name} (${supplier.code})</p>
-                            <p class="sm-item-subtext">${supplier.orders} đơn hàng</p>
+                    <div class="sm-list-item sm-clickable-supplier"
+                         onclick="highlightSupplierByCode('${supplier.code}')"
+                         title="Click để xem trong danh sách">
+                        <div class="sm-rank-content">
+                            <div class="sm-rank-badge ${rankClass}">${index + 1}</div>
+                            <div class="sm-rank-info">
+                                <p class="sm-item-name">${supplier.name} (${supplier.code})</p>
+                                <p class="sm-item-subtext">${supplier.orders} đơn hàng</p>
+                            </div>
+                            <span class="sm-item-value">${value}</span>
                         </div>
-                        <span class="sm-item-value">${value}</span>
                     </div>
-                </div>
-            `;
+                `;
                 }).join('');
 
                 container.innerHTML = html;
@@ -2318,7 +2362,15 @@ function validatePhone(phone) {
                 const transactions = state.recentTransactions || [];
 
                 if (transactions.length === 0) {
-                    container.innerHTML = '<div class="sm-list-item" style="text-align: center; color: #9ca3af;">Chưa có giao dịch</div>';
+                    container.innerHTML = `
+                    <div class="sm-list-item" style="text-align: center; color: #9ca3af; padding: 24px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 12px; opacity: 0.4;">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        <p style="font-size: 14px;">Chưa có giao dịch gần đây</p>
+                    </div>
+                `;
                     return;
                 }
 
@@ -2333,18 +2385,18 @@ function validatePhone(phone) {
                     });
 
                     return `
-                <div class="sm-list-item">
-                    <div class="sm-flex-start-between">
-                        <p class="sm-item-name sm-clickable-supplier"
-                           onclick="highlightSupplierByName('${txn.supplierName.replace(/'/g, "\\'")}')"
-                           title="Click để xem trong danh sách">
-                            ${txn.supplierName}
-                        </p>
-                        <span class="sm-item-value">${formattedValue}</span>
+                    <div class="sm-list-item">
+                        <div class="sm-flex-start-between">
+                            <p class="sm-item-name sm-clickable-supplier"
+                               onclick="highlightSupplierByName('${txn.supplierName.replace(/'/g, "\\'")}')"
+                               title="Click để xem trong danh sách">
+                                ${txn.supplierName}
+                            </p>
+                            <span class="sm-item-value">${formattedValue}</span>
+                        </div>
+                        <p class="sm-item-subtext">${formattedDate}</p>
                     </div>
-                    <p class="sm-item-subtext">${formattedDate}</p>
-                </div>
-            `;
+                `;
                 }).join('');
 
                 container.innerHTML = html;
@@ -2489,13 +2541,13 @@ function validatePhone(phone) {
                         content = `
                         <div class="sm-panel">
                             <div class="sm-products-panel-header">
-                                <h3 class="sm-panel-title">Danh mục nguyên liệu cung cấp</h3>
-                                <button class="sm-table-action-btn">+ Thêm nguyên liệu</button>
+                                <h3 class="sm-panel-title">Danh mục mặt hàng cung cấp</h3>
+                                <button class="sm-table-action-btn">+ Thêm mặt hàng</button>
                             </div>
                             <table class="sm-table">
                                 <thead class="sm-table-thead">
                                     <tr>
-                                        <th class="sm-table-th">Tên nguyên liệu</th>
+                                        <th class="sm-table-th">Tên mặt hàng</th>
                                         <th class="sm-table-th">Đơn vị</th>
                                         <th class="sm-table-th">Giá gần nhất</th>
                                         <th class="sm-table-th">Giá TB</th>
@@ -2517,7 +2569,7 @@ function validatePhone(phone) {
                         </div>
                     `;
                     } else if (ingredients) {
-                        content = `<div class="sm-panel p-4 text-center text-gray-500">Nhà cung cấp này chưa cung cấp nguyên liệu nào.</div>`;
+                        content = `<div class="sm-panel p-4 text-center text-gray-500">Nhà cung cấp này chưa cung cấp mặt hàng nào.</div>`;
                     }
                 }
 

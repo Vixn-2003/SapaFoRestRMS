@@ -16,7 +16,5 @@ namespace BusinessAccessLayer.Services.Interfaces
 
         Task<IEnumerable<StockTransactionDTO>> GetExportTransactionsAsync();
 
-        Task<bool> UpdateStatusExportAsync(int transactionId, string statusExport);
-
     }
 }

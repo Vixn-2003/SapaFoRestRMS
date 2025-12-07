@@ -1,6 +1,6 @@
 ﻿@model WebSapaForestForStaff.DTOs.Inventory.ExportManagementViewModel
 @{
-    ViewData["Title"] = "Quản Lý Xuất hàng";
+    ViewData["Title"] = "Lịch Sử Xuất hàng";
     Layout = "~/Views/Shared/_LayoutInventory.cshtml";
     
     // Ensure Model is never null
@@ -10,7 +10,7 @@
 <style>
     /* ==================== EXPORT MANAGEMENT ISOLATED STYLES ==================== */
     /* Wrap everything in .export-mgmt to avoid conflicts */
-    
+
     .export-mgmt {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background: #f3f4f6;
@@ -18,11 +18,11 @@
         min-height: 100vh;
     }
 
-    .export-mgmt *,
-    .export-mgmt *::before,
-    .export-mgmt *::after {
-        box-sizing: border-box;
-    }
+        .export-mgmt *,
+        .export-mgmt *::before,
+        .export-mgmt *::after {
+            box-sizing: border-box;
+        }
 
     /* ==================== HEADER ==================== */
     .export-mgmt__header {
@@ -60,10 +60,10 @@
         transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .export-mgmt__stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
+        .export-mgmt__stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
 
     .export-mgmt__stat-card--blue {
         border-left-color: #3b82f6;
@@ -157,12 +157,12 @@
         transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .export-mgmt__filter-input:focus,
-    .export-mgmt__filter-select:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
+        .export-mgmt__filter-input:focus,
+        .export-mgmt__filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
 
     /* ==================== ALERT SECTION ==================== */
     .export-mgmt__alerts {
@@ -203,9 +203,9 @@
         align-items: center;
     }
 
-    .export-mgmt__alert-item:last-child {
-        margin-bottom: 0;
-    }
+        .export-mgmt__alert-item:last-child {
+            margin-bottom: 0;
+        }
 
     .export-mgmt__top-item {
         display: flex;
@@ -217,9 +217,9 @@
         border-radius: 0.5rem;
     }
 
-    .export-mgmt__top-item:last-child {
-        margin-bottom: 0;
-    }
+        .export-mgmt__top-item:last-child {
+            margin-bottom: 0;
+        }
 
     .export-mgmt__rank {
         font-weight: 700;
@@ -247,9 +247,9 @@
         border-radius: 0.5rem;
     }
 
-    .export-mgmt__warehouse-stat:last-child {
-        margin-bottom: 0;
-    }
+        .export-mgmt__warehouse-stat:last-child {
+            margin-bottom: 0;
+        }
 
     .export-mgmt__badge {
         display: inline-block;
@@ -289,7 +289,7 @@
 
     .export-mgmt__table-wrapper {
         overflow-x: auto;
-        max-height: 450px; 
+        max-height: 600px;
         overflow-y: auto;
     }
 
@@ -299,37 +299,37 @@
         font-size: 0.875rem;
     }
 
-    .export-mgmt__table thead {
-        background: #f9fafb;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
+        .export-mgmt__table thead {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
 
-    .export-mgmt__table th {
-        padding: 0.75rem 1rem;
-        text-align: left;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border-bottom: 2px solid #e5e7eb;
-    }
+        .export-mgmt__table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #e5e7eb;
+        }
 
-    .export-mgmt__table td {
-        padding: 0.875rem 1rem;
-        border-top: 1px solid #e5e7eb;
-        color: #374151;
-    }
+        .export-mgmt__table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid #e5e7eb;
+            color: #374151;
+        }
 
-    .export-mgmt__table tbody tr {
-        transition: background-color 0.15s;
-    }
+        .export-mgmt__table tbody tr {
+            transition: background-color 0.15s;
+        }
 
-    .export-mgmt__table tbody tr:hover {
-        background: #f9fafb;
-    }
+            .export-mgmt__table tbody tr:hover {
+                background: #f9fafb;
+            }
 
     .export-mgmt__ingredient-info {
         display: flex;
@@ -392,8 +392,8 @@
 
     .export-mgmt__comparison-wrapper {
         overflow-x: auto;
-        max-height: 500px; 
-        overflow-y: auto; 
+        max-height: 500px;
+        overflow-y: auto;
     }
 
     .export-mgmt__comparison-table {
@@ -402,24 +402,24 @@
         font-size: 0.875rem;
     }
 
-    .export-mgmt__comparison-table thead {
-        background: #f9fafb;
-    }
+        .export-mgmt__comparison-table thead {
+            background: #f9fafb;
+        }
 
-    .export-mgmt__comparison-table th {
-        padding: 0.75rem 1rem;
-        text-align: left;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #6b7280;
-        text-transform: uppercase;
-        border-bottom: 2px solid #e5e7eb;
-    }
+        .export-mgmt__comparison-table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e5e7eb;
+        }
 
-    .export-mgmt__comparison-table td {
-        padding: 0.875rem 1rem;
-        border-top: 1px solid #e5e7eb;
-    }
+        .export-mgmt__comparison-table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
 
     .export-mgmt__trend-up {
         color: #ef4444;
@@ -520,9 +520,17 @@
     }
 
     @@keyframes export-mgmt-dots {
-        0%, 20% { content: "Đang tải dữ liệu."; }
-        40% { content: "Đang tải dữ liệu.."; }
-        60%, 100% { content: "Đang tải dữ liệu..."; }
+        0%, 20% {
+            content: "Đang tải dữ liệu.";
+        }
+
+        40% {
+            content: "Đang tải dữ liệu..";
+        }
+
+        60%, 100% {
+            content: "Đang tải dữ liệu...";
+        }
     }
 
     .export-mgmt__alert-item {
@@ -639,368 +647,6 @@
     .export-mgmt__stat-card--info .export-mgmt__stat-icon-wrapper {
         background: #ede9fe;
     }
-
-    /* ==================== ACTION BUTTONS ==================== */
-    .export-mgmt__actions {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: flex-end;
-    }
-
-    .export-mgmt__btn {
-        padding: 0.5rem 1rem;
-        border: none;
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .export-mgmt__btn--primary {
-        background: #3b82f6;
-        color: white;
-    }
-
-        .export-mgmt__btn--primary:hover {
-            background: #2563eb;
-        }
-
-    .export-mgmt__btn--danger {
-        background: #ef4444;
-        color: white;
-    }
-
-        .export-mgmt__btn--danger:hover {
-            background: #dc2626;
-        }
-
-    .export-mgmt__btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-/* ==================== MODAL CONFIRMATION ==================== */
-.export-mgmt__modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    backdrop-filter: blur(4px);
-}
-
-.export-mgmt__modal-overlay.active {
-    display: flex;
-    animation: fadeIn 0.2s ease;
-}
-
-.export-mgmt__modal {
-    background: white;
-    border-radius: 1rem;
-    padding: 2rem;
-    max-width: 400px;
-    width: 90%;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    animation: slideUp 0.3s ease;
-}
-
-.export-mgmt__modal-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.export-mgmt__modal-icon {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
-
-.export-mgmt__modal-icon--success {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.export-mgmt__modal-icon--danger {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.export-mgmt__modal-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #111827;
-    margin: 0;
-}
-
-.export-mgmt__modal-body {
-    margin-bottom: 1.5rem;
-    color: #6b7280;
-    line-height: 1.6;
-}
-
-.export-mgmt__modal-actions {
-    display: flex;
-    gap: 0.75rem;
-    justify-content: flex-end;
-}
-
-.export-mgmt__modal-btn {
-    padding: 0.625rem 1.25rem;
-    border: none;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.export-mgmt__modal-btn--cancel {
-    background: #f3f4f6;
-    color: #374151;
-}
-
-.export-mgmt__modal-btn--cancel:hover {
-    background: #e5e7eb;
-}
-
-.export-mgmt__modal-btn--confirm {
-    background: #3b82f6;
-    color: white;
-}
-
-.export-mgmt__modal-btn--confirm:hover {
-    background: #2563eb;
-}
-
-.export-mgmt__modal-btn--danger {
-    background: #ef4444;
-    color: white;
-}
-
-.export-mgmt__modal-btn--danger:hover {
-    background: #dc2626;
-}
-
-/* ==================== TOAST NOTIFICATIONS ==================== */
-.export-mgmt__toast-container {
-    position: fixed;
-    top: 1.5rem;
-    right: 1.5rem;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-width: 400px;
-}
-
-.export-mgmt__toast {
-    background: white;
-    border-radius: 0.75rem;
-    padding: 1rem 1.25rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    min-width: 300px;
-    animation: slideInRight 0.3s ease;
-    border-left: 4px solid #3b82f6;
-}
-
-.export-mgmt__toast--success {
-    border-left-color: #22c55e;
-}
-
-.export-mgmt__toast--error {
-    border-left-color: #ef4444;
-}
-
-.export-mgmt__toast--info {
-    border-left-color: #3b82f6;
-}
-
-.export-mgmt__toast--warning {
-    border-left-color: #f59e0b;
-}
-
-.export-mgmt__toast-icon {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
-.export-mgmt__toast--success .export-mgmt__toast-icon {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.export-mgmt__toast--error .export-mgmt__toast-icon {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.export-mgmt__toast--info .export-mgmt__toast-icon {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.export-mgmt__toast--warning .export-mgmt__toast-icon {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.export-mgmt__toast-content {
-    flex: 1;
-}
-
-.export-mgmt__toast-title {
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 0.25rem;
-    font-size: 0.9rem;
-}
-
-.export-mgmt__toast-message {
-    color: #6b7280;
-    font-size: 0.875rem;
-    line-height: 1.4;
-}
-
-.export-mgmt__toast-close {
-    background: none;
-    border: none;
-    color: #9ca3af;
-    cursor: pointer;
-    font-size: 1.25rem;
-    padding: 0;
-    width: 1.5rem;
-    height: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s;
-}
-
-.export-mgmt__toast-close:hover {
-    color: #374151;
-}
-
-/* ==================== ANIMATIONS ==================== */
-@@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@@keyframes slideInRight {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@@keyframes slideOutRight {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-}
-
-.export-mgmt__toast.removing {
-    animation: slideOutRight 0.3s ease forwards;
-}
-
-/* ==================== RESPONSIVE ==================== */
-@@media (max-width: 640px) {
-    .export-mgmt__toast-container {
-        right: 1rem;
-        left: 1rem;
-        top: 1rem;
-    }
-
-    .export-mgmt__toast {
-        min-width: unset;
-    }
-
-    .export-mgmt__modal {
-        margin: 1rem;
-    }
-}
-
-    .export-mgmt__badge--cancelled {
-        background: #f3f4f6;
-        color: #374151;
-    }
-
-    /* ==================== TABS FOR EXPORT TABLE ==================== */
-    .export-mgmt__export-tabs {
-        display: flex;
-        gap: 4px;
-        border-bottom: 1px solid #e5e7eb;
-        background: #f9fafb;
-        padding: 0 1rem;
-    }
-
-    .export-mgmt__export-tab {
-        padding: 0.75rem 1.25rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        background: none;
-        border: none;
-        border-bottom: 2px solid transparent;
-        color: #6b7280;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-        .export-mgmt__export-tab:hover {
-            color: #111827;
-            background: rgba(59, 130, 246, 0.05);
-        }
-
-        .export-mgmt__export-tab.active {
-            color: #2563eb;
-            border-bottom-color: #2563eb;
-            background: white;
-        }
 </style>
 
 <div class="export-mgmt">
@@ -1011,9 +657,9 @@
     font-weight: 600;
     margin-bottom: 5px;
 ">
-            Quản Lý Xuất Hàng
+            Lịch Sử Xuất Hàng
         </h1>
-        <p>Quản lý xuất hàng cho nhà bếp </p>
+        <p>Lịch sử xuất hàng cho nhà bếp </p>
     </div>
 
     <!-- Stats Cards -->
@@ -1112,9 +758,9 @@
 
     <!-- Main Table -->
     <div class="export-mgmt__table-section">
-        <h2 class="export-mgmt__section-header">Chi tiết đơn xuất (@viewModel.TotalTransactions giao dịch)</h2>
+        <h2 class="export-mgmt__section-header">Chi tiết đơn xuất (@Model.TotalTransactions giao dịch)</h2>
 
-        @if (viewModel.ExportData != null && viewModel.ExportData.Any())
+        @if (Model.ExportData.Any())
         {
             <div class="export-mgmt__table-wrapper">
                 <table class="export-mgmt__table" id="exportTable">
@@ -1126,8 +772,6 @@
                             <th>Kho</th>
                             <th>Lô hàng</th>
                             <th>Ghi chú</th>
-                            <th>Trạng thái</th>
-                            <th style="text-align: right;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1178,51 +822,6 @@
                                         <span class="export-mgmt__text-muted">-</span>
                                     }
                                 </td>
-                                <td>
-                                    @{
-                                        var statusClass = item.StatusExport switch
-                                        {
-                                            "Delivered" => "export-mgmt__badge--success",
-                                            "Received" => "export-mgmt__badge--success",
-                                            "Missing" => "export-mgmt__badge--danger",
-                                            "Cancelled" => "export-mgmt__badge--cancelled",
-                                            _ => "export-mgmt__badge--warning"
-                                        };
-
-                                        var statusText = item.StatusExport switch
-                                        {
-                                            "Delivered" => "Đã giao",
-                                            "Received" => "Đã nhận",
-                                            "Missing" => "Thiếu",
-                                            "Cancelled" => "Từ chối",
-                                            "Requested" => "Đang yêu cầu",
-                                            _ => "Đang xử lý"
-                                        };
-                                    }
-                                    <span class="export-mgmt__badge @statusClass" id="status-@item.TransactionId">
-                                        @statusText
-                                    </span>
-                                </td>
-
-                                <td style="text-align: right;">
-                                    <div class="export-mgmt__actions" id="actions-@item.TransactionId">
-                                        @if (item.StatusExport == "Requested")
-                                        {
-                                            <button class="export-mgmt__btn export-mgmt__btn--primary"
-                                                    onclick="updateExportStatus(@item.TransactionId, 'Delivered')">
-                                                Giao hàng
-                                            </button>
-                                            <button class="export-mgmt__btn export-mgmt__btn--danger"
-                                                    onclick="updateExportStatus(@item.TransactionId, 'Missing')">
-                                                Báo thiếu
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <span class="export-mgmt__text-muted">Đã xử lý</span>
-                                        }
-                                    </div>
-                                </td>
                             </tr>
                         }
                     </tbody>
@@ -1270,353 +869,10 @@
     </div>
 </div>
 
-    <script>
-        const exportData = @Html.Raw(Json.Serialize(viewModel.ExportData));
-
-<!-- Modal Confirmation -->
-<div class="export-mgmt__modal-overlay" id="confirmModal">
-    <div class="export-mgmt__modal">
-        <div class="export-mgmt__modal-header">
-            <div class="export-mgmt__modal-icon" id="modalIcon">
-                ✓
-            </div>
-            <h3 class="export-mgmt__modal-title" id="modalTitle">Xác nhận</h3>
-        </div>
-        <div class="export-mgmt__modal-body" id="modalBody">
-            Bạn có chắc chắn muốn thực hiện hành động này?
-        </div>
-        <div class="export-mgmt__modal-actions">
-            <button class="export-mgmt__modal-btn export-mgmt__modal-btn--cancel" onclick="closeModal()">
-                Hủy
-            </button>
-            <button class="export-mgmt__modal-btn export-mgmt__modal-btn--confirm" id="modalConfirmBtn">
-                Xác nhận
-            </button>
-        </div>
-    </div>
-</div>
-
 <script>
     const exportData = @Html.Raw(Json.Serialize(Model.ExportData));
 
-    // Tạo mảng receivedExports có thể thay đổi được
-    let receivedExports = exportData.filter(x => x.statusExport === "Received");
-
-    // ==================== TOAST NOTIFICATION SYSTEM ====================
-    function showToast(message, type = 'info', duration = 3000) {
-        const container = document.getElementById('toastContainer');
-        const toast = document.createElement('div');
-        toast.className = `export-mgmt__toast export-mgmt__toast--${type}`;
-
-        const icons = {
-            success: '✓',
-            error: '✕',
-            info: 'ℹ',
-            warning: '⚠'
-        };
-
-        const titles = {
-            success: 'Thành công',
-            error: 'Lỗi',
-            info: 'Thông báo',
-            warning: 'Cảnh báo'
-        };
-
-        toast.innerHTML = `
-                <div class="export-mgmt__toast-icon">${icons[type]}</div>
-                <div class="export-mgmt__toast-content">
-                    <div class="export-mgmt__toast-title">${titles[type]}</div>
-                    <div class="export-mgmt__toast-message">${message}</div>
-                </div>
-                <button class="export-mgmt__toast-close" onclick="this.parentElement.remove()">×</button>
-            `;
-
-        container.appendChild(toast);
-
-        // Auto remove
-        setTimeout(() => {
-            toast.classList.add('removing');
-            setTimeout(() => toast.remove(), 300);
-        }, duration);
-    }
-
-    // ==================== MODAL CONFIRMATION SYSTEM ====================
-    let modalCallback = null;
-
-    function showConfirmModal(title, message, type = 'success', onConfirm) {
-        const modal = document.getElementById('confirmModal');
-        const modalIcon = document.getElementById('modalIcon');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalBody = document.getElementById('modalBody');
-        const confirmBtn = document.getElementById('modalConfirmBtn');
-
-        // Set content
-        modalTitle.textContent = title;
-        modalBody.textContent = message;
-
-        // Set icon style
-        modalIcon.className = `export-mgmt__modal-icon export-mgmt__modal-icon--${type}`;
-        modalIcon.textContent = type === 'success' ? '✓' : '⚠';
-
-        // Set button style
-        confirmBtn.className = `export-mgmt__modal-btn export-mgmt__modal-btn--${type === 'danger' ? 'danger' : 'confirm'}`;
-        confirmBtn.textContent = type === 'danger' ? 'Xác nhận' : 'Xác nhận';
-
-        // Store callback
-        modalCallback = onConfirm;
-
-        // Show modal
-        modal.classList.add('active');
-    }
-
-    function closeModal() {
-        const modal = document.getElementById('confirmModal');
-        modal.classList.remove('active');
-        modalCallback = null;
-    }
-
-    function confirmModal() {
-        if (modalCallback) {
-            modalCallback();
-        }
-        closeModal();
-    }
-
-    // Attach confirm to button
-    document.getElementById('modalConfirmBtn').onclick = confirmModal;
-
-    // Close on overlay click
-    document.getElementById('confirmModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeModal();
-        }
-    });
-
-    // ==================== TAB MANAGEMENT ====================
-    let currentExportTab = 'all';
-
-    function switchExportTab(tab) {
-        currentExportTab = tab;
-
-        // Update tab UI
-        document.querySelectorAll('.export-mgmt__export-tab').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.target.closest('.export-mgmt__export-tab').classList.add('active');
-
-        // Filter table
-        filterTable();
-    }
-
-    // ==================== FILTER TABLE ====================
-    function filterTable() {
-        const searchText = document.getElementById('searchInput').value.toLowerCase();
-        const dateFilter = document.getElementById('dateFilter').value;
-        const warehouseId = document.getElementById('warehouseFilter').value;
-
-        const rows = document.querySelectorAll('#exportTable tbody tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            let show = true;
-
-            // TAB FILTER - LỌC THEO TRẠNG THÁI
-            if (currentExportTab !== 'all') {
-                const statusBadge = row.querySelector('.export-mgmt__badge');
-
-                if (statusBadge) {
-                    const transactionId = parseInt(statusBadge.id.replace('status-', ''));
-                    const rowData = exportData.find(x => x.transactionId === transactionId);
-
-                    if (rowData) {
-                        const status = rowData.statusExport;
-
-                        switch (currentExportTab) {
-                            case 'requested':
-                                show = show && status === 'Requested';
-                                break;
-                            case 'delivered':
-                                show = show && status === 'Delivered';
-                                break;
-                            case 'received':
-                                show = show && status === 'Received';
-                                break;
-                            case 'missing':
-                                show = show && status === 'Missing';
-                                break;
-                            case 'cancelled':
-                                show = show && status === 'Cancelled';
-                                break;
-                        }
-                    }
-                }
-            }
-
-            // SEARCH - TÌM KIẾM
-            if (searchText && show) {
-                const ingredientName = row.querySelector('.export-mgmt__ingredient-name')?.textContent.toLowerCase() || '';
-                const ingredientCode = row.querySelector('.export-mgmt__ingredient-meta')?.textContent.toLowerCase() || '';
-                const batchInfo = row.querySelector('.export-mgmt__batch-badge')?.textContent.toLowerCase() || '';
-
-                const matchName = ingredientName.includes(searchText);
-                const matchCode = ingredientCode.includes(searchText);
-                const matchBatch = batchInfo.includes(searchText);
-
-                show = show && (matchName || matchCode || matchBatch);
-            }
-
-            // DATE FILTER
-            if (dateFilter !== 'all' && show) {
-                const rowDate = new Date(row.dataset.date);
-                const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-                switch (dateFilter) {
-                    case 'today':
-                        show = show && rowDate >= today;
-                        break;
-                    case 'yesterday':
-                        const yesterday = new Date(today);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        show = show && rowDate >= yesterday && rowDate < today;
-                        break;
-                    case '7days':
-                        const sevenDays = new Date(today);
-                        sevenDays.setDate(sevenDays.getDate() - 7);
-                        show = show && rowDate >= sevenDays;
-                        break;
-                    case '30days':
-                        const thirtyDays = new Date(today);
-                        thirtyDays.setDate(thirtyDays.getDate() - 30);
-                        show = show && rowDate >= thirtyDays;
-                        break;
-                }
-            }
-
-            // WAREHOUSE FILTER
-            if (warehouseId && show) {
-                show = show && row.dataset.warehouseId === warehouseId;
-            }
-
-            row.style.display = show ? '' : 'none';
-            if (show) visibleCount++;
-        });
-
-        // Update count display
-        document.getElementById('tableCountDisplay').textContent = `${visibleCount} giao dịch`;
-    }
-
-    // ==================== TAB COUNTS ====================
-    function updateTabCounts() {
-        const counts = {
-            all: exportData.length,
-            requested: exportData.filter(x => x.statusExport === 'Requested').length,
-            delivered: exportData.filter(x => x.statusExport === 'Delivered').length,
-            received: exportData.filter(x => x.statusExport === 'Received').length,
-            missing: exportData.filter(x => x.statusExport === 'Missing').length,
-            cancelled: exportData.filter(x => x.statusExport === 'Cancelled').length
-        };
-
-        document.getElementById('count-all').textContent = counts.all;
-        document.getElementById('count-requested').textContent = counts.requested;
-        document.getElementById('count-delivered').textContent = counts.delivered;
-        document.getElementById('count-received').textContent = counts.received;
-        document.getElementById('count-missing').textContent = counts.missing;
-        document.getElementById('count-cancelled').textContent = counts.cancelled;
-    }
-
-    // ==================== UPDATE EXPORT STATUS ====================
-    async function updateExportStatus(transactionId, newStatus) {
-        const isDelivered = newStatus === 'Delivered';
-
-        showConfirmModal(
-            isDelivered ? 'Xác nhận giao hàng' : 'Xác nhận báo thiếu',
-            isDelivered
-                ? `Bạn có chắc chắn muốn xác nhận đã giao hàng cho đơn xuất này?`
-                : `Bạn có chắc chắn muốn báo thiếu hàng cho đơn xuất này?`,
-            isDelivered ? 'success' : 'danger',
-            async () => {
-                const actionsDiv = document.getElementById(`actions-${transactionId}`);
-                const buttons = actionsDiv.querySelectorAll('button');
-                buttons.forEach(btn => btn.disabled = true);
-
-                try {
-                    const formData = new FormData();
-                    formData.append('transactionId', transactionId);
-                    formData.append('status', newStatus);
-
-                    const response = await fetch('/ExportManagement/UpdateExportStatus', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        showToast(result.message, 'success');
-                        updateStatusUI(transactionId, newStatus);
-
-                        // Cập nhật dữ liệu
-                        const exportItem = exportData.find(x => x.transactionId === transactionId);
-                        if (exportItem) {
-                            exportItem.statusExport = newStatus;
-                        }
-
-                        // Cập nhật receivedExports
-                        receivedExports = exportData.filter(x => x.statusExport === "Received");
-
-                        // Tính lại thống kê
-                        calculateStats();
-                    } else {
-                        showToast(result.message || 'Không thể cập nhật trạng thái', 'error');
-                        buttons.forEach(btn => btn.disabled = false);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    showToast('Lỗi kết nối: ' + error.message, 'error');
-                    buttons.forEach(btn => btn.disabled = false);
-                }
-            }
-        );
-    }
-
-    function updateStatusUI(transactionId, newStatus) {
-        const statusBadge = document.getElementById(`status-${transactionId}`);
-        const actionsDiv = document.getElementById(`actions-${transactionId}`);
-
-        if (statusBadge) {
-            statusBadge.className = 'export-mgmt__badge';
-
-            switch (newStatus) {
-                case 'Delivered':
-                    statusBadge.classList.add('export-mgmt__badge--success');
-                    statusBadge.textContent = 'Đã giao';
-                    break;
-                case 'Missing':
-                    statusBadge.classList.add('export-mgmt__badge--danger');
-                    statusBadge.textContent = 'Thiếu';
-                    break;
-                case 'Received':
-                    statusBadge.classList.add('export-mgmt__badge--success');
-                    statusBadge.textContent = 'Đã nhận';
-                    break;
-                case 'Cancelled':
-                    statusBadge.classList.add('export-mgmt__badge--cancelled');
-                    statusBadge.textContent = 'Từ chối';
-                    break;
-            }
-        }
-
-        if (actionsDiv) {
-            actionsDiv.innerHTML = '<span class="export-mgmt__text-muted">Đã xử lý</span>';
-        }
-
-        // Cập nhật lại tab counts và filter
-        updateTabCounts();
-        filterTable();
-    }
-
-    // ==================== STATISTICS CALCULATIONS ====================
+    // Tính toán thống kê
     function calculateStats() {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1632,14 +888,14 @@
         sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
         // Xuất hôm nay
-        const todayExports = receivedExports.filter(x => {
+        const todayExports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= today;
         });
         const todayTotal = todayExports.reduce((sum, x) => sum + x.quantity, 0);
 
-        // Xuất hôm qua
-        const yesterdayExports = receivedExports.filter(x => {
+        // Xuất hôm qua để so sánh
+        const yesterdayExports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= yesterday && transDate < today;
         });
@@ -1653,13 +909,14 @@
         document.getElementById('todayCompare').innerHTML = `<span style="color: ${todayColor}">${todayArrow} ${Math.abs(todayPercent)}% vs hôm qua</span>`;
 
         // Xuất 7 ngày
-        const week7Exports = receivedExports.filter(x => {
+        const week7Exports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= sevenDaysAgo;
         });
         const week7Total = week7Exports.reduce((sum, x) => sum + x.quantity, 0);
 
-        const prevWeek7Exports = receivedExports.filter(x => {
+        // 7 ngày trước đó để so sánh
+        const prevWeek7Exports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= fourteenDaysAgo && transDate < sevenDaysAgo;
         });
@@ -1673,13 +930,14 @@
         document.getElementById('week7Compare').innerHTML = `<span style="color: ${week7Color}">${week7Arrow} ${Math.abs(week7Percent)}% vs 7 ngày trước</span>`;
 
         // Xuất 30 ngày
-        const month30Exports = receivedExports.filter(x => {
+        const month30Exports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= thirtyDaysAgo;
         });
         const month30Total = month30Exports.reduce((sum, x) => sum + x.quantity, 0);
 
-        const prevMonth30Exports = receivedExports.filter(x => {
+        // 30 ngày trước đó để so sánh
+        const prevMonth30Exports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= sixtyDaysAgo && transDate < thirtyDaysAgo;
         });
@@ -1733,20 +991,20 @@
         if (abnormal.length > 0) {
             const html = abnormal.map(a =>
                 `<div class="export-mgmt__alert-item">
-                        <div class="export-mgmt__alert-item-left">
-                            <div class="export-mgmt__alert-item-name">${a.name}</div>
-                            <div class="export-mgmt__alert-item-detail">Hôm nay: ${a.today.toFixed(2)} | TB 7 ngày: ${a.avg.toFixed(2)}</div>
-                        </div>
-                        <span class="export-mgmt__badge export-mgmt__badge--danger">+${a.percent}%</span>
-                    </div>`
+                <div class="export-mgmt__alert-item-left">
+                    <div class="export-mgmt__alert-item-name">${a.name}</div>
+                    <div class="export-mgmt__alert-item-detail">Hôm nay: ${a.today.toFixed(2)} | TB 7 ngày: ${a.avg.toFixed(2)}</div>
+                </div>
+                <span class="export-mgmt__badge export-mgmt__badge--danger">+${a.percent}%</span>
+            </div>`
             ).join('');
             document.getElementById('abnormalAlerts').innerHTML = html;
         } else {
             document.getElementById('abnormalAlerts').innerHTML = `
-                    <div class="export-mgmt__empty" style="padding: 2rem;">
-                        <div class="export-mgmt__empty-icon">📊</div>
-                        <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu xuất bất thường</div>
-                    </div>`;
+                <div class="export-mgmt__empty" style="padding: 2rem;">
+                    <div class="export-mgmt__empty-icon">📊</div>
+                    <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu xuất bất thường</div>
+                </div>`;
         }
     }
 
@@ -1768,17 +1026,17 @@
         if (top.length > 0) {
             const html = top.map((item, idx) =>
                 `<div class="export-mgmt__top-item">
-                        <div class="export-mgmt__top-item-name">${idx + 1}. ${item.name}</div>
-                        <div class="export-mgmt__top-item-value">${item.total.toFixed(2)} ${item.unit}</div>
-                    </div>`
+                    <div class="export-mgmt__top-item-name">${idx + 1}. ${item.name}</div>
+                    <div class="export-mgmt__top-item-value">${item.total.toFixed(2)} ${item.unit}</div>
+                </div>`
             ).join('');
             document.getElementById('topIngredients').innerHTML = html;
         } else {
             document.getElementById('topIngredients').innerHTML = `
-                    <div class="export-mgmt__empty" style="padding: 2rem;">
-                        <div class="export-mgmt__empty-icon">🏆</div>
-                        <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
-                    </div>`;
+                <div class="export-mgmt__empty" style="padding: 2rem;">
+                    <div class="export-mgmt__empty-icon">🏆</div>
+                    <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
+                </div>`;
         }
     }
 
@@ -1798,17 +1056,17 @@
         if (stats.length > 0) {
             const html = stats.map(s =>
                 `<div class="export-mgmt__warehouse-stat">
-                        <div class="export-mgmt__warehouse-name">${s.name}</div>
-                        <div class="export-mgmt__warehouse-count">${s.count} giao dịch</div>
-                    </div>`
+                    <div class="export-mgmt__warehouse-name">${s.name}</div>
+                    <div class="export-mgmt__warehouse-count">${s.count} giao dịch</div>
+                </div>`
             ).join('');
             document.getElementById('warehouseStats').innerHTML = html;
         } else {
             document.getElementById('warehouseStats').innerHTML = `
-                    <div class="export-mgmt__empty" style="padding: 2rem;">
-                        <div class="export-mgmt__empty-icon">🏢</div>
-                        <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
-                    </div>`;
+                <div class="export-mgmt__empty" style="padding: 2rem;">
+                    <div class="export-mgmt__empty-icon">🏢</div>
+                    <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
+                </div>`;
         }
     }
 
@@ -1819,8 +1077,8 @@
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        const todayExports = receivedExports.filter(x => new Date(x.transactionDate) >= today);
-        const week7Exports = receivedExports.filter(x => new Date(x.transactionDate) >= sevenDaysAgo);
+        const todayExports = exportData.filter(x => new Date(x.transactionDate) >= today);
+        const week7Exports = exportData.filter(x => new Date(x.transactionDate) >= sevenDaysAgo);
 
         const comparison = {};
 
@@ -1847,18 +1105,18 @@
             const colorClass = percent > 20 ? 'export-mgmt__trend-up' : percent < -20 ? 'export-mgmt__trend-down' : '';
 
             return `<tr>
-                            <td>${c.name}</td>
-                            <td>${c.today.toFixed(2)} ${c.unit}</td>
-                            <td>${avg7.toFixed(2)} ${c.unit}</td>
-                            <td class="${colorClass}">${arrow} ${percent}%</td>
-                        </tr>`;
+                                <td>${c.name}</td>
+                                <td>${c.today.toFixed(2)} ${c.unit}</td>
+                                <td>${avg7.toFixed(2)} ${c.unit}</td>
+                                <td class="${colorClass}">${arrow} ${percent}%</td>
+                            </tr>`;
         });
 
         document.querySelector('#comparisonTable tbody').innerHTML = rows.length > 0 ? rows.join('') :
             `<tr><td colspan="4" style="text-align: center; padding: 2rem;">
-                    <div class="export-mgmt__empty-icon">📊</div>
-                    <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu so sánh</div>
-                </td></tr>`;
+                <div class="export-mgmt__empty-icon">📊</div>
+                <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu so sánh</div>
+            </td></tr>`;
     }
 
     // Filter comparison table
@@ -1882,6 +1140,7 @@
                     Không tìm thấy Mặt hàng "${searchText}"
                 </td>`;
 
+            // Xóa row cũ nếu có
             const oldEmpty = document.getElementById('no-comparison-result');
             if (oldEmpty) oldEmpty.remove();
 
@@ -1892,15 +1151,79 @@
         }
     });
 
-    // ==================== KHỞI TẠO ====================
-    document.addEventListener('DOMContentLoaded', function () {
-        updateTabCounts();
-        calculateStats();
 
-        // Gắn filter listeners
-        document.getElementById('searchInput').addEventListener('input', filterTable);
-        document.getElementById('dateFilter').addEventListener('change', filterTable);
-        document.getElementById('warehouseFilter').addEventListener('change', filterTable);
-    });
+    // Filters
+    document.getElementById('searchInput').addEventListener('input', filterTable);
+    document.getElementById('dateFilter').addEventListener('change', filterTable);
+    document.getElementById('warehouseFilter').addEventListener('change', filterTable);
+
+    function filterTable() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const dateFilter = document.getElementById('dateFilter').value;
+        const warehouseId = document.getElementById('warehouseFilter').value;
+
+        const rows = document.querySelectorAll('#exportTable tbody tr');
+
+        rows.forEach(row => {
+            let show = true;
+
+            // Search - CHỈ TÌM TÊN, MÃ Mặt hàng VÀ LÔ HÀNG
+            if (searchText) {
+                // Lấy tên Mặt hàng (cột 1)
+                const ingredientName = row.querySelector('.export-mgmt__ingredient-name')?.textContent.toLowerCase() || '';
+
+                // Lấy mã Mặt hàng (cột 1 - phần meta)
+                const ingredientCode = row.querySelector('.export-mgmt__ingredient-meta')?.textContent.toLowerCase() || '';
+
+                // Lấy lô hàng (cột 5)
+                const batchInfo = row.querySelector('.export-mgmt__batch-badge')?.textContent.toLowerCase() || '';
+
+                // Kiểm tra xem có khớp với bất kỳ trường nào không
+                const matchName = ingredientName.includes(searchText);
+                const matchCode = ingredientCode.includes(searchText);
+                const matchBatch = batchInfo.includes(searchText);
+
+                show = show && (matchName || matchCode || matchBatch);
+            }
+
+            // Date filter
+            if (dateFilter !== 'all') {
+                const rowDate = new Date(row.dataset.date);
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                switch (dateFilter) {
+                    case 'today':
+                        show = show && rowDate >= today;
+                        break;
+                    case 'yesterday':
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        show = show && rowDate >= yesterday && rowDate < today;
+                        break;
+                    case '7days':
+                        const sevenDays = new Date(today);
+                        sevenDays.setDate(sevenDays.getDate() - 7);
+                        show = show && rowDate >= sevenDays;
+                        break;
+                    case '30days':
+                        const thirtyDays = new Date(today);
+                        thirtyDays.setDate(thirtyDays.getDate() - 30);
+                        show = show && rowDate >= thirtyDays;
+                        break;
+                }
+            }
+
+            // Warehouse filter
+            if (warehouseId) {
+                show = show && row.dataset.warehouseId === warehouseId;
+            }
+
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', calculateStats);
 </script>
 

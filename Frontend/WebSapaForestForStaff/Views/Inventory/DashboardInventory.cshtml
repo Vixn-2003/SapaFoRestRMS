@@ -1,8 +1,7 @@
-﻿@model List<WebSapaForestForStaff.DTOs.Inventory.StockTransactionInventoryDTO>
+﻿@model WebSapaForestForStaff.DTOs.Inventory.DashboardViewModel
 @{
     Layout = "~/Views/Shared/_LayoutInventory.cshtml";
     ViewData["Title"] = "Dashboard Quản Lý Kho";
-    // Ví dụ: Lấy dữ liệu từ Server nếu có, nếu không JS sẽ dùng Mock Data
 }
 
 
@@ -119,9 +118,9 @@
         gap: 24px;
     }
 
-    .wd-grid-4-col {
+    .wd-grid-3-col {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
     }
 
     .wd-grid-2-col {
@@ -447,7 +446,7 @@
     .wd-task-grid {
         padding: 24px;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr); 
         gap: 24px;
     }
 
@@ -640,19 +639,9 @@
     </div>
 
     <div class="wd-padding-8">
-        @* KPI Cards *@
-        <div class="wd-grid-4-col wd-gap-6 wd-mb-8">
-            <div class="wd-kpi-card wd-hover-shadow-md">
-                <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
-                    <div class="wd-kpi-card-icon-wrapper wd-icon-bg-blue">
-                        <svg class="wd-text-white" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"></path><path d="M4.73 6.97L12 3.65l7.27 3.32"></path></svg>
-                    </div>
-                    <span class="wd-text-xs wd-text-green-600 wd-bg-green-50 wd-px-2 wd-py-1 wd-rounded-full wd-font-medium">+2.5%</span>
-                </div>
-                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Tổng Giá Trị Kho</p>
-                <h3 class="wd-text-3xl wd-font-bold wd-text-gray-800" id="kpi-total-value">...</h3>
-            </div>
-
+        <div class="wd-grid-3-col wd-gap-6 wd-mb-8">
+            <!-- XÓA CARD TỔNG GIÁ TRỊ KHO -->
+            <!-- Card 1: mặt hàng Sắp Hết -->
             <div class="wd-kpi-card wd-hover-shadow-md">
                 <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
                     <div class="wd-kpi-card-icon-wrapper wd-icon-bg-orange">
@@ -660,10 +649,11 @@
                     </div>
                     <span class="wd-text-xs wd-text-orange-600 wd-bg-orange-50 wd-px-2 wd-py-1 wd-rounded-full wd-font-medium">Cần chú ý</span>
                 </div>
-                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Nguyên Liệu Sắp Hết</p>
+                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">mặt hàng Sắp Hết</p>
                 <h3 class="wd-text-3xl wd-font-bold wd-text-orange-600" id="kpi-low-stock">...</h3>
             </div>
 
+            <!-- Card 2: Lô Sắp Hết Hạn -->
             <div class="wd-kpi-card wd-hover-shadow-md">
                 <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
                     <div class="wd-kpi-card-icon-wrapper wd-icon-bg-red">
@@ -671,10 +661,11 @@
                     </div>
                     <span class="wd-text-xs wd-text-red-600 wd-bg-red-50 wd-px-2 wd-py-1 wd-rounded-full wd-font-medium">Khẩn cấp</span>
                 </div>
-                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Sắp Hết Hạn Sử Dụng</p>
-                <h3 class="wd-text-3xl wd-font-bold wd-text-red-600" id="kpi-expiring-soon">...</h3>
+                <p class="wd-text-gray-500 wd-text-sm wd-mb-1">Lô Sắp Hết Hạn</p>
+                <h3 class="wd-text-3xl wd-font-bold wd-text-red-600" id="kpi-expiring-batches">...</h3>
             </div>
 
+            <!-- Card 3: Đơn Chờ Xử Lý -->
             <div class="wd-kpi-card wd-hover-shadow-md">
                 <div class="wd-flex wd-items-start wd-justify-between wd-mb-4">
                     <div class="wd-kpi-card-icon-wrapper wd-icon-bg-purple">
@@ -709,7 +700,7 @@
                     <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
                         <div class="wd-task-panel-header">
                             <div>
-                                <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Top Nguyên Liệu</h2>
+                                <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Top mặt hàng</h2>
                                 <p class="wd-text-xs wd-text-gray-500 wd-mt-0-5">Tiêu hao 7 ngày qua</p>
                             </div>
                             <select class="wd-select" id="wd-top-items-select">
@@ -721,14 +712,7 @@
                         <div class="wd-padding-6" id="wd-top-items-list"></div>
                     </div>
 
-                    @* Recent Activity *@
-                    <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
-                        <div class="wd-task-panel-header">
-                            <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Hoạt Động Gần Đây</h2>
-                            <p class="wd-text-xs wd-text-gray-500 wd-mt-0-5">Cập nhật liên tục</p>
-                        </div>
-                        <div class="wd-padding-6" id="wd-recent-activity-list"></div>
-                    </div>
+                    
                 </div>
             </div>
 
@@ -761,7 +745,7 @@
                             <div class="wd-bg-gray-600 wd-p-2 wd-rounded-lg wd-mb-2 wd-scale-110">
                                 <svg class="wd-text-white" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2z"></path></svg>
                             </div>
-                            <span class="wd-text-xs wd-font-semibold wd-text-gray-700">QL Nguyên Liệu</span>
+                            <span class="wd-text-xs wd-font-semibold wd-text-gray-700">QL mặt hàng</span>
                         </button>
                     </div>
                 </div>
@@ -770,7 +754,6 @@
     </div>
 </div>
 
-@* --- JAVASCRIPT SECTION --- *@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
 
@@ -778,206 +761,356 @@
         const $ = selector => document.querySelector(selector);
 
         // ====================================================================
-        // ===== I. MOCK DATA (Dữ liệu tĩnh) =====
+        // ===== I. LẤY DỮ LIỆU TỪ SERVER =====
         // ====================================================================
 
-        const kpiData = {
-            totalValue: '125,500,000',
-            lowStock: 8,
-            expiringSoon: 5,
-            pendingOrders: 12
-        };
+        let ingredientList = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Ingredients));
+        let purchaseOrders = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.PurchaseOrders));
+        let auditInventories = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.AuditInventories));
 
-        const alerts = [
-            { id: 1, name: 'Tôm sú', quantity: '2 kg', min: '10 kg', type: 'low', urgent: true, expiry: '' },
-            { id: 2, name: 'Thịt bò Úc', quantity: '5 kg', min: '15 kg', type: 'low', urgent: true, expiry: '' },
-            { id: 3, name: 'Rau xà lách', expiry: '2 ngày', quantity: '3 kg', type: 'expiry', urgent: true, min: '' },
-            { id: 4, name: 'Cà chua', expiry: '3 ngày', quantity: '8 kg', type: 'expiry', urgent: false, min: '' },
-            { id: 5, name: 'Sữa tươi', quantity: '4 lít', min: '8 lít', type: 'low', urgent: false, expiry: '' },
-            { id: 6, name: 'Bơ', expiry: '4 ngày', quantity: '2 kg', type: 'expiry', urgent: false, min: '' },
-        ];
-
-        const pendingTasks = {
-            export: [
-                { id: 'EX001', kitchen: 'Bếp Chính', items: 8, time: '10:30', priority: 'high' },
-                { id: 'EX002', kitchen: 'Bếp Phụ', items: 5, time: '11:00', priority: 'medium' },
-                { id: 'EX003', kitchen: 'Bếp Lẩu', items: 6, time: '11:30', priority: 'low' },
-            ],
-            import: [
-                { id: 'IM001', supplier: 'Hải Sản Tươi Sống', items: 12, time: '14:00', status: 'arriving' },
-                { id: 'IM002', supplier: 'Rau Sạch Đà Lạt', items: 6, time: '15:30', status: 'pending' },
-                { id: 'IM003', supplier: 'Thịt Sạch 3A', items: 8, time: '16:00', status: 'pending' },
-            ],
-            inventory: [
-                { id: 'KK001', area: 'Kho Lạnh #1', items: 25, deadline: 'Hôm nay', priority: 'high' },
-                { id: 'KK002', area: 'Kho Khô', items: 45, deadline: 'Ngày mai', priority: 'medium' },
-            ]
-        };
-
-        const topItems = [
-            { name: 'Thịt bò', usage: 85, trend: 'up', value: '15.2M' },
-            { name: 'Rau củ', usage: 72, trend: 'up', value: '8.5M' },
-            { name: 'Hải sản', usage: 68, trend: 'down', value: '22.1M' },
-            { name: 'Gia vị', usage: 45, trend: 'up', value: '4.3M' },
-            { name: 'Thịt gà', usage: 38, trend: 'up', value: '6.7M' },
-        ];
-
-        const recentActivity = [
-            { time: '09:45', action: 'Xuất kho', user: 'Nguyễn Văn A', detail: 'EX001 - Bếp Chính' },
-            { time: '09:20', action: 'Nhập kho', user: 'Trần Thị B', detail: 'IM105 - Hải sản' },
-            { time: '08:50', action: 'Kiểm kê', user: 'Lê Văn C', detail: 'KK099 - Kho lạnh' },
-        ];
+        console.log('=== LOADED DATA ===');
+        console.log('Ingredients:', ingredientList.length);
+        console.log('Purchase Orders:', purchaseOrders.length);
+        console.log('Audits:', auditInventories.length);
 
         // ====================================================================
-        // ===== II. RENDER FUNCTIONS =====
+        // ===== II. TÍNH TOÁN KPI =====
+        // ====================================================================
+
+        function calculateKPIs() {
+            // 1. Số mặt hàng sắp hết
+            const lowStockCount = ingredientList.filter(ing =>
+                ing.ReorderLevel != null &&
+                ing.TotalQuantity < ing.ReorderLevel
+            ).length;
+
+            // 2. Số lô sắp hết hạn - DÙNG ExpiringSoonBatchCount có sẵn
+            const expiringSoonBatchCount = ingredientList.reduce((sum, ing) => {
+                return sum + (ing.ExpiringSoonBatchCount || 0);
+            }, 0);
+
+            // 3. Đơn chờ xử lý
+            const processingPurchase = purchaseOrders.filter(po =>
+                po.Status && po.Status.trim() === 'Processing'
+            ).length;
+
+            const processingAudits = auditInventories.filter(audit =>
+                audit.AuditStatus && audit.AuditStatus.trim() === 'Processing'
+            ).length;
+
+            const totalPendingOrders = processingPurchase + processingAudits;
+
+            console.log('KPIs:', {
+                lowStockCount,
+                expiringSoonBatchCount,
+                processingPurchase,
+                processingAudits,
+                totalPendingOrders
+            });
+
+            return {
+                lowStockCount,
+                expiringSoonBatchCount,
+                totalPendingOrders
+            };
+        }
+
+        // ====================================================================
+        // ===== III. TÍNH TOP 10 mặt hàng =====
+        // ====================================================================
+
+        function calculateTopIngredients(period = '7days') {
+            const now = new Date();
+            let startDate;
+
+            switch (period) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case '7days':
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case '30days':
+                    startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    break;
+                default:
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            }
+
+            // ✅ LẤY TRANSACTIONS TỪ BATCHES
+            const ingredientUsage = {};
+
+            ingredientList.forEach(ingredient => {
+                if (!ingredient.Batches || ingredient.Batches.length === 0) {
+                    return;
+                }
+
+                let totalExport = 0;
+
+                ingredient.Batches.forEach(batch => {
+                    if (!batch.StockTransactions || batch.StockTransactions.length === 0) {
+                        return;
+                    }
+
+                    batch.StockTransactions.forEach(trans => {
+                        // Kiểm tra Type = "Export" và trong khoảng thời gian
+                        if (trans.Type === 'Export' && trans.TransactionDate) {
+                            const transDate = new Date(trans.TransactionDate);
+
+                            if (transDate >= startDate && transDate <= now) {
+                                totalExport += trans.Quantity;
+                            }
+                        }
+                    });
+                });
+
+                // Chỉ thêm vào danh sách nếu có xuất kho
+                if (totalExport > 0) {
+                    ingredientUsage[ingredient.IngredientCode] = {
+                        code: ingredient.IngredientCode,
+                        name: ingredient.Name,
+                        totalQuantity: totalExport,
+                        unit: ingredient.Unit?.Name || ''
+                    };
+                }
+            });
+
+            // Sắp xếp và lấy top 10
+            const topList = Object.values(ingredientUsage)
+                .sort((a, b) => b.totalQuantity - a.totalQuantity)
+                .slice(0, 10);
+
+            console.log(`Top ingredients (${period}):`, topList);
+            return topList;
+        }
+
+        // ====================================================================
+        // ===== IV. LẤY DANH SÁCH ĐƠN PROCESSING =====
+        // ====================================================================
+
+        function getProcessingOrders() {
+            const processingPurchase = purchaseOrders
+                .filter(po => po.Status && po.Status.trim() === 'Processing')
+                .map(po => {
+                    const orderDate = po.OrderDate ? new Date(po.OrderDate) : new Date();
+                    return {
+                        id: po.PurchaseOrderId,
+                        type: 'import',
+                        supplier: po.Supplier?.Name || 'N/A',
+                        itemCount: po.PurchaseOrderDetails?.length || 0,
+                        orderDate: orderDate.toLocaleDateString('vi-VN'),
+                        time: orderDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                    };
+                });
+
+            const processingAudit = auditInventories
+                .filter(audit => audit.AuditStatus && audit.AuditStatus.trim() === 'Processing')
+                .map(audit => {
+                    const createdDate = audit.CreatedAt ? new Date(audit.CreatedAt) : new Date();
+                    return {
+                        id: audit.AuditId,
+                        type: 'inventory',
+                        ingredientName: audit.IngredientName,
+                        quantity: `${audit.AdjustmentQuantity} ${audit.Unit}`,
+                        createdDate: createdDate.toLocaleDateString('vi-VN'),
+                        time: createdDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                    };
+                });
+
+            return {
+                purchaseOrders: processingPurchase,
+                auditOrders: processingAudit
+            };
+        }
+
+        // ====================================================================
+        // ===== V. LẤY DANH SÁCH CẢNH BÁO =====
+        // ====================================================================
+
+        function getLowStockAlerts() {
+            const alerts = ingredientList
+                .filter(ing =>
+                    ing.ReorderLevel != null &&
+                    ing.TotalQuantity < ing.ReorderLevel
+                )
+                .map(ing => ({
+                    id: ing.IngredientId,
+                    code: ing.IngredientCode,
+                    name: ing.Name,
+                    currentQuantity: ing.TotalQuantity,
+                    reorderLevel: ing.ReorderLevel,
+                    unit: ing.Unit?.Name || '',
+                    urgent: ing.TotalQuantity < (ing.ReorderLevel / 2)
+                }))
+                .sort((a, b) => {
+                    if (a.urgent && !b.urgent) return -1;
+                    if (!a.urgent && b.urgent) return 1;
+                    const aPercent = a.currentQuantity / a.reorderLevel;
+                    const bPercent = b.currentQuantity / b.reorderLevel;
+                    return aPercent - bPercent;
+                });
+
+            console.log('Low stock alerts:', alerts.length);
+            return alerts;
+        }
+
+        // ====================================================================
+        // ===== VI. RENDER FUNCTIONS =====
         // ====================================================================
 
         function renderKpiCards() {
-            document.getElementById('kpi-total-value').textContent = kpiData.totalValue + 'đ';
-            document.getElementById('kpi-low-stock').innerHTML = kpiData.lowStock + ' <span class="wd-text-lg wd-text-gray-400">món</span>';
-            document.getElementById('kpi-expiring-soon').innerHTML = kpiData.expiringSoon + ' <span class="wd-text-lg wd-text-gray-400">món</span>';
-            document.getElementById('kpi-pending-orders').innerHTML = kpiData.pendingOrders + ' <span class="wd-text-lg wd-text-gray-400">đơn</span>';
+            const kpis = calculateKPIs();
+
+            $('#kpi-low-stock').innerHTML = kpis.lowStockCount + ' <span class="wd-text-lg wd-text-gray-400">món</span>';
+            $('#kpi-expiring-batches').innerHTML = kpis.expiringSoonBatchCount + ' <span class="wd-text-lg wd-text-gray-400">lô</span>';
+            $('#kpi-pending-orders').innerHTML = kpis.totalPendingOrders + ' <span class="wd-text-lg wd-text-gray-400">đơn</span>';
         }
 
         function renderPendingTasks() {
-            const container = document.getElementById('wd-pending-tasks');
+            const container = $('#wd-pending-tasks');
+            const orders = getProcessingOrders();
 
-            const renderSection = (title, count, color, items, renderItem) => `
-                        <div>
-                            <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
-                                <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
-                                    <div class="wd-w-2 wd-h-2 wd-bg-${color}-500 wd-rounded-full wd-mr-2"></div> ${title}
-                                </h3>
-                                <span class="wd-bg-${color}-100 wd-text-${color}-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${count}</span>
-                            </div>
-                            <div class="wd-space-y-3">
-                                ${items.map(renderItem).join('')}
-                            </div>
+            const importHtml = `
+                    <div>
+                        <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
+                            <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
+                                <div class="wd-w-2 wd-h-2 wd-bg-green-500 wd-rounded-full wd-mr-2"></div> Đơn Nhập
+                            </h3>
+                            <span class="wd-bg-green-100 wd-text-green-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${orders.purchaseOrders.length}</span>
                         </div>
-                    `;
-
-
-            const importHtml = renderSection('Đơn Nhập', pendingTasks.import.length, 'green', pendingTasks.import, order => `
-                        <div class="wd-task-item import">
-                            <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
-                                <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
-                                <span class="wd-tag-priority ${order.status === 'arriving' ? 'wd-tag-arriving' : 'wd-tag-pending'}">
-                                    ${order.status === 'arriving' ? 'Đang đến' : 'Chờ'}
-                                </span>
-                            </div>
-                            <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.supplier}</p>
-                            <p class="wd-text-xs wd-text-gray-500">${order.items} món • ${order.time}</p>
+                        <div class="wd-space-y-3">
+                            ${orders.purchaseOrders.length === 0
+                    ? '<p class="wd-text-xs wd-text-gray-400 wd-text-center wd-py-4">Không có đơn đang xử lý</p>'
+                    : orders.purchaseOrders.map(order => `
+                                    <div class="wd-task-item import">
+                                        <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                                            <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
+                                            <span class="wd-tag-priority wd-tag-pending">Đang xử lý</span>
+                                        </div>
+                                        <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.supplier}</p>
+                                        <p class="wd-text-xs wd-text-gray-500">${order.itemCount} món • ${order.time}</p>
+                                    </div>
+                                `).join('')
+                }
                         </div>
-                    `);
+                    </div>
+                `;
 
-            const inventoryHtml = renderSection('Kiểm Kê', pendingTasks.inventory.length, 'purple', pendingTasks.inventory, order => `
-                        <div class="wd-task-item inventory">
-                            <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
-                                <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
-                                ${order.priority === 'high' ? '<span class="wd-tag-priority wd-tag-high">Hôm nay</span>' : ''}
-                            </div>
-                            <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.area}</p>
-                            <p class="wd-text-xs wd-text-gray-500">${order.items} món • ${order.deadline}</p>
+            const inventoryHtml = `
+                    <div>
+                        <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
+                            <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
+                                <div class="wd-w-2 wd-h-2 wd-bg-purple-500 wd-rounded-full wd-mr-2"></div> Kiểm Kê
+                            </h3>
+                            <span class="wd-bg-purple-100 wd-text-purple-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${orders.auditOrders.length}</span>
                         </div>
-                    `);
+                        <div class="wd-space-y-3">
+                            ${orders.auditOrders.length === 0
+                    ? '<p class="wd-text-xs wd-text-gray-400 wd-text-center wd-py-4">Không có đơn đang xử lý</p>'
+                    : orders.auditOrders.map(order => `
+                                    <div class="wd-task-item inventory">
+                                        <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                                            <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
+                                            <span class="wd-tag-priority wd-tag-pending">Đang xử lý</span>
+                                        </div>
+                                        <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.ingredientName}</p>
+                                        <p class="wd-text-xs wd-text-gray-500">${order.quantity} • ${order.time}</p>
+                                    </div>
+                                `).join('')
+                }
+                        </div>
+                    </div>
+                `;
 
-            container.innerHTML = exportHtml + importHtml + inventoryHtml;
+            container.innerHTML = importHtml + inventoryHtml;
         }
 
         function renderAlerts() {
-            const container = document.getElementById('wd-alerts-list');
-            let html = alerts.map(alert => {
-                const colorClass = alert.urgent
-                    ? alert.type === 'expiry' ? 'wd-alert-urgent-expiry' : 'wd-alert-urgent-low'
-                    : 'wd-alert-normal';
+            const container = $('#wd-alerts-list');
+            const alerts = getLowStockAlerts();
 
-                return `
-                            <div key="${alert.id}" class="wd-alert-item ${colorClass}">
-                                <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
-                                    <h4 class="wd-font-bold wd-text-gray-800 wd-text-sm">${alert.name}</h4>
-                                    ${alert.urgent ? '<span class="wd-tag-priority wd-tag-high">Gấp</span>' : ''}
-                                </div>
-                                <div class="wd-space-y-1">
-                                    <p class="wd-text-sm wd-text-gray-700">
-                                        Còn: <span class="wd-font-bold">${alert.quantity}</span>
-                                    </p>
-                                    ${alert.type === 'low' ? `<p class="wd-text-xs wd-text-gray-600">Tối thiểu: ${alert.min}</p>` : ''}
-                                    ${alert.type === 'expiry' ? `<p class="wd-text-sm wd-alert-time">⏰ HSD: ${alert.expiry}</p>` : ''}
-                                </div>
-                            </div>
-                        `;
-            }).join('');
+            if (alerts.length === 0) {
+                container.innerHTML = '<p class="wd-text-center wd-text-gray-400 wd-py-8">Không có cảnh báo</p>';
+                return;
+            }
+
+            const html = alerts.map(alert => `
+                    <div class="wd-alert-item ${alert.urgent ? 'wd-alert-urgent-low' : 'wd-alert-normal'}">
+                        <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                            <h4 class="wd-font-bold wd-text-gray-800 wd-text-sm">${alert.name}</h4>
+                            ${alert.urgent ? '<span class="wd-tag-priority wd-tag-high">Gấp</span>' : ''}
+                        </div>
+                        <div class="wd-space-y-1">
+                            <p class="wd-text-sm wd-text-gray-700">
+                                Còn: <span class="wd-font-bold">${alert.currentQuantity.toFixed(2)} ${alert.unit}</span>
+                            </p>
+                            <p class="wd-text-xs wd-text-gray-600">Tối thiểu: ${alert.reorderLevel.toFixed(2)} ${alert.unit}</p>
+                            <p class="wd-text-xs wd-text-red-600">⚠ Cần nhập thêm: ${(alert.reorderLevel - alert.currentQuantity).toFixed(2)} ${alert.unit}</p>
+                        </div>
+                    </div>
+                `).join('');
+
             container.innerHTML = html;
         }
 
-        function renderTopItems() {
-            const container = document.getElementById('wd-top-items-list');
-            let html = topItems.map((item, idx) => {
-                const trendIcon = item.trend === 'up'
-                    ? '<svg class="wd-text-green-600" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>'
-                    : '<svg class="wd-text-red-600" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 18l2.29-2.29-4.88-4.88-4 4L2 7.41 3.41 6l6 6 4-4 6.3 6.29L22 12V18z"/></svg>';
+        function renderTopItems(period = '7days') {
+            const container = $('#wd-top-items-list');
+            const topList = calculateTopIngredients(period);
 
+            if (topList.length === 0) {
+                container.innerHTML = '<p class="wd-text-center wd-text-gray-400 wd-py-8">Chưa có dữ liệu xuất kho</p>';
+                return;
+            }
+
+            const maxQuantity = Math.max(...topList.map(item => item.totalQuantity));
+
+            const html = topList.map((item, idx) => {
+                const percentage = maxQuantity > 0 ? (item.totalQuantity / maxQuantity * 100).toFixed(0) : 0;
                 const barColorClass = idx === 0 ? 'wd-bg-gradient-blue' :
                     idx === 1 ? 'wd-bg-gradient-green' : 'wd-bg-gradient-purple';
 
                 return `
-                            <div class="wd-mb-4 wd-last-mb-0">
-                                <div class="wd-flex wd-justify-between wd-items-center wd-mb-2">
-                                    <div class="wd-flex wd-items-center wd-gap-2">
-                                        <span class="wd-text-lg wd-font-bold wd-text-gray-400">#${idx + 1}</span>
-                                        <span class="wd-text-sm wd-font-semibold wd-text-gray-700">${item.name}</span>
-                                    </div>
-                                    <div class="wd-flex wd-items-center wd-gap-3">
-                                        <span class="wd-text-xs wd-text-gray-500">${item.value}</span>
-                                        <div class="wd-flex wd-items-center wd-gap-1">
-                                            <span class="wd-text-sm wd-font-bold wd-text-gray-600">${item.usage}%</span>
-                                            ${trendIcon}
-                                        </div>
-                                    </div>
+                        <div class="wd-mb-4 wd-last-mb-0">
+                            <div class="wd-flex wd-justify-between wd-items-center wd-mb-2">
+                                <div class="wd-flex wd-items-center wd-gap-2">
+                                    <span class="wd-text-lg wd-font-bold wd-text-gray-400">#${idx + 1}</span>
+                                    <span class="wd-text-sm wd-font-semibold wd-text-gray-700">${item.name}</span>
                                 </div>
-                                <div class="wd-w-full wd-bg-gray-100 wd-rounded-full wd-h-2">
-                                    <div class="wd-h-2 wd-rounded-full ${barColorClass}" style="width: ${item.usage}%"></div>
+                                <div class="wd-flex wd-items-center wd-gap-3">
+                                    <span class="wd-text-sm wd-font-bold wd-text-gray-600">${item.totalQuantity.toFixed(2)} ${item.unit}</span>
                                 </div>
                             </div>
-                        `;
-            }).join('');
-            container.innerHTML = html;
-        }
-
-        function renderRecentActivity() {
-            const container = document.getElementById('wd-recent-activity-list');
-            let html = recentActivity.map((activity) => `
-                        <div class="wd-flex wd-items-start wd-gap-3 wd-mb-4 wd-pb-4 wd-border-b wd-border-gray-100 wd-last-mb-0 wd-last-pb-0 wd-last-border-b-0">
-                            <div class="wd-bg-blue-100 wd-p-2 wd-rounded-lg wd-mt-0-5">
-                                <svg class="wd-text-blue-600" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 13l5-5-5-5M17 8H6"></path></svg>
-                            </div>
-                            <div class="wd-flex-1">
-                                <div class="wd-flex wd-items-center wd-justify-between wd-mb-1">
-                                    <span class="wd-text-sm wd-font-semibold wd-text-gray-800">${activity.action}</span>
-                                    <span class="wd-text-xs wd-text-gray-400">${activity.time}</span>
-                                </div>
-                                <p class="wd-text-xs wd-text-gray-600">${activity.detail}</p>
-                                <p class="wd-text-xs wd-text-gray-400 wd-mt-0-5">Bởi: ${activity.user}</p>
+                            <div class="wd-w-full wd-bg-gray-100 wd-rounded-full wd-h-2">
+                                <div class="wd-h-2 wd-rounded-full ${barColorClass}" style="width: ${percentage}%"></div>
                             </div>
                         </div>
-                    `).join('');
+                    `;
+            }).join('');
 
-            html += `<button class="wd-w-full wd-mt-2 wd-text-sm wd-text-blue-600 wd-font-medium wd-py-2 wd-hover-bg-blue-50 wd-rounded-lg wd-transition">Xem lịch sử đầy đủ</button>`;
             container.innerHTML = html;
         }
 
-        // ===== Initialization =====
-        function initializeDashboard() {
-            // Cập nhật ngày tháng trong header
-            const currentDate = new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            document.getElementById('wd-current-date').innerHTML = `Chào buổi sáng, Nguyễn Văn A • ${currentDate}`;
+        // ====================================================================
+        // ===== VII. INITIALIZATION =====
+        // ====================================================================
 
-            // Render UI
+        function initializeDashboard() {
+            const currentDate = new Date().toLocaleDateString('vi-VN', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            $('#wd-current-date').textContent = currentDate;
+
             renderKpiCards();
             renderPendingTasks();
             renderAlerts();
-            renderTopItems();
-            renderRecentActivity();
+            renderTopItems('7days');
+
+            $('#wd-top-items-select').addEventListener('change', (e) => {
+                renderTopItems(e.target.value);
+            });
         }
 
         initializeDashboard();

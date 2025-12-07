@@ -94,6 +94,47 @@ namespace BusinessAccessLayer.DTOs.Inventory
             }
         }
 
+        public decimal QuantityExcludingExpired
+        {
+            get
+            {
+                var today = DateTime.Now.Date;
+                return Batches
+                    .Where(b => b.IsActive &&
+                               (!b.ExpiryDate.HasValue ||
+                                b.ExpiryDate.Value.ToDateTime(TimeOnly.MinValue) >= today))
+                    .Sum(b => b.QuantityRemaining);
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra: Sau khi trừ lô hết hạn, số lượng còn lại có dưới tối thiểu không?
+        /// </summary>
+        public bool NeedUrgentRestock
+        {
+            get
+            {
+                // ✅ 1. Phải có mức tối thiểu
+                if (!ReorderLevel.HasValue || ReorderLevel.Value <= 0)
+                    return false;
+
+                // ✅ 2. Phải có ít nhất 1 lô hết hạn (điều kiện BẮT BUỘC)
+                var today = DateTime.Now.Date;
+                bool hasExpiredBatch = Batches.Any(b =>
+                    b.ExpiryDate.HasValue &&
+                    b.ExpiryDate.Value.ToDateTime(TimeOnly.MinValue) < today &&
+                    b.QuantityRemaining > 0  // ✅ Lô hết hạn phải còn hàng
+                );
+
+                if (!hasExpiredBatch)
+                    return false;  // ✅ Không có lô hết hạn → không cần cảnh báo
+
+                // ✅ 3. Số lượng sau trừ hết hạn < tối thiểu
+                // ✅ 4. Vẫn còn hàng sau khi trừ (chưa hết hoàn toàn)
+                return QuantityExcludingExpired < ReorderLevel.Value
+                    && QuantityExcludingExpired > 0;
+            }
+        }
         public string Status
         {
             get

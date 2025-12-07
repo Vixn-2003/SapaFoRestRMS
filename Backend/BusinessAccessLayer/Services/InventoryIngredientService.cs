@@ -440,5 +440,86 @@ namespace BusinessAccessLayer.Services
                 .ThenBy(r => r.IngredientName)
                 .ToList();
         }
+
+        /// <summary>
+        /// Phát hiện và trả về danh sách nguyên liệu thiếu cho các món đang nấu
+        /// </summary>
+        public async Task<List<IngredientShortageDTO>> GetIngredientShortageListAsync()
+        {
+            var result = new List<IngredientShortageDTO>();
+
+            // Lấy tất cả active orders
+            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForStationAsync();
+
+            // Lấy tất cả OrderDetails có status = "Cooking" hoặc "Late"
+            var cookingOrderDetails = activeOrders
+                .SelectMany(o => o.OrderDetails)
+                .Where(od => od.Status != null && 
+                             (od.Status.Equals("Cooking", StringComparison.OrdinalIgnoreCase) || 
+                              od.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            // Với mỗi OrderDetail, kiểm tra thiếu nguyên liệu
+            foreach (var orderDetail in cookingOrderDetails)
+            {
+                if (orderDetail.MenuItem == null) continue;
+
+                // Tìm Order chứa OrderDetail này để lấy thông tin Table
+                var parentOrder = activeOrders.FirstOrDefault(o => o.OrderId == orderDetail.OrderId);
+                var tableName = parentOrder?.Reservation?.ReservationTables?.FirstOrDefault()?.Table?.TableNumber;
+
+                // Lấy recipes cho menu item này
+                var recipes = await _unitOfWork.MenuItem.GetRecipeByMenuItem(orderDetail.MenuItem.MenuItemId);
+                if (!recipes.Any()) continue;
+
+                var orderQuantity = orderDetail.Quantity;
+
+                // Với mỗi recipe, kiểm tra thiếu nguyên liệu
+                foreach (var recipe in recipes)
+                {
+                    if (recipe.Ingredient == null) continue;
+
+                    var totalNeeded = recipe.QuantityNeeded * orderQuantity;
+
+                    // Lấy các batches đã reserve cho ingredient này
+                    var reservedBatches = await _unitOfWork.InventoryIngredient.GetReservedBatchesByIngredientAsync(recipe.IngredientId);
+                    
+                    // Tính tổng số lượng đã reserve
+                    var totalReserved = reservedBatches.Sum(b => b.QuantityReserved);
+
+                    // Nếu số lượng cần lớn hơn số lượng đã reserve thì thiếu
+                    if (totalNeeded > totalReserved)
+                    {
+                        var shortageQuantity = totalNeeded - totalReserved;
+
+                        var shortageDto = new IngredientShortageDTO
+                        {
+                            OrderDetailId = orderDetail.OrderDetailId,
+                            MenuItemName = orderDetail.MenuItem.Name,
+                            OrderId = orderDetail.OrderId,
+                            TableName = tableName,
+                            
+                            IngredientId = recipe.IngredientId,
+                            IngredientName = recipe.Ingredient.Name,
+                            UnitName = recipe.Ingredient.Unit?.UnitName,
+                            
+                            RequiredQuantity = totalNeeded,
+                            ReservedQuantity = totalReserved,
+                            ShortageQuantity = shortageQuantity,
+                            IsUrgent = orderDetail.IsUrgent
+                        };
+
+                        result.Add(shortageDto);
+                    }
+                }
+            }
+
+            // Sắp xếp: món ưu tiên (IsUrgent = true) hiển thị trước, sau đó theo tên món
+            return result
+                .OrderByDescending(r => r.IsUrgent)
+                .ThenBy(r => r.MenuItemName)
+                .ThenBy(r => r.IngredientName)
+                .ToList();
+        }
     }
 }

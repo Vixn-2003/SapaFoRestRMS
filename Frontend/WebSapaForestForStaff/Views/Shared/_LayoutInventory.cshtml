@@ -87,13 +87,27 @@
             background: rgba(0, 0, 0, 0.2);
         }
 
-        .layout-sidebar .sidebar-logo h1 {
-            color: #22c55e;
-            font-size: 24px;
-            font-weight: 700;
+        .layout-sidebar .sidebar-logo {
+            /* Căn giữa nội dung logo */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .layout-sidebar .sidebar-brand-logo {
+            max-width: 100%; /* Không tràn ra ngoài */
+            height: auto; /* Giữ tỷ lệ ảnh */
+            max-height: 50px; /* Giới hạn chiều cao tối đa, bạn có thể chỉnh số này to nhỏ tùy ý */
+            object-fit: contain;
             margin-bottom: 5px;
-            white-space: nowrap;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
+        }
+
+        /* Xử lý khi Sidebar thu nhỏ (Collapsed) */
+        .layout-sidebar.collapsed .sidebar-brand-logo {
+            max-height: 30px; /* Thu nhỏ logo khi sidebar đóng lại */
+            opacity: 1; /* Giữ hiển thị logo (hoặc chỉnh thành 0 nếu muốn ẩn hẳn) */
         }
 
         .layout-sidebar .sidebar-logo p {
@@ -447,8 +461,8 @@
             </button>
 
             <div class="sidebar-logo">
-                <h1>WareHouse</h1>
-                <p>Quản lý kho</p>
+                <img src="~/assets/images/MainLogo.png" alt="Sapa Forest Logo" class="sidebar-brand-logo">
+                <p>Quản lý kho Sapa FoRest</p>
             </div>
 
             <nav class="sidebar-menu">
@@ -486,7 +500,7 @@
                         <svg fill="currentColor" viewBox="0 0 24 24">
                             <path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z" />
                         </svg>
-                        <span>Nguyên liệu</span>
+                        <span>Mặt hàng</span>
                         <svg class="submenu-arrow" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M7 10l5 5 5-5z" />
                         </svg>
@@ -495,7 +509,7 @@
                         <a href="@Url.Action("DisplayIngredent", "ManagerIngredent")"
                            class="sidebar-submenu-item"
                            data-controller="ManagerIngredent">
-                            <span>Quản lý nguyên liệu</span>
+                            <span>Quản lý mặt hàng</span>
                         </a>
                         <a href="@Url.Action("Index", "AuditInventory")"
                            class="sidebar-submenu-item"
@@ -525,10 +539,37 @@
             </nav>
 
             <div class="sidebar-user-section">
-                <div class="sidebar-user-avatar">A</div>
+                <div class="sidebar-user-avatar">
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        @User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value?.Substring(0, 1).ToUpper()
+                    }
+                    else
+                    {
+                        @:A
+                    }
+                </div>
                 <div class="sidebar-user-info">
-                    <div class="sidebar-user-name">Admin User</div>
-                    <div class="sidebar-user-email">admin@warehouse.vn</div>
+                    <div class="sidebar-user-name">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            @User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                        }
+                        else
+                        {
+                            @:Admin User
+                        }
+                    </div>
+                    <div class="sidebar-user-email">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            @User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                        }
+                        else
+                        {
+                            @:admin@warehouse.vn
+                        }
+                    </div>
                 </div>
             </div>
 

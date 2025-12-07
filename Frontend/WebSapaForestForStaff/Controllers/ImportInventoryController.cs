@@ -22,73 +22,202 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // Gọi các API
-            var response = await _httpClient.GetAsync("api/InventoryIngredient");
-            var responseIdPurchase = await _httpClient.GetAsync("api/PurchaseOrder");
-            var responseSupplier = await _httpClient.GetAsync("/api/inventory/Supplier");
-            var responseWarehouse = await _httpClient.GetAsync("api/Warehouse");
-            var responseUnit = await _httpClient.GetAsync("api/Unit");
+            // ✅ KHỞI TẠO CÁC DANH SÁCH RỖNG MẶC ĐỊNH
+            var supplierList = new List<SupplierDTO>();
+            var purchaseList = new List<PurchaseOrderDTO>();
+            var ingredientList = new List<InventoryIngredientDTO>();
+            var warehouseList = new List<WarehouseDTO>();
+            var unitList = new List<UnitDTO>();
 
-            // Kiểm tra phản hồi
-            if (!response.IsSuccessStatusCode)
-                return NotFound("Không tìm thấy nguyên liệu nào.");
-
-            if (!responseSupplier.IsSuccessStatusCode)
-                return NotFound("Không tìm thấy nhà cung cấp nào.");
-
-            if (!responseWarehouse.IsSuccessStatusCode)
-                return NotFound("Không tìm thấy danh sách kho nào.");
-
-            if (!responseUnit.IsSuccessStatusCode)
-                return NotFound("Không tìm thấy danh sách đơn vị tính nào.");
-
-            // Đọc dữ liệu
-            var json = await response.Content.ReadAsStringAsync();
-            var jsonSupplier = await responseSupplier.Content.ReadAsStringAsync();
-            var jsonIdPurchase = await responseIdPurchase.Content.ReadAsStringAsync();
-            var jsonWarehouse = await responseWarehouse.Content.ReadAsStringAsync();
-            var jsonUnit = await responseUnit.Content.ReadAsStringAsync();
-
-            // Giải mã JSON
-            var supplierList = JsonConvert.DeserializeObject<List<SupplierDTO>>(jsonSupplier);
-            var purchaseList = JsonConvert.DeserializeObject<List<PurchaseOrderDTO>>(jsonIdPurchase);
-            var ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json);
-            var warehouseList = JsonConvert.DeserializeObject<List<WarehouseDTO>>(jsonWarehouse);
-            var unitList = JsonConvert.DeserializeObject<List<UnitDTO>>(jsonUnit);
-
-            warehouseList = warehouseList?.Where(w => w.IsActive).ToList() ?? new List<WarehouseDTO>();
-
-            // ✅ THÊM: MAP UNIT VÀO INGREDIENT
-            if (ingredientList != null && unitList != null)
+            try
             {
-                foreach (var ingredient in ingredientList)
+                // ✅ GỌI API VÀ XỬ LÝ TỪNG ENDPOINT RIÊNG BIỆT
+
+                // 1. Ingredients
+                try
                 {
-                    if (ingredient.UnitId.HasValue)
+                    var response = await _httpClient.GetAsync("api/InventoryIngredient");
+                    if (response.IsSuccessStatusCode)
                     {
-                        ingredient.Unit = unitList.FirstOrDefault(u => u.UnitId == ingredient.UnitId.Value)
-                                          ?? new UnitDTO(); // Tạo Unit rỗng nếu không tìm thấy
-                    }
-                    else
-                    {
-                        ingredient.Unit = new UnitDTO(); // Tạo Unit rỗng nếu không có UnitId
+                        var json = await response.Content.ReadAsStringAsync();
+                        ingredientList = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(json)
+                                         ?? new List<InventoryIngredientDTO>();
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading ingredients: {ex.Message}");
+                }
+
+                // 2. Purchase Orders
+                try
+                {
+                    var responseIdPurchase = await _httpClient.GetAsync("api/PurchaseOrder");
+                    if (responseIdPurchase.IsSuccessStatusCode)
+                    {
+                        var jsonIdPurchase = await responseIdPurchase.Content.ReadAsStringAsync();
+                        purchaseList = JsonConvert.DeserializeObject<List<PurchaseOrderDTO>>(jsonIdPurchase)
+                                       ?? new List<PurchaseOrderDTO>();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading purchase orders: {ex.Message}");
+                }
+
+                // 3. Suppliers
+                try
+                {
+                    var responseSupplier = await _httpClient.GetAsync("/api/inventory/Supplier");
+                    if (responseSupplier.IsSuccessStatusCode)
+                    {
+                        var jsonSupplier = await responseSupplier.Content.ReadAsStringAsync();
+                        supplierList = JsonConvert.DeserializeObject<List<SupplierDTO>>(jsonSupplier)
+                                       ?? new List<SupplierDTO>();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading suppliers: {ex.Message}");
+                }
+
+                // 4. Warehouses
+                try
+                {
+                    var responseWarehouse = await _httpClient.GetAsync("api/Warehouse");
+                    if (responseWarehouse.IsSuccessStatusCode)
+                    {
+                        var jsonWarehouse = await responseWarehouse.Content.ReadAsStringAsync();
+                        warehouseList = JsonConvert.DeserializeObject<List<WarehouseDTO>>(jsonWarehouse)
+                                        ?? new List<WarehouseDTO>();
+
+                        // Chỉ lấy kho active
+                        warehouseList = warehouseList.Where(w => w.IsActive).ToList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading warehouses: {ex.Message}");
+                }
+
+                // 5. Units
+                try
+                {
+                    var responseUnit = await _httpClient.GetAsync("api/Unit");
+                    if (responseUnit.IsSuccessStatusCode)
+                    {
+                        var jsonUnit = await responseUnit.Content.ReadAsStringAsync();
+                        unitList = JsonConvert.DeserializeObject<List<UnitDTO>>(jsonUnit)
+                                   ?? new List<UnitDTO>();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading units: {ex.Message}");
+                }
+
+                // ✅ MAP UNIT VÀO INGREDIENT (CHỈ NẾU CẢ 2 LIST ĐỀU CÓ DỮ LIỆU)
+                if (ingredientList.Any() && unitList.Any())
+                {
+                    foreach (var ingredient in ingredientList)
+                    {
+                        if (ingredient.UnitId.HasValue)
+                        {
+                            ingredient.Unit = unitList.FirstOrDefault(u => u.UnitId == ingredient.UnitId.Value)
+                                              ?? new UnitDTO();
+                        }
+                        else
+                        {
+                            ingredient.Unit = new UnitDTO();
+                        }
+                    }
+                }
+
+                // ✅ TẠO DANH SÁCH NHÀ CUNG CẤP GẦN ĐÂY (AN TOÀN VỚI NULL)
+                var recentSuppliers = new List<SupplierDTO>();
+                if (purchaseList.Any() && supplierList.Any())
+                {
+                    recentSuppliers = purchaseList
+                        .Where(p => p.Status == "Completed" && p.TimeConfirm.HasValue)
+                        .OrderByDescending(p => p.TimeConfirm)
+                        .GroupBy(p => p.SupplierId)
+                        .Select(g => g.First())
+                        .Take(5)
+                        .Select(p => supplierList.FirstOrDefault(s => s.SupplierId == p.SupplierId))
+                        .Where(s => s != null)
+                        .ToList();
+                }
+
+                // ✅ TẠO DANH SÁCH NGUYÊN LIỆU KHẨN CẤP (AN TOÀN VỚI NULL)
+                var urgentIngredients = new List<InventoryIngredientDTO>();
+                if (ingredientList.Any())
+                {
+                    urgentIngredients = ingredientList
+                        .Where(i =>
+                            i.TotalQuantity == 0 ||
+                            i.IsLowStock ||
+                            i.IsBelowReorderLevel ||
+                            i.NeedUrgentRestock)
+                        .OrderBy(i => i.TotalQuantity == 0 ? 0 :
+                                     i.IsLowStock ? 1 :
+                                     i.NeedUrgentRestock ? 2 : 3)
+                        .ThenBy(i => i.TotalQuantity)
+                        .Take(10)
+                        .ToList();
+                }
+
+                // ✅ TẠO MODEL VỚI TẤT CẢ DANH SÁCH (RỖNG HOẶC CÓ DỮ LIỆU)
+                var importIngredient = new ImportIngredient
+                {
+                    SupplierDTOs = supplierList,
+                    InventoryIngredientDTOs = ingredientList,
+                    WarehouseDTOs = warehouseList,
+                    PurchaseOrderDTOs = purchaseList,
+                    unitDTOs = unitList,
+                    RecentSupplierDTOs = recentSuppliers,
+                    UrgentIngredientDTOs = urgentIngredients
+                };
+
+                // ✅ THÊM THÔNG BÁO NẾU CÓ DANH SÁCH RỖNG
+                if (!supplierList.Any())
+                {
+                    TempData["WarningMessage"] = "Không có nhà cung cấp nào trong hệ thống";
+                }
+                if (!ingredientList.Any())
+                {
+                    TempData["WarningMessage"] = (TempData["WarningMessage"]?.ToString() ?? "")
+                        + (string.IsNullOrEmpty(TempData["WarningMessage"]?.ToString()) ? "" : ". ")
+                        + "Không có nguyên liệu nào trong kho";
+                }
+                if (!warehouseList.Any())
+                {
+                    TempData["WarningMessage"] = (TempData["WarningMessage"]?.ToString() ?? "")
+                        + (string.IsNullOrEmpty(TempData["WarningMessage"]?.ToString()) ? "" : ". ")
+                        + "Không có kho nào đang hoạt động";
+                }
+
+                return View("~/Views/Menu/ImportInventory.cshtml", importIngredient);
             }
-
-            // Tạo model
-            var importIngredient = new ImportIngredient
+            catch (Exception ex)
             {
-                SupplierDTOs = supplierList,
-                InventoryIngredientDTOs = ingredientList,
-                WarehouseDTOs = warehouseList,
-                PurchaseOrderDTOs = purchaseList,
-                unitDTOs = unitList
-            };
+                // ✅ XỬ LÝ LỖI TỔNG THỂ - VẪN TRẢ VỀ VIEW VỚI DANH SÁCH RỖNG
+                Console.WriteLine($"Error in Index: {ex.Message}");
 
-            return View("~/Views/Menu/ImportInventory.cshtml", importIngredient);
+                var importIngredient = new ImportIngredient
+                {
+                    SupplierDTOs = supplierList,
+                    InventoryIngredientDTOs = ingredientList,
+                    WarehouseDTOs = warehouseList,
+                    PurchaseOrderDTOs = purchaseList,
+                    unitDTOs = unitList,
+                    RecentSupplierDTOs = new List<SupplierDTO>(),
+                    UrgentIngredientDTOs = new List<InventoryIngredientDTO>()
+                };
+
+                TempData["ErrorMessage"] = "Có lỗi khi tải dữ liệu. Vui lòng thử lại sau.";
+                return View("~/Views/Menu/ImportInventory.cshtml", importIngredient);
+            }
         }
-
-
 
         [HttpPost]
         public async Task<IActionResult> SubmitImport([FromForm] ImportSubmitModel model)
@@ -136,10 +265,9 @@ namespace WebSapaForestForStaff.Controllers
 
                 // Thêm các field thông tin cơ bản
                 formData.Add(new StringContent(model.ImportCode), "ImportCode");
-                formData.Add(new StringContent(model.ImportDate.ToString("o")), "ImportDate"); // ISO 8601 format
+                formData.Add(new StringContent(model.ImportDate.ToString("o")), "ImportDate");
                 formData.Add(new StringContent(model.SupplierId.ToString()), "SupplierId");
                 formData.Add(new StringContent(model.CreatorId.ToString()), "CreatorId");
-                //formData.Add(new StringContent(model.CheckId?.ToString() ?? ""), "CheckId");
 
                 // ✅ Thêm danh sách items dưới dạng JSON string
                 var itemsJson = JsonConvert.SerializeObject(importItems.Select(item => new
@@ -191,7 +319,6 @@ namespace WebSapaForestForStaff.Controllers
                 return StatusCode(500, new { success = false, message = $"Lỗi server: {ex.Message}" });
             }
         }
-
 
         [HttpGet]
         public async Task<IActionResult> GetSupplierComparison(int ingredientId, string compareBy = "price")
