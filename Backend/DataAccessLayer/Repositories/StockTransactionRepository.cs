@@ -66,6 +66,7 @@ namespace DataAccessLayer.Repositories
             return await _context.StockTransactions
                 .FirstOrDefaultAsync(x => x.TransactionId == transactionId);
         }
-      
+
+       
     }
 }

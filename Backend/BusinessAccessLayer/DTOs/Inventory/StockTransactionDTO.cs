@@ -22,7 +22,6 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string? Note { get; set; }
 
         public int? BatchId { get; set; }
-        public string? StatusExport { get; set; }
         public string? BatchName { get; set; }
     }
 }

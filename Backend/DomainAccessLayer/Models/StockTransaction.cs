@@ -18,7 +18,7 @@ public partial class StockTransaction
     public string? Note { get; set; }
 
     public int? BatchId { get; set; }
-    
+
     public virtual InventoryBatch? Batch { get; set; }
 
     public virtual Ingredient Ingredient { get; set; } = null!;

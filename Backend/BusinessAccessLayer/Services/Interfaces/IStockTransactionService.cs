@@ -15,7 +15,6 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<IEnumerable<StockTransactionInventoryDTO>> GetAllStockExport();
 
         Task<IEnumerable<StockTransactionDTO>> GetExportTransactionsAsync();
-       
 
     }
 }

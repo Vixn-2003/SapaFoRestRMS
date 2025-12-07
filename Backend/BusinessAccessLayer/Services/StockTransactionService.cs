@@ -52,6 +52,6 @@ namespace BusinessAccessLayer.Services
             return _mapper.Map<IEnumerable<StockTransactionInventoryDTO>>(export);
         }
 
-      
+        
     }
 }

@@ -36,7 +36,5 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         
-
-        
     }
 }

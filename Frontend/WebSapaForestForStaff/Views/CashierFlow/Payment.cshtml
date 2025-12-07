@@ -51,7 +51,7 @@
         Discount = Model.DiscountAmount,
         DepositAmount = Model.DepositAmount,
         DepositPaid = Model.DepositPaid,
-        DepositRefundAmount = Model.DepositRefundAmount,
+        // DepositRefundAmount = Model.DepositRefundAmount,
         Total = Model.TotalAmount,
         Items = (Model.Items ?? new List<WebSapaForestForStaff.DTOs.Payment.OrderItemDto>()).Select(i => new
         {
@@ -550,22 +550,22 @@
                                     <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
                                 </tr>
                             }
-                            @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
-                            {
-                                <tr class="table-warning">
-                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
-                                        <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
-                                        Tiền cần trả lại cho khách
-                                        <small class="text-muted d-block">
-                                            Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
-                                        </small>
-                                    </td>
-                                    <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
-                                        +@Model.DepositRefundAmount.Value.ToString("N0") ₫
-                                    </td>
-                                </tr>
-                            }
-                            <tr class="table-success">
+                             @* @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
+                             {
+                                 <tr class="table-warning">
+                                     <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                         <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
+                                         Tiền cần trả lại cho khách
+                                         <small class="text-muted d-block">
+                                             Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
+                                         </small>
+                                     </td>
+                                     <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
+                                         +@Model.DepositRefundAmount.Value.ToString("N0") ₫
+                                     </td>
+                                 </tr>
+                             } *@
+                            @* <tr class="table-success">
                                 <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
                                     <span class="d-flex align-items-center gap-2">
                                         <i class="bi bi-cash-coin text-primary fs-4"></i>
@@ -585,7 +585,7 @@
                                 <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
                                     @Model.TotalAmount.ToString("N0") ₫
                                 </td>
-                            </tr>
+                            </tr> *@
                         </tfoot>
                     </table>
                 </div>

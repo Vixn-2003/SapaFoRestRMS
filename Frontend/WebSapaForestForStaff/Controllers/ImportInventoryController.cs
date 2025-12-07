@@ -75,15 +75,43 @@ namespace WebSapaForestForStaff.Controllers
                 }
             }
 
-            // Tạo model
+            var recentSuppliers = purchaseList?
+    .Where(p => p.Status == "Completed" && p.TimeConfirm.HasValue)
+    .OrderByDescending(p => p.TimeConfirm)
+    .GroupBy(p => p.SupplierId)
+    .Select(g => g.First())
+    .Take(5)  // ✅ ĐỔI TỪ 7 → 5
+    .Select(p => supplierList?.FirstOrDefault(s => s.SupplierId == p.SupplierId))
+    .Where(s => s != null)
+    .ToList() ?? new List<SupplierDTO>();
+
+            var urgentIngredients = ingredientList?
+        .Where(i =>
+            i.TotalQuantity == 0 ||                    
+            i.IsLowStock ||                            
+            i.IsBelowReorderLevel ||                  
+            i.NeedUrgentRestock)                    
+        .OrderBy(i => i.TotalQuantity == 0 ? 0 :      
+                     i.IsLowStock ? 1 :            
+                     i.NeedUrgentRestock ? 2 :      
+                     3)                                 
+        .ThenBy(i => i.TotalQuantity)             
+        .Take(10)                                   
+        .ToList() ?? new List<InventoryIngredientDTO>();
+
+            // ✅ Thêm vào model
             var importIngredient = new ImportIngredient
             {
                 SupplierDTOs = supplierList,
                 InventoryIngredientDTOs = ingredientList,
                 WarehouseDTOs = warehouseList,
                 PurchaseOrderDTOs = purchaseList,
-                unitDTOs = unitList
+                unitDTOs = unitList,
+                RecentSupplierDTOs = recentSuppliers,
+                UrgentIngredientDTOs = urgentIngredients
             };
+
+
 
             return View("~/Views/Menu/ImportInventory.cshtml", importIngredient);
         }

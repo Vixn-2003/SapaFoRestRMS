@@ -12,7 +12,6 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<bool> AddNewStockTransaction(StockTransaction stockTransaction);
         Task<IEnumerable<StockTransaction>> GetExportTransactionsAsync();
         Task<IEnumerable<StockTransaction>> GetAllExport();
-
         Task<StockTransaction?> GetByIdAsync(int transactionId);
     }
 }
