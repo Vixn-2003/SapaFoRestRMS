@@ -437,6 +437,47 @@ namespace BusinessAccessLayer.Services
                 }
             }
 
+            // ✅ TÍNH TOÁN SỐ LƯỢNG MÓN THEO TRẠNG THÁI (Backend)
+            screenDto.TotalQuantity = screenDto.OrderedItems.Sum(item => item.Quantity);
+            
+            foreach (var item in screenDto.OrderedItems)
+            {
+                var status = (item.Status ?? "").Trim();
+                var statusLower = status.ToLower();
+                
+                // Đã phục vụ & đang nấu: Status = "Cooking", "Done", "Ready", "Served"
+                var isReady = statusLower == "cooking" ||
+                             statusLower == "done" ||
+                             statusLower == "ready" ||
+                             statusLower == "served" ||
+                             statusLower == "đang chế biến" ||
+                             statusLower == "đã xong" ||
+                             statusLower == "sẵn sàng";
+                
+                // Chưa nấu: Status = "Pending"
+                var isPending = statusLower == "pending" ||
+                               statusLower == "đã gửi" ||
+                               string.IsNullOrEmpty(status);
+                
+                // Món đã hủy: Status = "Cancelled", "Removed"
+                var isCancelled = statusLower == "cancelled" ||
+                                 statusLower == "hủy" ||
+                                 statusLower == "removed";
+                
+                if (isReady)
+                {
+                    screenDto.QtyServedAndCooking += item.Quantity;
+                }
+                else if (isPending)
+                {
+                    screenDto.QtyNotCooked += item.Quantity;
+                }
+                else if (isCancelled)
+                {
+                    screenDto.QtyCancelled += item.Quantity;
+                }
+            }
+
             return screenDto;
         }
 

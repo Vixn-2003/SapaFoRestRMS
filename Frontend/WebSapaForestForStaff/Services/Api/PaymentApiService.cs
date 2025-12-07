@@ -180,6 +180,19 @@ namespace WebSapaForestForStaff.Services.Api
             return payload;
         }
 
+        public async Task<ApiResult> CancelOrderAsync(int orderId, string reason)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.DeleteAsync(BuildApiUrl($"/payment/orders/{orderId}/cancel?reason={Uri.EscapeDataString(reason)}")));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể hủy đơn hàng";
+                return new ApiResult(false, message);
+            }
+            return new ApiResult(true, "Đã hủy đơn hàng thành công");
+        }
+
         private async Task<List<OrderDto>> FetchOrdersByStatusAsync(string statusFilter)
         {
             var response = await SendWithAutoRefreshAsync(client =>
