@@ -2118,7 +2118,7 @@
                         rejectBtn.disabled = false;
                     } catch (error) {
                         console.error('Error loading user info:', error);
-                        alert('❌ ' + error.message);
+                        showToast('error', 'Lỗi tải thông tin', error.message || 'Không thể tải thông tin người dùng');
                         this.checked = false;
                         confirmerInfoSection.style.display = 'none';
                     }
@@ -2191,7 +2191,7 @@
         const checkbox = document.getElementById('confirmCheckbox');
 
         if (!checkbox.checked) {
-            alert('Vui lòng xác nhận bằng cách check vào ô checkbox!');
+            showToast('warning', 'Chưa xác nhận', 'Vui lòng tick vào ô checkbox để xác nhận!');
             return;
         }
 
@@ -2283,7 +2283,7 @@
         const checkbox = document.getElementById('confirmCheckbox');
 
         if (!checkbox.checked) {
-            alert('Vui lòng xác nhận bằng cách check vào ô checkbox!');
+            showToast('warning', 'Chưa xác nhận', 'Vui lòng tick vào ô checkbox để xác nhận!');
             return;
         }
 

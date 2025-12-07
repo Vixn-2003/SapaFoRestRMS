@@ -3511,7 +3511,7 @@
 
                 popup.remove();
             } catch (error) {
-                alert('Có lỗi xảy ra: ' + error.message);
+                showToast('Có lỗi xảy ra: ' + error.message);
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận';
             }
@@ -3575,6 +3575,50 @@
         setTimeout(() => {
             const msg = document.getElementById('successMsg');
             if (msg) msg.remove();
+        }, 3000);
+    }
+
+    // ✅ HÀM HIỂN THỊ THÔNG BÁO CHUNG (Thay thế alert)
+    function showToast(message, type = 'success') {
+        let backgroundColor, icon;
+
+        // Cấu hình màu sắc và icon dựa trên loại thông báo
+        switch (type) {
+            case 'error':
+                backgroundColor = '#ef4444'; // Đỏ
+                icon = '<i class="fas fa-times-circle"></i>';
+                break;
+            case 'warning':
+                backgroundColor = '#f59e0b'; // Cam
+                icon = '<i class="fas fa-exclamation-triangle"></i>';
+                break;
+            default: // success
+                backgroundColor = '#10b981'; // Xanh lá
+                icon = '<i class="fas fa-check-circle"></i>';
+                break;
+        }
+
+        const toastHtml = `
+            <div class="custom-toast" style="
+                position: fixed; top: 20px; right: 20px;
+                background: ${backgroundColor}; color: white;
+                padding: 1rem 1.5rem; border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 99999; animation: slideIn 0.3s ease-out;
+                display: flex; align-items: center; gap: 10px; font-weight: 500;">
+                ${icon} <span>${message}</span>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Tự động xóa sau 3 giây
+        const toast = document.body.lastElementChild;
+        setTimeout(() => {
+            if (toast && toast.classList.contains('custom-toast')) {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }
         }, 3000);
     }
 
@@ -3708,13 +3752,13 @@ function closeAlert() {
 
         // Validation
         if (!ingredientName) {
-            alert('Vui lòng nhập tên mặt hàng!');
+            showToast('Vui lòng nhập tên mặt hàng!', 'warning'); // MỚI
             document.getElementById('editIngredientName').focus();
             return;
         }
 
-        if (!ingredientUnitId) { // ← Đổi tên biến
-            alert('Vui lòng chọn đơn vị tính!');
+        if (!ingredientUnitId) {
+            showToast('Vui lòng chọn đơn vị tính!', 'warning'); // MỚI
             document.getElementById('editIngredientUnit').focus();
             return;
         }
@@ -3755,8 +3799,7 @@ function closeAlert() {
             }
 
         } catch (error) {
-            console.error('Error updating ingredient:', error);
-            alert('Có lỗi xảy ra: ' + error.message);
+            showToast('Có lỗi xảy ra: ' + error.message, 'error');
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
         }
@@ -4351,7 +4394,7 @@ function closeAlert() {
             const row = document.querySelector(`tr[data-batch-id="${batchId}"]`);
 
             if (!row) {
-                alert('Không tìm thấy thông tin lô hàng');
+                showToast('Không tìm thấy thông tin lô hàng', 'error');
                 return;
             }
 
@@ -4437,7 +4480,7 @@ function closeAlert() {
 
         } catch (error) {
             console.error('Error opening audit modal:', error);
-            alert('Có lỗi xảy ra khi kiểm tra trạng thái kiểm kê: ' + error.message);
+            showToast('Lỗi kiểm tra trạng thái: ' + error.message, 'error');
         }
     }
 
@@ -4649,14 +4692,14 @@ function closeAlert() {
 
         // Validate file size (5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('Kích thước file không được vượt quá 5MB');
+            showToast('Kích thước file không được vượt quá 5MB', 'warning');
             event.target.value = '';
             return;
         }
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
-            alert('Vui lòng chọn file hình ảnh (PNG, JPG, JPEG)');
+            showToast('Vui lòng chọn file hình ảnh (PNG, JPG, JPEG)', 'warning');
             event.target.value = '';
             return;
         }
@@ -4676,7 +4719,7 @@ function closeAlert() {
 
     async function submitAudit() {
         if (!currentAuditBatch) {
-            alert('Không có thông tin lô hàng để kiểm kê');
+            showToast('Không có thông tin lô hàng để kiểm kê', 'error');
             return;
         }
 
@@ -4688,14 +4731,14 @@ function closeAlert() {
 
         // Validate số lượng (trừ trường hợp removeAll)
         if (auditType !== 'removeAll' && auditType !== 'noChange' && quantity <= 0) {
-            alert('Vui lòng nhập số lượng hợp lệ');
+            showToast('Vui lòng nhập số lượng hợp lệ', 'warning');
             document.getElementById('auditQuantity').focus();
             return;
         }
 
         // Validate lý do
         if (!reason) {
-            alert('Vui lòng nhập lý do kiểm kê');
+            showToast('Vui lòng nhập lý do kiểm kê', 'warning');
             document.getElementById('auditReason').focus();
             return;
         }
@@ -4706,7 +4749,7 @@ function closeAlert() {
             const minDate = currentAuditBatch.createdDateObj;
 
             if (selectedDate < minDate) {
-                alert('Ngày hết hạn mới không được nhỏ hơn ngày tạo lô!');
+                showToast('Ngày hết hạn mới không được nhỏ hơn ngày tạo lô!', 'warning');
                 document.getElementById('auditNewExpiryDate').focus();
                 return;
             }
@@ -4715,14 +4758,14 @@ function closeAlert() {
         // Validate thông tin người kiểm kê
         const useMyInfo = document.getElementById('useMyInfo').checked;
         if (!useMyInfo) {
-            alert('Vui lòng xác nhận thông tin người kiểm kê');
+            showToast('Vui lòng xác nhận thông tin người kiểm kê', 'warning');
             return;
         }
 
         // Validate ảnh minh chứng
         const imageFile = document.getElementById('auditImageUpload').files[0];
         if (!imageFile) {
-            alert('Vui lòng tải lên hình ảnh minh chứng');
+            showToast('Vui lòng tải lên hình ảnh minh chứng', 'warning');
             return;
         }
 
@@ -4850,7 +4893,7 @@ function closeAlert() {
 
         } catch (error) {
             console.error('Error submitting audit:', error);
-            alert('Có lỗi xảy ra khi tạo đơn kiểm kê: ' + error.message);
+            showToast('Có lỗi xảy ra khi tạo đơn kiểm kê: ' + error.message, 'error');
 
             const submitBtn = document.getElementById('submitAuditBtn');
             submitBtn.disabled = false;
