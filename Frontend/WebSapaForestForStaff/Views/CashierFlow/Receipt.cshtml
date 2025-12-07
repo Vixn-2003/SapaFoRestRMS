@@ -43,9 +43,22 @@
 
     @if (TempData["ErrorMessage"] is string errorMessage)
     {
-        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle fs-4"></i>
-            <span>@errorMessage</span>
+        <div class="alert alert-danger d-flex align-items-start gap-3 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle fs-4 mt-1"></i>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-2">Lỗi khi tải hóa đơn</h6>
+                <p class="mb-0">@errorMessage</p>
+                <hr class="my-2">
+                <small class="text-muted">
+                    <strong>Gợi ý:</strong>
+                    <ul class="mb-0 mt-1" style="padding-left: 20px;">
+                        <li>Kiểm tra đơn hàng đã được thanh toán chưa</li>
+                        <li>Thử tải lại hóa đơn sau vài giây</li>
+                        <li>Liên hệ quản trị viên nếu vấn đề vẫn tiếp tục</li>
+                    </ul>
+                </small>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
     @if (TempData["SuccessMessage"] is string successMessage)
@@ -53,6 +66,7 @@
         <div class="alert alert-success d-flex align-items-center gap-2 mb-3" role="alert">
             <i class="bi bi-check-circle fs-4"></i>
             <span>@successMessage</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 

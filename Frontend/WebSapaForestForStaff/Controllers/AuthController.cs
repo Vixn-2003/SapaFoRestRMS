@@ -78,7 +78,7 @@ namespace WebSapaForestForStaff.Controllers
                             case 2: // Cashier
                                 return RedirectToAction("Index", "DashboardTable");
                             case 3: // Kitchen Staff
-                                return RedirectToAction("Index", "KischenDisplay");
+                                return RedirectToAction("Index", "KitchenDisplay");
                             case 4: // Inventory Staff
                                 return RedirectToAction("Index", "DashboardInventory");
                         }
@@ -97,7 +97,7 @@ namespace WebSapaForestForStaff.Controllers
                             }
                             if (positionIds.Contains(3))
                             {
-                                return RedirectToAction("Index", "KischenDisplay");
+                                return RedirectToAction("Index", "KitchenDisplay");
                             }
                             if (positionIds.Contains(4))
                             {
@@ -204,7 +204,7 @@ namespace WebSapaForestForStaff.Controllers
                         // Id = 3 (Kitchen Staff) -> KischenDisplay
                         else if (positionIds.Contains(3))
                         {
-                            redirectUrl = returnUrl ?? Url.Action("Index", "KischenDisplay");
+                            redirectUrl = returnUrl ?? Url.Action("Index", "KitchenDisplay");
                         }
                         // Id = 4 (Inventory Staff) -> DashboardInventory
                         else if (positionIds.Contains(4))

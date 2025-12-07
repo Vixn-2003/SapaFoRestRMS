@@ -12,13 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-<<<<<<<< HEAD:Backend/DataAccessLayer/Migrations/20251205022103_updatedatabaseByDuc.Designer.cs
-    [Migration("20251205022103_updatedatabaseByDuc")]
-    partial class updatedatabaseByDuc
-========
-    [Migration("20251204103021_VinxUpdateDBMergeLastDemo")]
-    partial class VinxUpdateDBMergeLastDemo
->>>>>>>> c7978f9355adc1d9f7c3c864dee2f93431dc8bfc:Backend/DataAccessLayer/Migrations/20251204103021_VinxUpdateDBMergeLastDemo.Designer.cs
+    [Migration("20251207142754_VinxUpdateDatabaseVerLast")]
+    partial class VinxUpdateDatabaseVerLast
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2003,6 +1998,10 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("StatusExport")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("TransactionDate")
                         .ValueGeneratedOnAdd()

@@ -615,6 +615,19 @@
     <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
     <input type="hidden" name="Notes" id="cashPaymentNotes" />
 </form>
+
+<form id="combinedPaymentForm"
+      asp-action="ProcessCombinedPayment"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrderId" id="combinedPaymentOrderId" />
+    <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
+    <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
+    <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
+    <input type="hidden" name="Notes" id="combinedPaymentNotes" />
+</form>
 </div>
 
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_CashPaymentModal.cshtml")
@@ -890,12 +903,57 @@
             document.getElementById('combinedQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${orderContext.OrderCode}-COMBINED`;
         }
 
-        function confirmCombinedPayment() {
+        async function confirmCombinedPayment() {
             if (document.getElementById('confirmCombinedPaymentBtn').disabled) {
                 showToast('Vui lòng đảm bảo tổng hai phần khớp với tổng hóa đơn.', 'warning');
                 return;
             }
-            submitPayment('combined', orderContext.Total);
+
+            const cashAmount = parseFloat(document.getElementById('cashAmount').value || 0);
+            const cashReceived = parseFloat(document.getElementById('cashReceived').value || 0) || null;
+            const qrAmount = parseFloat(document.getElementById('qrAmount').value || 0);
+            const notes = document.getElementById('combinedNotes')?.value || '';
+
+            if (cashAmount <= 0 || qrAmount <= 0) {
+                showToast('Vui lòng nhập số tiền hợp lệ cho cả hai phần.', 'warning');
+                return;
+            }
+
+            // Disable button to prevent double submit
+            const btn = document.getElementById('confirmCombinedPaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+                const response = await fetch('/cashier-flow/payment/combined', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify({
+                        orderId: orderContext.OrderId,
+                        cashAmount: cashAmount,
+                        cashReceived: cashReceived,
+                        qrAmount: qrAmount,
+                        notes: notes
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Không thể xử lý thanh toán kết hợp');
+                }
+
+                // Success - redirect to receipt page
+                window.location.href = `/cashier-flow/receipt/${orderContext.OrderId}`;
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Lỗi: ' + (error.message || 'Không thể xử lý thanh toán. Vui lòng thử lại.'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận thanh toán';
+            }
         }
 
         // Split bill logic

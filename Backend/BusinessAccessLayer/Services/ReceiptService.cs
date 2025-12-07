@@ -3,6 +3,7 @@ using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
 using DomainAccessLayer.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
@@ -20,13 +21,38 @@ public class ReceiptService : IReceiptService
     private readonly string _webRootPath;
     private readonly ILogger<ReceiptService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly ICloudinaryService? _cloudinaryService;
 
-    public ReceiptService(IUnitOfWork unitOfWork, string webRootPath, ILogger<ReceiptService> logger, IConfiguration configuration)
+    public ReceiptService(
+        IUnitOfWork unitOfWork, 
+        string webRootPath, 
+        ILogger<ReceiptService> logger, 
+        IConfiguration configuration,
+        IServiceProvider? serviceProvider = null)
     {
         _unitOfWork = unitOfWork;
         _webRootPath = webRootPath ?? throw new ArgumentNullException(nameof(webRootPath));
         _logger = logger;
         _configuration = configuration;
+        
+        // Get CloudinaryService from DI if available (optional dependency)
+        try
+        {
+            _cloudinaryService = serviceProvider?.GetService<ICloudinaryService>();
+            if (_cloudinaryService != null)
+            {
+                _logger.LogInformation("CloudinaryService is available. Receipts will be uploaded to Cloudinary.");
+            }
+            else
+            {
+                _logger.LogInformation("CloudinaryService is not available. Receipts will be stored locally only.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get CloudinaryService. Receipts will be stored locally only.");
+            _cloudinaryService = null;
+        }
     }
 
     /// <summary>
@@ -403,8 +429,33 @@ public class ReceiptService : IReceiptService
 
         _logger.LogInformation("Finished generating receipt for order {OrderId}. File saved to {PdfPath} ({FileSize} bytes)", orderId, pdfPath, fileSize);
 
-        // Return relative URL path
-        return $"/receipts/{pdfFileName}";
+        // ✅ Upload PDF to Cloudinary if service is available
+        string? cloudinaryUrl = null;
+        if (_cloudinaryService != null)
+        {
+            try
+            {
+                var pdfBytes = await System.IO.File.ReadAllBytesAsync(pdfPath, ct);
+                cloudinaryUrl = await _cloudinaryService.UploadPdfAsync(pdfBytes, pdfFileName, "receipts");
+                
+                if (!string.IsNullOrEmpty(cloudinaryUrl))
+                {
+                    _logger.LogInformation("Successfully uploaded receipt PDF to Cloudinary for order {OrderId}. URL: {CloudinaryUrl}", orderId, cloudinaryUrl);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to upload receipt PDF to Cloudinary for order {OrderId}. Will use local file.", orderId);
+                }
+            }
+            catch (Exception cloudinaryEx)
+            {
+                // Log error but don't fail - fallback to local storage
+                _logger.LogWarning(cloudinaryEx, "Error uploading receipt PDF to Cloudinary for order {OrderId}. Will use local file.", orderId);
+            }
+        }
+
+        // Return Cloudinary URL if available, otherwise return local path
+        return cloudinaryUrl ?? $"/receipts/{pdfFileName}";
     }
 
     /// <summary>
