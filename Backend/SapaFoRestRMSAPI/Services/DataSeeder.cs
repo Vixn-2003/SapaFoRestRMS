@@ -260,14 +260,14 @@ namespace SapaFoRestRMSAPI.Services
                 var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
                 return Convert.ToBase64String(hashedBytes);
             }
-
+            
             // Create staff for each position
             var staffAccounts = new[]
             {
-                new { Email = "cashier@test.com", FullName = "Test Cashier", Phone = "0900002001", PositionName = "Cashier" },
+                new { Email = "xuanvidz03102003@gmail.com", FullName = "Test Cashier", Phone = "0900002001", PositionName = "Cashier" },
                 new { Email = "waiter@test.com", FullName = "Test Waiter", Phone = "0900002002", PositionName = "Waiter/Waitress" },
-                new { Email = "kitchen@test.com", FullName = "Test Kitchen Staff", Phone = "0900002003", PositionName = "Kitchen Staff" },
-                new { Email = "inventory@test.com", FullName = "Test Inventory Staff", Phone = "0900002004", PositionName = "Inventory Staff" }
+                new { Email = "tuanminhle1802@gmail.com", FullName = "Test Kitchen Staff", Phone = "0900002003", PositionName = "Kitchen Staff" },
+                new { Email = "dangduc504@gmail.com", FullName = "Test Inventory Staff", Phone = "0900002004", PositionName = "Inventory Staff" }
             };
 
             foreach (var account in staffAccounts)

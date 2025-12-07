@@ -30,6 +30,10 @@ namespace WebSapaForestForStaff.DTOs.Payment
         public decimal DiscountAmount { get; set; }
         public decimal? DepositAmount { get; set; }
         public bool? DepositPaid { get; set; }
+        /// <summary>
+        /// Số tiền cần trả lại cho khách khi tiền cọc lớn hơn tổng tiền thanh toán
+        /// </summary>
+        public decimal? DepositRefundAmount { get; set; }
         public decimal TotalAmount { get; set; }
 
         // Legacy alias
