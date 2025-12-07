@@ -52,16 +52,6 @@ namespace BusinessAccessLayer.Services
             return _mapper.Map<IEnumerable<StockTransactionInventoryDTO>>(export);
         }
 
-        public async Task<bool> UpdateStatusExportAsync(int transactionId, string statusExport)
-        {
-            // Validate status
-            var validStatuses = new[] { "Requested", "Delivered", "Received", "Missing" };
-            if (!validStatuses.Contains(statusExport))
-            {
-                throw new ArgumentException($"Invalid status. Valid values: {string.Join(", ", validStatuses)}");
-            }
-
-            return await _unitOfWork.StockTransaction.UpdateStatusExportAsync(transactionId, statusExport);
-        }
+      
     }
 }
