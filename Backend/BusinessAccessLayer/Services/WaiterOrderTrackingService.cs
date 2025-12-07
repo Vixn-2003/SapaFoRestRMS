@@ -20,13 +20,33 @@ namespace BusinessAccessLayer.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null)
+        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null, List<int>? tableIds = null)
         {
             var now = DateTime.Now;
             var result = new WaiterOrderTrackingDto();
 
             // Lấy tất cả active orders với order details
-            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            var allActiveOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            
+            // Filter theo tableIds nếu có
+            List<Order> activeOrders;
+            if (tableIds != null && tableIds.Any())
+            {
+                activeOrders = allActiveOrders.Where(order =>
+                {
+                    // Lấy tableIds từ reservation
+                    var reservationTableIds = order.Reservation?.ReservationTables?
+                        .Select(rt => rt.TableId)
+                        .ToList() ?? new List<int>();
+                    
+                    // Kiểm tra xem có bàn nào trong danh sách filter không
+                    return reservationTableIds.Any(tableId => tableIds.Contains(tableId));
+                }).ToList();
+            }
+            else
+            {
+                activeOrders = allActiveOrders;
+            }
 
             var allItems = new List<OrderTrackingItemDto>();
             var orderGroups = new Dictionary<int, OrderTrackingGroupDto>();
@@ -112,9 +132,14 @@ namespace BusinessAccessLayer.Services
                             // Trạng thái riêng theo từng món con
                             var comboStatus = (orderComboItem.Status ?? status).Trim();
                             var comboStatusLower = comboStatus.ToLower();
+                            var normalizedComboStatus = NormalizeStatus(comboStatus);
                             var comboIsDone = comboStatusLower.Contains("done") ||
                                               comboStatusLower.Contains("hoàn thành") ||
                                               comboStatusLower.Contains("xong");
+
+                            // Quyền Hủy / Làm gấp theo trạng thái món con
+                            var canCancelItem = normalizedComboStatus == "Pending";
+                            var canRequestUrgentItem = normalizedComboStatus != "Done";
 
                             var comboItem = new OrderTrackingItemDto
                             {
@@ -131,9 +156,9 @@ namespace BusinessAccessLayer.Services
                                 StartedAt = orderComboItem.StartedAt ?? orderDetail.StartedAt,
                                 ReadyAt = orderComboItem.ReadyAt ?? orderDetail.ReadyAt,
                                 ServedAt = comboIsDone ? (orderComboItem.ReadyAt ?? orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null,
-                                CanCancel = canCancel,
+                                CanCancel = canCancelItem,
                                 CanReturn = false,
-                                CanRequestUrgent = canRequestUrgent,
+                                CanRequestUrgent = canRequestUrgent && canRequestUrgentItem,
                                 IsSplit = isSplit
                             };
 

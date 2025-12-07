@@ -2,6 +2,9 @@
 @{
     ViewData["Title"] = "Quản Lý Xuất hàng";
     Layout = "~/Views/Shared/_LayoutInventory.cshtml";
+    
+    // Ensure Model is never null
+    var viewModel = Model ?? new WebSapaForestForStaff.DTOs.Inventory.ExportManagementViewModel();
 }
 
 <style>
@@ -1050,7 +1053,7 @@
         <div class="export-mgmt__stat-card export-mgmt__stat-card--info">
             <div class="export-mgmt__stat-content">
                 <span class="export-mgmt__stat-label">Tổng giao dịch xuất kho</span>
-                <span class="export-mgmt__stat-value">@Model.TotalTransactions</span>
+                <span class="export-mgmt__stat-value">@viewModel.TotalTransactions</span>
                 <span class="export-mgmt__stat-status">Tất cả thời gian</span>
             </div>
         </div>
@@ -1097,7 +1100,7 @@
                 <label class="export-mgmt__filter-label">Kho</label>
                 <select class="export-mgmt__filter-select" id="warehouseFilter">
                     <option value="">Tất cả kho</option>
-                    @foreach (var warehouse in Model.Warehouses)
+                    @foreach (var warehouse in viewModel.Warehouses)
                     {
                         <option value="@warehouse.Id">@warehouse.Name</option>
                     }
@@ -1109,33 +1112,9 @@
 
     <!-- Main Table -->
     <div class="export-mgmt__table-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; background: #f9fafb;">
-            <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600;">Chi tiết đơn xuất</h2>
-            <span id="tableCountDisplay" style="font-size: 0.875rem; color: #6b7280;">@Model.TotalTransactions giao dịch</span>
-        </div>
+        <h2 class="export-mgmt__section-header">Chi tiết đơn xuất (@viewModel.TotalTransactions giao dịch)</h2>
 
-        <!-- Tabs -->
-        <div class="export-mgmt__export-tabs">
-            <button class="export-mgmt__export-tab active" onclick="switchExportTab('all')">
-                Tất cả (<span id="count-all">@Model.TotalTransactions</span>)
-            </button>
-            <button class="export-mgmt__export-tab" onclick="switchExportTab('requested')">
-                Đang yêu cầu (<span id="count-requested">0</span>)
-            </button>
-            <button class="export-mgmt__export-tab" onclick="switchExportTab('delivered')">
-                Đã giao (<span id="count-delivered">0</span>)
-            </button>
-            <button class="export-mgmt__export-tab" onclick="switchExportTab('received')">
-                Đã nhận (<span id="count-received">0</span>)
-            </button>
-            <button class="export-mgmt__export-tab" onclick="switchExportTab('missing')">
-                Thiếu (<span id="count-missing">0</span>)
-            </button>
-            <button class="export-mgmt__export-tab" onclick="switchExportTab('cancelled')">
-                Từ chối (<span id="count-cancelled">0</span>)
-            </button>
-        </div>
-        @if (Model.ExportData.Any())
+        @if (viewModel.ExportData != null && viewModel.ExportData.Any())
         {
             <div class="export-mgmt__table-wrapper">
                 <table class="export-mgmt__table" id="exportTable">
@@ -1152,7 +1131,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in Model.ExportData.OrderByDescending(x => x.TransactionDate))
+                        @foreach (var item in viewModel.ExportData.OrderByDescending(x => x.TransactionDate))
                         {
                             <tr data-ingredient-id="@item.IngredientId"
                                 data-warehouse-id="@item.WarehouseId"
@@ -1254,9 +1233,9 @@
         {
             <div class="export-mgmt__empty">
                 <h3 class="export-mgmt__empty-title">Không có dữ liệu xuất kho</h3>
-                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                @if (!string.IsNullOrEmpty(viewModel.ErrorMessage))
                 {
-                    <div class="export-mgmt__alert export-mgmt__alert--danger">@Model.ErrorMessage</div>
+                    <div class="export-mgmt__alert export-mgmt__alert--danger">@viewModel.ErrorMessage</div>
                 }
             </div>
         }
@@ -1291,7 +1270,8 @@
     </div>
 </div>
 
-<div class="export-mgmt__toast-container" id="toastContainer"></div>
+    <script>
+        const exportData = @Html.Raw(Json.Serialize(viewModel.ExportData));
 
 <!-- Modal Confirmation -->
 <div class="export-mgmt__modal-overlay" id="confirmModal">

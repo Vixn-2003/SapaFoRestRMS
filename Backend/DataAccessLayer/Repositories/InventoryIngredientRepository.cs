@@ -265,6 +265,9 @@ namespace DataAccessLayer.Repositories
         public async Task<List<InventoryBatch>> GetReservedBatchesByIngredientAsync(int ingredientId)
         {
             return await _context.InventoryBatches
+                .Include(b => b.Warehouse)
+                .Include(b => b.Ingredient)
+                    .ThenInclude(i => i.Unit)
                 .Where(b => b.IngredientId == ingredientId 
                     && b.QuantityReserved > 0) // Chỉ lấy batch đã được reserve
                 .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
