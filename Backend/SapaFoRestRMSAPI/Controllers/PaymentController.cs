@@ -271,7 +271,38 @@ public class PaymentController : ControllerBase
             }
 
             var transaction = await _paymentService.InitiatePaymentAsync(request, ct);
-            return Ok(transaction);
+            
+            // If payment method is QR, generate QR code URL
+            string? qrCodeUrl = null;
+            if (transaction.PaymentMethod != null && 
+                (transaction.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) || 
+                 transaction.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    // Get bank configuration from appsettings.json
+                    var bankCode = _configuration["BankSettings:BankCode"] ?? "VCB";
+                    var account = _configuration["BankSettings:Account"] ?? "0123456789";
+
+                    // Generate VietQR URL
+                    var qrResponse = await _paymentService.GenerateVietQRAsync(request.OrderId, bankCode, account, null, ct);
+                    qrCodeUrl = qrResponse.QrUrl;
+                }
+                catch (Exception qrEx)
+                {
+                    _logger.LogWarning("Failed to generate QR code for order {OrderId}: {Error}", request.OrderId, qrEx.Message);
+                    // Continue without QR code - transaction is still created
+                }
+            }
+
+            // Return response in PaymentSessionDto format for frontend
+            return Ok(new
+            {
+                SessionId = transaction.SessionId ?? string.Empty,
+                QrCodeUrl = qrCodeUrl,
+                Amount = transaction.Amount,
+                PaymentMethod = transaction.PaymentMethod
+            });
         }
         catch (KeyNotFoundException ex)
         {

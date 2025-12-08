@@ -839,7 +839,7 @@
             document.getElementById('qrAmount').textContent = formatCurrency(orderContext.Total);
             document.getElementById('qrDescription').textContent = `RMS#${orderContext.OrderCode}`;
             document.getElementById('qrTransactionCode').textContent = `TXN-${Date.now()}`;
-            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${orderContext.OrderCode}`;
+            document.getElementById('qrImage').src = '@Url.Content("~/img/qr_code_payment.png")';
             document.getElementById('confirmQRPaymentBtn').classList.remove('d-none');
         }
 

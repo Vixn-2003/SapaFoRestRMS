@@ -326,46 +326,89 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Đơn hàng chưa được khách xác nhận, không thể thanh toán. Vui lòng yêu cầu khách xác nhận số lượng món đã dùng trước.");
         }
 
-        // Validate payment amount
-        var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
-        var expectedAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
+        // ✅ FIX: Nếu có SessionId, tìm transaction đã tạo từ InitiatePayment và sử dụng amount từ đó
+        Transaction? existingTransaction = null;
+        decimal expectedAmount = request.Amount;
+
+        if (!string.IsNullOrEmpty(request.SessionId))
+        {
+            existingTransaction = await _unitOfWork.Payments.GetTransactionBySessionIdAsync(request.SessionId);
+            if (existingTransaction != null)
+            {
+                // Sử dụng amount từ transaction đã tạo (đã tính đúng với discount)
+                expectedAmount = existingTransaction.Amount;
+                
+                // Validate: amount từ request phải khớp với amount trong transaction
+                if (Math.Abs(request.Amount - existingTransaction.Amount) > 0.01m)
+                {
+                    throw new InvalidOperationException($"Số tiền thanh toán không khớp với phiên thanh toán. Phiên: {existingTransaction.Amount:N0} ₫, Nhận được: {request.Amount:N0} ₫");
+                }
+            }
+        }
+
+        // Nếu không có existing transaction, tính lại amount (cho backward compatibility)
+        if (existingTransaction == null)
+        {
+            var orderDto = _mapper.Map<OrderDto>(order);
+            CalculateOrderAmounts(order, orderDto);
+            expectedAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
                             (orderDto.ServiceFee ?? 0) - (orderDto.DiscountAmount ?? 0);
 
-        if (request.Amount != expectedAmount)
-        {
-            throw new InvalidOperationException($"Số tiền thanh toán không khớp. Mong đợi: {expectedAmount}, Nhận được: {request.Amount}");
+            if (Math.Abs(request.Amount - expectedAmount) > 0.01m)
+            {
+                throw new InvalidOperationException($"Số tiền thanh toán không khớp. Mong đợi: {expectedAmount:N0} ₫, Nhận được: {request.Amount:N0} ₫");
+            }
         }
 
         // Validate cash payment
         if (request.PaymentMethod == "Cash" && request.CashGiven.HasValue)
         {
-            if (request.CashGiven.Value < request.Amount)
+            if (request.CashGiven.Value < expectedAmount)
             {
                 throw new InvalidOperationException("Số tiền khách đưa không đủ!");
             }
         }
 
-        // Tạo transaction
-        var transaction = new Transaction
+        Transaction savedTransaction;
+        
+        if (existingTransaction != null)
         {
-            OrderId = request.OrderId,
-            TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
-            Amount = request.Amount,
-            PaymentMethod = request.PaymentMethod,
-            Status = "Success",
-            CreatedAt = DateTime.UtcNow,
-            CompletedAt = DateTime.UtcNow,
-            SessionId = request.SessionId,
-            Notes = request.Notes
-        };
+            // ✅ Cập nhật transaction đã tồn tại thay vì tạo mới
+            existingTransaction.Status = "Paid";
+            existingTransaction.CompletedAt = DateTime.UtcNow;
+            existingTransaction.Notes = request.Notes ?? existingTransaction.Notes;
+            
+            if (request.PaymentMethod == "Cash" && request.CashGiven.HasValue)
+            {
+                existingTransaction.AmountReceived = request.CashGiven.Value;
+                existingTransaction.RefundAmount = request.CashGiven.Value - existingTransaction.Amount;
+            }
+            
+            await _unitOfWork.Payments.UpdateTransactionAsync(existingTransaction);
+            savedTransaction = existingTransaction;
+        }
+        else
+        {
+            // Tạo transaction mới (backward compatibility)
+            var transaction = new Transaction
+            {
+                OrderId = request.OrderId,
+                TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
+                Amount = request.Amount,
+                PaymentMethod = request.PaymentMethod,
+                Status = "Paid",
+                CreatedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                SessionId = request.SessionId,
+                Notes = request.Notes
+            };
+
+            savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
+        }
 
         // Cập nhật trạng thái đơn hàng
         order.Status = OrderStatusConstants.Paid;
         await _unitOfWork.Payments.UpdateAsync(order);
-
-        // Lưu transaction
-        var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
 
         // Save changes
         await _unitOfWork.SaveChangesAsync();
