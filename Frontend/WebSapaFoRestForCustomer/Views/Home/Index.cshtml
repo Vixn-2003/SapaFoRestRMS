@@ -43,9 +43,9 @@
                             @foreach (var g in group)
                             {
                                 <div class="card menu-card">
-                                    <img src="@g.item.ImageUrl" class="card-img-top menu-img" alt="@g.item.MenuItemName" />
+                                    <img src="@g.item.ImageUrl" class="card-img-top menu-img" alt="@g.item.Name" />
                                     <div class="card-body text-center">
-                                        <h6 class="menu-title">@g.item.MenuItemName</h6>
+                                        <h6 class="menu-title">@g.item.Name</h6>
                                         <p class="menu-price">@g.item.Price.ToString("N0") ₫</p>
                                     </div>
                                 </div>

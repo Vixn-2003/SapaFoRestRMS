@@ -380,19 +380,13 @@
                             return false;
                         }
                         
-                        // ✅ LOGIC COMBO: Nếu là combo và status = "Pending" thì không đếm
-                        if (i.ComboId.HasValue)
+                        // ✅ Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                        if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
                         {
-                            // Combo ở trạng thái "Pending" → không đếm
-                            if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
-                            {
-                                return false;
-                            }
-                            // Combo có status khác "Pending" → đếm
-                            return true;
+                            return false;
                         }
                         
-                        // ✅ MÓN LẺ: Đếm tất cả (trừ cancelled/removed đã filter ở trên)
+                        // ✅ Các món có trạng thái khác "Pending" và không bị hủy → đếm
                         return true;
                     }).Count() ?? 0;
                 }
@@ -422,8 +416,9 @@
                                 else
                                 {
                                     // ✅ Filter logic:
-                                    // 1. Món lẻ: Hiển thị tất cả (trừ cancelled/removed)
-                                    // 2. Combo: Chỉ hiển thị nếu có ít nhất 1 món trong combo không ở trạng thái "Pending"
+                                    // 1. Bỏ qua các món đã bị hủy (cancelled/removed)
+                                    // 2. Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                                    // 3. Chỉ hiển thị các món có trạng thái khác "Pending" và không bị hủy
                                     var billableItems = Model.Items.Where(i =>
                                     {
                                         var status = (i.KitchenStatus ?? "").Trim().ToLower();
@@ -434,19 +429,13 @@
                                             return false;
                                         }
                                         
-                                        // ✅ LOGIC COMBO: Nếu là combo và status = "Pending" thì không hiển thị
-                                        if (i.ComboId.HasValue)
+                                        // ✅ Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                                        if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
                                         {
-                                            // Combo ở trạng thái "Pending" → không hiển thị
-                                            if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
-                                            {
-                                                return false;
-                                            }
-                                            // Combo có status khác "Pending" (Cooking, Done, Ready, etc.) → hiển thị
-                                            return true;
+                                            return false;
                                         }
                                         
-                                        // ✅ MÓN LẺ: Hiển thị tất cả (trừ cancelled/removed đã filter ở trên)
+                                        // ✅ Các món có trạng thái khác "Pending" và không bị hủy → hiển thị
                                         return true;
                                     }).ToList();
 
@@ -550,7 +539,7 @@
                                     <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
                                 </tr>
                             }
-                             @* @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
+                             @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
                              {
                                  <tr class="table-warning">
                                      <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -564,28 +553,58 @@
                                          +@Model.DepositRefundAmount.Value.ToString("N0") ₫
                                      </td>
                                  </tr>
-                             } *@
-                            @* <tr class="table-success">
-                                <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                             }
+                            @{
+                                var totalBeforeDeposit = Model.Subtotal + Model.VatAmount + Model.ServiceFee - Model.DiscountAmount;
+                            }
+                            <tr class="table-info">
+                                <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#e7f3ff;">
                                     <span class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                        <i class="bi bi-calculator text-info fs-4"></i>
                                         <span class="fs-5">Tổng cộng thanh toán</span>
                                     </span>
                                     <small class="text-muted d-block mt-1">
-                                        @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
-                                        {
-                                            <text>Đã thanh toán đủ bằng tiền cọc. Cần trả lại: @Model.DepositRefundAmount.Value.ToString("N0") ₫</text>
-                                        }
-                                        else
-                                        {
-                                            <text>Tạm tính + VAT + Phí phục vụ - Giảm giá - Đặt cọc (nếu có)</text>
-                                        }
+                                        Tạm tính + VAT + Phí phục vụ - Giảm giá
                                     </small>
                                 </td>
-                                <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
-                                    @Model.TotalAmount.ToString("N0") ₫
+                                <td class="text-end fw-bold text-info align-middle" style="background:#e7f3ff; font-size:1.6rem;">
+                                    @totalBeforeDeposit.ToString("N0") ₫
                                 </td>
-                            </tr> *@
+                            </tr>
+                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                            {
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            Tổng cộng thanh toán - Đặt cọc (@Model.DepositAmount.Value.ToString("N0") ₫)
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @Model.TotalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            Tổng cộng thanh toán (không có đặt cọc)
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @Model.TotalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
                         </tfoot>
                     </table>
                 </div>
@@ -614,6 +633,19 @@
     <input type="hidden" name="OrderId" id="cashPaymentOrderId" />
     <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
     <input type="hidden" name="Notes" id="cashPaymentNotes" />
+</form>
+
+<form id="combinedPaymentForm"
+      asp-action="ProcessCombinedPayment"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrderId" id="combinedPaymentOrderId" />
+    <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
+    <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
+    <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
+    <input type="hidden" name="Notes" id="combinedPaymentNotes" />
 </form>
 </div>
 
@@ -807,7 +839,7 @@
             document.getElementById('qrAmount').textContent = formatCurrency(orderContext.Total);
             document.getElementById('qrDescription').textContent = `RMS#${orderContext.OrderCode}`;
             document.getElementById('qrTransactionCode').textContent = `TXN-${Date.now()}`;
-            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${orderContext.OrderCode}`;
+            document.getElementById('qrImage').src = '@Url.Content("~/img/qr_code_payment.png")';
             document.getElementById('confirmQRPaymentBtn').classList.remove('d-none');
         }
 
@@ -890,12 +922,57 @@
             document.getElementById('combinedQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${orderContext.OrderCode}-COMBINED`;
         }
 
-        function confirmCombinedPayment() {
+        async function confirmCombinedPayment() {
             if (document.getElementById('confirmCombinedPaymentBtn').disabled) {
                 showToast('Vui lòng đảm bảo tổng hai phần khớp với tổng hóa đơn.', 'warning');
                 return;
             }
-            submitPayment('combined', orderContext.Total);
+
+            const cashAmount = parseFloat(document.getElementById('cashAmount').value || 0);
+            const cashReceived = parseFloat(document.getElementById('cashReceived').value || 0) || null;
+            const qrAmount = parseFloat(document.getElementById('qrAmount').value || 0);
+            const notes = document.getElementById('combinedNotes')?.value || '';
+
+            if (cashAmount <= 0 || qrAmount <= 0) {
+                showToast('Vui lòng nhập số tiền hợp lệ cho cả hai phần.', 'warning');
+                return;
+            }
+
+            // Disable button to prevent double submit
+            const btn = document.getElementById('confirmCombinedPaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+                const response = await fetch('/cashier-flow/payment/combined', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify({
+                        orderId: orderContext.OrderId,
+                        cashAmount: cashAmount,
+                        cashReceived: cashReceived,
+                        qrAmount: qrAmount,
+                        notes: notes
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || 'Không thể xử lý thanh toán kết hợp');
+                }
+
+                // Success - redirect to receipt page
+                window.location.href = `/cashier-flow/receipt/${orderContext.OrderId}`;
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Lỗi: ' + (error.message || 'Không thể xử lý thanh toán. Vui lòng thử lại.'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận thanh toán';
+            }
         }
 
         // Split bill logic

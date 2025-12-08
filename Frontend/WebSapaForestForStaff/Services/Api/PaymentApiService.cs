@@ -180,6 +180,20 @@ namespace WebSapaForestForStaff.Services.Api
             return payload;
         }
 
+        public async Task<ApiResult> ProcessCombinedPaymentAsync(CombinedPaymentRequest request)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl("/payment/combined"), request));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể xử lý thanh toán kết hợp";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Thanh toán kết hợp thành công");
+        }
+
         public async Task<ApiResult> CancelOrderAsync(int orderId, string reason)
         {
             var response = await SendWithAutoRefreshAsync(client =>

@@ -290,25 +290,123 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
+        /// <summary>
+        /// POST: Xử lý thanh toán kết hợp (Cash + QR)
+        /// </summary>
+        [HttpPost("payment/combined")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessCombinedPayment(CombinedPaymentRequest request)
+        {
+            if (request == null || request.OrderId <= 0)
+            {
+                TempData["ErrorMessage"] = "Dữ liệu thanh toán không hợp lệ.";
+                return RedirectToAction(nameof(Payment), new { id = request?.OrderId ?? 0 });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.ProcessCombinedPaymentAsync(request);
+                if (!result.Success)
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                    return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+                }
+
+                TempData["SuccessMessage"] = result.Message ?? "✅ Thanh toán kết hợp thành công!";
+                return RedirectToAction(nameof(Receipt), new { orderId = request.OrderId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi xử lý thanh toán kết hợp: {ex.Message}";
+                return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+            }
+        }
+
         [HttpGet("receipt/{orderId}")]
         public async Task<IActionResult> Receipt(int orderId)
         {
-            var order = await _paymentApiService.GetOrderDetailAsync(orderId);
-            if (order == null) return NotFound();
-            return View("~/Views/CashierFlow/Receipt.cshtml", order);
+            try
+            {
+                var order = await _paymentApiService.GetOrderDetailAsync(orderId);
+                if (order == null)
+                {
+                    TempData["ErrorMessage"] = $"Không tìm thấy đơn hàng với ID: {orderId}";
+                    return RedirectToAction(nameof(OrderSelection));
+                }
+
+                // Kiểm tra đơn hàng đã được thanh toán chưa
+                if (string.IsNullOrEmpty(order.Status) || 
+                    (!order.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) &&
+                     !order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) &&
+                     !order.Status.Equals("Success", StringComparison.OrdinalIgnoreCase)))
+                {
+                    TempData["ErrorMessage"] = $"Đơn hàng chưa được thanh toán. Trạng thái hiện tại: {order.Status ?? "N/A"}";
+                    return RedirectToAction(nameof(Payment), new { id = orderId });
+                }
+
+                return View("~/Views/CashierFlow/Receipt.cshtml", order);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi tải thông tin đơn hàng: {ex.Message}";
+                return RedirectToAction(nameof(OrderSelection));
+            }
         }
 
         [HttpGet("receipt/{orderId}/download")]
         public async Task<IActionResult> DownloadReceipt(int orderId)
         {
-            var file = await _paymentApiService.GenerateReceiptAsync(orderId);
-            if (file == null || !file.Success || file.FileBytes.Length == 0)
+            try
             {
-                TempData["ErrorMessage"] = file?.ErrorMessage ?? "Không thể tải hóa đơn.";
+                var file = await _paymentApiService.GenerateReceiptAsync(orderId);
+                
+                if (file == null)
+                {
+                    TempData["ErrorMessage"] = "Không thể tải hóa đơn. Vui lòng thử lại sau.";
+                    return RedirectToAction(nameof(Receipt), new { orderId });
+                }
+
+                if (!file.Success)
+                {
+                    // Log error message chi tiết
+                    var errorMsg = file.ErrorMessage ?? "Không thể tải hóa đơn.";
+                    
+                    // Kiểm tra các trường hợp lỗi phổ biến
+                    if (file.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        errorMsg = "Không tìm thấy đơn hàng hoặc hóa đơn chưa được tạo.";
+                    }
+                    else if (file.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                    {
+                        errorMsg = "Đơn hàng chưa được thanh toán. Vui lòng thanh toán trước khi tải hóa đơn.";
+                    }
+                    else if (file.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        errorMsg = "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+                    }
+                    else if (file.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+                    {
+                        errorMsg = "Lỗi hệ thống khi tạo hóa đơn. Vui lòng liên hệ quản trị viên.";
+                    }
+
+                    TempData["ErrorMessage"] = errorMsg;
+                    return RedirectToAction(nameof(Receipt), new { orderId });
+                }
+
+                if (file.FileBytes == null || file.FileBytes.Length == 0)
+                {
+                    TempData["ErrorMessage"] = "File hóa đơn bị trống. Vui lòng thử lại.";
+                    return RedirectToAction(nameof(Receipt), new { orderId });
+                }
+
+                return File(file.FileBytes, "application/pdf", file.FileName);
+            }
+            catch (Exception ex)
+            {
+                // Log exception chi tiết
+                TempData["ErrorMessage"] = $"Lỗi khi tải hóa đơn: {ex.Message}";
                 return RedirectToAction(nameof(Receipt), new { orderId });
             }
-
-            return File(file.FileBytes, "application/pdf", file.FileName);
         }
 
         /// <summary>

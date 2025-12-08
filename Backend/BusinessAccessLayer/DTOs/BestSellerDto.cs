@@ -9,7 +9,7 @@ namespace BusinessAccessLayer.DTOs
     public class BestSellerDto
     {
         public int MenuItemId { get; set; }
-        public string MenuItemName { get; set; } = null!;
+        public string Name { get; set; } = null!;
         public int TotalQuantity { get; set; }
 
         public string? Description { get; set; }   // Mô tả món

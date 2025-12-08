@@ -1,5 +1,11 @@
-﻿@{
+﻿@using System.Security.Claims
+@using WebSapaForestForStaff.Controllers
+@{
     Layout = null;
+    
+    // Lấy UserPositionId từ Claims (1 = Waiter, 2 = Cashier)
+    var positionIdClaim = User.FindFirst("PositionId")?.Value;
+    var userPositionId = positionIdClaim != null && int.TryParse(positionIdClaim, out var posId) ? posId : 0;
 }
 
 <!DOCTYPE html>
@@ -89,7 +95,11 @@
                 <a href="/DashboardTable/ListOrder" class="menu-item">Đơn đặt bàn</a>
                 <a href="/DashboardTable/Index" class="menu-item">Sơ đồ bàn</a>
                 <a href="/OrderTable/AssistanceList" class="menu-item">Hỗ trợ</a>
-                <a href="/CashierFlow/ShiftManagement" class="menu-item">Quản lý Ca làm việc</a>
+@*                 <a href="/CashierFlow/ShiftManagement" class="menu-item">Quản lý Ca làm việc</a>
+ *@                 @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
+                {
+                    <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" class="menu-item">Danh sách order</a>
+                }
             </div>
         </div>
 
