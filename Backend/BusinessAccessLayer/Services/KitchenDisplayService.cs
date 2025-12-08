@@ -401,23 +401,19 @@ namespace BusinessAccessLayer.Services
                 }
                 else if (normalizedCurrentStatus == "Ready")
                 {
-                    // From Ready, allow transition to Done or back to Cooking (hủy sẵn sàng)
+                    // From Ready, only allow transition to Done
+                    // Không cho phép quay lại Cooking từ nút "bắt đầu nấu" vì món đã sẵn sàng
+                    // Nếu cần "hủy sẵn sàng", cần có nút/chức năng riêng
                     if (normalizedNewStatus == "Done")
                     {
-                        // Đã consume khi chuyển sang Ready, Done chỉ là bước hoàn tất hiển thị
-                    }
-                    else if (normalizedNewStatus == "Cooking")
-                    {
-                        // Hủy sẵn sàng → Quay lại Cooking, reset ReadyAt
-                        orderDetail.ReadyAt = null;
-                        // Giữ nguyên StartedAt để tiếp tục đếm thời gian nấu
+                        // Đã consume khi chuyển sang Cooking, Done chỉ là bước hoàn tất hiển thị
                     }
                     else
                     {
                         return new StatusUpdateResponse
                         {
                             Success = false,
-                            Message = $"Không thể chuyển từ trạng thái 'Sẵn sàng' sang '{newStatus}'. Chỉ có thể chuyển sang 'Hoàn thành' hoặc quay lại 'Đang nấu'."
+                            Message = $"Không thể chuyển từ trạng thái 'Sẵn sàng' sang '{newStatus}'. Món đã sẵn sàng, chỉ có thể chuyển sang 'Hoàn thành'."
                         };
                     }
                 }
