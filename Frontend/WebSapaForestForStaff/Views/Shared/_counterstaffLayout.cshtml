@@ -1,4 +1,5 @@
 ﻿@using System.Security.Claims
+@using WebSapaForestForStaff.Controllers
 @{
     Layout = null;
     
@@ -97,7 +98,7 @@
 @*                 <a href="/CashierFlow/ShiftManagement" class="menu-item">Quản lý Ca làm việc</a>
  *@                 @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
                 {
-                    <a href="/cashier-flow/orders" class="menu-item">Danh sách order</a>
+                    <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" class="menu-item">Danh sách order</a>
                 }
             </div>
         </div>
