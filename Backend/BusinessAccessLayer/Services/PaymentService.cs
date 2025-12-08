@@ -386,6 +386,9 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Đơn hàng không có món để xác nhận.");
         }
 
+        // ✅ Danh sách status được phép thanh toán (billable)
+        var billableStatuses = new[] { "Cooking", "Done", "Ready", "Served", "cooking", "done", "ready", "served", "Đang chế biến", "Đã xong", "Sẵn sàng", "Đã phục vụ" };
+        
         foreach (var confirmed in request.Items)
         {
             var detail = order.OrderDetails.FirstOrDefault(d => d.OrderDetailId == confirmed.OrderDetailId);
@@ -407,20 +410,41 @@ public class PaymentService : IPaymentService
                 // Chỉ cập nhật QuantityUsed (SL thực tế khách dùng)
                 // Giữ nguyên detail.Quantity (đây là SL ban đầu đặt)
                 detail.QuantityUsed = confirmed.QuantityUsed < 0 ? 0 : confirmed.QuantityUsed;
-                detail.Status = "Done";
+                
+                // ✅ FIX BUG: CHỈ chuyển status thành "Done" nếu món có status billable
+                // KHÔNG chuyển món "Pending" thành "Done"
+                var currentStatus = (detail.Status ?? "").Trim();
+                bool isBillable = billableStatuses.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase));
+                
+                if (isBillable)
+                {
+                    // Món đã được bếp xử lý (Cooking/Done/Ready/Served) → chuyển thành Done để thanh toán
+                    detail.Status = "Done";
+                }
+                // Nếu món có status "Pending" → GIỮ NGUYÊN status, KHÔNG chuyển thành "Done"
+                // Món "Pending" sẽ không được tính vào hóa đơn
             }
         }
 
-        // ✅ TỰ ĐỘNG CHUYỂN TRẠNG THÁI CÁC MÓN CÓ STATUS "Cooking", "Done", "Ready" THÀNH "Done"
+        // ✅ TỰ ĐỘNG CHUYỂN TRẠNG THÁI CÁC MÓN CÓ STATUS "Cooking", "Done", "Ready", "Served" THÀNH "Done"
         // Các món này sẽ được lấy ra để thanh toán
-        var billableStatuses = new[] { "Cooking", "Done", "Ready", "cooking", "done", "ready" };
+        // ⚠️ KHÔNG chuyển món có status "Pending" thành "Done"
+        var billableStatusesForAutoUpdate = new[] { "Cooking", "Done", "Ready", "Served", "cooking", "done", "ready", "served", "Đang chế biến", "Đã xong", "Sẵn sàng", "Đã phục vụ" };
         
         foreach (var detail in order.OrderDetails)
         {
-            // Bỏ qua món đã bị hủy hoặc đã được xử lý trong request.Items
+            // Bỏ qua món đã bị hủy
             if (detail.Status == "Removed" || detail.Status == "Cancelled")
             {
                 continue;
+            }
+
+            // ✅ Bỏ qua món đã được xử lý trong request.Items (đã được set status ở trên)
+            // Kiểm tra xem món này có trong request.Items không
+            var wasProcessedInRequest = request.Items.Any(item => item.OrderDetailId == detail.OrderDetailId);
+            if (wasProcessedInRequest)
+            {
+                continue; // Đã xử lý rồi, không xử lý lại
             }
 
             var currentStatus = (detail.Status ?? "").Trim();
@@ -428,8 +452,9 @@ public class PaymentService : IPaymentService
             // ✅ XỬ LÝ MÓN LẺ (KHÔNG PHẢI COMBO)
             if (!detail.ComboId.HasValue)
             {
-                // Nếu món có status Cooking/Done/Ready → chuyển thành Done
-                if (billableStatuses.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
+                // ⚠️ CHỈ chuyển status thành "Done" nếu món có status billable (Cooking/Done/Ready/Served)
+                // KHÔNG chuyển món "Pending" thành "Done"
+                if (billableStatusesForAutoUpdate.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
                 {
                     detail.Status = "Done";
                     
@@ -440,29 +465,33 @@ public class PaymentService : IPaymentService
                         detail.QuantityUsed = detail.Quantity;
                     }
                 }
+                // Nếu món có status "Pending" → GIỮ NGUYÊN, KHÔNG chuyển thành "Done"
             }
             // ✅ XỬ LÝ COMBO
             else if (detail.ComboId.HasValue)
             {
-                // Nếu combo có status Cooking/Done/Ready → chuyển thành Done
-                if (billableStatuses.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
+                // ⚠️ CHỈ chuyển status thành "Done" nếu combo có status billable
+                // KHÔNG chuyển combo "Pending" thành "Done"
+                if (billableStatusesForAutoUpdate.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
                 {
                     detail.Status = "Done";
                     
-                    // ✅ CHUYỂN TRẠNG THÁI TẤT CẢ MÓN CON TRONG COMBO THÀNH "Done"
+                    // ✅ CHUYỂN TRẠNG THÁI TẤT CẢ MÓN CON TRONG COMBO THÀNH "Done" (chỉ món con có status billable)
                     if (detail.OrderComboItems != null && detail.OrderComboItems.Any())
                     {
                         foreach (var comboItem in detail.OrderComboItems)
                         {
                             var comboItemStatus = (comboItem.Status ?? "").Trim();
-                            // Chỉ chuyển các món con có status Cooking/Done/Ready thành Done
-                            if (billableStatuses.Any(s => string.Equals(s, comboItemStatus, StringComparison.OrdinalIgnoreCase)))
+                            // ⚠️ CHỈ chuyển các món con có status Cooking/Done/Ready/Served thành Done
+                            // KHÔNG chuyển món con "Pending" thành "Done"
+                            if (billableStatusesForAutoUpdate.Any(s => string.Equals(s, comboItemStatus, StringComparison.OrdinalIgnoreCase)))
                             {
                                 comboItem.Status = "Done";
                             }
                         }
                     }
                 }
+                // Nếu combo có status "Pending" → GIỮ NGUYÊN, KHÔNG chuyển thành "Done"
             }
         }
 
