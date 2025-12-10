@@ -20,15 +20,41 @@
         return;
     }
 
-    // NEW: nhận tiền khách đưa & tiền thối
-    const customerPaid = parseFloat($(this).data('customer-paid') || 0);
-    const changeAmount = parseFloat($(this).data('change-amount') || 0);
+    // NEW: nhận breakdown từ receiptData.Transactions (nếu có)
+    const txs = (window.receiptData && Array.isArray(window.receiptData.Transactions))
+        ? window.receiptData.Transactions
+        : [];
+
+    // Nếu không có transactions, fallback dùng PaymentMethod + tổng
+    const paymentBreakdown = txs.length
+        ? txs.map(t => ({
+            method: t.PaymentMethod || 'Unknown',
+            amount: parseFloat(t.Amount || 0),
+            amountReceived: parseFloat(t.AmountReceived || 0),
+            refundAmount: parseFloat(t.RefundAmount || 0)
+        }))
+        : [{
+            method: paymentMethod || 'Unknown',
+            amount: total,
+            amountReceived: parseFloat($(this).data('customer-paid') || 0),
+            refundAmount: parseFloat($(this).data('change-amount') || 0)
+        }];
 
     // Lấy dữ liệu items từ biến global (được định nghĩa trong Receipt.cshtml)
     const items = (window.receiptData && window.receiptData.Items) ? window.receiptData.Items : [];
 
     function formatCurrency(amount) {
         return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+    }
+
+    function renderMethod(method) {
+        const m = (method || '').toLowerCase();
+        if (m === 'cash') return 'Tiền mặt';
+        if (m === 'qrbanktransfer' || m === 'qr' || m === 'vietqr') return 'QR';
+        if (m === 'card') return 'Thẻ';
+        if (m === 'ewallet') return 'Ví điện tử';
+        if (m === 'split') return 'Chia hóa đơn';
+        return method || 'Khác';
     }
 
     let itemsHtml = "";
@@ -94,14 +120,17 @@
                     <td style="text-align:right;">${formatCurrency(total)}</td>
                 </tr>
 
-                <!-- NEW: khách trả - tiền thối -->
-                ${customerPaid > 0
-            ? `
-                <tr><td>Khách đưa</td><td style="text-align:right;">${formatCurrency(customerPaid)}</td></tr>
-                <tr><td>Tiền thối lại</td><td style="text-align:right;">${formatCurrency(changeAmount)}</td></tr>
-                `
-            : ""
-        }
+                <!-- NEW: breakdown theo phương thức + tiền thối nếu có -->
+                ${paymentBreakdown.map(p => `
+                    <tr>
+                        <td>${renderMethod(p.method)}</td>
+                        <td style="text-align:right;">${formatCurrency(p.amount)}</td>
+                    </tr>
+                    ${p.method && p.method.toLowerCase() === 'cash' && p.refundAmount > 0
+                        ? `<tr><td>Tiền thối lại</td><td style="text-align:right;">${formatCurrency(p.refundAmount)}</td></tr>`
+                        : ''
+                    }
+                `).join('')}
             </table>
 
             <div style="text-align:center; margin-top:30px; color:#16a34a;">

@@ -717,6 +717,17 @@
     <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
     <input type="hidden" name="Notes" id="combinedPaymentNotes" />
 </form>
+
+<form id="splitBillForm"
+      asp-action="ProcessSplitBill"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="orderId" id="splitBillOrderId" />
+    <input type="hidden" name="partsJson" id="splitBillPartsJson" />
+    <input type="hidden" name="notes" id="splitBillNotes" />
+</form>
 </div>
 
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_CashPaymentModal.cshtml")
@@ -726,6 +737,7 @@
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_PromotionModal.cshtml")
 
 @section Scripts {
+    <script src="~/js/split-bill.js"></script>
     <script>
         // ✅ Toast notification function
         function showToast(message, type = 'success') {
@@ -964,6 +976,11 @@
                 showToast('Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.', 'error');
             }
         }
+                function generateVietQrUrl(bank, account, amount, addInfo) {
+            return `https://img.vietqr.io/image/${bank}-${account}-compact.png`
+                + `?amount=${amount}`
+                + `&addInfo=${encodeURIComponent(addInfo)}`;
+        }
 
         // QR payment logic
         function openQrPaymentModal() {
@@ -976,15 +993,30 @@
             setTimeout(loadQrPreview, 600);
         }
 
-        function loadQrPreview() {
+                      function loadQrPreview() {
+            const amount = orderContext.Total;
+            const orderCode = orderContext.OrderCode;
+            const transactionCode = `TXN-${Date.now()}`;
+
+            const bank = "MB";
+            const account = "0397604824";
+            const addInfo = `RMS#${orderCode}`;
+
+            // Tạo URL VietQR
+            const qrUrl = generateVietQrUrl(bank, account, amount, addInfo);
+
+            // Update UI
             document.getElementById('qrLoading').classList.add('d-none');
             document.getElementById('qrContent').classList.remove('d-none');
-            document.getElementById('qrAmount').textContent = formatCurrency(orderContext.Total);
-            document.getElementById('qrDescription').textContent = `RMS#${orderContext.OrderCode}`;
-            document.getElementById('qrTransactionCode').textContent = `TXN-${Date.now()}`;
-            document.getElementById('qrImage').src = '@Url.Content("~/img/qr_code_payment.png")';
+            document.getElementById('qrAmount').textContent = formatCurrency(amount);
+            document.getElementById('qrDescription').textContent = addInfo;
+            document.getElementById('qrTransactionCode').textContent = transactionCode;
+            document.getElementById('qrImage').src = qrUrl;
+
             document.getElementById('confirmQRPaymentBtn').classList.remove('d-none');
         }
+
+
 
         function retryLoadQR() {
             openQrPaymentModal();
@@ -1114,33 +1146,36 @@
             document.getElementById('confirmCombinedPaymentBtn').disabled = (sum !== total) || errors.length > 0;
         }
 
-        function generateCombinedQR() {
-            // Hiển thị loading state
+               function generateCombinedQR() {
             document.getElementById('combinedQrLoading').classList.remove('d-none');
             document.getElementById('combinedQrContent').classList.add('d-none');
             document.getElementById('generateQrBtn').disabled = true;
-            
-            // Simulate loading delay (giống loadQrPreview)
+
             setTimeout(() => {
-                // Ẩn loading, hiển thị content
                 document.getElementById('combinedQrLoading').classList.add('d-none');
                 document.getElementById('combinedQrContent').classList.remove('d-none');
-                
-                // Tính số tiền QR từ total - cashAmount (không lấy từ input nữa)
+
                 const cashAmount = parseFloat(document.getElementById('cashAmount').value || 0);
                 const total = parseFloat(orderContext.Total || 0);
                 const qrAmount = total - cashAmount;
-                
-                // Hiển thị thông tin QR đầy đủ
+
+                const orderCode = orderContext.OrderCode;
+                const transactionCode = `TXN-${Date.now()}`;
+                const bank = "MB";
+                const account = "0397604824";
+                const addInfo = `RMS#${orderCode}`;
+
+                const qrUrl = generateVietQrUrl(bank, account, qrAmount, addInfo);
+
                 document.getElementById('combinedQrAmount').textContent = formatCurrency(qrAmount);
-                document.getElementById('combinedQrDescription').textContent = `RMS#${orderContext.OrderCode}`;
-                document.getElementById('combinedQrTransactionCode').textContent = `TXN-${Date.now()}`;
-                document.getElementById('combinedQrImage').src = '@Url.Content("~/img/qr_code_payment.png")';
-                
-                // Enable button lại
+                document.getElementById('combinedQrDescription').textContent = addInfo;
+                document.getElementById('combinedQrTransactionCode').textContent = transactionCode;
+                document.getElementById('combinedQrImage').src = qrUrl;
+
                 document.getElementById('generateQrBtn').disabled = false;
             }, 600);
         }
+
 
         function confirmCombinedPayment() {
             if (document.getElementById('confirmCombinedPaymentBtn').disabled) {

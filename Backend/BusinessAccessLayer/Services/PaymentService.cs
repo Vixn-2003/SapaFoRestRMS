@@ -417,7 +417,7 @@ public class PaymentService : IPaymentService
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
 
-    public async Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, CancellationToken ct = default)
+    public async Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, int userId, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
 
@@ -517,8 +517,14 @@ public class PaymentService : IPaymentService
         order.Status = OrderStatusConstants.Paid;
         await _unitOfWork.Payments.UpdateAsync(order);
 
+        // 🔓 Giải phóng bàn và hoàn thành reservation
+        await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+
         // Save changes
         await _unitOfWork.SaveChangesAsync();
+
+        // ✅ Trigger post-payment actions (VIP update, LoyaltyPoints +1, etc.)
+        await TriggerPostPaymentActionsAsync(request.OrderId, savedTransaction.TransactionId, ct);
 
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
@@ -1008,7 +1014,7 @@ public class PaymentService : IPaymentService
 
         // Tính tổng tiền
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+      CalculateOrderAmounts(order, orderDto);
 
         // Use custom amount if provided, otherwise use total amount
         var totalAmount = customAmount ?? orderDto.TotalAmount ?? 0;
@@ -1053,7 +1059,7 @@ public class PaymentService : IPaymentService
         }
 
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+       CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
         var depositRefundAmount = orderDto.DepositRefundAmount ?? 0;
 
@@ -1253,7 +1259,7 @@ public class PaymentService : IPaymentService
 
         // Calculate total amount
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+         CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
 
         // Validate tổng hai phần phải bằng totalAmount
@@ -1760,7 +1766,7 @@ public class PaymentService : IPaymentService
 
         // Calculate total amount
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+       CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
 
         if (totalAmount <= 0)
@@ -2026,6 +2032,7 @@ public class PaymentService : IPaymentService
                 ct: ct
             );
         }
+
         catch (Exception ex)
         {
             // Log error but don't fail the payment - table release is secondary

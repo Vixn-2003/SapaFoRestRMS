@@ -49,27 +49,33 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateVip(int customerId, bool isVip)
         {
             var stats = await _apiService.UpdateCustomerVipAsync(customerId, isVip);
             if (stats == null)
             {
-                return BadRequest(new { success = false, message = "Không thể cập nhật VIP" });
+                TempData["ErrorMessage"] = "Không thể cập nhật trạng thái VIP. Vui lòng thử lại.";
+                return RedirectToAction(nameof(Index));
             }
 
-            return Json(new { success = true, data = stats });
+            TempData["SuccessMessage"] = $"Đã cập nhật trạng thái VIP thành công!";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Recalculate(int customerId)
         {
             var stats = await _apiService.RecalculateCustomerVipAsync(customerId);
             if (stats == null)
             {
-                return BadRequest(new { success = false, message = "Không thể tính lại VIP" });
+                TempData["ErrorMessage"] = "Không thể tính lại VIP. Vui lòng thử lại.";
+                return RedirectToAction(nameof(Details), new { id = customerId });
             }
 
-            return Json(new { success = true, data = stats });
+            TempData["SuccessMessage"] = "Đã tính lại trạng thái VIP thành công!";
+            return RedirectToAction(nameof(Details), new { id = customerId });
         }
     }
 }

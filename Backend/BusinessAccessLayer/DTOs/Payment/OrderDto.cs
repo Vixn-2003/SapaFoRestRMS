@@ -67,5 +67,7 @@ public class OrderDto
     public string? PaymentMethod { get; set; }
 
     public List<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
+
+    public List<TransactionDto> Transactions { get; set; } = new();
 }
 

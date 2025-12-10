@@ -506,7 +506,19 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                var json = JsonSerializer.Serialize(request);
+                var payload = new
+                {
+                    request.FullName,
+                    request.Email,
+                    request.Phone,
+                    request.RoleId,
+                    request.Status,
+                    Password = string.IsNullOrWhiteSpace(request.TemporaryPassword) ? null : request.TemporaryPassword,
+                    TemporaryPassword = request.TemporaryPassword,
+                    request.SendEmailNotification
+                };
+
+                var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/users", content));

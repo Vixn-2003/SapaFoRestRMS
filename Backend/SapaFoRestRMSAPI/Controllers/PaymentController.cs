@@ -334,8 +334,12 @@ public class PaymentController : ControllerBase
             {
                 return BadRequest(ModelState);
             }
-
-            var transaction = await _paymentService.ProcessPaymentAsync(request, ct);
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+            var transaction = await _paymentService.ProcessPaymentAsync(request, userId.Value,ct);
             return Ok(new { 
                 success = true, 
                 message = "Thanh toán thành công",
@@ -440,8 +444,12 @@ public class PaymentController : ControllerBase
                 Amount = totalAmount,
                 Notes = "Thanh toán qua VietQR"
             };
-
-            var transaction = await _paymentService.ProcessPaymentAsync(paymentRequest, ct);
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+            var transaction = await _paymentService.ProcessPaymentAsync(paymentRequest,userId.Value, ct);
             
             return Ok(new
             {

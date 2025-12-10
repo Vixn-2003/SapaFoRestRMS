@@ -40,6 +40,14 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         public record ConfirmQrPaymentRequest(int OrderId, string? Notes);
+        
+        public class SplitBillPart
+        {
+            public string PaymentMethod { get; set; } = "Cash";
+            public decimal Amount { get; set; }
+            public decimal? AmountReceived { get; set; }
+            public string? Notes { get; set; }
+        }
 
         [HttpGet("orders")]
         public async Task<IActionResult> OrderSelection(DateOnly? date = null, string status = "Confirmed")
@@ -164,17 +172,19 @@ namespace WebSapaForestForStaff.Controllers
         /// </summary>
         [HttpPost("payment/confirm-qr")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ConfirmQrPayment([FromBody] ConfirmQrPaymentRequest request)
+        public async Task<IActionResult> ConfirmQrPayment([FromForm] ConfirmQrPaymentRequest request)
         {
             if (request == null || request.OrderId <= 0)
             {
-                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+                TempData["ErrorMessage"] = "Dữ liệu không hợp lệ";
+                return RedirectToAction(nameof(Payment), new { id = request?.OrderId ?? 0 });
             }
 
             var order = await _paymentApiService.GetOrderDetailAsync(request.OrderId);
             if (order == null)
             {
-                return NotFound(new { message = $"Không tìm thấy đơn hàng {request.OrderId}" });
+                TempData["ErrorMessage"] = $"Không tìm thấy đơn hàng {request.OrderId}";
+                return RedirectToAction(nameof(OrderSelection));
             }
 
             var confirmRequest = new PaymentConfirmRequest
@@ -190,11 +200,12 @@ namespace WebSapaForestForStaff.Controllers
             var result = await _paymentApiService.ConfirmPaymentAsync(confirmRequest);
             if (!result.Success)
             {
-                return BadRequest(new { message = result.Message ?? "Xác nhận thanh toán thất bại" });
+                TempData["ErrorMessage"] = result.Message ?? "Xác nhận thanh toán thất bại";
+                return RedirectToAction(nameof(Payment), new { id = request.OrderId });
             }
 
-            var redirectUrl = Url.Action(nameof(Receipt), new { orderId = request.OrderId });
-            return Ok(new { success = true, redirectUrl });
+            TempData["SuccessMessage"] = "✅ Đã xác nhận thanh toán QR thành công!";
+            return RedirectToAction(nameof(Receipt), new { orderId = request.OrderId });
         }
 
         /// <summary>
@@ -477,8 +488,72 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
+        /// <summary>
+        /// POST: Xử lý chia hóa đơn
+        /// </summary>
+        [HttpPost("payment/split-bill")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessSplitBill([FromForm] int orderId, [FromForm] string partsJson, [FromForm] string? notes)
+        {
+            if (orderId <= 0 || string.IsNullOrEmpty(partsJson))
+            {
+                TempData["ErrorMessage"] = "Dữ liệu chia hóa đơn không hợp lệ.";
+                return RedirectToAction(nameof(Payment), new { id = orderId });
+            }
+
+            try
+            {
+                var token = GetToken();
+                if (string.IsNullOrEmpty(token))
+                {
+                    TempData["ErrorMessage"] = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+                    return RedirectToAction("Login", "Auth");
+                }
+
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                // Parse parts from JSON
+                var parts = JsonSerializer.Deserialize<List<SplitBillPart>>(partsJson);
+                if (parts == null || !parts.Any())
+                {
+                    TempData["ErrorMessage"] = "Dữ liệu phần chia không hợp lệ.";
+                    return RedirectToAction(nameof(Payment), new { id = orderId });
+                }
+
+                var apiUrl = $"{GetApiBaseUrl()}/Payment/split-bill";
+                var response = await _httpClient.PostAsJsonAsync(apiUrl, new
+                {
+                    orderId,
+                    parts = parts.Select(p => new
+                    {
+                        paymentMethod = p.PaymentMethod,
+                        amount = p.Amount,
+                        amountReceived = p.AmountReceived,
+                        notes = p.Notes
+                    }),
+                    notes
+                });
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    TempData["ErrorMessage"] = $"Không thể chia hóa đơn: {errorContent}";
+                    return RedirectToAction(nameof(Payment), new { id = orderId });
+                }
+
+                TempData["SuccessMessage"] = "✅ Đã chia hóa đơn thành công!";
+                return RedirectToAction(nameof(Receipt), new { orderId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi chia hóa đơn: {ex.Message}";
+                return RedirectToAction(nameof(Payment), new { id = orderId });
+            }
+        }
+
         [HttpGet("receipt/{orderId}")]
         public async Task<IActionResult> Receipt(int orderId)
+
         {
             try
             {

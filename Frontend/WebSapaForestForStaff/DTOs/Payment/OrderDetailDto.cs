@@ -25,6 +25,7 @@ namespace WebSapaForestForStaff.DTOs.Payment
         public string? PaymentMethod { get; set; }
         [JsonPropertyName("orderItems")]
         public List<OrderItemDto> Items { get; set; } = new();
+        public List<TransactionDto>? Transactions { get; set; }
         public decimal Subtotal { get; set; }
         public decimal VatAmount { get; set; }
         public decimal ServiceFee { get; set; }
