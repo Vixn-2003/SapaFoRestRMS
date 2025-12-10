@@ -110,90 +110,75 @@ namespace DataAccessLayer.Repositories
         }
 
         // (1) Lấy danh sách đơn đã đặt bàn
-            public async Task<PagedList<Reservation>> GetPagedReservationsAsync(ReservationQueryParameters parameters)
-            {
-                var query = _context.Reservations
-                    .Include(r => r.Customer)
-                        .ThenInclude(c => c.User)
-                    .Include(r => r.ReservationTables)
-                        .ThenInclude(rt => rt.Table)
-                            .ThenInclude(t => t.Area)
-                    .AsQueryable();
+        public async Task<PagedList<Reservation>> GetPagedReservationsAsync(ReservationQueryParameters parameters)
+        {
+            var query = _context.Reservations
+                .Include(r => r.Customer).ThenInclude(c => c.User)
+                .Include(r => r.ReservationTables).ThenInclude(rt => rt.Table).ThenInclude(t => t.Area)
+                .AsQueryable();
 
-                // 1. Lọc theo Ngày đặt (Nếu có chọn ngày)
-                if (parameters.ReservationDate.HasValue)
-                {
-                    // So sánh phần Date (ngày/tháng/năm) bỏ qua phần giờ
-                    var filterDate = parameters.ReservationDate.Value.Date;
-                    query = query.Where(r => r.ReservationDate.Date == filterDate);
-                }
+            // 🔥 1. Chỉ lấy đơn của NGÀY HÔM NAY
             var today = DateTime.Today;
-            var now = DateTime.Now;
+            query = query.Where(r => r.ReservationDate.Date == today);
 
-            // Lấy đơn trước hôm nay: OK
-            // Nếu hôm nay => chỉ lấy giờ >= giờ hiện tại
-            query = query.Where(r =>
-      r.ReservationDate.Date < today ||
-      (r.ReservationDate.Date == today && r.ReservationTime.TimeOfDay >= now.TimeOfDay)
-      );
-
-
-            // 2. Lọc theo TimeSlot (Nếu có chọn ca)
+            // 2. Lọc theo TimeSlot (nếu có)
             if (!string.IsNullOrEmpty(parameters.TimeSlot))
-                {
-                    query = query.Where(r => r.TimeSlot == parameters.TimeSlot);
-                }
-
-                // 3. Lọc Status
-                bool isFilteringAll = string.IsNullOrEmpty(parameters.Status) || parameters.Status.ToLower() == "all";
-
-                if (isFilteringAll)
-                {
-                    query = query.Where(r => r.Status != "Pending" && r.Status != "Success");
-                }
-                else
-                {
-                    query = query.Where(r => r.Status == parameters.Status);
-                }
-
-                // 4. Search
-                if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
-                {
-                    var searchTerm = parameters.SearchTerm.ToLower();
-                    query = query.Where(r =>
-                        (r.Customer != null && r.Customer.User != null &&
-                            (r.Customer.User.FullName.ToLower().Contains(searchTerm) || 
-                            r.Customer.User.Phone.Contains(searchTerm))) ||
-                        (r.CustomerNameReservation != null && r.CustomerNameReservation.ToLower().Contains(searchTerm))
-                    );
-                }
-
-                // 5. Sắp xếp hiển thị thời gian lên đầu của các đơn đặt bàn ứng với thời gian thực 
-                var nowDate = now.Date;
-                var nowTime = now.TimeOfDay;
-
-                query = query
-                    .OrderBy(r => r.Status == "Confirmed" ? 0 :
-                                  r.Status == "Guest Seated" ? 1 :
-                                  2)
-                    .ThenBy(r => (r.ReservationDate < nowDate) || (r.ReservationDate == nowDate 
-                                                               && r.ReservationTime.TimeOfDay < nowTime) ? 1 : 0)
-                    .ThenBy(r => r.ReservationDate)
-                    .ThenBy(r => r.ReservationTime.TimeOfDay)
-                    .ThenByDescending(r => r.ArrivalAt)
-                    .ThenByDescending(r => r.ReservationDate)
-                    .ThenByDescending(r => r.ReservationTime.TimeOfDay);
-
-                // 6. Phân trang & Trả về kết quả
-                var totalCount = await query.CountAsync();
-
-                var items = await query
-                    .Skip((parameters.PageNumber - 1) * parameters.PageSize)
-                    .Take(parameters.PageSize)
-                    .ToListAsync();
-
-                return new PagedList<Reservation>(items, totalCount, parameters.PageNumber, parameters.PageSize);
+            {
+                query = query.Where(r => r.TimeSlot == parameters.TimeSlot);
             }
+
+            // 3. Lọc theo Status
+            bool isFilteringAll = string.IsNullOrEmpty(parameters.Status) || parameters.Status.ToLower() == "all";
+
+            if (isFilteringAll)
+            {
+                query = query.Where(r => r.Status != "Pending" && r.Status != "Success");
+            }
+            else
+            {
+                query = query.Where(r => r.Status == parameters.Status);
+            }
+
+            // 4. Search
+            if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
+            {
+                var searchTerm = parameters.SearchTerm.ToLower();
+
+                query = query.Where(r =>
+                    (r.Customer != null && r.Customer.User != null &&
+                        (r.Customer.User.FullName.ToLower().Contains(searchTerm) ||
+                         r.Customer.User.Phone.Contains(searchTerm))) ||
+                    (r.CustomerNameReservation != null && r.CustomerNameReservation.ToLower().Contains(searchTerm))
+                );
+            }
+
+            // 5. Sắp xếp
+            var now = DateTime.Now.TimeOfDay;
+
+            query = query
+                // Ưu tiên status (nếu cần giữ logic cũ)
+                .OrderBy(r => r.Status == "Confirmed" ? 0 :
+                              r.Status == "Guest Seated" ? 1 : 2)
+
+                // 🔥 Đưa đơn chưa đến giờ lên đầu, trễ giờ xuống dưới
+                .ThenBy(r => r.ReservationTime.TimeOfDay < now ? 1 : 0)
+
+                // Sắp theo giờ tăng dần
+                .ThenBy(r => r.ReservationTime.TimeOfDay)
+
+                // Giữ lại phần sắp xếp phụ
+                .ThenByDescending(r => r.ArrivalAt);
+
+            // 6. Phân trang
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                .Take(parameters.PageSize)
+                .ToListAsync();
+
+            return new PagedList<Reservation>(items, totalCount, parameters.PageNumber, parameters.PageSize);
+        }
 
         // (2) Lấy chi tiết (Thay đổi: Guid -> int)
         public async Task<Reservation?> GetReservationDetailByIdAsync(int reservationId)

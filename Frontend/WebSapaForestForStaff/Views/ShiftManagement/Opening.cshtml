@@ -1,0 +1,205 @@
+@{
+    ViewData["Title"] = "Mở ca làm việc";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+}
+
+<style>
+    .opening-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .step-header {
+        background: linear-gradient(135deg, #10b981, #14a58c);
+        border-radius: 18px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(16, 185, 129, 0.2);
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .denomination-input {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 16px;
+        background: #f9fafb;
+        border-radius: 12px;
+    }
+
+    .currency-label {
+        min-width: 120px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .count-input {
+        width: 100px;
+        text-align: center;
+    }
+
+    .amount-display {
+        margin-left: auto;
+        font-weight: 700;
+        color: #10b981;
+        font-size: 18px;
+    }
+</style>
+
+<div class="opening-container">
+    <!-- Step Header -->
+    <div class="step-header">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-door-open fs-1 me-3"></i>
+            <div>
+                <h3 class="mb-1">Mở ca làm việc</h3>
+                <p class="mb-0 opacity-90">Bước 1/3: Khai báo số dư đầu ca</p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar" role="progressbar" style="width: 33%; background-color: white;"></div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        <form asp-action="DeclareOpening" method="post" id="openingForm">
+            @Html.AntiForgeryToken()
+            
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-cash-stack me-2 text-success"></i>
+                    Số dư tiền mặt đầu ca
+                </label>
+                <input type="number" 
+                       class="form-control form-control-lg" 
+                       id="openingBalance" 
+                       name="openingBalance" 
+                       step="1000" 
+                       min="0" 
+                       required 
+                       placeholder="Nhập số tiền (VD: 500000)">
+                <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Số tiền mặt bạn có trong ngăn kéo khi bắt đầu ca làm việc
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-pencil-square me-2 text-primary"></i>
+                    Ghi chú (Tùy chọn)
+                </label>
+                <textarea class="form-control" 
+                          id="notes" 
+                          name="notes" 
+                          rows="3" 
+                          placeholder="Ví dụ: Nhận ca từ bạn A, đã kiểm kê đầy đủ"></textarea>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-lightbulb me-2"></i>
+                <strong>Lưu ý:</strong> Sau khi khai báo, bạn sẽ cần nhập chi tiết mệnh giá tiền để xác thực số dư.
+            </div>
+
+            <div class="d-flex gap-3 mt-4">
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Quay lại
+                </a>
+                <button type="submit" class="btn btn-success btn-lg flex-grow-1">
+                    <i class="bi bi-arrow-right me-2"></i>Tiếp theo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const openingBalanceInput = document.getElementById('openingBalance');
+            
+            // Format currency on input
+            openingBalanceInput.addEventListener('blur', function() {
+                if (this.value) {
+                    const value = parseInt(this.value.replace(/[^0-9]/g, ''));
+                    if (!isNaN(value)) {
+                        this.value = value;
+                    }
+                }
+            });
+
+            // Validate form before submit
+            document.getElementById('openingForm').addEventListener('submit', function(e) {
+                const balance = parseInt(openingBalanceInput.value);
+                
+                if (isNaN(balance) || balance <= 0) {
+                    e.preventDefault();
+                    showToast('Vui lòng nhập số dư đầu ca hợp lệ (> 0)', 'error');
+                    return false;
+                }
+
+                if (balance < 100000) {
+                    if (!confirm('Số dư đầu ca thấp hơn 100,000 VND. Bạn có chắc chắn muốn tiếp tục?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+
+            // Display messages
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <text>
+                showToast('@TempData["SuccessMessage"]', 'success');
+                </text>
+            }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <text>
+                showToast('@TempData["ErrorMessage"]', 'error');
+                </text>
+            }
+        });
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+    </script>
+}
+

@@ -1,0 +1,325 @@
+@model WebSapaForestForStaff.DTOs.ShiftManagement.ShiftDashboardDto
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Quản lý Ca làm việc";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    
+    // Get user info from claims
+    var positionIdClaim = User.FindFirst("PositionId")?.Value;
+    var isCounterStaff = positionIdClaim == "2"; // PositionId = 2 is Counter Staff
+    var staffName = User.FindFirst(ClaimTypes.Name)?.Value ?? "N/A";
+    var staffId = User.FindFirst("StaffId")?.Value;
+    
+    // Determine current status
+    var hasShift = Model != null && !string.IsNullOrEmpty(Model.Id);
+    var shiftStatus = Model?.Status ?? "NoShift";
+}
+
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+    body {
+        background-color: #f8f9fa;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    }
+    .gradient-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        border-radius: 18px;
+        padding: 32px;
+        color: white;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 30px rgba(13, 110, 253, 0.2);
+    }
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.2s;
+        height: 100%;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .icon-badge {
+        width: 56px;
+        height: 56px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+    .bg-green-light { background-color: #d1e7dd; color: #0f5132; }
+    .bg-blue-light { background-color: #cfe2ff; color: #084298; }
+    .bg-purple-light { background-color: #e0cffc; color: #3d0a91; }
+    .bg-orange-light { background-color: #ffe5d0; color: #984c0c; }
+    .number-display {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #212529;
+    }
+    .btn-gradient {
+        border: none;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-gradient-orange {
+        background: linear-gradient(135deg, #fd7e14 0%, #dc6502 100%);
+    }
+    .btn-gradient-orange:hover {
+        background: linear-gradient(135deg, #dc6502 0%, #bb5a00 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(253, 126, 20, 0.4);
+        color: white;
+    }
+    .btn-gradient-blue {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+    .btn-gradient-blue:hover {
+        background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+        color: white;
+    }
+    .denomination-input {
+        width: 100%;
+        border: 1px solid #ced4da;
+        border-radius: 8px;
+        padding: 8px 12px;
+        text-align: right;
+        font-weight: 500;
+    }
+    .denomination-input:focus {
+        outline: none;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+
+<div class="container-fluid py-4" style="max-width: 1400px;">
+    
+    @* TempData Messages *@
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Thành công!</strong> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle me-2"></i>
+            <strong>Lỗi!</strong> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!hasShift)
+    {
+        @* NO SHIFT - Show Opening Form *@
+        if (isCounterStaff)
+        {
+            <div class="card shadow-lg border-0" style="max-width: 800px; margin: 0 auto;">
+                <div class="card-header gradient-header text-white">
+                    <h3 class="mb-0"><i class="bi bi-door-open me-2"></i>Mở Ca Làm Việc</h3>
+                    <p class="mb-0 mt-2 opacity-75">Nhân viên: <strong>@staffName</strong></p>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Bạn cần khai báo số tiền đầu ca trước khi bắt đầu làm việc.
+                    </div>
+                    
+                    <form asp-action="DeclareOpening" asp-controller="ShiftManagement" method="post">
+                        @Html.AntiForgeryToken()
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Số dư đầu ca (VNĐ)</label>
+                            <input type="number" name="openingBalance" class="form-control form-control-lg" 
+                                   min="0" step="1000" required 
+                                   placeholder="Nhập số tiền đầu ca...">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Ghi chú (tùy chọn)</label>
+                            <textarea name="notes" class="form-control" rows="3" 
+                                      placeholder="Ghi chú về tiền đầu ca..."></textarea>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-gradient-blue btn-lg px-5">
+                                <i class="bi bi-check-circle me-2"></i>Bắt đầu ca làm việc
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center mt-5">
+                <div class="alert alert-warning d-inline-block">
+                    <h4><i class="bi bi-exclamation-triangle me-2"></i>Chưa có ca làm việc</h4>
+                    <p>Vui lòng liên hệ quản lý để được hỗ trợ mở ca.</p>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        @* HAS SHIFT - Dashboard *@
+        <div class="gradient-header">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h2 class="mb-2"><i class="bi bi-briefcase me-2"></i>Ca làm việc hiện tại</h2>
+                    <p class="mb-0 opacity-75">
+                        <i class="bi bi-person me-2"></i>@Model.Cashier
+                    </p>
+                </div>
+                <div class="text-end">
+                    <div class="opacity-75" style="font-size: 0.875rem;">Mã ca</div>
+                    <div class="fw-bold" style="font-family: monospace; font-size: 1.25rem;">@Model.Id</div>
+                </div>
+            </div>
+            <div class="d-flex gap-3" style="font-size: 0.875rem;">
+                <div>
+                    <i class="bi bi-clock me-1"></i>Bắt đầu: @Model.StartTime
+                </div>
+                <div>
+                    <i class="bi bi-calendar3 me-1"></i>Ngày: @Model.StartDate
+                </div>
+            </div>
+        </div>
+
+        @* Statistics Cards *@
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="icon-badge bg-green-light">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <div class="text-muted mb-1" style="font-size: 0.875rem;">Tổng doanh thu</div>
+                    <div class="number-display">@Model.TotalRevenue.ToString("N0")₫</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="icon-badge bg-blue-light">
+                        <i class="bi bi-cart3"></i>
+                    </div>
+                    <div class="text-muted mb-1" style="font-size: 0.875rem;">Số đơn hàng</div>
+                    <div class="number-display">@Model.TotalOrders</div>
+                    @if (Model.PendingOrders > 0)
+                    {
+                        <div class="text-warning mt-1" style="font-size: 0.875rem;">
+                            @Model.PendingOrders đơn chưa thanh toán
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="icon-badge bg-purple-light">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="text-muted mb-1" style="font-size: 0.875rem;">Tiền mặt (Hệ thống)</div>
+                    <div class="number-display">@Model.SystemCash.ToString("N0")₫</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card">
+                    <div class="icon-badge bg-orange-light">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <div class="text-muted mb-1" style="font-size: 0.875rem;">Thẻ + QR</div>
+                    <div class="number-display">@((Model.SystemCard + Model.SystemQR).ToString("N0"))₫</div>
+                </div>
+            </div>
+        </div>
+
+        @* Revenue Details *@
+        <div class="card stat-card mb-4">
+            <h5 class="mb-4"><i class="bi bi-currency-dollar text-success me-2"></i>Chi tiết doanh thu</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-wallet2 text-success me-2"></i>Tiền mặt</span>
+                            <span class="fw-bold fs-5">@Model.SystemCash.ToString("N0")₫</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-credit-card text-primary me-2"></i>Thẻ NH</span>
+                            <span class="fw-bold fs-5">@Model.SystemCard.ToString("N0")₫</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-qr-code text-info me-2"></i>QR / Ví ĐT</span>
+                            <span class="fw-bold fs-5">@Model.SystemQR.ToString("N0")₫</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Pending Orders Warning *@
+        @if (Model.PendingOrders > 0)
+        {
+            <div class="alert alert-warning border-start border-warning border-4" role="alert">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 24px;"></i>
+                    <div>
+                        <div class="fw-medium">Còn @Model.PendingOrders đơn hàng chưa thanh toán</div>
+                        <div style="font-size: 0.875rem;">Vui lòng xử lý tất cả đơn hàng trước khi kết ca</div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* Action Buttons *@
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a asp-action="History" class="btn btn-outline-primary btn-lg w-100 py-3">
+                    <i class="bi bi-clock-history me-2"></i>Lịch sử ca làm việc
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-action="Closing" class="btn btn-gradient-orange btn-lg w-100 py-3">
+                    <i class="bi bi-file-text me-2"></i>Kết ca & Báo cáo
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a asp-action="Handover" class="btn btn-gradient-blue btn-lg w-100 py-3">
+                    <i class="bi bi-arrow-right-circle me-2"></i>Giao ca
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+<script>
+    // Auto-hide alerts after 5 seconds
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
+

@@ -1,0 +1,220 @@
+@{
+    ViewData["Title"] = "Ghi chú bàn giao";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    var shiftId = ViewData["ShiftId"];
+    var toStaffId = ViewData["ToStaffId"];
+    var toStaffName = ViewData["ToStaffName"];
+}
+
+<style>
+    .handover-notes-container {
+        max-width: 700px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .step-header {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border-radius: 18px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(245, 158, 11, 0.2);
+    }
+
+    .notes-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .handover-summary {
+        background: #fffbeb;
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+
+    .suggestion-item {
+        background: #f3f4f6;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .suggestion-item:hover {
+        background: #e5e7eb;
+    }
+</style>
+
+<div class="handover-notes-container">
+    <!-- Step Header -->
+    <div class="step-header">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-pencil-square fs-1 me-3"></i>
+            <div>
+                <h3 class="mb-1">Ghi chú bàn giao ca</h3>
+                <p class="mb-0 opacity-90">Bước 2/4: Thêm ghi chú cho nhân viên tiếp nhận</p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar" role="progressbar" style="width: 50%; background-color: white;"></div>
+        </div>
+    </div>
+
+    <!-- Handover Summary -->
+    <div class="handover-summary">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-arrow-right-circle fs-2 text-warning me-3"></i>
+            <div>
+                <div class="text-muted small">Bàn giao ca cho:</div>
+                <div class="fw-bold fs-4">@toStaffName</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Form -->
+    <div class="notes-card">
+        <h5 class="mb-3"><i class="bi bi-card-text me-2 text-warning"></i>Nội dung ghi chú</h5>
+
+        <div class="alert alert-info">
+            <i class="bi bi-lightbulb me-2"></i>
+            <strong>Gợi ý:</strong> Ghi chú giúp nhân viên tiếp ca nắm rõ tình hình ca làm việc, những vấn đề cần lưu ý.
+        </div>
+
+        <form id="handoverNotesForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="shiftId" value="@shiftId" />
+            <input type="hidden" id="toStaffId" value="@toStaffId" />
+
+            <div class="mb-4">
+                <label for="handoverNotes" class="form-label fw-semibold">
+                    Ghi chú bàn giao (không bắt buộc)
+                </label>
+                <textarea class="form-control" id="handoverNotes" rows="6" 
+                          placeholder="Ví dụ: Tiền lẻ đã sắp xếp gọn gàng, có 2 đơn hàng đang chờ thanh toán..."></textarea>
+                <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Tối đa 500 ký tự
+                </div>
+            </div>
+
+            <!-- Quick Suggestions -->
+            <div class="mb-4">
+                <label class="form-label fw-semibold mb-3">
+                    <i class="bi bi-stars me-2"></i>Gợi ý nội dung:
+                </label>
+                <div class="suggestion-item" onclick="addSuggestion('Tiền mặt đã kiểm kê đầy đủ và chính xác.')">
+                    <i class="bi bi-plus-circle me-2 text-warning"></i>
+                    Tiền mặt đã kiểm kê đầy đủ và chính xác
+                </div>
+                <div class="suggestion-item" onclick="addSuggestion('Có đơn hàng đang chờ thanh toán, vui lòng theo dõi.')">
+                    <i class="bi bi-plus-circle me-2 text-warning"></i>
+                    Có đơn hàng đang chờ thanh toán
+                </div>
+                <div class="suggestion-item" onclick="addSuggestion('Máy POS hoạt động bình thường.')">
+                    <i class="bi bi-plus-circle me-2 text-warning"></i>
+                    Máy POS hoạt động bình thường
+                </div>
+                <div class="suggestion-item" onclick="addSuggestion('Có khách hàng đặt bàn lúc 18:00 cần lưu ý.')">
+                    <i class="bi bi-plus-circle me-2 text-warning"></i>
+                    Có khách hàng đặt bàn cần lưu ý
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-3">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Quay lại
+                </a>
+                <button type="button" onclick="submitHandoverNotes()" class="btn btn-warning btn-lg flex-grow-1">
+                    <i class="bi bi-arrow-right me-2"></i>Tiếp theo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function addSuggestion(text) {
+            const notesField = document.getElementById('handoverNotes');
+            const currentValue = notesField.value;
+            
+            if (currentValue) {
+                notesField.value = currentValue + '\n- ' + text;
+            } else {
+                notesField.value = '- ' + text;
+            }
+            
+            showToast('Đã thêm gợi ý', 'success');
+        }
+
+        async function submitHandoverNotes() {
+            const shiftId = parseInt(document.getElementById('shiftId').value);
+            const toStaffId = parseInt(document.getElementById('toStaffId').value);
+            const notes = document.getElementById('handoverNotes').value.trim();
+            
+            try {
+                const response = await fetch('/shift-management/handover/notes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({
+                        shiftId: shiftId,
+                        toStaffId: toStaffId,
+                        handoverNotes: notes
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = `/shift-management/handover/verify-pin?shiftId=${shiftId}&toStaffId=${toStaffId}`;
+                } else {
+                    showToast(result.message || 'Lỗi khi lưu ghi chú', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Lỗi kết nối. Vui lòng thử lại.', 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+    </script>
+}
+

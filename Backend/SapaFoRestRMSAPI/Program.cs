@@ -21,7 +21,10 @@ using SapaFoRestRMSAPI.Services;
 using System.Text;
 using SapaFoRestRMSAPI.Hubs;
 using BusinessAccessLayer.Services.Inventory;
+using QuestPDF.Infrastructure;
 
+// ✅ FIX: Configure QuestPDF License (Community - Free for commercial use)
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -281,6 +284,7 @@ builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ICustomerVipService, CustomerVipService>();
 
 // AuditLog Service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();

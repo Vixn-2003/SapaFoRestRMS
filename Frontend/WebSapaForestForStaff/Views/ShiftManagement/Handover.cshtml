@@ -1,0 +1,290 @@
+@model WebSapaForestForStaff.DTOs.ShiftManagement.ShiftDto
+
+@{
+    ViewData["Title"] = "Bàn giao ca";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+}
+
+<style>
+    .handover-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .step-header {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border-radius: 18px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(245, 158, 11, 0.2);
+    }
+
+    .staff-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 2px solid #e5e7eb;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .staff-card:hover {
+        border-color: #f59e0b;
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .staff-card.selected {
+        border-color: #f59e0b;
+        background: #fffbeb;
+        box-shadow: 0 6px 20px rgba(245, 158, 11, 0.2);
+    }
+
+    .staff-card.unavailable {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: #f9fafb;
+    }
+
+    .staff-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 24px;
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-badge.available {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-badge.busy {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+</style>
+
+<div class="handover-container">
+    <!-- Step Header -->
+    <div class="step-header">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-arrow-left-right fs-1 me-3"></i>
+            <div>
+                <h3 class="mb-1">Bàn giao ca làm việc</h3>
+                <p class="mb-0 opacity-90">Bước 1/4: Chọn nhân viên tiếp nhận ca</p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar" role="progressbar" style="width: 25%; background-color: white;"></div>
+        </div>
+    </div>
+
+    <!-- Current Shift Info -->
+    <div class="info-card mb-4">
+        <h5 class="mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin ca hiện tại</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-2 text-muted">Thu ngân hiện tại:</div>
+                <div class="fw-bold fs-5">@Model.StaffName</div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-2 text-muted">Số dư cuối ca:</div>
+                <div class="fw-bold fs-5 text-success">@Model.ClosingBalance?.ToString("N0") ₫</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Selection -->
+    <div class="info-card">
+        <h5 class="mb-4"><i class="bi bi-people me-2 text-warning"></i>Chọn nhân viên tiếp nhận ca</h5>
+
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Lưu ý:</strong> Chỉ chọn nhân viên không có ca đang mở. Nhân viên được chọn sẽ tiếp quản ca mới với số dư đầu ca = Số dư cuối ca của bạn.
+        </div>
+
+        <!-- Staff List -->
+        <div id="staffList">
+            <div class="text-center py-5">
+                <div class="spinner-border text-warning" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-3 text-muted">Đang tải danh sách nhân viên...</div>
+            </div>
+        </div>
+
+        <!-- Selected Staff Summary -->
+        <div id="selectedSummary" class="d-none mt-4 p-4" style="background: #fffbeb; border-radius: 12px; border: 2px solid #f59e0b;">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-warning fs-3 me-3"></i>
+                    <div>
+                        <div class="text-muted small">Đã chọn:</div>
+                        <div class="fw-bold fs-5" id="selectedStaffName"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSelection()">
+                    <i class="bi bi-x me-1"></i>Hủy chọn
+                </button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 mt-4">
+            <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-arrow-left me-2"></i>Quay lại
+            </a>
+            <button type="button" onclick="proceedToNotes()" class="btn btn-warning btn-lg flex-grow-1" id="nextBtn" disabled>
+                <i class="bi bi-arrow-right me-2"></i>Tiếp theo
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const currentShiftId = @Model.ShiftId;
+        const currentStaffId = @Model.StaffId;
+        let selectedStaffId = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadStaffList();
+        });
+
+        async function loadStaffList() {
+            try {
+                const response = await fetch('/shift-management/handover/available-staff');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load staff list');
+                }
+                
+                const staffList = await response.json();
+                renderStaffList(staffList);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('staffList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        Không thể tải danh sách nhân viên. Vui lòng thử lại.
+                    </div>`;
+            }
+        }
+
+        function renderStaffList(staffList) {
+            const container = document.getElementById('staffList');
+            
+            if (staffList.length === 0) {
+                container.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Không có nhân viên khả dụng để bàn giao ca.
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = staffList.map(staff => `
+                <div class="staff-card ${staff.isAvailable ? '' : 'unavailable'}" 
+                     onclick="${staff.isAvailable ? `selectStaff(${staff.staffId}, '${staff.staffName}')` : ''}"
+                     id="staff-${staff.staffId}">
+                    <div class="d-flex align-items-center">
+                        <div class="staff-avatar me-3">
+                            ${staff.staffName.charAt(0)}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold fs-5">${staff.staffName}</div>
+                            <div class="text-muted small">${staff.position || 'Counter Staff'}</div>
+                        </div>
+                        <div>
+                            ${staff.isAvailable 
+                                ? '<span class="status-badge available"><i class="bi bi-check-circle me-1"></i>Sẵn sàng</span>'
+                                : '<span class="status-badge busy"><i class="bi bi-x-circle me-1"></i>Đang mở ca</span>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectStaff(staffId, staffName) {
+            // Clear previous selection
+            document.querySelectorAll('.staff-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Select new staff
+            selectedStaffId = staffId;
+            document.getElementById(`staff-${staffId}`).classList.add('selected');
+            
+            // Show summary
+            document.getElementById('selectedSummary').classList.remove('d-none');
+            document.getElementById('selectedStaffName').textContent = staffName;
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        function clearSelection() {
+            selectedStaffId = null;
+            document.querySelectorAll('.staff-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.getElementById('selectedSummary').classList.add('d-none');
+            document.getElementById('nextBtn').disabled = true;
+        }
+
+        function proceedToNotes() {
+            if (!selectedStaffId) {
+                showToast('Vui lòng chọn nhân viên tiếp nhận ca', 'error');
+                return;
+            }
+            
+            window.location.href = `/shift-management/handover/notes?shiftId=${currentShiftId}&toStaffId=${selectedStaffId}`;
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+    </script>
+}
+

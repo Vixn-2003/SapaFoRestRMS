@@ -87,6 +87,10 @@ public class PaymentRepository : IPaymentRepository
                     .ThenInclude(rt => rt.Table)
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.Staff)
+            // ✅ FIX: Include Reservation.Customer.User để có thể fallback khi Order.Customer.User null
+            .Include(o => o.Reservation)
+                .ThenInclude(r => r.Customer)
+                    .ThenInclude(c => c!.User)
             .Include(o => o.Payments)
             .Include(o => o.Transactions)
                 .ThenInclude(t => t.ConfirmedByUser)
@@ -150,6 +154,10 @@ public class PaymentRepository : IPaymentRepository
                     .ThenInclude(rt => rt.Table)
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.Staff)
+            // ✅ FIX: Include Reservation.Customer.User để có thể fallback khi Order.Customer.User null
+            .Include(o => o.Reservation)
+                .ThenInclude(r => r.Customer)
+                    .ThenInclude(c => c!.User)
             .Include(o => o.Payments)
             .Include(o => o.Transactions)
                 .ThenInclude(t => t.ConfirmedByUser);
