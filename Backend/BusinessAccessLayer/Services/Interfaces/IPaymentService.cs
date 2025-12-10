@@ -57,6 +57,11 @@ public interface IPaymentService
     Task<TransactionDto> ProcessCashPaymentAsync(CashPaymentRequestDto request, int userId, CancellationToken ct = default);
 
     /// <summary>
+    /// Xử lý thanh toán kết hợp (Cash + QR)
+    /// </summary>
+    Task<List<TransactionDto>> ProcessCombinedPaymentAsync(CombinedPaymentRequestDto request, int userId, CancellationToken ct = default);
+
+    /// <summary>
     /// CASE 2: Kiểm tra trạng thái thanh toán
     /// </summary>
     Task<PaymentStatusResponseDto> CheckPaymentStatusAsync(int orderId, CancellationToken ct = default);

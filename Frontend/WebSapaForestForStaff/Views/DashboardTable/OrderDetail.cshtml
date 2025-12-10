@@ -676,9 +676,10 @@
                 // ✅ Kiểm tra status: Nếu đã "Confirmed" thì hiển thị nút "Hoàn tác xác nhận"
                 @if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
                 {
-                    <button class="btn-checkout flex-fill" style="background-color: #ffc107; border-color: #ffc107;" onclick="handleUndoConfirmPayment()">
-                        <i class="fa-solid fa-undo me-2"></i>Hoàn tác xác nhận
+                    <button class="btn-checkout flex-fill" style="background-color: #ffc107; border-color: #ffc107;">
+                     Đơn đã được phục vụ xác nhận
                     </button>
+
                 }
                 else
                 {
@@ -690,9 +691,20 @@
 
             @if (userPositionId == 2)  // Cashier
             {
-                <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
-                    Thanh Toán Bàn <i class="fa-solid fa-chevron-right ms-2"></i>
-                </button>
+                // ✅ Chỉ cho phép thanh toán khi đơn hàng đã được xác nhận (status = "Confirmed")
+                @if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
+                {
+                    <button class="btn-checkout flex-fill" onclick="handleCreatePaymentOrder()">
+                        Thanh Toán Bàn <i class="fa-solid fa-chevron-right ms-2"></i>
+                    </button>
+                }
+                else
+                {
+                    <button class="btn-checkout flex-fill" disabled style="opacity: 0.6; cursor: not-allowed;" 
+                            title="Đơn hàng chưa được xác nhận. Vui lòng đợi waiter xác nhận đơn hàng trước khi thanh toán.">
+                        <i class="fa-solid fa-lock me-2"></i>Chờ xác nhận đơn hàng
+                    </button>
+                }
             }
         </div>
        @*  <button class="btn btn-outline-danger w-100" onclick="handleCancelOrder()" style="margin-top: 8px;">
@@ -884,7 +896,7 @@
         const qtyCancelled = @Model.QtyCancelled;
 
         const confirmed = await showConfirmPopup(
-            "✅ Xác nhận thanh toán",
+            "Xác nhận thanh toán",
             `<div class="text-center mb-3">
                 <h5 class="mb-3">Xác nhận đơn hàng để chuyển sang bước thanh toán?</h5>
             </div>
@@ -925,8 +937,8 @@
                     Thu ngân sẽ xử lý thanh toán sau đó.
                 </div>
             </div>`,
-            "✅ Xác nhận",
-            "❌ Hủy"
+            " Xác nhận",
+            "Hủy"
         );
 
         if (!confirmed) {
@@ -982,6 +994,13 @@
      * Đơn hàng phải đã được Waiter xác nhận (status = "Confirmed") trước đó
      */
     async function handleCreatePaymentOrder() {
+        // ✅ VALIDATION: Kiểm tra đơn hàng đã được xác nhận chưa
+        const orderStatus = window.__ORDER_STATUS__ || '';
+        if (!orderStatus || orderStatus.toLowerCase() !== 'confirmed') {
+            alert('⚠️ Đơn hàng chưa được xác nhận!\n\nVui lòng đợi waiter xác nhận đơn hàng (status = "Confirmed") trước khi thanh toán.');
+            return;
+        }
+
         // Check if there are any items in the cart
         const visibleItems = cartItems.filter(x => !x.isDeleted);
         
@@ -1001,6 +1020,12 @@
         const totalQty = visibleItems.reduce((sum, item) => sum + item.quantity, 0);
         const totalAmount = visibleItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+        // ✅ Double-check status trước khi hiển thị popup
+        if (!orderStatus || orderStatus.toLowerCase() !== 'confirmed') {
+            alert('⚠️ Đơn hàng chưa được xác nhận!\n\nVui lòng đợi waiter xác nhận đơn hàng (status = "Confirmed") trước khi thanh toán.');
+            return;
+        }
+
         const confirmed = await showConfirmPopup(
             "💳 Thanh toán bàn",
             `<div class="text-center mb-3">
@@ -1014,6 +1039,10 @@
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted"><i class="fa-solid fa-user me-2"></i>Khách hàng:</span>
                     <span class="fw-bold">${customerName}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted"><i class="fa-solid fa-check-circle me-2 text-success"></i>Trạng thái:</span>
+                    <span class="fw-bold text-success">Đã xác nhận</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted"><i class="fa-solid fa-utensils me-2"></i>Số lượng món:</span>
@@ -1047,7 +1076,7 @@
      * Hoàn tác xác nhận đơn hàng (chuyển status từ "Confirmed" về "WaitingConfirmation")
      * Cho phép waiter sửa lại đơn hàng nếu xác nhận sai
      */
-    async function handleUndoConfirmPayment() {
+  @*   async function handleUndoConfirmPayment() {
         const activeOrderId = window.__ACTIVE_ORDER_ID__;
         if (activeOrderId <= 0) {
             alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
@@ -1106,7 +1135,7 @@
             console.error('Lỗi khi hoàn tác xác nhận đơn hàng:', error);
             alert('Lỗi: ' + (error.message || 'Không thể hoàn tác xác nhận đơn hàng. Vui lòng thử lại.'));
         }
-    }
+    } *@
 
     /**
      * 🚫 HỦY ĐƠN HÀNG

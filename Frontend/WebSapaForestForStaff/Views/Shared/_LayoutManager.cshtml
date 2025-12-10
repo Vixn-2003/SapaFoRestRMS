@@ -644,6 +644,9 @@
     </a>
     <div class="collapse" id="tables">
         <ul class="nav flex-column sub-menu">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/AreaManage">Quản lý khu vực bàn</a>
+                                </li>
             <li class="nav-item">
                 <a class="nav-link" href="/TableManage">Quản lý bàn</a>
             </li>
@@ -749,26 +752,24 @@
                         </div>
                     </li>
                     <li class="nav-item menu-items">
-                        <a class="nav-link" asp-controller="TableManage" asp-action="Index">
+                        <a class="nav-link" asp-controller="SystemLogo" asp-action="Index">
                             <span class="menu-icon"><i class="mdi mdi-table-chair"></i></span>
-                            <span class="menu-title">Bàn ăn</span>
+                            <span class="menu-title">Quản Lý Logo </span>
                         </a>
                     </li>
                     <li class="nav-item menu-items">
-                        <a class="nav-link" asp-controller="Menu" asp-action="Index">
+                        <a class="nav-link" asp-controller="BrandBanner" asp-action="Index">
+                            <span class="menu-icon"><i class="mdi mdi-table-chair"></i></span>
+                            <span class="menu-title">Quản Lý Banner </span>
+                        </a>
+                    </li>
+                    <li class="nav-item menu-items">
+                        <a class="nav-link" asp-controller="EventManage" asp-action="Index">
                             <span class="menu-icon"><i class="mdi mdi-food"></i></span>
-                            <span class="menu-title">Thực đơn</span>
+                            <span class="menu-title">Quản lý sự kiện </span>
                         </a>
                     </li>
-                    <li class="nav-item"> <a class="nav-link" asp-controller="ExportInventory" asp-action="Index">
-                        
-                     <i class="menu-icon mdi mdi-file-document"></i> <span class="menu-title">Quản lý kho</span> </a> </li>
-                    <li class="nav-item menu-items">
-                        <a class="nav-link" asp-controller="Staff" asp-action="Index">
-                            <span class="menu-icon"><i class="mdi mdi-account-group"></i></span>
-                            <span class="menu-title">Nhân viên</span>
-                        </a>
-                    </li>
+                    
                 </ul>
             </nav>
 

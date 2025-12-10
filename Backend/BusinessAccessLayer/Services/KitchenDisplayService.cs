@@ -348,8 +348,25 @@ namespace BusinessAccessLayer.Services
                             Message = $"Không thể chuyển từ trạng thái 'Chờ' sang '{newStatus}'. Phải chuyển sang 'Đang nấu' trước."
                         };
                     }
-                    // Lưu thời gian bắt đầu nấu (chưa trừ nguyên liệu)
+                    // Lưu thời gian bắt đầu nấu
                     orderDetail.StartedAt = DateTime.Now;
+                    
+                    // ✅ LOGIC MỚI: Trừ nguyên liệu khi chuyển từ Pending sang Cooking
+                    // Chỉ consume cho món KitchenPrepared, không consume cho ConsumptionBased
+                    // Món ConsumptionBased sẽ được consume khi order status chuyển sang "paid"
+                    if (orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
+                    {
+                        // Khi món chuyển sang Cooking → trừ nguyên liệu thật (consume từ QuantityReserved)
+                        var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
+                        if (!consumeResult.success)
+                        {
+                            return new StatusUpdateResponse
+                            {
+                                Success = false,
+                                Message = consumeResult.message
+                            };
+                        }
+                    }
                     
                     // ✅ Nếu là combo và đã có OrderComboItems, cập nhật status của tất cả món con sang Cooking
                     if (orderDetail.ComboId.HasValue && 
@@ -379,43 +396,24 @@ namespace BusinessAccessLayer.Services
                     if (normalizedNewStatus == "Ready")
                     {
                         orderDetail.ReadyAt = DateTime.Now;
-                        
-                        // ✅ LOGIC MỚI: Chỉ consume cho món KitchenPrepared, không consume cho ConsumptionBased
-                        // Món ConsumptionBased sẽ được consume khi order status chuyển sang "paid"
-                        if (orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
-                        {
-                            // Khi món Ready → trừ nguyên liệu thật (consume từ QuantityReserved)
-                            var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
-                            if (!consumeResult.success)
-                            {
-                                return new StatusUpdateResponse
-                                {
-                                    Success = false,
-                                    Message = consumeResult.message
-                                };
-                            }
-                        }
+                        // ✅ Đã consume nguyên liệu khi chuyển sang Cooking, Ready chỉ lưu thời gian
                     }
                 }
                 else if (normalizedCurrentStatus == "Ready")
                 {
-                    // From Ready, allow transition to Done or back to Cooking (hủy sẵn sàng)
+                    // From Ready, only allow transition to Done
+                    // Không cho phép quay lại Cooking từ nút "bắt đầu nấu" vì món đã sẵn sàng
+                    // Nếu cần "hủy sẵn sàng", cần có nút/chức năng riêng
                     if (normalizedNewStatus == "Done")
                     {
-                        // Đã consume khi chuyển sang Ready, Done chỉ là bước hoàn tất hiển thị
-                    }
-                    else if (normalizedNewStatus == "Cooking")
-                    {
-                        // Hủy sẵn sàng → Quay lại Cooking, reset ReadyAt
-                        orderDetail.ReadyAt = null;
-                        // Giữ nguyên StartedAt để tiếp tục đếm thời gian nấu
+                        // Đã consume khi chuyển sang Cooking, Done chỉ là bước hoàn tất hiển thị
                     }
                     else
                     {
                         return new StatusUpdateResponse
                         {
                             Success = false,
-                            Message = $"Không thể chuyển từ trạng thái 'Sẵn sàng' sang '{newStatus}'. Chỉ có thể chuyển sang 'Hoàn thành' hoặc quay lại 'Đang nấu'."
+                            Message = $"Không thể chuyển từ trạng thái 'Sẵn sàng' sang '{newStatus}'. Món đã sẵn sàng, chỉ có thể chuyển sang 'Hoàn thành'."
                         };
                     }
                 }
@@ -515,11 +513,26 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Nếu số lượng nấu = tổng số lượng, chỉ cần update status (chưa trừ nguyên liệu)
+                // Nếu số lượng nấu = tổng số lượng, update status và trừ nguyên liệu
                 if (cookingQuantity == totalQuantity)
                 {
                     orderDetail.Status = "Cooking";
                     orderDetail.StartedAt = DateTime.Now;
+
+                    // ✅ LOGIC MỚI: Trừ nguyên liệu khi chuyển sang Cooking
+                    // Chỉ consume cho món KitchenPrepared, không consume cho ConsumptionBased
+                    if (orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
+                    {
+                        var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
+                        if (!consumeResult.success)
+                        {
+                            return new StatusUpdateResponse
+                            {
+                                Success = false,
+                                Message = consumeResult.message
+                            };
+                        }
+                    }
 
                     await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
                     await _unitOfWork.SaveChangesAsync();
@@ -548,7 +561,7 @@ namespace BusinessAccessLayer.Services
                 }
 
                 // Nếu số lượng nấu < tổng số lượng, cần split order detail
-                // Tạo order detail mới với số lượng đã chọn, status = Pending (sẽ reserve, rồi sau đó Ready mới consume)
+                // Tạo order detail mới với số lượng đã chọn, status = Pending (sẽ reserve, rồi chuyển sang Cooking và consume)
                 var newOrderDetail = new OrderDetail
                 {
                     OrderId = orderDetail.OrderId,
@@ -580,9 +593,29 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Chuyển sang Cooking (giữ nguyên reserve, sẽ consume khi Ready)
+                // ✅ LOGIC MỚI: Chuyển sang Cooking và trừ nguyên liệu ngay
                 newOrderDetail.Status = "Cooking";
                 newOrderDetail.StartedAt = DateTime.Now;
+
+                // ✅ Trừ nguyên liệu khi chuyển sang Cooking
+                // Chỉ consume cho món KitchenPrepared, không consume cho ConsumptionBased
+                if (newOrderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
+                {
+                    var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(newOrderDetail.OrderDetailId);
+                    if (!consumeResult.success)
+                    {
+                        // Rollback: xóa order detail mới
+                        await _unitOfWork.OrderDetails.DeleteAsync(newOrderDetail.OrderDetailId);
+                        await _unitOfWork.OrderDetails.UpdateAsync(orderDetail); // Cập nhật lại orderDetail gốc
+                        await _unitOfWork.SaveChangesAsync();
+                        
+                        return new StatusUpdateResponse
+                        {
+                            Success = false,
+                            Message = consumeResult.message
+                        };
+                    }
+                }
 
                 await _unitOfWork.OrderDetails.UpdateAsync(newOrderDetail);
                 await _unitOfWork.SaveChangesAsync();

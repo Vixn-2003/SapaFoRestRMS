@@ -294,6 +294,7 @@ builder.Services.AddScoped<IReceiptService>(sp =>
     var env = sp.GetRequiredService<IWebHostEnvironment>();
     var logger = sp.GetRequiredService<ILogger<ReceiptService>>();
     var configuration = sp.GetRequiredService<IConfiguration>();
+    var serviceProvider = sp; // Pass service provider to access ICloudinaryService
     var webRootPath = string.IsNullOrWhiteSpace(env.WebRootPath)
         ? Path.Combine(env.ContentRootPath, "wwwroot")
         : env.WebRootPath;
@@ -303,7 +304,7 @@ builder.Services.AddScoped<IReceiptService>(sp =>
         Directory.CreateDirectory(webRootPath);
     }
 
-    return new ReceiptService(unitOfWork, webRootPath, logger, configuration);
+    return new ReceiptService(unitOfWork, webRootPath, logger, configuration, serviceProvider);
 });
 
 // SalaryChangeRequest Service/Repository
@@ -426,7 +427,8 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
-    await DataSeeder.SeedPositionsAsync(ctx);
+    //await DataSeeder.SeedPositionsAsync(ctx);
+    //await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
     //await DataSeeder.SeedTestCustomerAsync(ctx);
     //await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
     //await MenuDataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
@@ -434,7 +436,7 @@ using (var scope = app.Services.CreateScope())
 
     // 🔹 Seed thêm dữ liệu workflow thu ngân + combo cho bếp (gồm Order 3–8)
     //await DataSeeder.SeedCashierWorkflowTestAsync(ctx);
-    await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
+    //await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);
