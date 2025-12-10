@@ -177,7 +177,7 @@ namespace SapaFoRestRMSAPI.Controllers
 
         [HttpPut("profile")]
         [Authorize]
-        public async Task<IActionResult> UpdateProfile([FromBody] UserProfileUpdateRequest request, CancellationToken ct)
+        public async Task<IActionResult> UpdateProfile([FromForm] UserProfileUpdateRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {

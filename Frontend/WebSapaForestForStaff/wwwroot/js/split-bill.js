@@ -323,6 +323,12 @@
         confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
 
         try {
+            // Validate từng phần: với tiền mặt cần nhập số tiền khách đưa >= số tiền phải trả
+            const invalidCash = splitParts.find(p => p.paymentMethod === 'Cash' && (!p.amountReceived || p.amountReceived < p.amount));
+            if (invalidCash) {
+                throw new Error(`Phần ${invalidCash.partNumber}: Vui lòng nhập số tiền khách đưa và phải lớn hơn hoặc bằng số tiền cần thu.`);
+            }
+
             const response = await fetch(`${getApiBaseUrl()}/payment/split-bill`, {
                 method: 'POST',
                 headers: {
@@ -347,7 +353,20 @@
             }
 
             const transactions = await response.json();
-            showToast(`✅ Đã chia hóa đơn thành ${transactions.length} phần thanh toán!`, 'success');
+
+            // Kiểm tra trạng thái sau khi split
+            const allPaid = transactions.every(t => t.status && t.status.toLowerCase() === 'paid');
+            const cashPending = transactions.filter(t => t.paymentMethod === 'Cash' && (!t.status || t.status.toLowerCase() !== 'paid')).length;
+            const qrPending = transactions.filter(t => t.paymentMethod !== 'Cash' && (!t.status || t.status.toLowerCase() !== 'paid')).length;
+
+            if (allPaid) {
+                showToast('✅ Đã chia và thanh toán đủ tất cả các phần. Đang chuyển sang hóa đơn...', 'success');
+            } else {
+                const pendingMsg = [];
+                if (cashPending > 0) pendingMsg.push(`${cashPending} phần tiền mặt chưa đủ/thiếu xác nhận`);
+                if (qrPending > 0) pendingMsg.push(`${qrPending} phần QR đang chờ xác nhận`);
+                showToast(`Đã tạo split bill. ${pendingMsg.join(' - ')}. Hệ thống sẽ giữ trạng thái PartiallyPaid cho tới khi tất cả phần được xác nhận.`, 'info');
+            }
 
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('splitBillModal'));
@@ -356,7 +375,7 @@
             // Reload page
             setTimeout(() => {
                 window.location.reload();
-            }, 1500);
+            }, allPaid ? 1000 : 2000);
         } catch (error) {
             console.error('Error processing split bill:', error);
             showToast(error.message || 'Lỗi khi chia hóa đơn. Vui lòng thử lại.', 'error');

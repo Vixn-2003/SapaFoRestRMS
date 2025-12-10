@@ -124,7 +124,24 @@ namespace WebSapaFoRestForCustomer.Controllers
                     return LocalRedirect(returnUrl ?? Url.Action("Index", "Home"));
                 }
 
-                ModelState.AddModelError(string.Empty, "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.");
+                // ✅ FIX: Đọc error message từ API response
+                var errorContent = await response.Content.ReadAsStringAsync();
+                string errorMessage = "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.";
+                
+                try
+                {
+                    var errorResponse = JsonConvert.DeserializeObject<dynamic>(errorContent);
+                    if (errorResponse?.message != null)
+                    {
+                        errorMessage = errorResponse.message.ToString();
+                    }
+                }
+                catch
+                {
+                    // Nếu không parse được JSON, dùng message mặc định
+                }
+
+                ModelState.AddModelError(string.Empty, errorMessage);
                 return View(model);
             }
             catch (Exception ex)

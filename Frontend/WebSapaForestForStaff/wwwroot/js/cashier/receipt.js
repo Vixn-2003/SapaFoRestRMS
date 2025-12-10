@@ -1,6 +1,6 @@
 ﻿$(document).on('click', '.btn-print-receipt', function () {
     const orderCode = $(this).data('order-code');
-    const tables = $(this).data('tables');
+    // ✅ REMOVED: tables variable - không sử dụng trong receipt print
     const customerName = $(this).data('customer-name');
     const customerPhone = $(this).data('customer-phone');
     const createdAt = $(this).data('created-at');
@@ -61,7 +61,6 @@
             </div>
 
             <div>
-                <div><b>Bàn:</b> ${tables}</div>
                 <div><b>Khách hàng:</b> ${customerName}</div>
                 ${customerPhone !== "—" ? `<div><b>Điện thoại:</b> ${customerPhone}</div>` : ""}
                 <div><b>Thời gian tạo:</b> ${createdAt}</div>

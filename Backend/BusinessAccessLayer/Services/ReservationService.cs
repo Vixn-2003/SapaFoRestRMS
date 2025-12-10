@@ -30,6 +30,7 @@ namespace BusinessAccessLayer.Services
             var user = await _userRepository.GetByPhoneAsync(dto.Phone);
             if (user == null)
             {
+                // ✅ FIX: Set Status=0 (active) để customer có thể đăng nhập ngay sau khi đặt bàn
                 user = new User
                 {
                     FullName = dto.CustomerName,
@@ -37,7 +38,7 @@ namespace BusinessAccessLayer.Services
                     PasswordHash = "666666",
                     Phone = dto.Phone,
                     RoleId = 5,
-                    Status=1
+                    Status = 0 // 0 = Active, 1 = Inactive
                 };
                 user = await _userRepository.CreateAsync(user);
             }

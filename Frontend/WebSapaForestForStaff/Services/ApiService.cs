@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.DTOs.Auth;
 using WebSapaForestForStaff.DTOs.UserManagement;
+using WebSapaForestForStaff.DTOs.Customers;
 using WebSapaForestForStaff.DTOs.Positions;
 
 namespace WebSapaForestForStaff.Services
@@ -597,8 +599,20 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                var json = JsonSerializer.Serialize(request);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var content = new MultipartFormDataContent();
+                content.Add(new StringContent(request.FullName), nameof(request.FullName));
+                content.Add(new StringContent(request.Phone ?? string.Empty), nameof(request.Phone));
+
+                if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+                {
+                    var streamContent = new StreamContent(request.AvatarFile.OpenReadStream());
+                    streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(request.AvatarFile.ContentType);
+                    content.Add(streamContent, nameof(request.AvatarFile), request.AvatarFile.FileName);
+                }
+                else if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+                {
+                    content.Add(new StringContent(request.AvatarUrl), nameof(request.AvatarUrl));
+                }
 
                 var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/profile", content));
                 
@@ -780,6 +794,75 @@ namespace WebSapaForestForStaff.Services
                 return response.IsSuccessStatusCode;
             }
             catch { return false; }
+        }
+
+        // Customer VIP Management
+        public async Task<List<CustomerVipListItemDto>?> GetVipCustomersAsync()
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/manager/customers"));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<CustomerVipListItemDto>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<CustomerVipStatisticsDto?> GetCustomerVipStatisticsAsync(int customerId)
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/manager/customers/{customerId}/statistics"));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<CustomerVipStatisticsDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<CustomerVipStatisticsDto?> UpdateCustomerVipAsync(int customerId, bool isVip)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { isVip });
+                var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/manager/customers/{customerId}/vip", content));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<CustomerVipStatisticsDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<CustomerVipStatisticsDto?> RecalculateCustomerVipAsync(int customerId)
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync(
+                    $"{GetApiBaseUrl()}/manager/customers/{customerId}/recalculate",
+                    new StringContent(string.Empty)));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<CustomerVipStatisticsDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

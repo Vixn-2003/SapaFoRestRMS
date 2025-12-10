@@ -18,12 +18,12 @@ namespace WebSapaForestForStaff.Services.Api
 
         public async Task<List<OrderDto>> GetPendingOrdersAsync()
         {
-            return await FetchOrdersByStatusAsync("pending");
+            return await FetchOrdersByStatusAsync("Confirmed");
         }
 
         public async Task<List<OrderDto>> GetPaidOrdersAsync()
         {
-            return await FetchOrdersByStatusAsync("processed");
+            return await FetchOrdersByStatusAsync("Paid");
         }
 
         public async Task<List<OrderDto>> GetOrdersByStatusAndDateAsync(string statusFilter, DateOnly date)

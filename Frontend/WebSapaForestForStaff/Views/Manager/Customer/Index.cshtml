@@ -1,0 +1,127 @@
+@model IEnumerable<WebSapaForestForStaff.DTOs.Customers.CustomerVipListItemDto>
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    ViewData["Title"] = "Customer VIP Management";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    var antiToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Customer VIP Management</h2>
+    <a class="btn btn-outline-primary" href="@Url.Action("Index", "Users")">Quản lý người dùng</a>
+  </div>
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Khách hàng</th>
+                <th>Số điện thoại</th>
+                <th>Điểm tích lũy</th>
+                <th>Trạng thái</th>
+                <th>VIP</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var customer in Model)
+            {
+                <tr data-customer-id="@customer.CustomerId">
+                    <td>@(string.IsNullOrWhiteSpace(customer.FullName) ? "Khách lẻ" : customer.FullName)</td>
+                    <td>@customer.Phone</td>
+                    <td>@customer.LoyaltyPoints</td>
+                    <td>
+                        <span class="badge vip-badge @(customer.IsVip ? "bg-warning text-dark" : "bg-secondary")">
+                            @(customer.IsVip ? "VIP" : "Normal")
+                        </span>
+                    </td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input vip-toggle" type="checkbox" role="switch" data-id="@customer.CustomerId" @(customer.IsVip ? "checked" : "")>
+                        </div>
+                    </td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-info" href="@Url.Action("Details", new { id = customer.CustomerId })">Chi tiết</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div id="vipMessage" class="alert d-none mt-3" role="alert"></div>
+
+<script>
+    (() => {
+        const antiToken = '@antiToken';
+        const messageBox = document.getElementById('vipMessage');
+
+        const showMessage = (text, isError = false) => {
+            if (!messageBox) return;
+            messageBox.classList.remove('d-none', 'alert-success', 'alert-danger');
+            messageBox.classList.add(isError ? 'alert-danger' : 'alert-success');
+            messageBox.textContent = text;
+        };
+
+        const updateBadge = (row, isVip) => {
+            const badge = row?.querySelector('.vip-badge');
+            if (!badge) return;
+            badge.classList.remove('bg-warning', 'text-dark', 'bg-secondary');
+            if (isVip) {
+                badge.classList.add('bg-warning', 'text-dark');
+                badge.textContent = 'VIP';
+            } else {
+                badge.classList.add('bg-secondary');
+                badge.textContent = 'Normal';
+            }
+        };
+
+        document.querySelectorAll('.vip-toggle').forEach(toggle => {
+            toggle.addEventListener('change', async (e) => {
+                const checkbox = e.target;
+                const customerId = checkbox.dataset.id;
+                const isVip = checkbox.checked;
+                const row = checkbox.closest('tr');
+                const confirmText = isVip
+                    ? 'Bạn có chắc muốn đánh dấu khách này là VIP?'
+                    : 'Bạn có chắc muốn hủy VIP của khách này?';
+
+                if (!confirm(confirmText)) {
+                    checkbox.checked = !isVip;
+                    return;
+                }
+
+                try {
+                    const payload = new URLSearchParams();
+                    payload.append('customerId', customerId);
+                    payload.append('isVip', isVip.toString());
+
+                    const response = await fetch('@Url.Action("UpdateVip", "ManagerCustomer")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'RequestVerificationToken': antiToken
+                        },
+                        body: payload.toString()
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Không thể cập nhật VIP');
+                    }
+
+                    const result = await response.json();
+                    if (!result?.success) {
+                        throw new Error(result?.message || 'Không thể cập nhật VIP');
+                    }
+
+                    updateBadge(row, result.data?.isVip ?? isVip);
+                    showMessage('Đã cập nhật trạng thái VIP');
+                } catch (error) {
+                    checkbox.checked = !isVip;
+                    showMessage(error.message, true);
+                }
+            });
+        });
+    })();
+</script>
+

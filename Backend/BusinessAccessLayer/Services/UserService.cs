@@ -19,14 +19,16 @@ namespace BusinessAccessLayer.Services
         private readonly IMapper _mapper;
         private readonly IRoleRepository _roleRepository;
         private readonly IEmailService _emailService;
+        private readonly ICloudinaryService? _cloudinaryService;
         private static readonly HashSet<int> RestrictedCreationRoleIds = new() { 2, 5 };
 
-        public UserService(IUnitOfWork unitOfWork, IMapper mapper, IRoleRepository roleRepository, IEmailService emailService)
+        public UserService(IUnitOfWork unitOfWork, IMapper mapper, IRoleRepository roleRepository, IEmailService emailService, ICloudinaryService? cloudinaryService = null)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _roleRepository = roleRepository;
             _emailService = emailService;
+            _cloudinaryService = cloudinaryService;
         }
 
         public async Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct = default)
@@ -257,9 +259,21 @@ namespace BusinessAccessLayer.Services
             {
                 user.Phone = request.Phone;
             }
-            user.AvatarUrl = string.IsNullOrWhiteSpace(request.AvatarUrl)
-                ? null
-                : request.AvatarUrl.Trim();
+
+            // Ưu tiên upload file lên Cloudinary nếu có
+            if (request.AvatarFile != null && request.AvatarFile.Length > 0 && _cloudinaryService != null)
+            {
+                var uploadedUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile, "avatars");
+                if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                {
+                    user.AvatarUrl = uploadedUrl;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+            {
+                user.AvatarUrl = request.AvatarUrl.Trim();
+            }
+
             user.ModifiedAt = DateTime.UtcNow;
 
             await _unitOfWork.Users.UpdateAsync(user);

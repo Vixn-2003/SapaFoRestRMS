@@ -415,8 +415,6 @@
                         <dt class="col-6 text-muted small">Mã đơn</dt>
                         <dd class="col-6 fw-semibold text-end">@(Model.OrderCode ?? $"#{Model.OrderId}")</dd>
 
-                        <dt class="col-6 text-muted small">Bàn</dt>
-                        <dd class="col-6 fw-semibold text-end">@tables</dd>
 
                         <dt class="col-6 text-muted small">Thu ngân xử lý</dt>
                         <dd class="col-6 fw-semibold text-end">@(Model.StaffName ?? Model.WaiterName ?? "—")</dd>
@@ -429,7 +427,7 @@
                     <button class="btn btn-outline-success btn-sm btn-print-receipt"
                             data-order-id="@Model.OrderId"
                             data-order-code="@(Model.OrderCode ?? $"#{Model.OrderId}")"
-                            data-tables="@tables"
+                            @* ✅ REMOVED: data-tables - không sử dụng trong receipt print *@
                             data-customer-name="@(Model.CustomerName ?? "Khách lẻ")"
                             data-customer-phone="@(Model.CustomerPhone ?? "—")"
                             data-created-at="@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"

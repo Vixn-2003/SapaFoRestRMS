@@ -4,6 +4,7 @@ using WebSapaForestForStaff.Services.Api.Interfaces;
 using WebSapaForestForStaff.ViewModels.Payment;
 using System.Text.Json;
 using System.Net.Http.Headers;
+using WebSapaForestForStaff.Models.VoucherDTO;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -38,31 +39,98 @@ namespace WebSapaForestForStaff.Controllers
             return httpContext.User?.FindFirst("Token")?.Value;
         }
 
+        public record ConfirmQrPaymentRequest(int OrderId, string? Notes);
+
         [HttpGet("orders")]
-        public async Task<IActionResult> OrderSelection(DateOnly? date = null)
+        public async Task<IActionResult> OrderSelection(DateOnly? date = null, string status = "Confirmed")
         {
             var selectedDate = date ?? DateOnly.FromDateTime(DateTime.Now);
-            var pending = await _paymentApiService.GetOrdersByStatusAndDateAsync("pending", selectedDate) ?? new List<OrderDto>();
-            var paid = await _paymentApiService.GetOrdersByStatusAndDateAsync("processed", selectedDate) ?? new List<OrderDto>();
+
+            // Normalize status
+            var normalizedStatus = status?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true
+                ? "Paid"
+                : "Confirmed";
+
+            // ✅ DEBUG: Log để kiểm tra
+            System.Diagnostics.Debug.WriteLine($"[OrderSelection] Date: {selectedDate}, Status: {status}, Normalized: {normalizedStatus}");
+
+            // Confirmed: waiter đã xác nhận, chờ thu ngân thanh toán
+            var confirmedOrders = await _paymentApiService.GetOrdersByStatusAndDateAsync("Confirmed", selectedDate) ?? new List<OrderDto>();
+            
+            // ✅ DEBUG: Log số lượng orders
+            System.Diagnostics.Debug.WriteLine($"[OrderSelection] Confirmed orders count: {confirmedOrders.Count}");
+            foreach (var order in confirmedOrders.Take(5))
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrderSelection] Confirmed Order {order.OrderId}: Status = {order.Status}");
+            }
+
+            // Paid: đã thanh toán xong
+            var paidOrders = await _paymentApiService.GetOrdersByStatusAndDateAsync("Paid", selectedDate) ?? new List<OrderDto>();
+            
+            // ✅ DEBUG: Log số lượng orders
+            System.Diagnostics.Debug.WriteLine($"[OrderSelection] Paid orders count: {paidOrders.Count}");
+            foreach (var order in paidOrders.Take(5))
+            {
+                System.Diagnostics.Debug.WriteLine($"[OrderSelection] Paid Order {order.OrderId}: Status = {order.Status}");
+            }
 
             var viewModel = new OrderSelectionViewModel
             {
                 SelectedDate = selectedDate,
-                PendingOrders = pending,
-                PaidOrders = paid
+                PendingOrders = confirmedOrders,
+                PaidOrders = paidOrders
             };
 
-            // Set ViewBag for partial view (defaults to pending for initial load)
-            ViewBag.OrderStatus = "pending";
+            // Set ViewBag for partial view
+            // Sử dụng lowercase để match với logic trong partial view
+            ViewBag.OrderStatus = normalizedStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) ? "paid" : "confirmed";
+            ViewBag.CurrentStatus = normalizedStatus; // Store original status for view
 
             return View("~/Views/CashierFlow/OrderSelection.cshtml", viewModel);
         }
 
-        [HttpGet("orders/partial")]
-        public async Task<IActionResult> LoadOrdersPartial(DateOnly date, string status = "pending")
+        /// <summary>
+        /// ✅ DEBUG: Endpoint để test API trực tiếp
+        /// </summary>
+        [HttpGet("orders/debug")]
+        public async Task<IActionResult> DebugOrders([FromQuery] DateOnly? date = null, [FromQuery] string status = "Confirmed")
         {
-            var orders = await _paymentApiService.GetOrdersByStatusAndDateAsync(status, date) ?? new List<OrderDto>();
-            ViewBag.OrderStatus = status;
+            var selectedDate = date ?? DateOnly.FromDateTime(DateTime.Now);
+            var normalizedStatus = status?.Equals("Paid", StringComparison.OrdinalIgnoreCase) == true ? "Paid" : "Confirmed";
+            
+            var orders = await _paymentApiService.GetOrdersByStatusAndDateAsync(normalizedStatus, selectedDate) ?? new List<OrderDto>();
+            
+            return Json(new
+            {
+                date = selectedDate.ToString("yyyy-MM-dd"),
+                requestedStatus = status,
+                normalizedStatus = normalizedStatus,
+                ordersCount = orders.Count,
+                orders = orders.Select(o => new
+                {
+                    orderId = o.OrderId,
+                    orderCode = o.OrderCode,
+                    status = o.Status,
+                    createdAt = o.CreatedAt,
+                    totalAmount = o.TotalAmount
+                }).ToList()
+            });
+        }
+
+        [HttpGet("orders/partial")]
+        public async Task<IActionResult> LoadOrdersPartial(DateOnly date, string status = "Confirmed")
+        {
+            // Normalize status to backend contract
+            var normalizedStatus = status?.Equals("paid", StringComparison.OrdinalIgnoreCase) == true
+                ? "Paid"
+                : "Confirmed";
+
+            var orders = await _paymentApiService.GetOrdersByStatusAndDateAsync(normalizedStatus, date) ?? new List<OrderDto>();
+            
+            // Set ViewBag để partial view biết đang hiển thị tab nào
+            // Sử dụng "confirmed" hoặc "paid" (lowercase) để match với logic trong partial view
+            ViewBag.OrderStatus = normalizedStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) ? "paid" : "confirmed";
+            
             return PartialView("~/Views/CashierFlow/_OrderListPartial.cshtml", orders);
         }
 
@@ -92,6 +160,61 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         /// <summary>
+        /// Thu ngân xác nhận đã nhận tiền QR (manual confirm) và trả về redirect URL
+        /// </summary>
+        [HttpPost("payment/confirm-qr")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmQrPayment([FromBody] ConfirmQrPaymentRequest request)
+        {
+            if (request == null || request.OrderId <= 0)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            var order = await _paymentApiService.GetOrderDetailAsync(request.OrderId);
+            if (order == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy đơn hàng {request.OrderId}" });
+            }
+
+            var confirmRequest = new PaymentConfirmRequest
+            {
+                OrderId = request.OrderId,
+                PaymentMethod = "QRBankTransfer",
+                Amount = order.TotalAmount,
+                Notes = request.Notes ?? "Thu ngân xác nhận đã nhận tiền qua QR",
+                SessionId = string.Empty,
+                CashGiven = null
+            };
+
+            var result = await _paymentApiService.ConfirmPaymentAsync(confirmRequest);
+            if (!result.Success)
+            {
+                return BadRequest(new { message = result.Message ?? "Xác nhận thanh toán thất bại" });
+            }
+
+            var redirectUrl = Url.Action(nameof(Receipt), new { orderId = request.OrderId });
+            return Ok(new { success = true, redirectUrl });
+        }
+
+        /// <summary>
+        /// API endpoint để load voucher list qua AJAX
+        /// </summary>
+        [HttpGet("vouchers/available")]
+        public async Task<IActionResult> GetAvailableVouchers([FromQuery] decimal subtotal = 0)
+        {
+            try
+            {
+                var vouchers = await GetAvailableVouchersAsync(subtotal);
+                return Ok(vouchers);
+            }
+            catch
+            {
+                return Ok(new List<VoucherDto>());
+            }
+        }
+
+        /// <summary>
         /// Lấy danh sách voucher phù hợp với đơn hàng (status="Đang sử dụng", minOrderValue <= subtotal)
         /// </summary>
         private async Task<List<VoucherDto>> GetAvailableVouchersAsync(decimal subtotal)
@@ -115,7 +238,16 @@ namespace WebSapaForestForStaff.Controllers
                     PropertyNameCaseInsensitive = true
                 });
 
-                if (!result.TryGetProperty("Data", out var dataElement)) return new List<VoucherDto>();
+                // ✅ FIX: API trả về property "Data" (chữ hoa), không phải "data"
+                // JsonElement.TryGetProperty là case-sensitive, cần check đúng tên property
+                if (!result.TryGetProperty("Data", out var dataElement))
+                {
+                    // Fallback: thử "data" (chữ thường) nếu "Data" không tồn tại
+                    if (!result.TryGetProperty("data", out dataElement))
+                    {
+                        return new List<VoucherDto>();
+                    }
+                }
 
                 var vouchers = JsonSerializer.Deserialize<List<VoucherDto>>(dataElement.GetRawText(), new JsonSerializerOptions
                 {
@@ -135,20 +267,7 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        public class VoucherDto
-        {
-            public int VoucherId { get; set; }
-            public string Code { get; set; } = string.Empty;
-            public string? Description { get; set; }
-            public string? DiscountType { get; set; }
-            public decimal DiscountValue { get; set; }
-            public DateTime? StartDate { get; set; }
-            public DateTime? EndDate { get; set; }
-            public decimal? MinOrderValue { get; set; }
-            public decimal? MaxDiscount { get; set; }
-            public string? Status { get; set; }
-            public bool? IsDelete { get; set; }
-        }
+        
 
         [HttpPost("payment/initiate")]
         [ValidateAntiForgeryToken]
@@ -226,14 +345,19 @@ namespace WebSapaForestForStaff.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessCashPayment(CashPaymentRequest request)
         {
+            // ✅ DEBUG: Log để trace
+            System.Diagnostics.Debug.WriteLine($"[ProcessCashPayment] Called with OrderId: {request?.OrderId}, AmountReceived: {request?.AmountReceived}");
+            
             if (request == null || request.OrderId <= 0)
             {
+                System.Diagnostics.Debug.WriteLine($"[ProcessCashPayment] Invalid request: OrderId = {request?.OrderId}");
                 TempData["ErrorMessage"] = "Dữ liệu thanh toán không hợp lệ.";
                 return RedirectToAction(nameof(Payment), new { id = request?.OrderId ?? 0 });
             }
 
             try
             {
+                System.Diagnostics.Debug.WriteLine($"[ProcessCashPayment] Processing payment for OrderId: {request.OrderId}");
                 var token = GetToken();
                 if (string.IsNullOrEmpty(token))
                 {
@@ -254,23 +378,43 @@ namespace WebSapaForestForStaff.Controllers
                 if (!response.IsSuccessStatusCode)
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
-                    var errorData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(errorContent, new System.Text.Json.JsonSerializerOptions
+                    System.Text.Json.JsonElement? errorData = null;
+                    
+                    try
                     {
-                        PropertyNameCaseInsensitive = true
-                    });
+                        errorData = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(errorContent, new System.Text.Json.JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+                    }
+                    catch
+                    {
+                        // Ignore JSON parse error
+                    }
 
-                    var errorMessage = errorData.TryGetProperty("message", out var msg) 
+                    var errorMessage = errorData.HasValue && errorData.Value.TryGetProperty("message", out var msg) 
                         ? msg.GetString() 
                         : "Không thể xử lý thanh toán. Vui lòng thử lại.";
 
-                    TempData["ErrorMessage"] = errorMessage;
+                    TempData["ErrorMessage"] = errorMessage ?? "Không thể xử lý thanh toán. Vui lòng thử lại.";
                     return RedirectToAction(nameof(Payment), new { id = request.OrderId });
                 }
 
-                var transaction = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                var refundAmount = transaction.TryGetProperty("refundAmount", out var refund) && refund.ValueKind == System.Text.Json.JsonValueKind.Number
-                    ? refund.GetDecimal()
-                    : (decimal?)null;
+                // Parse transaction response
+                decimal? refundAmount = null;
+                try
+                {
+                    var transaction = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    if (transaction.TryGetProperty("refundAmount", out var refund) && refund.ValueKind == System.Text.Json.JsonValueKind.Number)
+                    {
+                        refundAmount = refund.GetDecimal();
+                    }
+                }
+                catch (Exception parseEx)
+                {
+                    // Log parse error nhưng vẫn tiếp tục redirect (vì payment đã thành công)
+                    // Có thể response không có refundAmount, điều này là bình thường
+                }
 
                 if (refundAmount.HasValue && refundAmount.Value > 0)
                 {
@@ -281,10 +425,21 @@ namespace WebSapaForestForStaff.Controllers
                     TempData["SuccessMessage"] = "✅ Thanh toán thành công!";
                 }
 
+                // ✅ DEBUG: Log trước khi redirect
+                System.Diagnostics.Debug.WriteLine($"[ProcessCashPayment] Payment successful, redirecting to Receipt for OrderId: {request.OrderId}");
+                
+                // Redirect đến Receipt page
+                var redirectUrl = Url.Action(nameof(Receipt), new { orderId = request.OrderId });
+                System.Diagnostics.Debug.WriteLine($"[ProcessCashPayment] Redirect URL: {redirectUrl}");
+                
                 return RedirectToAction(nameof(Receipt), new { orderId = request.OrderId });
             }
             catch (Exception ex)
             {
+                // ✅ DEBUG: Log exception
+                System.Diagnostics.Debug.WriteLine($"[ProcessCashPayment] Exception: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ProcessCashPayment] StackTrace: {ex.StackTrace}");
+                
                 TempData["ErrorMessage"] = $"Lỗi khi xử lý thanh toán: {ex.Message}";
                 return RedirectToAction(nameof(Payment), new { id = request.OrderId });
             }
@@ -327,20 +482,60 @@ namespace WebSapaForestForStaff.Controllers
         {
             try
             {
+                // ✅ DEBUG: Log để trace
+                System.Diagnostics.Debug.WriteLine($"[Receipt] Loading order {orderId} for receipt");
+                
+                // Retry logic: Đợi một chút để đảm bảo database đã commit transaction
                 var order = await _paymentApiService.GetOrderDetailAsync(orderId);
+                
+                // ✅ DEBUG: Log customer info
+                if (order != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Receipt] Order {orderId} - CustomerId: {order.CustomerId}, CustomerName: {order.CustomerName}, CustomerPhone: {order.CustomerPhone}");
+                }
+                
+                // Nếu không tìm thấy, thử lại sau 500ms (có thể do database chưa commit)
                 if (order == null)
                 {
-                    TempData["ErrorMessage"] = $"Không tìm thấy đơn hàng với ID: {orderId}";
-                    return RedirectToAction(nameof(OrderSelection));
+                    await Task.Delay(500);
+                    order = await _paymentApiService.GetOrderDetailAsync(orderId);
+                    
+                    if (order == null)
+                    {
+                        TempData["ErrorMessage"] = $"Không tìm thấy đơn hàng với ID: {orderId}";
+                        return RedirectToAction(nameof(OrderSelection));
+                    }
                 }
 
                 // Kiểm tra đơn hàng đã được thanh toán chưa
+                // Nếu chưa Paid nhưng có thể đang trong quá trình xử lý, thử lại một lần nữa
                 if (string.IsNullOrEmpty(order.Status) || 
                     (!order.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) &&
                      !order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) &&
                      !order.Status.Equals("Success", StringComparison.OrdinalIgnoreCase)))
                 {
-                    TempData["ErrorMessage"] = $"Đơn hàng chưa được thanh toán. Trạng thái hiện tại: {order.Status ?? "N/A"}";
+                    // Đợi thêm một chút và thử lại
+                    await Task.Delay(500);
+                    order = await _paymentApiService.GetOrderDetailAsync(orderId);
+                    
+                    if (order != null && 
+                        (order.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) ||
+                         order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                         order.Status.Equals("Success", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        // Status đã được cập nhật, hiển thị receipt
+                        return View("~/Views/CashierFlow/Receipt.cshtml", order);
+                    }
+                    
+                    // Vẫn chưa Paid, nhưng có thể đang trong quá trình xử lý
+                    // Cho phép xem receipt nếu có thông báo thành công từ TempData
+                    if (TempData.ContainsKey("SuccessMessage"))
+                    {
+                        // Có thông báo thành công, cho phép xem receipt
+                        return View("~/Views/CashierFlow/Receipt.cshtml", order);
+                    }
+                    
+                    TempData["ErrorMessage"] = $"Đơn hàng chưa được thanh toán. Trạng thái hiện tại: {order?.Status ?? "N/A"}";
                     return RedirectToAction(nameof(Payment), new { id = orderId });
                 }
 
@@ -411,7 +606,7 @@ namespace WebSapaForestForStaff.Controllers
 
         /// <summary>
         /// POST: Áp dụng ưu đãi / mã giảm giá cho đơn hàng hiện tại
-        /// Form submit từ Promotion Modal → reload lại Payment view với order đã cập nhật
+        /// AJAX call từ Promotion Modal → trả về JSON response
         /// </summary>
         [HttpPost("payment/apply-discount")]
         [ValidateAntiForgeryToken]
@@ -419,8 +614,7 @@ namespace WebSapaForestForStaff.Controllers
         {
             if (request == null || request.OrderId <= 0)
             {
-                TempData["DiscountErrorMessage"] = "Dữ liệu ưu đãi không hợp lệ.";
-                return RedirectToAction(nameof(Payment), new { id = request?.OrderId ?? 0 });
+                return Json(new { success = false, message = "Dữ liệu ưu đãi không hợp lệ." });
             }
 
             // Gọi ApiService để áp dụng voucher
@@ -428,35 +622,19 @@ namespace WebSapaForestForStaff.Controllers
             
             if (result == null)
             {
-                TempData["DiscountErrorMessage"] = "Không thể áp dụng ưu đãi. Vui lòng thử lại sau.";
-                TempData["VoucherCode"] = request.VoucherCode; // Giữ lại mã đã nhập để user sửa
-                return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+                return Json(new { success = false, message = "Không thể áp dụng ưu đãi. Vui lòng thử lại sau." });
             }
 
             if (!result.Success)
             {
-                TempData["DiscountErrorMessage"] = result.Message;
-                TempData["VoucherCode"] = request.VoucherCode; // Giữ lại mã đã nhập
-                return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+                return Json(new { success = false, message = result.Message ?? "Không thể áp dụng mã giảm giá." });
             }
 
-            // Thành công: reload lại Payment view với order đã cập nhật
-            TempData["DiscountSuccessMessage"] = result.Message ?? "Áp dụng ưu đãi thành công!";
-            
-            // Reload lại order từ API để có dữ liệu mới nhất
-            var updatedOrder = await _paymentApiService.GetOrderDetailAsync(request.OrderId);
-            if (updatedOrder == null)
-            {
-                TempData["ErrorMessage"] = "Không thể tải lại thông tin đơn hàng sau khi áp dụng ưu đãi.";
-                return RedirectToAction(nameof(OrderSelection));
-            }
-
-            // Load lại danh sách voucher phù hợp
-            var availableVouchers = await GetAvailableVouchersAsync(updatedOrder.Subtotal);
-            ViewData["AvailableVouchers"] = availableVouchers;
-
-            // Return Payment view với order đã cập nhật
-            return View("~/Views/CashierFlow/Payment.cshtml", updatedOrder);
+            // ✅ Thành công: trả về JSON để frontend xử lý
+            return Json(new { 
+                success = true, 
+                message = result.Message ?? "Áp dụng mã ưu đãi thành công" 
+            });
         }
     }
 }

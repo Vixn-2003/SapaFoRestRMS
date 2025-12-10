@@ -444,6 +444,11 @@ namespace DataAccessLayer.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
 
+                    b.Property<bool>("IsVip")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<int?>("LoyaltyPoints")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")

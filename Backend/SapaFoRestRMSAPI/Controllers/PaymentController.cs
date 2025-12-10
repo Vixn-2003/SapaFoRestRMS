@@ -52,6 +52,9 @@ public class PaymentController : ControllerBase
         try
         {
             var orders = await _paymentService.GetOrdersAsync(date, status, sortOrder, ct);
+            
+        
+            
             return Ok(orders);
         }
         catch (Exception ex)
@@ -75,6 +78,10 @@ public class PaymentController : ControllerBase
             {
                 return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {id}" });
             }
+
+            // ✅ DEBUG: Log để trace customer info
+            _logger.LogInformation("[GetOrderDetail] Order {OrderId} - CustomerId: {CustomerId}, CustomerName: {CustomerName}, CustomerPhone: {CustomerPhone}", 
+                id, order.CustomerId, order.CustomerName, order.CustomerPhone);
 
             return Ok(order);
         }

@@ -121,7 +121,7 @@ namespace WebSapaForestForStaff.Controllers
         /// Update user profile (AJAX endpoint)
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> UpdateProfile([FromBody] UserProfileUpdateRequest request)
+        public async Task<IActionResult> UpdateProfile([FromForm] UserProfileUpdateRequest request)
         {
             if (!ModelState.IsValid)
             {
