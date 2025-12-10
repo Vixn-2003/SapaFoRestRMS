@@ -16,12 +16,11 @@
 <link rel="stylesheet" href="~/css/assign-tables.css" />
 
 <style>
-    /* ===== TOAST ĐẸP & CHUYÊN NGHIỆP ===== */
-
+    /* TOAST + MODAL CSS giữ nguyên như bạn đang dùng */
     #toastContainer {
         top: 1.25rem;
         right: 1.25rem;
-        z-index: 2000; /* cao hơn modal-backdrop */
+        z-index: 2000;
     }
 
     .notification-toast {
@@ -37,20 +36,16 @@
         font-size: 0.95rem;
     }
 
-    /* animation slide in */
     @@keyframes toast-slide-in {
-        from
+        from {
+            opacity: 0;
+            transform: translateX(20px) translateY(-5px);
+        }
 
-    {
-        opacity: 0;
-        transform: translateX(20px) translateY(-5px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0) translateY(0);
-    }
-
+        to {
+            opacity: 1;
+            transform: translateX(0) translateY(0);
+        }
     }
 
     .notification-toast.show,
@@ -71,13 +66,10 @@
             opacity: 1;
         }
 
-    /* SUCCESS: xanh lá cây */
-    /* SUCCESS: xanh lá cây – ÉP đè mọi style khác */
     .notification-toast.toast-success {
-        background-color: #16a34a !important; /* dùng background-color + !important */
+        background-color: #16a34a !important;
         color: #ffffff !important;
     }
-
 
     .notification-toast.toast-error {
         background-color: #b91c1c !important;
@@ -93,13 +85,6 @@
         background-color: #0ea5e9 !important;
         color: #ffffff !important;
     }
-
-
-    .notification-toast.text-bg-warning .toast-body {
-        font-weight: 500;
-    }
-
-    /* ===== CONFIRM MODAL CHUYÊN NGHIỆP ===== */
 
     #confirmModal .modal-dialog {
         max-width: 420px;
@@ -151,11 +136,7 @@
         padding-top: 0.25rem;
     }
 
-    #confirmModal .btn-danger {
-        border-radius: 999px;
-        padding-inline: 1.1rem;
-    }
-
+    #confirmModal .btn-danger,
     #confirmModal .btn-secondary {
         border-radius: 999px;
     }
@@ -167,10 +148,7 @@
 
 <h2>🌿 Xếp bàn</h2>
 
-<!-- Thông báo TempData sẽ hiển thị qua toast -->
-
 <div class="card p-3 mb-3" style="display:flex; flex-direction:row; gap:20px; flex-wrap:nowrap; align-items:flex-start;">
-    <!-- Bên trái: Thông tin khách hàng -->
     <div style="flex:1; min-width:250px;">
         <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
         <strong>SĐT:</strong> @reservation.CustomerPhone <br />
@@ -186,12 +164,12 @@
                 : "Không có bàn nào được đặt ở lần xử lý trước đó"
                 )
     </div>
+
     <a href="@Url.Action("EditReservation", "ReservationStaff", new { id = reservation.ReservationId })"
        class="btn btn-sm btn-warning">
         ✏️ Sửa
     </a>
 
-    <!-- Bên phải: Thống kê bàn trống & sức chứa -->
     <div style="flex:1; min-width:250px;">
         <h5>📊 Thống kê khu vực</h5>
         @foreach (var area in areas)
@@ -282,18 +260,17 @@
         </div>
     }
 
-    <div class="form-check mt-4">
-        <input type="checkbox" class="form-check-input" name="RequireDeposit" id="depositCheck" value="true" />
-        <label class="form-check-label" for="depositCheck">Yêu cầu đặt cọc</label>
-
-        <input type="number" id="depositAmount" name="DepositAmount"
+    <!-- PHẦN GỬI YÊU CẦU ĐẶT CỌC – chỉ dùng cho SMS, không dính tới AssignTablesPost -->
+  @*   <div class="form-check mt-4">
+        <label class="form-label" for="depositAmount">Số tiền đặt cọc (VND)</label>
+        <input type="number" id="depositAmount"
                class="form-control mt-2"
                placeholder="Số tiền đặt cọc (VND)" step="0.01" />
 
-        <button type="button" id="sendDepositBtn" class="btn btn-info mt-3" style="display:none;">
+        <button type="button" id="sendDepositBtn" class="btn btn-info mt-3">
             💬 Gửi yêu cầu đặt cọc
         </button>
-    </div>
+    </div> *@
 
     <div class="mt-4">
         <button type="submit"
@@ -325,7 +302,6 @@
 </div>
 
 <div id="depositInvoicesContainer" style="margin-top:15px;">
-    <!-- Danh sách hóa đơn sẽ hiển thị ở đây -->
 </div>
 
 <!-- Modal popup thêm hóa đơn -->
@@ -369,11 +345,9 @@
     </div>
 </div>
 
-<!-- Toast container -->
 <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 1080;">
 </div>
 
-<!-- Modal confirm dùng chung -->
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -392,10 +366,8 @@
     </div>
 </div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Hiển thị TempData bằng toast -->
 @if (!string.IsNullOrEmpty(errorMsg))
 {
     <script>
@@ -414,17 +386,15 @@
 }
 
 <script>
-    // --- TOAST HELPER ---
     function showToast(message, type = "info") {
         const container = document.getElementById("toastContainer");
         if (!container) return;
 
         const bgClass =
-    type === "success" ? "toast-success" :
-    type === "error"   ? "toast-error"   :
-    type === "warning" ? "toast-warning" :
-                         "toast-info";
-
+            type === "success" ? "toast-success" :
+            type === "error"   ? "toast-error"   :
+            type === "warning" ? "toast-warning" :
+                                 "toast-info";
 
         const toastEl = document.createElement("div");
         toastEl.className = `toast align-items-center notification-toast ${bgClass}`;
@@ -451,7 +421,6 @@
         });
     }
 
-    // --- CONFIRM MODAL HELPER ---
     let confirmCallback = null;
 
     function showConfirm(message, onYes) {
@@ -466,7 +435,6 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Gán sự kiện nút Đồng ý trong modal confirm
         const yesBtn = document.getElementById("confirmYesBtn");
         const confirmModalEl = document.getElementById("confirmModal");
 
@@ -479,7 +447,6 @@
             modal.hide();
         });
 
-        // --- Biến toàn cục ---
         const depositContainer = document.getElementById("depositInvoicesContainer");
         const viewInvoicesBtn = document.getElementById("viewDepositInvoicesBtn");
         const addDepositBtn = document.getElementById("addDepositBtn");
@@ -487,48 +454,44 @@
         const depositModal = new bootstrap.Modal(depositModalEl);
         const form = document.getElementById("depositForm");
         const saveBtn = document.getElementById("saveDepositBtn");
-        let invoices = []; // lưu danh sách hóa đơn hiện tại
-        let editingDepositId = null; // lưu id khi sửa
+        let invoices = [];
+        let editingDepositId = null;
 
         const API_BASE = "https://localhost:7096/api/ReservationDeposit";
 
-        // --- Hiển thị nút gửi yêu cầu đặt cọc ---
-        const depositCheck = document.getElementById("depositCheck");
+        // GỬI YÊU CẦU ĐẶT CỌC – không liên quan đến AssignTablesPost
         const sendBtn = document.getElementById("sendDepositBtn");
 
-        depositCheck.addEventListener("change", function () {
-            sendBtn.style.display = this.checked ? "inline-block" : "none";
-        });
+        if (sendBtn) {
+            sendBtn.addEventListener("click", async () => {
+                const depositAmount = document.getElementById("depositAmount").value;
+                if (!depositAmount || depositAmount <= 0) {
+                    showToast("Vui lòng nhập số tiền đặt cọc hợp lệ!", "warning");
+                    return;
+                }
 
-        sendBtn.addEventListener("click", async () => {
-            const depositAmount = document.getElementById("depositAmount").value;
-            if (!depositAmount || depositAmount <= 0) {
-                showToast("Vui lòng nhập số tiền đặt cọc hợp lệ!", "warning");
-                return;
-            }
+                const reservationId = "@reservation.ReservationId";
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
 
-            const reservationId = "@reservation.ReservationId";
-            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                try {
+                    const response = await fetch(`/ReservationStaff/SendDepositRequest`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "RequestVerificationToken": token
+                        },
+                        body: JSON.stringify({ reservationId, depositAmount })
+                    });
 
-            try {
-                const response = await fetch(`/ReservationStaff/SendDepositRequest`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "RequestVerificationToken": token
-                    },
-                    body: JSON.stringify({ reservationId, depositAmount })
-                });
+                    const result = await response.json();
+                    showToast(result.message || "Gửi yêu cầu đặt cọc thành công!", response.ok ? "success" : "error");
+                } catch (err) {
+                    console.error(err);
+                    showToast("Có lỗi khi gửi yêu cầu đặt cọc.", "error");
+                }
+            });
+        }
 
-                const result = await response.json();
-                showToast(result.message || "Gửi yêu cầu đặt cọc thành công!", response.ok ? "success" : "error");
-            } catch (err) {
-                console.error(err);
-                showToast("Có lỗi khi gửi yêu cầu đặt cọc.", "error");
-            }
-        });
-
-        // --- Lọc khu vực khi click vào thống kê ---
         document.querySelectorAll(".area-summary").forEach(summary => {
             summary.addEventListener("click", () => {
                 const areaId = summary.getAttribute("data-area-id");
@@ -538,7 +501,6 @@
             });
         });
 
-        // --- Lọc bàn ---
         const filterSelect = document.getElementById("filterSelect");
         filterSelect.addEventListener("change", () => {
             const value = filterSelect.value;
@@ -557,7 +519,6 @@
             });
         });
 
-        // --- Xem danh sách hóa đơn đặt cọc ---
         async function loadInvoices() {
             depositContainer.innerHTML = "<p>Đang tải danh sách hóa đơn...</p>";
             try {
@@ -615,14 +576,12 @@
 
         viewInvoicesBtn.addEventListener("click", loadInvoices);
 
-        // --- Mở modal thêm hóa đơn ---
         addDepositBtn.addEventListener("click", () => {
             editingDepositId = null;
             form.reset();
             depositModal.show();
         });
 
-        // --- Lưu hoặc cập nhật hóa đơn ---
         saveBtn.addEventListener("click", async () => {
             const formData = new FormData(form);
 
@@ -647,7 +606,6 @@
             }
         });
 
-        // --- Event delegation cho xóa/sửa hóa đơn ---
         depositContainer.addEventListener("click", (e) => {
             const btn = e.target;
 
@@ -682,7 +640,6 @@
             }
         });
 
-        // --- Confirm cho các button submit có data-confirm-message ---
         document.querySelectorAll(".confirm-submit").forEach(btn => {
             btn.addEventListener("click", function (e) {
                 e.preventDefault();

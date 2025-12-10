@@ -11,7 +11,10 @@ namespace BusinessAccessLayer.Services.Interfaces
 {
     public interface IReservationService
     {
+        Task<bool> HasExistingReservationAsync(string phone, DateTime date, string timeSlot);
         Task<Reservation> CreateReservationAsync(ReservationCreateDto dto);
+        Task AddDepositAsync(int reservationId, ReservationDeposit deposit);
+        Task UpdateReservationDepositStatusAsync(Reservation reservation);
         Task<object> GetPendingAndConfirmedReservationsAsync(
     string? status = null,
     DateTime? date = null,

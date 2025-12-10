@@ -29,6 +29,8 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<List<Reservation>> GetReservationsByCustomerAsync(int customerId);
         Task<int> GetPendingCountAsync();
         Task SaveChangesAsync();
+        Task<Reservation?> GetByIdAsync(int reservationId);
+        Task UpdateAsync(Reservation reservation);
     }
 
 }
