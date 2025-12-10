@@ -1,0 +1,245 @@
+﻿/**
+ * =====================================================
+ * CREATE PAGE - Create User (users/create.css)
+ * Styles specific to user creation page
+ * =====================================================
+ */
+
+/* ===== FORM LAYOUT ===== */
+#createUserForm .row {
+    margin-bottom: 0;
+}
+
+    #createUserForm .row .col-md-6 {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    #createUserForm .row:first-child .col-md-6:first-child {
+        padding-left: 0;
+    }
+
+    #createUserForm .row:first-child .col-md-6:last-child {
+        padding-right: 0;
+    }
+
+/* ===== FORM GROUPS ===== */
+#createUserForm .mb-3 {
+    margin-bottom: 1.25rem;
+}
+
+/* ===== TEMPORARY PASSWORD INPUT ===== */
+input[name="TemporaryPassword"] {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+
+    input[name="TemporaryPassword"]::placeholder {
+        font-family: system-ui, -apple-system, sans-serif;
+        letter-spacing: normal;
+    }
+
+/* ===== EMAIL NOTIFICATION CHECKBOX ===== */
+#createUserForm .form-check {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: var(--primary-50);
+    border-radius: 8px;
+    border: 1px solid var(--primary-200);
+}
+
+    #createUserForm .form-check:hover {
+        background-color: var(--primary-100);
+        border-color: var(--primary-300);
+    }
+
+/* ===== SIDEBAR GUIDANCE ===== */
+.col-lg-4 .card-custom {
+    position: sticky;
+    top: 1.5rem;
+}
+
+/* Role info display */
+.role-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    margin-top: 1rem;
+}
+
+.role-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem;
+    background-color: var(--neutral-gray-50);
+    border-radius: 8px;
+    border: 1px solid var(--neutral-gray-200);
+    transition: all 0.2s ease;
+}
+
+    .role-item:hover {
+        background-color: var(--primary-50);
+        border-color: var(--primary-300);
+        transform: translateX(2px);
+    }
+
+    .role-item .badge-custom {
+        flex-shrink: 0;
+    }
+
+    .role-item small {
+        flex: 1;
+        margin-left: 0.875rem;
+        font-size: 13px;
+        color: var(--neutral-gray-600);
+        line-height: 1.4;
+    }
+
+/* ===== INFO ALERT ===== */
+.info-card .alert-info h6 {
+    color: var(--primary-700);
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.info-card .alert-info ul {
+    margin-bottom: 0;
+    padding-left: 1.5rem;
+}
+
+.info-card .alert-info li {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+    .info-card .alert-info li:last-child {
+        margin-bottom: 0;
+    }
+
+/* ===== FORM BUTTONS ===== */
+#createUserForm .d-flex.gap-2 {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--neutral-gray-200);
+}
+
+/* ===== STATUS SELECT STYLING ===== */
+select[name="Status"] {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 3rem;
+}
+
+    /* Status option colors */
+    select[name="Status"] option[value="0"] {
+        color: #2E7D32;
+    }
+
+    select[name="Status"] option[value="1"] {
+        color: #C62828;
+    }
+
+    select[name="Status"] option[value="2"] {
+        color: #E65100;
+    }
+
+/* ===== ROLE SELECT STYLING ===== */
+select[name="RoleId"] {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 3rem;
+}
+
+/* ===== VALIDATION ===== */
+.form-control-custom.is-invalid {
+    border-color: var(--semantic-error-500);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23d32f2f' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z'/%3E%3Cpath d='M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 16px;
+    padding-right: 3rem;
+}
+
+    .form-control-custom.is-invalid:focus {
+        border-color: var(--semantic-error-500);
+        box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.1);
+    }
+
+.form-control-custom.is-valid {
+    border-color: var(--semantic-success-500);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%232e7d32' viewBox='0 0 16 16'%3E%3Cpath d='M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 16px;
+    padding-right: 3rem;
+}
+
+    .form-control-custom.is-valid:focus {
+        border-color: var(--semantic-success-500);
+        box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+    }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .row > .col-lg-8,
+    .row > .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .col-lg-4 .card-custom {
+        position: static;
+        margin-top: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #createUserForm .row .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    #createUserForm .mb-3 {
+        margin-bottom: 1rem;
+    }
+
+    .role-info {
+        gap: 0.625rem;
+    }
+
+    .role-item {
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    #createUserForm .form-check {
+        padding: 0.875rem;
+    }
+
+    #createUserForm .d-flex.gap-2 {
+        flex-direction: column;
+    }
+
+        #createUserForm .d-flex.gap-2 a,
+        #createUserForm .d-flex.gap-2 button {
+            width: 100%;
+        }
+
+    .role-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+        .role-item small {
+            margin-left: 0;
+        }
+}

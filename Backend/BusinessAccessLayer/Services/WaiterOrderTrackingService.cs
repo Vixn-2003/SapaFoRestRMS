@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using BusinessAccessLayer.DTOs.Waiter;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
@@ -19,13 +20,33 @@ namespace BusinessAccessLayer.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null)
+        public async Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null, List<int>? tableIds = null)
         {
             var now = DateTime.Now;
             var result = new WaiterOrderTrackingDto();
 
             // Lấy tất cả active orders với order details
-            var activeOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            var allActiveOrders = await _unitOfWork.Orders.GetActiveOrdersAsync();
+            
+            // Filter theo tableIds nếu có
+            List<Order> activeOrders;
+            if (tableIds != null && tableIds.Any())
+            {
+                activeOrders = allActiveOrders.Where(order =>
+                {
+                    // Lấy tableIds từ reservation
+                    var reservationTableIds = order.Reservation?.ReservationTables?
+                        .Select(rt => rt.TableId)
+                        .ToList() ?? new List<int>();
+                    
+                    // Kiểm tra xem có bàn nào trong danh sách filter không
+                    return reservationTableIds.Any(tableId => tableIds.Contains(tableId));
+                }).ToList();
+            }
+            else
+            {
+                activeOrders = allActiveOrders;
+            }
 
             var allItems = new List<OrderTrackingItemDto>();
             var orderGroups = new Dictionary<int, OrderTrackingGroupDto>();
@@ -94,53 +115,113 @@ namespace BusinessAccessLayer.Services
                         }
                     }
 
-                    var item = new OrderTrackingItemDto
+                    // ✅ Nếu là combo và đã có OrderComboItems → sổ ra từng món trong combo
+                    if (orderDetail.ComboId.HasValue &&
+                        orderDetail.OrderComboItems != null &&
+                        orderDetail.OrderComboItems.Any())
                     {
-                        OrderDetailId = orderDetail.OrderDetailId,
-                        OrderId = order.OrderId,
-                        MenuItemName = orderDetail.MenuItem?.Name ?? orderDetail.Combo?.Name ?? "N/A",
-                        Quantity = orderDetail.Quantity,
-                        Status = status,
-                        Notes = orderDetail.Notes,
-                        IsUrgent = orderDetail.IsUrgent,
-                        OrderTime = orderDetail.CreatedAt,
-                        WaitingMinutes = waitingMinutes,
-                        StartedAt = orderDetail.StartedAt,
-                        ReadyAt = orderDetail.ReadyAt,
-                        ServedAt = isDone ? (orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null, // Nếu Done, dùng ReadyAt hoặc CreatedAt
-                        CanCancel = canCancel,
-                        CanReturn = false,
-                        CanRequestUrgent = canRequestUrgent,
-                        IsSplit = isSplit
-                    };
+                        foreach (var orderComboItem in orderDetail.OrderComboItems)
+                        {
+                            var mi = orderComboItem.MenuItem ?? orderDetail.MenuItem;
+                            var menuItemName = mi?.Name
+                                ?? orderDetail.Combo?.Name
+                                ?? "Combo item";
 
-                    allItems.Add(item);
-                    group.Items.Add(item);
+                            var itemQuantity = orderDetail.Quantity * orderComboItem.Quantity;
 
-                    // Đếm theo status
-                    if (statusLower.Contains("pending") || statusLower.Contains("chờ"))
+                            // Trạng thái riêng theo từng món con
+                            var comboStatus = (orderComboItem.Status ?? status).Trim();
+                            var comboStatusLower = comboStatus.ToLower();
+                            var normalizedComboStatus = NormalizeStatus(comboStatus);
+                            var comboIsDone = comboStatusLower.Contains("done") ||
+                                              comboStatusLower.Contains("hoàn thành") ||
+                                              comboStatusLower.Contains("xong");
+
+                            // Quyền Hủy / Làm gấp theo trạng thái món con
+                            var canCancelItem = normalizedComboStatus == "Pending";
+                            var canRequestUrgentItem = normalizedComboStatus != "Done";
+
+                            var comboItem = new OrderTrackingItemDto
+                            {
+                                OrderDetailId = orderDetail.OrderDetailId,
+                                OrderComboItemId = orderComboItem.OrderComboItemId,
+                                OrderId = order.OrderId,
+                                MenuItemName = menuItemName,
+                                Quantity = itemQuantity,
+                                Status = comboStatus,
+                                Notes = orderComboItem.Notes ?? orderDetail.Notes,
+                                IsUrgent = orderComboItem.IsUrgent || orderDetail.IsUrgent,
+                                OrderTime = orderDetail.CreatedAt,
+                                WaitingMinutes = waitingMinutes,
+                                StartedAt = orderComboItem.StartedAt ?? orderDetail.StartedAt,
+                                ReadyAt = orderComboItem.ReadyAt ?? orderDetail.ReadyAt,
+                                ServedAt = comboIsDone ? (orderComboItem.ReadyAt ?? orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null,
+                                CanCancel = canCancelItem,
+                                CanReturn = false,
+                                CanRequestUrgent = canRequestUrgent && canRequestUrgentItem,
+                                IsSplit = isSplit
+                            };
+
+                            allItems.Add(comboItem);
+                            group.Items.Add(comboItem);
+                        }
+                    }
+                    else
                     {
+                        // Món lẻ (không phải combo) → giữ nguyên logic cũ
+                        var item = new OrderTrackingItemDto
+                        {
+                            OrderDetailId = orderDetail.OrderDetailId,
+                            OrderId = order.OrderId,
+                            MenuItemName = orderDetail.MenuItem?.Name ?? orderDetail.Combo?.Name ?? "N/A",
+                            Quantity = orderDetail.Quantity,
+                            Status = status,
+                            Notes = orderDetail.Notes,
+                            IsUrgent = orderDetail.IsUrgent,
+                            OrderTime = orderDetail.CreatedAt,
+                            WaitingMinutes = waitingMinutes,
+                            StartedAt = orderDetail.StartedAt,
+                            ReadyAt = orderDetail.ReadyAt,
+                            ServedAt = isDone ? (orderDetail.ReadyAt ?? orderDetail.CreatedAt) : null, // Nếu Done, dùng ReadyAt hoặc CreatedAt
+                            CanCancel = canCancel,
+                            CanReturn = false,
+                            CanRequestUrgent = canRequestUrgent,
+                            IsSplit = isSplit
+                        };
+
+                        allItems.Add(item);
+                        group.Items.Add(item);
+                    }
+                }
+            }
+
+            // Tính lại counters dựa trên từng item (bao gồm món lẻ và từng món trong combo)
+            result.TotalCount = allItems.Count;
+
+            foreach (var item in allItems)
+            {
+                var normalizedStatus = NormalizeStatus(item.Status ?? "Pending");
+
+                switch (normalizedStatus)
+                {
+                    case "Pending":
                         result.WaitingKitchenCount++;
                         result.ProcessingCount++;
-                    }
-                    else if (statusLower.Contains("cooking") || statusLower.Contains("đang nấu") || 
-                             statusLower.Contains("processing") || statusLower.Contains("đang xử lý") ||
-                             statusLower.Contains("late") || statusLower.Contains("trễ"))
-                    {
+                        break;
+                    case "Cooking":
+                    case "Late":
                         result.CookingCount++;
                         result.ProcessingCount++;
-                    }
-                    else if (statusLower.Contains("ready") || statusLower.Contains("sẵn sàng"))
-                    {
+                        break;
+                    case "Ready":
                         result.ReadyCount++;
                         result.ProcessingCount++;
-                    }
-                    // Done items không đếm vào ProcessingCount, nhưng vẫn được thêm vào danh sách
+                        break;
+                    // Done/Cancelled/Returned không cộng vào ProcessingCount
                 }
             }
 
             result.OrderGroups = orderGroups.Values.ToList();
-            result.TotalCount = allItems.Count;
 
             return result;
         }
@@ -159,35 +240,98 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Kiểm tra status - chỉ có thể yêu cầu làm gấp khi chưa Done
-                var status = (orderDetail.Status ?? "Pending").Trim();
-                var normalizedStatus = NormalizeStatus(status);
-                if (normalizedStatus == "Done")
+                // Nếu có OrderComboItemId → đánh dấu urgent cho đúng món con trong combo
+                if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
                 {
-                    return new RequestUrgentResponse
+                    var orderComboItem = await _unitOfWork.OrderComboItems.GetByIdAsync(request.OrderComboItemId.Value);
+                    if (orderComboItem == null)
                     {
-                        Success = false,
-                        Message = "Món đã hoàn thành, không thể yêu cầu làm gấp"
-                    };
-                }
+                        return new RequestUrgentResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy món trong combo"
+                        };
+                    }
 
-                // Đánh dấu urgent
-                orderDetail.IsUrgent = true;
-                // Lưu lý do vào Notes (có thể tạo field riêng UrgentReason nếu cần)
-                if (!string.IsNullOrEmpty(request.Reason))
+                    var statusCombo = (orderComboItem.Status ?? "Pending").Trim();
+                    var normalizedComboStatus = NormalizeStatus(statusCombo);
+                    if (normalizedComboStatus == "Done")
+                    {
+                        return new RequestUrgentResponse
+                        {
+                            Success = false,
+                            Message = "Món trong combo đã hoàn thành, không thể yêu cầu làm gấp"
+                        };
+                    }
+
+                    // Toggle urgent: nếu đang urgent thì hủy, nếu chưa thì bật
+                    if (orderComboItem.IsUrgent)
+                    {
+                        orderComboItem.IsUrgent = false;
+                        // Xóa các tag [LÀM GẤP: ...] khỏi ghi chú
+                        orderComboItem.Notes = CleanUrgentNotes(orderComboItem.Notes);
+                    }
+                    else
+                    {
+                        orderComboItem.IsUrgent = true;
+                        var baseNotes = CleanUrgentNotes(orderComboItem.Notes) ?? string.Empty;
+                        if (!string.IsNullOrEmpty(request.Reason))
+                        {
+                            orderComboItem.Notes = $"{baseNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                        else
+                        {
+                            orderComboItem.Notes = baseNotes;
+                        }
+                    }
+
+                    await _unitOfWork.OrderComboItems.UpdateAsync(orderComboItem);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                else
                 {
-                    var currentNotes = orderDetail.Notes ?? "";
-                    orderDetail.Notes = $"{currentNotes} [LÀM GẤP: {request.Reason}]".Trim();
-                }
+                    // Món lẻ hoặc combo nhưng chưa chọn món con cụ thể → đánh dấu urgent cấp OrderDetail
+                    var status = (orderDetail.Status ?? "Pending").Trim();
+                    var normalizedStatus = NormalizeStatus(status);
+                    if (normalizedStatus == "Done")
+                    {
+                        return new RequestUrgentResponse
+                        {
+                            Success = false,
+                            Message = "Món đã hoàn thành, không thể yêu cầu làm gấp"
+                        };
+                    }
 
-                await _unitOfWork.SaveChangesAsync();
+                    // Toggle urgent cho món lẻ / dòng combo
+                    if (orderDetail.IsUrgent)
+                    {
+                        orderDetail.IsUrgent = false;
+                        orderDetail.Notes = CleanUrgentNotes(orderDetail.Notes);
+                    }
+                    else
+                    {
+                        orderDetail.IsUrgent = true;
+                        var baseNotes = CleanUrgentNotes(orderDetail.Notes) ?? string.Empty;
+                        if (!string.IsNullOrEmpty(request.Reason))
+                        {
+                            orderDetail.Notes = $"{baseNotes} [LÀM GẤP: {request.Reason}]".Trim();
+                        }
+                        else
+                        {
+                            orderDetail.Notes = baseNotes;
+                        }
+                    }
+
+                    await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                    await _unitOfWork.SaveChangesAsync();
+                }
 
                 // TODO: Gửi SignalR notification cho bếp
 
                 return new RequestUrgentResponse
                 {
                     Success = true,
-                    Message = "Đã yêu cầu làm gấp thành công"
+                    Message = "Đã cập nhật trạng thái làm gấp"
                 };
             }
             catch (Exception ex)
@@ -198,6 +342,22 @@ namespace BusinessAccessLayer.Services
                     Message = $"Lỗi: {ex.Message}"
                 };
             }
+        }
+
+        /// <summary>
+        /// Loại bỏ tất cả các đoạn tag [LÀM GẤP: ...] khỏi ghi chú để tránh bị nối nhiều lần.
+        /// Giữ lại các phần ghi chú khác của waiter.
+        /// </summary>
+        private string? CleanUrgentNotes(string? notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+            {
+                return notes;
+            }
+
+            // Xóa các đoạn " [LÀM GẤP: ...]" (tiếng Việt, có thể có khoảng trắng trước)
+            var cleaned = Regex.Replace(notes, @"\s*\[LÀM GẤP:[^\]]*\]", string.Empty, RegexOptions.IgnoreCase);
+            return cleaned.Trim();
         }
 
         public async Task<CancelOrderDetailResponse> CancelOrderDetailAsync(CancelOrderDetailDto request)
@@ -264,6 +424,43 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
+                // Nếu có OrderComboItemId → xử lý theo từng món trong combo
+                if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
+                {
+                    var comboItem = await _unitOfWork.OrderComboItems.GetByIdWithMenuItemAsync(request.OrderComboItemId.Value);
+                    if (comboItem == null)
+                    {
+                        return new MarkAsServedResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy món trong combo"
+                        };
+                    }
+
+                    var status = (comboItem.Status ?? "Pending").Trim();
+                    var normalizedStatus = NormalizeStatus(status);
+                    if (normalizedStatus != "Ready")
+                    {
+                        return new MarkAsServedResponse
+                        {
+                            Success = false,
+                            Message = "Chỉ có thể lấy món khi món trong combo đã sẵn sàng"
+                        };
+                    }
+
+                    // Đơn giản: đánh dấu món con trong combo là Done (đã phục vụ)
+                    comboItem.Status = "Done";
+                    await _unitOfWork.OrderComboItems.UpdateAsync(comboItem);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return new MarkAsServedResponse
+                    {
+                        Success = true,
+                        Message = "Đã đánh dấu món trong combo đã phục vụ"
+                    };
+                }
+
+                // Món lẻ (không phải combo) → giữ nguyên logic cũ
                 var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
                 if (orderDetail == null)
                 {
@@ -275,8 +472,8 @@ namespace BusinessAccessLayer.Services
                 }
 
                 // Kiểm tra status - chỉ có thể đánh dấu đã phục vụ khi món đã Ready
-                var status = (orderDetail.Status ?? "Pending").Trim();
-                var statusLower = status.ToLower();
+                var statusDetail = (orderDetail.Status ?? "Pending").Trim();
+                var statusLower = statusDetail.ToLower();
                 
                 if (!statusLower.Contains("ready") && !statusLower.Contains("sẵn sàng"))
                 {
@@ -360,6 +557,7 @@ namespace BusinessAccessLayer.Services
         // Helper methods
         private string GetTableNumber(Order order)
         {
+            // Ưu tiên: lấy số bàn từ ReservationTables (đặt bàn)
             if (order.Reservation != null && order.Reservation.ReservationTables != null)
             {
                 var reservationTable = order.Reservation.ReservationTables
@@ -368,8 +566,23 @@ namespace BusinessAccessLayer.Services
                 {
                     return reservationTable.Table.TableNumber ?? "N/A";
                 }
+
+                // Fallback: tên khách trong reservation
+                var reservationCustomer = order.Reservation.Customer?.User?.FullName;
+                if (!string.IsNullOrEmpty(reservationCustomer))
+                {
+                    return reservationCustomer;
+                }
             }
-            return "N/A";
+
+            // Tiếp theo: tên khách của order trực tiếp (walk-in)
+            if (order.Customer != null && order.Customer.User != null)
+            {
+                return order.Customer.User.FullName ?? "Khách";
+            }
+
+            // Cuối cùng: hiển thị theo loại order
+            return order.OrderType ?? "N/A";
         }
 
         private string GetAreaName(Order order)

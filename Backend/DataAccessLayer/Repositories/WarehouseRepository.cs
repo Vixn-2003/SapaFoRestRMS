@@ -59,5 +59,18 @@ namespace DataAccessLayer.Repositories
         {
             throw new NotImplementedException();
         }
+
+        public async Task<IEnumerable<InventoryBatch>> GetBatchesByWarehouseIdAsync(int warehouseId)
+        {
+            return await _context.InventoryBatches
+                .Include(b => b.Ingredient)
+                    .ThenInclude(i => i.Unit)
+                .Include(b => b.Warehouse)
+                .Include(b => b.PurchaseOrderDetail)
+                    .ThenInclude(pod => pod.PurchaseOrder)
+                .Where(b => b.WarehouseId == warehouseId && b.IsActive)
+                .OrderByDescending(b => b.CreatedAt)
+                .ToListAsync();
+        }
     }
 }

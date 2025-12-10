@@ -16,15 +16,25 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         /// <summary>
-        /// GET: api/WaiterOrderTracking
+        /// GET: api/WaiterOrderTracking?tableIds=1,2,3
         /// Lấy danh sách orders để theo dõi tiến độ phục vụ
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetOrderTracking([FromQuery] int? waiterUserId = null)
+        public async Task<IActionResult> GetOrderTracking([FromQuery] int? waiterUserId = null, [FromQuery] string? tableIds = null)
         {
             try
             {
-                var result = await _service.GetOrderTrackingAsync(waiterUserId);
+                List<int>? tableIdList = null;
+                if (!string.IsNullOrWhiteSpace(tableIds))
+                {
+                    tableIdList = tableIds.Split(',')
+                        .Select(id => int.TryParse(id.Trim(), out var tableId) ? tableId : (int?)null)
+                        .Where(id => id.HasValue)
+                        .Select(id => id!.Value)
+                        .ToList();
+                }
+                
+                var result = await _service.GetOrderTrackingAsync(waiterUserId, tableIdList);
                 return Ok(new { success = true, data = result });
             }
             catch (Exception ex)

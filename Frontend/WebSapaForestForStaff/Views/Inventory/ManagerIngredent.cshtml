@@ -1,10 +1,34 @@
 ﻿@using WebSapaForestForStaff.DTOs;
 @using WebSapaForestForStaff.DTOs.Inventory;
+@using System.Security.Claims
+
 @{
     Layout = "_LayoutInventory";
-    ViewData["Title"] = "Quản Lý Nhập Hàng";
-}
+    ViewData["Title"] = "Quản lý mặt hàng";
 
+    // ✅ LẤY THÔNG TIN TỪ CLAIMS
+    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+    var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Không xác định";
+    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+    var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    var userPhone = User.FindFirst(ClaimTypes.MobilePhone)?.Value ?? ""; // ✅ THÊM DÒNG NÀY
+
+    // ✅ LẤY POSITIONS (nếu có)
+    var positionsJson = User.FindFirst("Positions")?.Value;
+    var userPosition = "Nhân viên kho";
+    if (!string.IsNullOrEmpty(positionsJson))
+    {
+        try
+        {
+            var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsJson);
+            userPosition = positions != null && positions.Any() ? string.Join(", ", positions) : "Nhân viên";
+        }
+        catch
+        {
+            userPosition = "Nhân viên kho";
+        }
+    }
+}
 @model WebSapaForestForStaff.DTOs.InventoryPagedViewModel
 
 <style>
@@ -34,8 +58,8 @@
         background: white;
         border-radius: 0.5rem;
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
     }
 
     .header-title {
@@ -160,7 +184,7 @@
             position: sticky;
             top: 0;
             z-index: 10;
-            background-color: #f9fafb;
+            background-color: #000000;
             border-bottom: 1px solid #e5e7eb;
         }
 
@@ -169,7 +193,7 @@
         text-align: center;
         font-size: 0.75rem;
         font-weight: 500;
-        color: #6b7280;
+        color: #ffffff;
         text-transform: uppercase;
         letter-spacing: 0.05em;
     }
@@ -795,7 +819,7 @@
         border-radius: 0 0 12px 12px;
     }
 
-  /* Trạng thái nguyên liệu */
+  /* Trạng thái mặt hàng */
 .status-badge {
     padding: 0.4rem 0.8rem;
     border-radius: 0.375rem;
@@ -1272,7 +1296,7 @@
         border-radius: 0 0 12px 12px;
     }
 
-  /* Trạng thái nguyên liệu */
+  /* Trạng thái mặt hàng */
 .status-badge {
     padding: 0.4rem 0.8rem;
     border-radius: 0.375rem;
@@ -2147,39 +2171,6 @@
 }
 
 
-
-/* ===== DASHBOARD CARDS ===== */
-.dashboard-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
-
-.dashboard-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-}
-
-.dashboard-card:hover::before {
-    transform: translateX(0);
-}
-
-.dashboard-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.25) !important;
-}
-
-.dashboard-card:active {
-    transform: translateY(-4px);
-}
-
 /* ===== FILTER SHORTCUT BUTTONS ===== */
 .filter-shortcut-btn {
     padding: 0.875rem 1.5rem;
@@ -2270,6 +2261,179 @@
     transform: translateX(4px);
 }
 
+    /* ===== STYLE CHO SELECT SẮP XẾP ===== */
+    #sortBySelect,
+    #sortOrderSelect {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        #sortBySelect:hover,
+        #sortOrderSelect:hover {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        #sortBySelect:focus,
+        #sortOrderSelect:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+
+        /* ===== LAYOUT 2 CỘT ===== */
+.main-content-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@@media (max-width: 1400px) {
+    .main-content-wrapper {
+        grid-template-columns: 1fr;
+    }
+    
+    .alert-panel {
+        order: -1;
+    }
+}
+
+/* ===== BẢNG CẢNH BÁO ===== */
+.alert-panel {
+    position: sticky;
+    top: 1rem;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+    .alert-panel-header {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        padding: 1.25rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .alert-panel-header-content {
+        flex: 1;
+    }
+
+    .alert-panel-header h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.125rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert-panel-header p {
+        margin: 0;
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+
+.alert-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.alert-item {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    border-left: 4px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.alert-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.alert-item.out-of-stock {
+    background: #f3f4f6;
+    border-color: #1f2937;
+}
+
+.alert-item.low-stock {
+    background: #fee2e2;
+    border-color: #dc2626;
+}
+
+.alert-item.below-reorder {
+    background: #fed7aa;
+    border-color: #ea580c;
+}
+
+.alert-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.alert-item-code {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #1f2937;
+}
+
+.alert-item-name {
+    font-size: 0.875rem;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+}
+
+.alert-item-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+}
+
+.alert-quantity {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.alert-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9ca3af;
+}
+
+.alert-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+    .alert-item.urgent-restock {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left: 4px solid #f59e0b;
+    }
+
+        .alert-item.urgent-restock:hover {
+            background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+            transform: translateX(4px);
+        }
+
+    .status-badge.status-urgent-restock {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #f59e0b;
+        font-weight: 700;
+    }
 </style>
 
 <div class="container">
@@ -2302,67 +2466,12 @@
             </div>
         }
         <div class="card">
-            <h1 class="header-title">Danh Sách Nguyên liệu</h1>
-            <p class="header-subtitle">Quản lý thông tin nguyên liệu</p>
+            <h1 class="header-title">Quản lý mặt hàng</h1>
+            <p class="header-subtitle">Quản lý thông tin mặt hàng</p>
         </div>
-
-        <!-- ===== DASHBOARD STATS ===== -->
-        <div id="dashboardStats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
-            <!-- Card 1: Hết hàng -->
-            <div class="dashboard-card" style="background: linear-gradient(135deg, #1f2937 0%, #111827 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;" onclick="filterByStatus('out-of-stock')">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <p style="color: #f3f4f6; font-size: 0.875rem; font-weight: 500; margin: 0;">Hết hàng</p>
-                        <p id="outOfStockCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 50%;">
-                        <i class="fas fa-box-open" style="font-size: 1.75rem; color: #f3f4f6;"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 2: Sắp hết hàng -->
-            <div class="dashboard-card" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); cursor: pointer;" onclick="filterByStatus('low-stock')">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <p style="color: #fee2e2; font-size: 0.875rem; font-weight: 500; margin: 0;">Sắp hết hàng</p>
-                        <p id="lowStockCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 50%;">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 1.75rem; color: white;"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 3: Sắp hết hạn -->
-            <div class="dashboard-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); cursor: pointer;" onclick="filterByStatus('expiring-soon')">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <p style="color: #fef3c7; font-size: 0.875rem; font-weight: 500; margin: 0;">Sắp hết hạn</p>
-                        <p id="expiringSoonCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 50%;">
-                        <i class="fas fa-clock" style="font-size: 1.75rem; color: white;"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 4: Hết hạn -->
-            <div class="dashboard-card" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); cursor: pointer;" onclick="filterByStatus('expired')">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <p style="color: #ede9fe; font-size: 0.875rem; font-weight: 500; margin: 0;">Hết hạn</p>
-                        <p id="expiredCount" style="color: white; font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 0 0;">0</p>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 50%;">
-                        <i class="fas fa-times-circle" style="font-size: 1.75rem; color: white;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        
         <!-- ===== FILTER SHORTCUTS ===== -->
-        <div id="filterShortcuts" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-radius: 0.75rem; border: 1px solid #e5e7eb;">
+        <div id="filterShortcuts" style="display: flex; gap: 0.75rem; flex-wrap: wrap; padding: 1.25rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-radius: 0.75rem; border: 1px solid #e5e7eb;">
             <button class="filter-shortcut-btn active" data-filter="all" onclick="filterByStatus('all')">
                 <i class="fas fa-th-large"></i>
                 <span>Tất cả</span>
@@ -2402,61 +2511,79 @@
 
         <form method="post" asp-controller="ManagerIngredent" asp-action="FilterIngredent" class="card" id="filterForm">
 
-            <!-- Container chính chia 2 cột -->
-            <div style="grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1rem;">
 
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 0; align-items: end;">
 
+                <!-- Box 1: Tìm kiếm -->
                 <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
                     <h3 style="font-size: 1rem; font-weight: 600; color: #1e40af; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                         <i class="fas fa-search"></i>
-                        Tìm kiếm & Thống kê theo thời gian
+                        Tìm kiếm
                     </h3>
-
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        <!-- Ô tìm kiếm -->
-                        <div class="form-group" style="margin-bottom: 0;">
+                    <div style="display: flex; gap: 0.75rem; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; flex: 1;">
                             <label class="form-label">
-                                <i class="fas fa-box"></i> Tìm kiếm nguyên liệu
+                                <i class="fas fa-box"></i> Tìm kiếm mặt hàng
                             </label>
                             <input type="text"
-                                   placeholder="Nhập tên nguyên liệu hoặc mã nguyên liệu"
+                                   placeholder="Nhập tên mặt hàng hoặc mã mặt hàng"
                                    name="searchIngredent"
                                    class="form-input"
                                    value="@Model.SearchIngredent" />
                         </div>
+                        <button type="submit" class="btn btn-primary" style="height: 42px; flex-shrink: 0;">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
                     </div>
                 </div>
 
-               
-            </div>
-
-            <!-- Nút thao tác -->
-            <div class="button-group">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-filter"></i> Tìm Kiếm
-                </button>
-                <button type="button" class="btn" style="background-color: #6b7280; color: white;" onclick="resetFilters()">
-                    <i class="fas fa-redo"></i> Đặt lại bộ lọc
-                </button>
-                <a href="/ImportInventory" class="btn btn-success">
-                    <i class="fas fa-plus"></i> Thêm nguyên liệu
-                </a>
+                <!-- Box 2: Sắp xếp -->
+                <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #10b981;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: #065f46; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-sort"></i>
+                        Sắp xếp danh sách
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- Sắp xếp theo -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-sort-amount-down"></i> Sắp xếp theo
+                            </label>
+                            <select id="sortBySelect" class="form-select" onchange="sortTable()">
+                                <option value="code">Mã mặt hàng</option>
+                                <option value="name">Tên mặt hàng</option>
+                                <option value="quantity">Số lượng tồn</option>
+                            </select>
+                        </div>
+                        <!-- Thứ tự -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-arrows-alt-v"></i> Thứ tự
+                            </label>
+                            <select id="sortOrderSelect" class="form-select" onchange="sortTable()">
+                                <option value="asc">Tăng dần</option>
+                                <option value="desc">Giảm dần</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
         </form>
-
-        <div class="table-container">
+        <div class="main-content-wrapper">
+         <div>
+          <div class="table-container">
             <div class="table-wrapper">
                 <table class="table">
                     <thead>
                         <tr>
                             <th>STT</th>
-                            <th>Mã nguyên liệu</th>
-                            <th>Tên nguyên liệu</th>
+                            <th>Mã mặt hàng</th>
+                            <th>Tên mặt hàng</th>
                             <th>Đơn vị tính</th>
                             <th class="text-right">SL tồn</th>
-                            <th class="text-right">Tồn đầu kỳ</th>
+@*                             <th class="text-right">Tồn đầu kỳ</th>
                             <th class="text-right">SL nhập</th>
-                            <th class="text-right">SL xuất</th>
+                            <th class="text-right">SL xuất</th> *@
                             <th class="text-center">Trạng thái số lượng</th>
                             <th class="text-center">Trạng thái chất lượng</th>
                             <th class="text-center">Thao tác</th>
@@ -2469,7 +2596,7 @@
                                 <td colspan="10" style="text-align:center; padding:3rem; color:#6b7280;">
                                     <i class="fas fa-inbox" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
                                     <br>
-                                    <strong style="font-size:1.1rem; color:#374151;">Không tìm thấy nguyên liệu nào</strong>
+                                    <strong style="font-size:1.1rem; color:#374151;">Không tìm thấy mặt hàng nào</strong>
                                     <br>
                                     <span style="font-size:0.875rem;">Vui lòng thử lại với điều kiện tìm kiếm khác</span>
                                 </td>
@@ -2505,15 +2632,19 @@
                                     dataStatus = "expiring-soon";
                                 }
 
-                                <tr class="@rowClass ingredient-row" data-status="@dataStatus">
+                                        <tr class="@rowClass ingredient-row"
+                                            data-status="@dataStatus"
+                                            data-qty-excluding-expired="@item.QuantityExcludingExpired"
+                                            data-reorder-level="@(item.ReorderLevel ?? 0)"
+                                            data-need-urgent-restock="@item.NeedUrgentRestock.ToString().ToLower()">
                                     <td>@stt</td>
                                     <td>@item.IngredientCode</td>
                                     <td>@item.Name</td>
                                     <td>@(item.Unit?.UnitName ?? "---")</td>
                                     <td class="text-right">@item.TotalQuantity</td>
-                                    <td class="text-right">@item.OriginalQuantity</td>
+@*                                     <td class="text-right">@item.OriginalQuantity</td>
                                     <td class="text-right">@item.TotalImport</td>
-                                    <td class="text-right">@item.TotalExport</td>
+                                    <td class="text-right">@item.TotalExport</td> *@
                                     <td class="text-center">
                                         @* Trạng thái số lượng *@
 
@@ -2595,24 +2726,46 @@
                         }
                     </tbody>
                 </table>
+              </div>
             </div>
+          </div>
+            <!-- CỘT PHẢI: Bảng cảnh báo -->
+            <div class="alert-panel">
+                <div class="alert-panel-header">
+                    <div class="alert-panel-header-content">
+                        <h3>
+                            <i class="fas fa-exclamation-triangle"></i>
+                            mặt hàng cần nhập ngay
+                        </h3>
+                        <p>
+                            <span id="alertCount">0</span> mặt hàng cần chú ý
+                        </p>
+                    </div>
+                    <!-- ✅ THÊM BUTTON VÀO ĐÂY -->
+                    <a href="/ImportInventory" class="btn btn-success" style="padding: 0.75rem 1.25rem; font-size: 0.875rem; white-space: nowrap;">
+                        <i class="fas fa-plus"></i> Thêm mặt hàng
+                    </a>
+                </div>
 
-            
+                <div class="alert-panel-body" id="alertPanelBody">
+                    <!-- Render bằng JS -->
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Modal chi tiết nguyên liệu -->
+    <!-- Modal chi tiết mặt hàng -->
     <div id="ingredientModal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2><i class="fas fa-info-circle"></i> Chi tiết nguyên liệu</h2>
+                <h2><i class="fas fa-info-circle"></i> Chi tiết mặt hàng</h2>
                 <button id="closeModal" class="close-btn">&times;</button>
             </div>
 
             <div class="modal-body">
                 <div class="info-header">
                     <div class="info-header-content">
-                        <p><strong>Tên nguyên liệu:</strong> <span id="mName">---</span></p>
+                        <p><strong>Tên mặt hàng:</strong> <span id="mName">---</span></p>
                         <p><strong>Đơn vị tính:</strong> <span id="mUnit">---</span></p>
                         <p style="position: relative;">
                             <strong>Mức tối thiểu:</strong>
@@ -2620,7 +2773,7 @@
                             <span class="info-tooltip">
                                 <i class="fas fa-info-circle"></i>
                                 <span class="tooltip-text">
-                                    Đây là số lượng trung bình nguyên liệu này xuất ra trong 30 ngày gần nhất.
+                                    Đây là số lượng trung bình mặt hàng này xuất ra trong 30 ngày gần nhất.
                                 </span>
                             </span>
                         </p>
@@ -2714,7 +2867,7 @@
                     <p style="margin: 0; font-size: 0.875rem; color: #991b1b; line-height: 1.5;
                   display: flex; align-items: start; gap: 0.5rem;">
                         <i class="fas fa-exclamation-circle" style="margin-top: 0.125rem; flex-shrink: 0; font-size: 1rem;"></i>
-                        <span><strong>Lưu ý:</strong> Với các lô nguyên liệu hết hạn sử dụng nhưng vẫn có trạng thái đang sử dụng, hệ thống sẽ không trừ nguyên liệu để chất lượng nguyên liệu luôn được đảm bảo.</span>
+                        <span><strong>Lưu ý:</strong> Với các lô mặt hàng hết hạn sử dụng nhưng vẫn có trạng thái đang sử dụng, hệ thống sẽ không trừ mặt hàng để chất lượng mặt hàng luôn được đảm bảo.</span>
                     </p>
                 </div>
                 <button id="closeModalFooter" class="btn btn-danger" style="flex-shrink: 0;">
@@ -2724,13 +2877,13 @@
         </div>
     </div>
 
-    <!-- Modal chỉnh sửa nguyên liệu -->
+    <!-- Modal chỉnh sửa mặt hàng -->
     <div id="editIngredientModal" class="edit-modal-overlay">
         <div class="edit-modal-content">
             <div class="edit-modal-header">
                 <h2>
                     <i class="fas fa-edit"></i>
-                    Chỉnh sửa nguyên liệu
+                    Chỉnh sửa mặt hàng
                 </h2>
                 <button id="closeEditModal" class="close-btn">&times;</button>
             </div>
@@ -2741,7 +2894,7 @@
 
                     <div class="edit-form-group">
                         <label class="edit-form-label">
-                            <i class="fas fa-hashtag"></i> Mã nguyên liệu
+                            <i class="fas fa-hashtag"></i> Mã mặt hàng
                         </label>
                         <input type="text"
                                id="editIngredientCode"
@@ -2751,12 +2904,12 @@
 
                     <div class="edit-form-group">
                         <label class="edit-form-label">
-                            <i class="fas fa-box"></i> Tên nguyên liệu
+                            <i class="fas fa-box"></i> Tên mặt hàng
                         </label>
                         <input type="text"
                                id="editIngredientName"
                                class="edit-form-input"
-                               placeholder="Nhập tên nguyên liệu"
+                               placeholder="Nhập tên mặt hàng"
                                required>
                     </div>
 
@@ -2795,7 +2948,7 @@
             <div class="audit-modal-header">
                 <h2>
                     <i class="fas fa-clipboard-check"></i>
-                    Kiểm kê thực tế nguyên liệu
+                    Kiểm kê thực tế mặt hàng
                 </h2>
                 <button class="close-btn" onclick="closeAuditModal()">&times;</button>
             </div>
@@ -2805,7 +2958,7 @@
                 <div class="audit-section">
                     <h3 style="font-size: 1.125rem; font-weight: 700; color: #374151; margin-bottom: 1rem;">
                         <i class="fas fa-box" style="color: #9333ea;"></i>
-                        Thông tin lô nguyên liệu hiện tại
+                        Thông tin lô mặt hàng hiện tại
                     </h3>
                     <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #9333ea;">
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
@@ -2818,11 +2971,11 @@
                                     <div id="auditBatchCode" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; color: #9333ea;">---</div>
                                 </div>
                                 <div style="display: flex; align-items: start; gap: 0.75rem;">
-                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Mã nguyên liệu:</div>
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Mã mặt hàng:</div>
                                     <div id="auditIngredientCode" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px;">---</div>
                                 </div>
                                 <div style="display: flex; align-items: start; gap: 0.75rem;">
-                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Tên nguyên liệu:</div>
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Tên mặt hàng:</div>
                                     <div id="auditIngredientName" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">---</div>
                                 </div>
                                 <div style="display: flex; align-items: start; gap: 0.75rem;">
@@ -2835,7 +2988,7 @@
                             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                                 <div style="display: flex; align-items: start; gap: 0.75rem;">
                                     <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">
-                                         Hạn sử dụng:
+                                        Hạn sử dụng:
                                     </div>
                                     <div id="auditExpiryDate" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px;">---</div>
                                 </div>
@@ -2848,6 +3001,12 @@
                                         Thời gian kiểm kê:
                                     </div>
                                     <div id="auditDateTime" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; color: #7c3aed;">---</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">
+                                        <i class="fas fa-warehouse"></i> Thuộc kho:
+                                    </div>
+                                    <div id="auditWarehouse" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">---</div>
                                 </div>
                                 <div style="display: flex; align-items: start; gap: 0.75rem;">
                                     <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Tình trạng:</div>
@@ -2883,6 +3042,10 @@
                                             <input type="radio" name="auditType" value="removeAll" onchange="handleAuditTypeChange()">
                                             <span>Hủy tất cả</span>
                                         </label>
+                                        <label class="audit-radio-label">
+                                            <input type="radio" name="auditType" value="noChange" onchange="handleAuditTypeChange()">
+                                            <span>Không thay đổi</span>
+                                        </label>
                                     </div>
 
                                     <!-- Input số lượng -->
@@ -2898,7 +3061,130 @@
                                                step="any"
                                                oninput="updateAuditPreview()">
                                     </div>
+
+                                    <div style="margin-top: 1rem;">
+                                        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                            <i class="fas fa-calendar-alt" style="color: #f59e0b;"></i>
+                                            Ngày hết hạn mới (tùy chọn)
+                                        </label>
+                                        <input type="date"
+                                               id="auditNewExpiryDate"
+                                               class="audit-quantity-input"
+                                               style="width: 100%;">
+                                        <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+                                            <i class="fas fa-info-circle"></i>
+                                            Để trống nếu giữ nguyên hạn sử dụng hiện tại
+                                        </p>
+                                    </div>
                                 </div>
+
+                                <!-- Cột phải: Preview số lượng -->
+                                <div style="min-width: 280px; padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border-left: 4px solid #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 0.875rem; font-weight: 600; color: #92400e; margin-bottom: 0.75rem;">
+                                            <i class="fas fa-calculator" style="margin-right: 0.5rem;"></i>
+                                            Số lượng sau kiểm kê
+                                        </div>
+                                        <div id="auditPreviewQty" style="font-size: 2.5rem; font-weight: 800; color: #1f2937; margin-bottom: 0.5rem;">
+                                            0
+                                        </div>
+                                        <div id="auditDiffIndicator" style="font-size: 0.875rem; font-weight: 600; min-height: 1.25rem;">
+                                            <span style="color: #6b7280;">
+                                                <i class="fas fa-minus"></i> Không thay đổi
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Lý do kiểm kê (Full Width - Xuống dưới) -->
+                    <div class="audit-section">
+                        <div class="audit-reason-section" style="width: 100%;">
+                            <h3 style="font-size: 1.125rem; font-weight: 700; color: #92400e; margin-bottom: 1rem;">
+                                <i class="fas fa-comment-alt" style="margin-right: 0.5rem;"></i>
+                                Lý do kiểm kê
+                            </h3>
+                            <textarea id="auditReason"
+                                      class="audit-reason-textarea"
+                                      placeholder="Nhập lý do kiểm kê...&#10;Ví dụ: Hàng bị hư hỏng, Sai sót trong nhập liệu, Kiểm tra định kỳ, v.v."
+                                      style="width: 100%;"></textarea>
+                            <p style="font-size: 0.75rem; color: #92400e; margin-top: 0.5rem;">
+                                <i class="fas fa-info-circle"></i> Vui lòng mô tả rõ lý do thêm/hủy mặt hàng
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- 4. Thông tin xác nhận & Upload ảnh -->
+                <div class="audit-confirmer-section">
+                    <!-- Thông tin người xác nhận -->
+                    <div class="audit-confirmer-box">
+                        <label class="audit-checkbox-label">
+                            <input type="checkbox" id="useMyInfo" onchange="handleConfirmerCheckbox(this.checked)">
+                            <i class="fas fa-user"></i>
+                            <span>Sử dụng thông tin của tôi</span>
+                        </label>
+
+                        <div id="confirmerInfoForm" style="display: none;">
+                            <div class="audit-input-group">
+                                <label class="audit-input-label">
+                                    <i class="fas fa-user"></i> Tên người xác nhận
+                                </label>
+                                <input type="text" id="confirmerName" class="audit-input" readonly>
+                            </div>
+                            <div class="audit-input-group">
+                                <label class="audit-input-label">
+                                    <i class="fas fa-briefcase"></i> Chức vụ
+                                </label>
+                                <input type="text" id="confirmerPosition" class="audit-input" readonly>
+                            </div>
+                            <div class="audit-input-group">
+                                <label class="audit-input-label">
+                                    <i class="fas fa-phone"></i> Số điện thoại
+                                </label>
+                                <input type="tel" id="confirmerPhone" class="audit-input" readonly>
+                            </div>
+                        </div>
+
+                        <div id="confirmerPlaceholder" class="audit-placeholder">
+                            <i class="fas fa-user"></i>
+                            <p style="font-size: 0.875rem;">Tick checkbox để sử dụng thông tin của bạn</p>
+                        </div>
+                    </div>
+
+                    <!-- Upload hình ảnh -->
+                    <div class="audit-image-box">
+                        <h4 style="font-size: 1.125rem; font-weight: 700; color: #065f46; margin-bottom: 1rem;">
+                            <i class="fas fa-camera"></i> Hình ảnh chứng cứ
+                        </h4>
+                        <label for="auditImageUpload" class="audit-upload-area">
+                            <div id="imagePreviewContainer">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #10b981; margin-bottom: 0.5rem;"></i>
+                                <p style="color: #065f46; font-weight: 600;">Nhấn để tải lên hình ảnh</p>
+                                <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">PNG, JPG, JPEG (Max 5MB)</p>
+                            </div>
+                        </label>
+                        <input type="file" id="auditImageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="audit-modal-footer">
+                <button class="btn btn-danger" onclick="closeAuditModal()">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </button>
+                <button class="btn btn-success" id="submitAuditBtn" onclick="submitAudit()">
+                    <i class="fas fa-check-circle"></i> Xác nhận kiểm kê
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
 
@@ -2924,12 +3210,13 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         loadWarehouses();
         const alert = document.getElementById('alertMessage');
-    if (alert) {
-        setTimeout(() => closeAlert(), 5000);
-    }
+        if (alert) {
+            setTimeout(() => closeAlert(), 5000);
+        }
+
         const searchInput = document.querySelector('input[name="searchIngredent"]');
         const tableBody = document.querySelector('.table tbody');
         const modal = document.getElementById("ingredientModal");
@@ -2959,6 +3246,11 @@
         updateDashboard();
         currentStatusFilter = 'all';
 
+        // ✅ THÊM: Render bảng cảnh báo
+        renderAlertPanel();
+
+        // ✅ THÊM: Sắp xếp mặc định theo mã mặt hàng
+        sortTable();
     });
 
 
@@ -3219,7 +3511,7 @@
 
                 popup.remove();
             } catch (error) {
-                alert('Có lỗi xảy ra: ' + error.message);
+                showToast('Có lỗi xảy ra: ' + error.message);
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận';
             }
@@ -3283,6 +3575,50 @@
         setTimeout(() => {
             const msg = document.getElementById('successMsg');
             if (msg) msg.remove();
+        }, 3000);
+    }
+
+    // ✅ HÀM HIỂN THỊ THÔNG BÁO CHUNG (Thay thế alert)
+    function showToast(message, type = 'success') {
+        let backgroundColor, icon;
+
+        // Cấu hình màu sắc và icon dựa trên loại thông báo
+        switch (type) {
+            case 'error':
+                backgroundColor = '#ef4444'; // Đỏ
+                icon = '<i class="fas fa-times-circle"></i>';
+                break;
+            case 'warning':
+                backgroundColor = '#f59e0b'; // Cam
+                icon = '<i class="fas fa-exclamation-triangle"></i>';
+                break;
+            default: // success
+                backgroundColor = '#10b981'; // Xanh lá
+                icon = '<i class="fas fa-check-circle"></i>';
+                break;
+        }
+
+        const toastHtml = `
+            <div class="custom-toast" style="
+                position: fixed; top: 20px; right: 20px;
+                background: ${backgroundColor}; color: white;
+                padding: 1rem 1.5rem; border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 99999; animation: slideIn 0.3s ease-out;
+                display: flex; align-items: center; gap: 10px; font-weight: 500;">
+                ${icon} <span>${message}</span>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Tự động xóa sau 3 giây
+        const toast = document.body.lastElementChild;
+        setTimeout(() => {
+            if (toast && toast.classList.contains('custom-toast')) {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }
         }, 3000);
     }
 
@@ -3416,13 +3752,13 @@ function closeAlert() {
 
         // Validation
         if (!ingredientName) {
-            alert('Vui lòng nhập tên nguyên liệu!');
+            showToast('Vui lòng nhập tên mặt hàng!', 'warning'); // MỚI
             document.getElementById('editIngredientName').focus();
             return;
         }
 
-        if (!ingredientUnitId) { // ← Đổi tên biến
-            alert('Vui lòng chọn đơn vị tính!');
+        if (!ingredientUnitId) {
+            showToast('Vui lòng chọn đơn vị tính!', 'warning'); // MỚI
             document.getElementById('editIngredientUnit').focus();
             return;
         }
@@ -3453,7 +3789,7 @@ function closeAlert() {
             const result = await response.json();
 
             if (result.success) {
-                showSuccessMessage(result.message || 'Cập nhật nguyên liệu thành công!');
+                showSuccessMessage(result.message || 'Cập nhật mặt hàng thành công!');
                 closeEditIngredientModal();
                 setTimeout(() => {
                     window.location.reload();
@@ -3463,8 +3799,7 @@ function closeAlert() {
             }
 
         } catch (error) {
-            console.error('Error updating ingredient:', error);
-            alert('Có lỗi xảy ra: ' + error.message);
+            showToast('Có lỗi xảy ra: ' + error.message, 'error');
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
         }
@@ -3489,7 +3824,7 @@ function closeAlert() {
 
         const reorderLevel = button.getAttribute('data-reorder-level');
 
-        // Hiển thị thông tin nguyên liệu ngay lập tức
+        // Hiển thị thông tin mặt hàng ngay lập tức
         document.getElementById("mName").textContent = ingredientName || "---";
         document.getElementById("mUnit").textContent = ingredientUnit || "---";
 
@@ -3660,7 +3995,7 @@ function closeAlert() {
         const currentBatches = filteredBatches.slice(startIndex, endIndex);
 
         // ✅ KHÔNG CẬP NHẬT LẠI - Thông tin đã được set khi mở modal
-        // Tên nguyên liệu và đơn vị tính đã hiển thị từ function showIngredientDetailFromRow()
+        // Tên mặt hàng và đơn vị tính đã hiển thị từ function showIngredientDetailFromRow()
         // và không cần thay đổi khi filter/phân trang batch
 
         // Clear và render bảng
@@ -3870,7 +4205,7 @@ function closeAlert() {
                 <td colspan="11" style="text-align:center; padding:3rem; color:#6b7280;">
                     <i class="fas fa-filter" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
                     <br>
-                    <strong style="font-size:1.1rem; color:#374151;">Không có nguyên liệu nào phù hợp với bộ lọc</strong>
+                    <strong style="font-size:1.1rem; color:#374151;">Không có mặt hàng nào phù hợp với bộ lọc</strong>
                     <br>
                     <span style="font-size:0.875rem;">Vui lòng thay đổi điều kiện lọc</span>
                 </td>
@@ -3890,6 +4225,13 @@ function closeAlert() {
     function resetFilters() {
         document.getElementById('quantityStatusFilter').value = '';
         document.getElementById('qualityStatusFilter').value = '';
+
+        // ✅ RESET LẠI SẮP XẾP VỀ MẶC ĐỊNH
+        document.getElementById('sortBySelect').value = 'code';
+        document.getElementById('sortOrderSelect').value = 'asc';
+        currentSortBy = 'code';
+        currentSortOrder = 'asc';
+
         currentStatusFilter = 'all';
         filterByStatus('all');
     }
@@ -3993,9 +4335,12 @@ function closeAlert() {
 
     // Mock user data - TODO: thay bằng session data thật
     const currentUserData = {
-        name: 'Nguyễn Văn A',
-        position: 'Quản lý kho',
-        phone: '0912345678'
+        userId: '@userId',
+        name: '@userName',
+        email: '@userEmail',
+        role: '@userRole',
+        position: '@userPosition',
+        phone: '@userPhone'
     };
 
     function toggleAuditButtons() {
@@ -4033,28 +4378,23 @@ function closeAlert() {
 
     async function openAuditModal(batchId) {
         try {
-            // ✅ BƯỚC 1: Kiểm tra xem lô này có đơn kiểm kê đang xử lý không
+            // ✅ KIỂM TRA ĐƠN KIỂM KÊ ĐANG XỬ LÝ
             const checkResponse = await fetch(`/ManagerIngredent/CheckAuditStatus?batchId=${batchId}`);
-
             if (!checkResponse.ok) {
                 throw new Error('Không thể kiểm tra trạng thái đơn kiểm kê');
             }
-
             const checkResult = await checkResponse.json();
-
-            // ✅ BƯỚC 2: Nếu có đơn đang xử lý, hiển thị cảnh báo và dừng lại
             if (checkResult.hasUnprocessedAudit && checkResult.auditId) {
                 showAuditWarningPopup(checkResult.auditId);
-                return; // Dừng lại, không mở modal kiểm kê
+                return;
             }
 
-            // ✅ BƯỚC 3: Nếu không có đơn đang xử lý, tiếp tục mở modal như bình thường
             const modal = document.getElementById('auditModal');
             const ingredientModal = document.getElementById('ingredientModal');
-
             const row = document.querySelector(`tr[data-batch-id="${batchId}"]`);
+
             if (!row) {
-                alert('Không tìm thấy thông tin lô hàng');
+                showToast('Không tìm thấy thông tin lô hàng', 'error');
                 return;
             }
 
@@ -4066,6 +4406,11 @@ function closeAlert() {
             const quantity = parseVietnameseNumber(row.cells[4].textContent);
             const statusBadge = row.cells[5].innerHTML;
 
+            // ✅ LẤY THÔNG TIN KHO TỪ SELECT
+            const warehouseSelect = row.querySelector('.warehouse-select');
+            const warehouseName = warehouseSelect.options[warehouseSelect.selectedIndex].text;
+            const warehouseId = warehouseSelect.value;
+
             // Lấy thông tin từ modal ingredient
             const ingredientCode = ingredientModal.getAttribute('data-ingredient-code');
             const ingredientName = ingredientModal.getAttribute('data-ingredient-name');
@@ -4074,6 +4419,14 @@ function closeAlert() {
 
             const currentDateTime = new Date();
             const formattedDateTime = formatDateTime(currentDateTime);
+
+            // ✅ PARSE NGÀY TẠO TỪ STRING "DD/MM/YYYY" SANG DATE OBJECT
+            const createdDateParts = createdDate.split('/');
+            const createdDateObj = new Date(
+                parseInt(createdDateParts[2]), // year
+                parseInt(createdDateParts[1]) - 1, // month (0-indexed)
+                parseInt(createdDateParts[0]) // day
+            );
 
             // Lưu thông tin batch hiện tại
             currentAuditBatch = {
@@ -4086,6 +4439,9 @@ function closeAlert() {
                 quantity: quantity,
                 expiryDate: expiryDate,
                 createdDate: createdDate,
+                createdDateObj: createdDateObj, 
+                warehouseName: warehouseName, 
+                warehouseId: warehouseId, 
                 status: statusBadge,
                 auditDateTime: currentDateTime
             };
@@ -4099,6 +4455,14 @@ function closeAlert() {
             document.getElementById('auditDateTime').textContent = formattedDateTime;
             document.getElementById('auditCurrentQty').textContent = formatNumber(quantity);
             document.getElementById('auditStatus').innerHTML = statusBadge;
+
+            // ✅ HIỂN THỊ THÔNG TIN KHO
+            document.getElementById('auditWarehouse').textContent = warehouseName;
+
+            // ✅ SET MIN DATE CHO INPUT NGÀY HẾT HẠN
+            const minDateStr = createdDateObj.toISOString().split('T')[0]; // "YYYY-MM-DD"
+            document.getElementById('auditNewExpiryDate').setAttribute('min', minDateStr);
+            document.getElementById('auditNewExpiryDate').value = ''; // Reset value
 
             // Cập nhật preview ban đầu
             document.getElementById('auditPreviewQty').textContent = formatNumber(quantity);
@@ -4116,7 +4480,7 @@ function closeAlert() {
 
         } catch (error) {
             console.error('Error opening audit modal:', error);
-            alert('Có lỗi xảy ra khi kiểm tra trạng thái kiểm kê: ' + error.message);
+            showToast('Lỗi kiểm tra trạng thái: ' + error.message, 'error');
         }
     }
 
@@ -4127,7 +4491,7 @@ function closeAlert() {
                 <div class="confirm-content" style="max-width: 500px;">
                     <h3 style="color: #dc2626; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
                         <i class="fas fa-exclamation-triangle" style="font-size: 2rem;"></i>
-                        Lô nguyên liệu đang có đơn kiểm kê chưa xử lý
+                        Lô mặt hàng đang có đơn kiểm kê chưa xử lý
                     </h3>
                     <div style="background: #fef3c7; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 1.5rem;">
                         <p style="color: #92400e; line-height: 1.6; margin: 0;">
@@ -4246,7 +4610,7 @@ function closeAlert() {
         const quantityInput = document.getElementById('auditQuantityInput');
         const typeLabel = document.getElementById('auditTypeLabel');
 
-        if (auditType === 'removeAll') {
+        if (auditType === 'removeAll' || auditType === 'noChange') {
             quantityInput.style.display = 'none';
         } else {
             quantityInput.style.display = 'block';
@@ -4271,30 +4635,28 @@ function closeAlert() {
             newQuantity = Math.max(0, currentAuditBatch.quantity - quantity);
         } else if (auditType === 'removeAll') {
             newQuantity = 0;
+        } else if (auditType === 'noChange') {
+            // ✅ KHÔNG THAY ĐỔI - GIỮ NGUYÊN
+            newQuantity = currentAuditBatch.quantity;
         }
 
         const diff = newQuantity - currentAuditBatch.quantity;
         const qtyCell = document.getElementById('auditPreviewQty');
         const diffIndicator = document.getElementById('auditDiffIndicator');
 
-        // Cập nhật số lượng mới
         qtyCell.textContent = formatNumber(newQuantity);
 
-        // Styling và hiển thị chênh lệch
         if (diff > 0) {
-            // Tăng - màu xanh
             qtyCell.style.color = '#10b981';
             diffIndicator.innerHTML = `<span style="color: #10b981;">
                 <i class="fas fa-arrow-up"></i> +${formatNumber(Math.abs(diff))}
             </span>`;
         } else if (diff < 0) {
-            // Giảm - màu đỏ
             qtyCell.style.color = '#ef4444';
             diffIndicator.innerHTML = `<span style="color: #ef4444;">
                 <i class="fas fa-arrow-down"></i> -${formatNumber(Math.abs(diff))}
             </span>`;
         } else {
-            // Không đổi - màu xám
             qtyCell.style.color = '#1f2937';
             diffIndicator.innerHTML = `<span style="color: #6b7280;">
                 <i class="fas fa-minus"></i> Không thay đổi
@@ -4307,12 +4669,10 @@ function closeAlert() {
         const placeholder = document.getElementById('confirmerPlaceholder');
 
         if (checked) {
-    // TODO: Lấy từ session thật
-            // const userData = JSON.parse(sessionStorage.getItem('currentUser'));
-
+            // ✅ LẤY THÔNG TIN TỪ currentUserData (đã có từ Claims)
             document.getElementById('confirmerName').value = currentUserData.name;
             document.getElementById('confirmerPosition').value = currentUserData.position;
-            document.getElementById('confirmerPhone').value = currentUserData.phone;
+            document.getElementById('confirmerPhone').value = currentUserData.phone || '';
 
             form.style.display = 'block';
             placeholder.style.display = 'none';
@@ -4332,14 +4692,14 @@ function closeAlert() {
 
         // Validate file size (5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('Kích thước file không được vượt quá 5MB');
+            showToast('Kích thước file không được vượt quá 5MB', 'warning');
             event.target.value = '';
             return;
         }
 
         // Validate file type
         if (!file.type.startsWith('image/')) {
-            alert('Vui lòng chọn file hình ảnh (PNG, JPG, JPEG)');
+            showToast('Vui lòng chọn file hình ảnh (PNG, JPG, JPEG)', 'warning');
             event.target.value = '';
             return;
         }
@@ -4359,7 +4719,7 @@ function closeAlert() {
 
     async function submitAudit() {
         if (!currentAuditBatch) {
-            alert('Không có thông tin lô hàng để kiểm kê');
+            showToast('Không có thông tin lô hàng để kiểm kê', 'error');
             return;
         }
 
@@ -4367,45 +4727,57 @@ function closeAlert() {
         const auditType = document.querySelector('input[name="auditType"]:checked').value;
         const quantity = parseFloat(document.getElementById('auditQuantity').value) || 0;
         const reason = document.getElementById('auditReason').value.trim();
+        const newExpiryDate = document.getElementById('auditNewExpiryDate').value; // ✅ LẤY NGÀY MỚI
 
         // Validate số lượng (trừ trường hợp removeAll)
-        if (auditType !== 'removeAll' && quantity <= 0) {
-            alert('Vui lòng nhập số lượng hợp lệ');
+        if (auditType !== 'removeAll' && auditType !== 'noChange' && quantity <= 0) {
+            showToast('Vui lòng nhập số lượng hợp lệ', 'warning');
             document.getElementById('auditQuantity').focus();
             return;
         }
 
         // Validate lý do
         if (!reason) {
-            alert('Vui lòng nhập lý do kiểm kê');
+            showToast('Vui lòng nhập lý do kiểm kê', 'warning');
             document.getElementById('auditReason').focus();
             return;
+        }
+
+        // ✅ VALIDATE NGÀY HẾT HẠN MỚI (nếu có nhập)
+        if (newExpiryDate) {
+            const selectedDate = new Date(newExpiryDate);
+            const minDate = currentAuditBatch.createdDateObj;
+
+            if (selectedDate < minDate) {
+                showToast('Ngày hết hạn mới không được nhỏ hơn ngày tạo lô!', 'warning');
+                document.getElementById('auditNewExpiryDate').focus();
+                return;
+            }
         }
 
         // Validate thông tin người kiểm kê
         const useMyInfo = document.getElementById('useMyInfo').checked;
         if (!useMyInfo) {
-            alert('Vui lòng xác nhận thông tin người kiểm kê');
+            showToast('Vui lòng xác nhận thông tin người kiểm kê', 'warning');
             return;
         }
 
         // Validate ảnh minh chứng
         const imageFile = document.getElementById('auditImageUpload').files[0];
         if (!imageFile) {
-            alert('Vui lòng tải lên hình ảnh minh chứng');
+            showToast('Vui lòng tải lên hình ảnh minh chứng', 'warning');
             return;
         }
 
-        // ✅ 2. PREPARE FORM DATA
         const formData = new FormData();
 
-        // ✅ BatchId - THÊM MỚI
+        // BatchId
         formData.append('BatchId', currentAuditBatch.batchId);
 
         // Mã lô (PurchaseOrderId)
         formData.append('PurchaseOrderId', currentAuditBatch.batchCode);
 
-        // Mã nguyên liệu
+        // Mã mặt hàng
         formData.append('IngredientCode', currentAuditBatch.ingredientCode);
         formData.append('IngredientName', currentAuditBatch.ingredientName);
         formData.append('Unit', currentAuditBatch.unit);
@@ -4413,47 +4785,57 @@ function closeAlert() {
         // Số lượng gốc
         formData.append('OriginalQuantity', currentAuditBatch.quantity);
 
-        // Hạn sử dụng (ExpiryDate) - Chuyển format DD/MM/YYYY sang YYYY-MM-DD
-        if (currentAuditBatch.expiryDate && currentAuditBatch.expiryDate !== 'N/A') {
+        // ✅ HẠN SỬ DỤNG
+        if (newExpiryDate) {
+            formData.append('ExpiryDate', newExpiryDate);
+        } else if (currentAuditBatch.expiryDate && currentAuditBatch.expiryDate !== 'N/A') {
             const parts = currentAuditBatch.expiryDate.split('/');
             if (parts.length === 3) {
-                // parts[0] = DD, parts[1] = MM, parts[2] = YYYY
                 const formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
                 formData.append('ExpiryDate', formattedDate);
             }
         }
 
-        // CreatorId - TODO: Lấy từ session thật
-        formData.append('CreatorId', '2');
+        // ✅ THÔNG TIN NGƯỜI TẠO (từ Claims)
+        formData.append('CreatorId', currentUserData.userId);
+        formData.append('CreatorName', currentUserData.name);
+        formData.append('CreatorEmail', currentUserData.email); // ✅ THÊM
+        formData.append('CreatorPosition', currentUserData.position);
+        formData.append('CreatorRole', currentUserData.role); // ✅ THÊM
+        formData.append('CreatorPhone', document.getElementById('confirmerPhone').value || 'N/A');
 
-        // Thời gian tạo đơn (CreatedAt)
-        formData.append('CreatedAt', currentAuditBatch.auditDateTime.toISOString());
+        // Thời gian tạo đơn
+        formData.append('CreatedAt',
+            new Date().toLocaleString('sv-SE', {
+                timeZone: 'Asia/Ho_Chi_Minh'
+            }).replace(' ', 'T')
+        );
 
         // Lý do kiểm kê
         formData.append('Reason', reason);
 
-        // ✅ 3. TÍNH TOÁN AdjustmentQuantity và IsAddition
+        // Số lượng điều chỉnh
         let adjustmentQty = quantity;
         let isAddition = false;
 
         if (auditType === 'add') {
-            // Thêm số lượng
             adjustmentQty = quantity;
             isAddition = true;
         } else if (auditType === 'remove') {
-            // Hủy số lượng
             adjustmentQty = quantity;
             isAddition = false;
         } else if (auditType === 'removeAll') {
-            // Hủy tất cả
             adjustmentQty = currentAuditBatch.quantity;
+            isAddition = false;
+        } else if (auditType === 'noChange') {
+            adjustmentQty = 0;
             isAddition = false;
         }
 
         formData.append('AdjustmentQuantity', adjustmentQty.toString());
         formData.append('IsAddition', isAddition.toString());
 
-        // ✅ 4. XÁC ĐỊNH IngredientStatus từ badge hiện tại
+        // ✅ XÁC ĐỊNH IngredientStatus
         const statusBadgeHTML = currentAuditBatch.status;
         let ingredientStatus = 'normal';
 
@@ -4467,25 +4849,18 @@ function closeAlert() {
 
         formData.append('IngredientStatus', ingredientStatus);
 
-        // ✅ 5. THÔNG TIN NGƯỜI TẠO ĐƠN (người kiểm kê)
-        formData.append('CreatorName', document.getElementById('confirmerName').value);
-        formData.append('CreatorPosition', document.getElementById('confirmerPosition').value);
-        formData.append('CreatorPhone', document.getElementById('confirmerPhone').value);
-
-        // ✅ 6. FILE ẢNH MINH CHỨNG
+        // ✅ FILE ẢNH MINH CHỨNG
         formData.append('ImageFile', imageFile);
 
-        // ✅ 7. LOG DỮ LIỆU GỬI ĐI (để debug)
+        // ✅ LOG DỮ LIỆU
         console.log('=== AUDIT SUBMISSION DATA ===');
+        console.log('UserId:', currentUserData.userId);
+        console.log('UserName:', currentUserData.name);
+        console.log('UserEmail:', currentUserData.email);
+        console.log('UserPosition:', currentUserData.position);
         console.log('BatchId:', currentAuditBatch.batchId);
-        console.log('PurchaseOrderId:', currentAuditBatch.batchCode);
-        console.log('IngredientCode:', currentAuditBatch.ingredientCode);
-        console.log('OriginalQuantity:', currentAuditBatch.quantity);
         console.log('AdjustmentQuantity:', adjustmentQty);
         console.log('IsAddition:', isAddition);
-        console.log('Reason:', reason);
-        console.log('IngredientStatus:', ingredientStatus);
-        console.log('ImageFile:', imageFile.name);
 
         // ✅ 8. GỬI REQUEST
         try {
@@ -4499,22 +4874,16 @@ function closeAlert() {
                 body: formData
             });
 
-            console.log('Response status:', response.status);
-
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Error response:', errorText);
                 throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
 
             const result = await response.json();
-            console.log('Success result:', result);
 
             if (result.success) {
                 showSuccessMessage(result.message || 'Tạo đơn kiểm kê thành công!');
                 closeAuditModal();
-
-                // Reload trang sau 1.5 giây
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
@@ -4524,12 +4893,11 @@ function closeAlert() {
 
         } catch (error) {
             console.error('Error submitting audit:', error);
-            alert('Có lỗi xảy ra khi tạo đơn kiểm kê: ' + error.message);
+            showToast('Có lỗi xảy ra khi tạo đơn kiểm kê: ' + error.message, 'error');
 
-            // Khôi phục nút submit
             const submitBtn = document.getElementById('submitAuditBtn');
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Xác nhận tạo đơn kiểm kê';
+            submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Xác nhận kiểm kê';
         }
     }
 
@@ -4599,12 +4967,12 @@ function closeAlert() {
     // ===== BIẾN TOÀN CỤC LƯU TRẠNG THÁI FILTER =====
     let currentStatusFilter = 'all';
 
-    // ===== HÀM ĐẾM SỐ LƯỢNG NGUYÊN LIỆU THEO TRẠNG THÁI =====
+    // ===== HÀM ĐẾM SỐ LƯỢNG mặt hàng THEO TRẠNG THÁI =====
     function countIngredientsByStatus() {
         const rows = document.querySelectorAll('.ingredient-row');
 
         let counts = {
-            total: rows.length,
+            total: 0,
             outOfStock: 0,
             lowStock: 0,
             belowReorder: 0,
@@ -4613,34 +4981,46 @@ function closeAlert() {
         };
 
         rows.forEach(row => {
-            // Đếm hết hàng
-            const qtyText = row.querySelector('td:nth-child(5)').textContent.trim();
+            // Chỉ đếm các row đang hiển thị
+            if (row.style.display === 'none') return;
+
+            counts.total++;
+
+            // Lấy số lượng từ cột thứ 5 (index 4)
+            const qtyText = row.cells[4].textContent.trim();
             const qty = parseVietnameseNumber(qtyText);
+
+            // Lấy trạng thái số lượng từ cột thứ 6 (index 5)
+            const qtyStatusCell = row.cells[5];
+            const qtyStatusText = qtyStatusCell ? qtyStatusCell.textContent.toLowerCase() : '';
+
+            // Lấy trạng thái chất lượng từ cột thứ 7 (index 6)
+            const qualityStatusCell = row.cells[6];
+            const qualityStatusText = qualityStatusCell ? qualityStatusCell.textContent.toLowerCase() : '';
+
+            // 1. Đếm hết hàng
             if (qty === 0) {
                 counts.outOfStock++;
             }
 
-            // Đếm trạng thái số lượng
-            const qtyStatusCell = row.querySelector('td:nth-child(9)');
-            if (qtyStatusCell) {
-                const statusText = qtyStatusCell.textContent.toLowerCase();
-                if (statusText.includes('sắp hết hàng')) {
-                    counts.lowStock++;
-                } else if (statusText.includes('dưới tối thiểu')) {
-                    counts.belowReorder++;
-                }
+            // 2. Đếm sắp hết hàng
+            if (qtyStatusText.includes('sắp hết hàng')) {
+                counts.lowStock++;
             }
 
-            // Đếm trạng thái chất lượng
-            const qualityStatusCell = row.querySelector('td:nth-child(10)');
-            if (qualityStatusCell) {
-                const qualityText = qualityStatusCell.textContent.toLowerCase();
-                if (qualityText.includes('hết hạn:')) {
-                    counts.expired++;
-                }
-                if (qualityText.includes('sắp hết hạn:')) {
-                    counts.expiringSoon++;
-                }
+            // 3. Đếm dưới tối thiểu
+            if (qtyStatusText.includes('dưới tối thiểu')) {
+                counts.belowReorder++;
+            }
+
+            // 4. Đếm sắp hết hạn
+            if (qualityStatusText.includes('sắp hết hạn:')) {
+                counts.expiringSoon++;
+            }
+
+            // 5. Đếm hết hạn
+            if (qualityStatusText.includes('hết hạn:')) {
+                counts.expired++;
             }
         });
 
@@ -4651,13 +5031,7 @@ function closeAlert() {
     function updateDashboard() {
         const counts = countIngredientsByStatus();
 
-        // Cập nhật Dashboard Cards
-        document.getElementById('outOfStockCount').textContent = counts.outOfStock;
-        document.getElementById('lowStockCount').textContent = counts.lowStock;
-        document.getElementById('expiringSoonCount').textContent = counts.expiringSoon;
-        document.getElementById('expiredCount').textContent = counts.expired;
-
-        // Cập nhật Filter Buttons
+        // CHỈ cập nhật Filter Buttons (bỏ phần cập nhật Dashboard Cards)
         document.getElementById('totalCount').textContent = counts.total;
         document.getElementById('outOfStockBtn').textContent = counts.outOfStock;
         document.getElementById('lowStockBtn').textContent = counts.lowStock;
@@ -4666,7 +5040,7 @@ function closeAlert() {
         document.getElementById('expiredBtn').textContent = counts.expired;
     }
 
-    // ===== LỌC NGUYÊN LIỆU THEO TRẠNG THÁI =====
+    // ===== LỌC mặt hàng THEO TRẠNG THÁI =====
     function filterByStatus(status) {
         currentStatusFilter = status;
 
@@ -4694,6 +5068,9 @@ function closeAlert() {
                 visibleCount++;
             });
             updatePaginationInfo(visibleCount);
+
+            // ✅ SẮP XẾP LẠI SAU KHI FILTER
+            sortTable();
             return;
         }
 
@@ -4701,12 +5078,16 @@ function closeAlert() {
         rows.forEach(row => {
             let shouldShow = false;
 
-            const qtyText = row.querySelector('td:nth-child(5)').textContent.trim();
+            // Lấy số lượng từ cột 5 (cells[4])
+            const qtyText = row.cells[4].textContent.trim();
             const qty = parseVietnameseNumber(qtyText);
-            const qtyStatusCell = row.querySelector('td:nth-child(9)');
-            const qualityStatusCell = row.querySelector('td:nth-child(10)');
 
+            // Lấy trạng thái số lượng từ cột 6 (cells[5])
+            const qtyStatusCell = row.cells[5];
             const qtyStatusText = qtyStatusCell ? qtyStatusCell.textContent.toLowerCase() : '';
+
+            // Lấy trạng thái chất lượng từ cột 7 (cells[6])
+            const qualityStatusCell = row.cells[6];
             const qualityStatusText = qualityStatusCell ? qualityStatusCell.textContent.toLowerCase() : '';
 
             switch (status) {
@@ -4756,7 +5137,7 @@ function closeAlert() {
                 <td colspan="11" style="text-align:center; padding:3rem; color:#6b7280;">
                     <i class="fas fa-filter" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
                     <br>
-                    <strong style="font-size:1.1rem; color:#374151;">Không có nguyên liệu nào ở trạng thái "${statusNames[status]}"</strong>
+                    <strong style="font-size:1.1rem; color:#374151;">Không có mặt hàng nào ở trạng thái "${statusNames[status]}"</strong>
                     <br>
                     <span style="font-size:0.875rem;">Nhấn "Tất cả" để xem toàn bộ danh sách</span>
                 </td>
@@ -4765,6 +5146,9 @@ function closeAlert() {
         }
 
         updatePaginationInfo(visibleCount);
+
+        // ✅ SẮP XẾP LẠI SAU KHI FILTER
+        sortTable();
     }
 
     // ===== CẬP NHẬT THÔNG TIN PAGINATION =====
@@ -4776,5 +5160,242 @@ function closeAlert() {
         }
     }
 
+    let currentSortBy = 'code';
+    let currentSortOrder = 'asc';
+
+    // ===== HÀM SẮP XẾP BẢNG =====
+    function sortTable() {
+        const sortBy = document.getElementById('sortBySelect').value;
+        const sortOrder = document.getElementById('sortOrderSelect').value;
+
+        currentSortBy = sortBy;
+        currentSortOrder = sortOrder;
+
+        const tbody = document.getElementById('ingredientTableBody');
+        const rows = Array.from(tbody.querySelectorAll('.ingredient-row'));
+
+        // Nếu không có dòng nào, return
+        if (rows.length === 0) return;
+
+        // Xóa dòng "no-data" hoặc "no-result" nếu có
+        const noDataRow = tbody.querySelector('.no-data-row');
+        const noResultRow = tbody.querySelector('.no-result-row');
+        if (noDataRow) noDataRow.remove();
+        if (noResultRow) noResultRow.remove();
+
+        // Sắp xếp rows
+        rows.sort((rowA, rowB) => {
+            let valueA, valueB;
+
+            switch (sortBy) {
+                case 'code':
+                    // Cột 2: Mã mặt hàng
+                    valueA = rowA.cells[1].textContent.trim();
+                    valueB = rowB.cells[1].textContent.trim();
+                    break;
+
+                case 'name':
+                    // Cột 3: Tên mặt hàng
+                    valueA = rowA.cells[2].textContent.trim().toLowerCase();
+                    valueB = rowB.cells[2].textContent.trim().toLowerCase();
+                    break;
+
+                case 'quantity':
+                    // Cột 5: Số lượng tồn (SL tồn)
+                    valueA = parseVietnameseNumber(rowA.cells[4].textContent.trim());
+                    valueB = parseVietnameseNumber(rowB.cells[4].textContent.trim());
+                    break;
+
+                default:
+                    valueA = rowA.cells[1].textContent.trim();
+                    valueB = rowB.cells[1].textContent.trim();
+            }
+
+            // So sánh
+            let comparison = 0;
+
+            if (sortBy === 'quantity') {
+                // So sánh số
+                comparison = valueA - valueB;
+            } else {
+                // So sánh chuỗi
+                comparison = valueA.localeCompare(valueB, 'vi');
+            }
+
+            // Đảo ngược nếu giảm dần
+            return sortOrder === 'asc' ? comparison : -comparison;
+        });
+
+        // Cập nhật lại STT sau khi sắp xếp
+        rows.forEach((row, index) => {
+            row.cells[0].textContent = index + 1;
+        });
+
+        // Clear tbody và append lại các rows đã sắp xếp
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+
+        // Cập nhật lại bảng cảnh báo
+        renderAlertPanel();
+    }
+
+    // ===== RENDER BẢNG CẢNH BÁO =====
+    function renderAlertPanel() {
+        const rows = document.querySelectorAll('.ingredient-row');
+        const alertBody = document.getElementById('alertPanelBody');
+        const alertCount = document.getElementById('alertCount');
+
+        let alertItems = [];
+
+        rows.forEach((row, index) => {
+            if (row.style.display === 'none') return;
+
+            const code = row.cells[1].textContent.trim();
+            const name = row.cells[2].textContent.trim();
+            const unit = row.cells[3].textContent.trim();
+            const qtyText = row.cells[4].textContent.trim();
+            const qty = parseVietnameseNumber(qtyText);
+
+            const qtyStatusCell = row.cells[5];
+            const statusText = qtyStatusCell ? qtyStatusCell.textContent.toLowerCase() : '';
+
+            // ✅ ĐỌC CHÍNH XÁC TỪ DATA ATTRIBUTES
+            const qtyExcludingExpired = parseFloat(row.dataset.qtyExcludingExpired);
+            const reorderLevel = parseFloat(row.dataset.reorderLevel);
+            const needUrgentRestock = row.dataset.needUrgentRestock === 'true';
+
+            console.log(`Row ${index + 1} (${code}):`, {
+                qty,
+                qtyExcludingExpired,
+                reorderLevel,
+                needUrgentRestock,
+                statusText
+            });
+
+            let alertType = null;
+            let statusLabel = '';
+            let priority = 0;
+            let extraInfo = null;
+
+            // ✅ LOGIC PHÂN LOẠI (ƯU TIÊN THEO THỨ TỰ)
+            if (qty === 0) {
+                // Ưu tiên 0: Hết hàng hoàn toàn
+                alertType = 'out-of-stock';
+                statusLabel = 'Hết hàng';
+                priority = 0;
+            }
+            else if (statusText.includes('sắp hết hàng')) {
+                // Ưu tiên 1: Sắp hết hàng
+                alertType = 'low-stock';
+                statusLabel = 'Sắp hết hàng';
+                priority = 1;
+            }
+            else if (needUrgentRestock) {
+                // ✅ Ưu tiên 2: CẦN NHẬP GẤP (có lô hết hạn làm giảm số lượng)
+                alertType = 'urgent-restock';
+                statusLabel = 'Cần nhập gấp';
+                priority = 2;
+
+                // ✅ Đảm bảo hiển thị đúng số liệu
+                if (!isNaN(qtyExcludingExpired) && !isNaN(reorderLevel)) {
+                    extraInfo = {
+                        qtyExcludingExpired: formatNumber(qtyExcludingExpired),
+                        reorderLevel: formatNumber(reorderLevel)
+                    };
+                    console.log(` Found urgent restock: ${code}`, extraInfo);
+                }
+            }
+            else if (statusText.includes('dưới tối thiểu')) {
+                // Ưu tiên 3: Dưới tối thiểu
+                alertType = 'below-reorder';
+                statusLabel = 'Dưới tối thiểu';
+                priority = 3;
+            }
+
+            if (alertType) {
+                alertItems.push({
+                    code,
+                    name,
+                    unit,
+                    qty: formatNumber(qty),
+                    status: statusLabel,
+                    alertType,
+                    priority,
+                    rowIndex: index,
+                    extraInfo // ✅ Thêm thông tin chi tiết
+                });
+            }
+        });
+
+        // Sắp xếp theo priority
+        alertItems.sort((a, b) => a.priority - b.priority);
+
+        // Cập nhật số lượng
+        alertCount.textContent = alertItems.length;
+
+        // Render
+        if (alertItems.length === 0) {
+            alertBody.innerHTML = `
+                <div class="alert-empty">
+                    <i class="fas fa-check-circle"></i>
+                    <p><strong>Tuyệt vời!</strong></p>
+                    <p>Không có mặt hàng nào cần chú ý</p>
+                </div>
+            `;
+            return;
+        }
+
+        alertBody.innerHTML = alertItems.map((item, index) => `
+            <div class="alert-item ${item.alertType}" onclick="scrollToIngredient(${item.rowIndex})">
+                <div class="alert-item-header">
+                    <span class="alert-item-code">#${index + 1} - ${item.code}</span>
+                    <span class="status-badge status-${item.alertType}" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
+                        ${item.status}
+                    </span>
+                </div>
+                <div class="alert-item-name">${item.name}</div>
+                <div class="alert-item-footer">
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1;">
+                        <span class="alert-quantity">
+                            <i class="fas fa-box"></i> <strong>${item.qty}</strong> ${item.unit}
+                        </span>
+                        ${item.extraInfo ? `
+                            <span style="font-size: 0.75rem; color: #dc2626; font-weight: 600; line-height: 1.4;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Còn ${item.extraInfo.qtyExcludingExpired} ${item.unit} (sau trừ hết hạn)
+                            </span>
+                            <span style="font-size: 0.75rem; color: #6b7280; line-height: 1.4;">
+                                <i class="fas fa-chart-line"></i>
+                                Tối thiểu: ${item.extraInfo.reorderLevel} ${item.unit}
+                            </span>
+                        ` : ''}
+                    </div>
+                    <span style="color: #6b7280; flex-shrink: 0;">
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ===== SCROLL ĐẾN mặt hàng =====
+    function scrollToIngredient(rowIndex) {
+        const rows = document.querySelectorAll('.ingredient-row');
+        const targetRow = rows[rowIndex];
+
+        if (targetRow && targetRow.style.display !== 'none') {
+            // Xóa highlight cũ
+            rows.forEach(r => r.style.backgroundColor = '');
+
+            // Highlight row
+            targetRow.style.backgroundColor = '#fef3c7';
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Xóa highlight sau 2s
+            setTimeout(() => {
+                targetRow.style.backgroundColor = '';
+            }, 2000);
+        }
+    }
 
 </script>

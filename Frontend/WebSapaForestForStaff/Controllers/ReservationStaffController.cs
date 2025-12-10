@@ -4,13 +4,15 @@ using Newtonsoft.Json;
 using System.Security.Claims;
 using System.Text;
 using WebSapaForestForStaff.DTOs;
+using WebSapaForestForStaff.DTOs.TimeSlotCapacity;
 using WebSapaForestForStaff.Models;
+
 namespace WebSapaForestForStaff.Controllers
 {
     public class ReservationStaffController : Controller
     {
         private readonly HttpClient _client;
-       
+
         public ReservationStaffController(IHttpClientFactory clientFactory)
         {
             _client = clientFactory.CreateClient();
@@ -26,15 +28,12 @@ namespace WebSapaForestForStaff.Controllers
              int page = 1,
              int pageSize = 10)
         {
-            // Mặc định lấy ngày hôm nay nếu không có filter
-            if (!reservationDate.HasValue)
-                reservationDate = DateTime.Today;
-
             var queryParts = new List<string>();
             if (!string.IsNullOrEmpty(status)) queryParts.Add($"status={Uri.EscapeDataString(status)}");
             if (!string.IsNullOrEmpty(customerName)) queryParts.Add($"customerName={Uri.EscapeDataString(customerName)}");
             if (!string.IsNullOrEmpty(phone)) queryParts.Add($"phone={Uri.EscapeDataString(phone)}");
-            queryParts.Add($"date={reservationDate:yyyy-MM-dd}");
+            if (reservationDate.HasValue)
+                queryParts.Add($"date={reservationDate.Value:yyyy-MM-dd}");
             if (!string.IsNullOrEmpty(timeSlot)) queryParts.Add($"timeSlot={Uri.EscapeDataString(timeSlot)}");
             queryParts.Add($"page={page}");
             queryParts.Add($"pageSize={pageSize}");
@@ -57,14 +56,34 @@ namespace WebSapaForestForStaff.Controllers
                 result = JsonConvert.DeserializeObject<ReservationListViewModel>(json) ?? result;
             }
 
-            // Tính count từng loại đơn
             var statusCounts = new Dictionary<string, int>
             {
                 { "Pending", result.Data.Count(r => r.Status == "Pending") },
                 { "Confirmed", result.Data.Count(r => r.Status == "Confirmed") },
                 { "Cancelled", result.Data.Count(r => r.Status == "Cancelled") }
             };
-            // Tính tổng số đơn (chỉ tính những đơn đang hiển thị sau filter)
+            DayCapacitySummaryDto? capacity = null;
+            try
+            {
+                // nếu user đã chọn ngày lọc thì dùng ngày đó, còn không thì để trống -> API lấy Today
+                string capacityUrl = "Statistics/capacity";
+                if (reservationDate.HasValue)
+                {
+                    capacityUrl += $"?date={reservationDate.Value:yyyy-MM-dd}";
+                }
+
+                var capacityResponse = await _client.GetAsync(capacityUrl);
+                if (capacityResponse.IsSuccessStatusCode)
+                {
+                    var capJson = await capacityResponse.Content.ReadAsStringAsync();
+                    capacity = JsonConvert.DeserializeObject<DayCapacitySummaryDto>(capJson);
+                }
+            }
+            catch
+            {
+                // có lỗi thì bỏ qua, không làm crash trang
+            }
+
             ViewBag.TotalReservations = result.Data.Count;
             ViewBag.StatusCounts = statusCounts;
             ViewBag.Status = status;
@@ -72,6 +91,7 @@ namespace WebSapaForestForStaff.Controllers
             ViewBag.Phone = phone;
             ViewBag.ReservationDate = reservationDate?.ToString("yyyy-MM-dd");
             ViewBag.TimeSlot = timeSlot;
+            ViewBag.CapacitySummary = capacity;
 
             return View(result);
         }
@@ -79,7 +99,6 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> AssignTables(int id)
         {
-            
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!resResponse.IsSuccessStatusCode)
                 return NotFound();
@@ -88,7 +107,6 @@ namespace WebSapaForestForStaff.Controllers
             var reservation = JsonConvert.DeserializeObject<ReservationStaffViewModel>(resJson);
 
             if (reservation == null) return NotFound();
-
 
             var tableResponse = await _client.GetAsync("ReservationStaff/tables/by-area-all");
             var tableJson = await tableResponse.Content.ReadAsStringAsync();
@@ -107,7 +125,6 @@ namespace WebSapaForestForStaff.Controllers
             var suggestJson = await suggestResponse.Content.ReadAsStringAsync();
             var suggestData = JsonConvert.DeserializeObject<SuggestTableResult>(suggestJson);
 
-            // Gộp cả single + combo
             var suggestedTableIdsByArea = new Dictionary<int, List<int>>();
             if (suggestData?.Areas != null)
             {
@@ -122,16 +139,15 @@ namespace WebSapaForestForStaff.Controllers
                     suggestedTableIdsByArea[area.AreaId] = singleIds.Union(comboIds).ToList();
                 }
             }
+
             var bookedInforResponse = await _client.GetAsync(
-    $"ReservationStaff/tables/booked-with-time?reservationDate={reservation.ReservationDate:yyyy-MM-dd}&timeSlot={reservation.TimeSlot}");
+                $"ReservationStaff/tables/booked-with-time?reservationDate={reservation.ReservationDate:yyyy-MM-dd}&timeSlot={reservation.TimeSlot}");
 
             var bookedInforJson = await bookedInforResponse.Content.ReadAsStringAsync();
             var bookedInforData = JsonConvert.DeserializeObject<BookedTableResultWithTime>(bookedInforJson);
-
-            // ✅ Danh sách bàn & thời gian
             var bookedTablesWithTime = bookedInforData?.BookedTables ?? new List<BookedTableDetailDto>();
-            ViewBag.BookedTablesWithTime = bookedTablesWithTime;
 
+            ViewBag.BookedTablesWithTime = bookedTablesWithTime;
             ViewBag.BookedTableIds = bookedTableIds;
             ViewBag.Reservation = reservation;
             ViewBag.Areas = areas;
@@ -139,8 +155,10 @@ namespace WebSapaForestForStaff.Controllers
             return View();
         }
 
+        // ✅ KHÔNG NHẬN RequireDeposit / DepositAmount NỮA
         [HttpPost]
-        public async Task<IActionResult> AssignTablesPost(int ReservationId, List<int> TableIds, bool RequireDeposit, decimal? DepositAmount)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AssignTablesPost(int ReservationId, List<int> TableIds)
         {
             if (TableIds == null || !TableIds.Any())
             {
@@ -148,20 +166,14 @@ namespace WebSapaForestForStaff.Controllers
                 return RedirectToAction("AssignTables", new { id = ReservationId });
             }
 
-            if (RequireDeposit && (!DepositAmount.HasValue || DepositAmount.Value <= 0))
-            {
-                TempData["Error"] = "Bạn phải nhập số tiền đặt cọc hợp lệ!";
-                return RedirectToAction("AssignTables", new { id = ReservationId });
-            }
             int uid = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-            // Tạo DTO gửi API
+
             var dto = new AssignTableDto
             {
                 ReservationId = ReservationId,
                 TableIds = TableIds,
-                RequireDeposit = RequireDeposit,
-                DepositAmount = DepositAmount,
-                StaffId = uid, // hoặc lấy từ session/login
+                // không set RequireDeposit / DepositAmount nữa
+                StaffId = uid,
                 ConfirmBooking = true
             };
 
@@ -183,7 +195,6 @@ namespace WebSapaForestForStaff.Controllers
         [HttpPost]
         public async Task<IActionResult> ResetTables(int reservationId)
         {
-            
             var res = await _client.PostAsync($"ReservationStaff/reset-tables/{reservationId}", null);
 
             if (!res.IsSuccessStatusCode)
@@ -198,11 +209,10 @@ namespace WebSapaForestForStaff.Controllers
 
             return RedirectToAction("AssignTables", new { id = reservationId });
         }
-        // hủy đơn
+
         [HttpPost]
         public async Task<IActionResult> CancelReservation(int id, bool refund)
         {
-            
             var response = await _client.PutAsync(
                 $"ReservationStaff/cancel/{id}?refund={refund.ToString().ToLower()}",
                 null
@@ -238,8 +248,6 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            
-            // Gửi đúng API "ReservationStaff/add"
             var dto = new
             {
                 CustomerName = model.CustomerName,
@@ -264,7 +272,6 @@ namespace WebSapaForestForStaff.Controllers
             }
             else
             {
-                // Lấy message lỗi từ API (ví dụ "Khách hàng đã có đơn trong khung giờ này")
                 try
                 {
                     dynamic errorData = JsonConvert.DeserializeObject(responseBody);
@@ -279,10 +286,10 @@ namespace WebSapaForestForStaff.Controllers
                 return View(model);
             }
         }
+
         [HttpGet]
         public async Task<IActionResult> EditReservation(int id)
         {
-            
             var response = await _client.GetAsync($"ReservationStaff/reservations/{id}");
             if (!response.IsSuccessStatusCode)
                 return NotFound();
@@ -292,7 +299,6 @@ namespace WebSapaForestForStaff.Controllers
             if (reservation == null)
                 return NotFound();
 
-            // Chuyển dữ liệu sang DTO cho form
             var model = new ReservationUpdateViewModel
             {
                 ReservationId = reservation.ReservationId,
@@ -312,7 +318,6 @@ namespace WebSapaForestForStaff.Controllers
             if (!ModelState.IsValid)
                 return View("EditReservation", model);
 
-            
             var dto = new
             {
                 model.ReservationDate,
@@ -355,8 +360,6 @@ namespace WebSapaForestForStaff.Controllers
             if (dto.DepositAmount <= 0)
                 return Json(new { success = false, message = "Số tiền đặt cọc không hợp lệ." });
 
-            
-            // Lấy thông tin đặt bàn
             var resResponse = await _client.GetAsync($"ReservationStaff/reservations/{dto.ReservationId}");
             if (!resResponse.IsSuccessStatusCode)
                 return Json(new { success = false, message = "Không tìm thấy thông tin đặt bàn." });
@@ -366,11 +369,9 @@ namespace WebSapaForestForStaff.Controllers
             if (reservation == null)
                 return Json(new { success = false, message = "Không thể đọc dữ liệu đặt bàn." });
 
-            // Tạo link thanh toán (ví dụ PayOS hoặc trang QR riêng)
             var paymentLink = Url.Action("DepositPayment", "Payment",
                 new { id = dto.ReservationId, amount = dto.DepositAmount }, Request.Scheme);
 
-            // Nội dung SMS
             string message = $"[SapaFoRest] Quý khách vui lòng thanh toán đặt cọc {dto.DepositAmount:N0} VND để giữ bàn. " +
                              $"Thanh toán tại: {paymentLink}";
 
@@ -385,8 +386,8 @@ namespace WebSapaForestForStaff.Controllers
                 {
                     to = new[] { reservation.CustomerPhone },
                     content = message,
-                    type = 2,   // Gửi qua brandname
-                    sender = "" // bắt buộc để trống nếu type=2
+                    type = 2,
+                    sender = ""
                 };
 
                 var json = JsonConvert.SerializeObject(smsPayload);
@@ -402,17 +403,15 @@ namespace WebSapaForestForStaff.Controllers
                 Console.WriteLine($"  ➜ Nội dung: {message}");
                 Console.WriteLine("====================================");
 
-                // Nếu gửi thành công
                 if (response.IsSuccessStatusCode)
                 {
                     return Json(new { success = true, message = "✅ Đã gửi yêu cầu đặt cọc qua SMS cho khách hàng." });
                 }
 
-                // Nếu là lỗi "sender not found"
                 if (smsResult.Contains("sender not found", StringComparison.OrdinalIgnoreCase))
                 {
                     Console.WriteLine("[⚠️ DEMO MODE] Chưa đăng ký brandname - chỉ hiển thị nội dung SMS trong log.");
-                   
+
                     return Json(new
                     {
                         success = true,
@@ -420,7 +419,6 @@ namespace WebSapaForestForStaff.Controllers
                     });
                 }
 
-                // Lỗi khác
                 Console.WriteLine("[❌ Lỗi khác khi gửi SMS]");
                 return Json(new { success = false, message = "❌ Gửi SMS thất bại: " + smsResult });
             }
@@ -446,9 +444,5 @@ namespace WebSapaForestForStaff.Controllers
             public int ReservationId { get; set; }
             public decimal DepositAmount { get; set; }
         }
-       
-
-
-
     }
 }

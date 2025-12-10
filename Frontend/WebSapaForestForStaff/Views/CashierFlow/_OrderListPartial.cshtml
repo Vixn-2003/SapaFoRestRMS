@@ -7,9 +7,11 @@
     string FormatTime(DateTime? dateTime) => dateTime?.ToString("HH:mm dd/MM") ?? "--";
     bool IsAged(DateTime? createdAt) => createdAt.HasValue && (DateTime.Now - createdAt.Value).TotalMinutes >= 15;
     
-    // Determine status from ViewBag or default to pending
-    var orderStatus = ViewBag.OrderStatus as string ?? "pending";
-    var isPending = orderStatus.Equals("pending", StringComparison.OrdinalIgnoreCase);
+    // Determine status from ViewBag or default to confirmed (unpaid)
+    var orderStatus = (ViewBag.OrderStatus as string ?? "confirmed").ToLower();
+    // Check if we're showing unpaid orders (confirmed, pendingpayment) or paid orders (paid, completed, success)
+    // Nếu ViewBag.OrderStatus = "paid" thì isUnpaid = false, ngược lại = true
+    var isUnpaid = !orderStatus.Equals("paid", StringComparison.OrdinalIgnoreCase);
 }
 
 @if (Model == null || !Model.Any())
@@ -18,7 +20,7 @@
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    @if (isPending)
+                    @if (isUnpaid)
                     {
                         <th>Mã đơn</th>
                         <th>Bàn</th>
@@ -43,8 +45,8 @@
             </thead>
             <tbody>
                 <tr>
-                    <td colspan="@(isPending ? 7 : 8)" class="text-center text-muted py-4">
-                        @(isPending ? "Không có đơn đang chờ thanh toán." : "Không có đơn đã thanh toán.")
+                    <td colspan="@(isUnpaid ? 7 : 8)" class="text-center text-muted py-4">
+                        @(isUnpaid ? "Không có đơn đang chờ thanh toán." : "Không có đơn đã thanh toán.")
                     </td>
                 </tr>
             </tbody>
@@ -60,7 +62,7 @@ else
                     <th>Mã đơn</th>
                     <th>Bàn</th>
                     <th>Nhân viên phục vụ</th>
-                    @if (isPending)
+                    @if (isUnpaid)
                     {
                         <th>Giờ tạo</th>
                         <th class="text-end">Tổng tiền</th>
@@ -84,12 +86,15 @@ else
                     var code = order.OrderCode ?? $"#{order.OrderId}";
                     var tableName = order.Table ?? "—";
                     var paidTime = order.PaidAt ?? order.CreatedAt;
+                    
+                    // ✅ DEBUG: Log order status để kiểm tra
+                    @* Debug: Order @order.OrderId - Status: @order.Status, ViewBag.OrderStatus: @ViewBag.OrderStatus, isUnpaid: @isUnpaid *@
 
                     <tr>
                         <td class="fw-bold">@code</td>
                         <td class="fw-bold">@tableName</td>
                         <td>@(order.WaiterName ?? "—")</td>
-                        @if (isPending)
+                        @if (isUnpaid)
                         {
                             <td>
                                 @FormatTime(order.CreatedAt)
@@ -103,14 +108,9 @@ else
                                 <span class="badge bg-warning text-dark">Chờ thanh toán</span>
                             </td>
                             <td class="text-end">
-                                <button type="button"
-                                        class="btn btn-success btn-sm me-2"
-                                        onclick="showPaymentConfirmationModal(@order.OrderId, '@tableName', @order.Total, '@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = order.OrderId })')">
-                                    <i class="fa-solid fa-credit-card me-1"></i>
-                                    Thanh toán
-                                </button>
+                                
                                 <a class="btn btn-outline-secondary btn-sm"
-                                   href="@Url.Action(nameof(CashierPaymentFlowController.OrderDetail), "CashierPaymentFlow", new { id = order.OrderId })">
+                                   href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = order.OrderId })">
                                     <i class="fa-solid fa-eye me-1"></i>
                                     Chi tiết
                                 </a>
@@ -129,11 +129,7 @@ else
                                    href="@Url.Action(nameof(CashierPaymentFlowController.Receipt), "CashierPaymentFlow", new { orderId = order.OrderId })">
                                     Xem hóa đơn
                                 </a>
-                                <a class="btn btn-outline-secondary btn-sm disabled"
-                                   href="#"
-                                   title="Tính năng gửi biên nhận sẽ được bổ sung">
-                                    Gửi lại biên nhận
-                                </a>
+                          
                             </td>
                         }
                     </tr>

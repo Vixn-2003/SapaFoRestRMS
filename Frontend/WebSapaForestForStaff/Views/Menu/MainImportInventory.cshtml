@@ -10,6 +10,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"]</title>
+
+
+    <link rel="stylesheet" href="~/css/importWarehouse/reportImport.css" />
     <style>
         * {
             margin: 0;
@@ -42,7 +45,7 @@
 
         .btn-add {
             position: absolute;
-            top: 20px;
+            top: 40px;
             right: 40px;
             background: #10b981;
             color: white;
@@ -58,12 +61,16 @@
             }
 
         .filter-section {
-            background: #ffffff;
+            background: #E8EAED;
             padding: 20px 40px;
             display: flex;
             gap: 15px;
             align-items: center;
             flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .filter-group {
@@ -73,8 +80,8 @@
         }
 
             .filter-group label {
-                color: #95a5a6;
-                font-size: 12px;
+                color: #000000;
+                font-size: 14px;
             }
 
             .filter-group input,
@@ -116,47 +123,41 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
+            gap: 15px;
             padding: 20px 40px;
         }
 
         .stat-card {
-            padding: 30px;
-            border-radius: 12px;
-            color: white;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-            .stat-card.green {
-                background: #10b981;
-            }
-
-            .stat-card.blue {
-                background: #3b82f6;
-            }
-
-            .stat-card.orange {
-                background: #f97316;
-            }
-
-            .stat-card.purple {
-                background: #a855f7;
-            }
-
-        .stat-number {
-            font-size: 48px;
-            font-weight: 700;
-            margin-bottom: 10px;
+        .stat-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
         .stat-label {
-            font-size: 14px;
-            opacity: 0.9;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
         }
 
         .stat-date {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-top: 5px;
+            font-size: 11px;
+            color: #999;
         }
 
         .content-grid {
@@ -392,99 +393,138 @@
         .status-cancelled {
             background: #ef4444;
         }
+
+        .card .history-table {
+            max-height: 350px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Quản Lý Nhập Hàng</h1>
         <p>Tổng quan và quản lý đơn nhập hàng</p>
-        <button class="btn-add" onclick="window.location.href='@Url.Action("Index", "ImportInventory")'">
-                    <span>+ Thêm nguyên liệu</span>
-                </button>
+
+        <!-- ✅ THÊM: Nhóm nút ở góc phải -->
+        <div class="header-actions">
+            <!-- Dropdown chọn khoảng thời gian -->
+            <select id="reportPeriod" class="report-period-select">
+                <option value="today">Hôm nay</option>
+                <option value="7days">7 ngày qua</option>
+                <option value="30days">30 ngày qua</option>
+                <option value="thisMonth">Tháng này</option>
+                <option value="lastMonth">Tháng trước</option>
+                <option value="custom">Tùy chỉnh</option>
+            </select>
+
+            <!-- Button Báo cáo -->
+            <button class="btn-report" onclick="generateReport()">
+                <i class="fas fa-file-pdf"></i>
+                <span>Xuất báo cáo</span>
+            </button>
+
+            <!-- Button Tạo đơn mới -->
+            <button class="btn-add" onclick="window.location.href='@Url.Action("Index", "ImportInventory")'">
+                <i class="fas fa-plus"></i>
+                <span>Tạo đơn nhập mới</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ✅ THÊM: Modal chọn ngày tùy chỉnh -->
+    <div id="customDateModal" class="custom-date-modal" style="display: none;">
+        <div class="modal-content-custom">
+            <div class="modal-header-custom">
+                <h3>Chọn khoảng thời gian</h3>
+                <button onclick="closeCustomDateModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body-custom">
+                <div class="date-input-group">
+                    <label>Từ ngày:</label>
+                    <input type="date" id="customDateFrom" class="date-input">
+                </div>
+                <div class="date-input-group">
+                    <label>Đến ngày:</label>
+                    <input type="date" id="customDateTo" class="date-input">
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button onclick="closeCustomDateModal()" class="btn-cancel">Hủy</button>
+                <button onclick="applyCustomDate()" class="btn-apply">Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== STATS CARDS MỚI ===== -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">Tổng đơn nhập</div>
+                <div class="stat-date" id="statDateRange">-</div>
+            </div>
+            <div class="stat-number" id="totalOrders">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">Tổng giá trị nhập</div>
+                <div class="stat-date" id="statDateRange2">-</div>
+            </div>
+            <div class="stat-number" id="totalValue">0đ</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">Đơn đang xử lý</div>
+                <div class="stat-date">Cần xác nhận</div>
+            </div>
+            <div class="stat-number" id="processingOrders">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-content">
+                <div class="stat-label">Giá trị TB/đơn</div>
+                <div class="stat-date" id="statDateRange3">-</div>
+            </div>
+            <div class="stat-number" id="avgValue">0đ</div>
+        </div>
     </div>
 
     <div class="filter-section">
         <div class="filter-group">
             <label>Từ ngày</label>
-            <input type="date" value="2025-10-01">
+            <input type="date" id="filterDateFrom" value="">
         </div>
         <div class="filter-group">
             <label>Đến ngày</label>
-            <input type="date" value="2025-10-03">
-        </div>
-        <div class="filter-group">
-            <label>Nhà cung cấp</label>
-            <select>
-                <option>Tất cả NCC</option>
-            </select>
+            <input type="date" id="filterDateTo" value="">
         </div>
         <div class="filter-group">
             <label>Trạng thái</label>
-            <select>
-                <option>Tất cả</option>
+            <select id="filterStatus">
+                <option value="">Tất cả</option>
+                <option value="processing">Đang xử lý</option>
+                <option value="completed">Hoàn thành</option>
+                <option value="cancelled">Từ chối</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Sắp xếp theo giá trị</label>
+            <select id="sortByValue">
+                <option value="">Mặc định</option>
+                <option value="asc">Tăng dần</option>
+                <option value="desc">Giảm dần</option>
             </select>
         </div>
         <div class="filter-group">
             <label>&nbsp;</label>
-            <input type="text" placeholder="Tìm kiếm mã đơn, NCC..." class="search-input">
+            <input type="text" id="searchInput" placeholder="Tìm mã đơn, nhà cung cấp..." class="search-input">
         </div>
-        <button class="btn-filter btn-primary">Lọc</button>
-        <button class="btn-filter btn-secondary">Đặt lại</button>
+        <button class="btn-filter btn-secondary" onclick="resetFilters()">Đặt lại</button>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card green">
-            <div class="stat-number">34</div>
-            <div class="stat-label">Tổng đơn nhập tháng này</div>
-            <div class="stat-date">Tháng 10/2025</div>
-        </div>
-        <div class="stat-card blue">
-            <div class="stat-number">245.6M</div>
-            <div class="stat-label">Tổng giá trị nhập</div>
-            <div class="stat-date">Tháng 10/2025</div>
-        </div>
-        <div class="stat-card orange">
-            <div class="stat-number">8</div>
-            <div class="stat-label">Đơn đang xử lý</div>
-            <div class="stat-date">Cần xác nhận</div>
-        </div>
-        <div class="stat-card purple">
-            <div class="stat-number">7.2M</div>
-            <div class="stat-label">Giá trị TB/đơn</div>
-            <div class="stat-date">Tháng 10/2025</div>
-        </div>
-    </div>
-
-    <div class="content-grid">
+    <!-- ✅ DANH SÁCH ĐƠN NHẬP HÀNG - Dạng TABLE (Đặt lên đầu) -->
+    <div style="padding: 0 40px 20px 40px;">
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Đơn hàng đang xử lý</h2>
-                <span class="badge brown" id="processingCount">0 đơn hàng</span>
-            </div>
-            <div class="order-list" id="processingOrdersList">
-                <!-- Dữ liệu sẽ được render bằng JavaScript -->
-            </div>
-            <a href="#" class="link-button">Xem tất cả đơn đang xử lý</a>
-        </div>
-
-        <div>
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Danh Sách Đơn Nhập Hàng</h2>
-                    <span class="badge gray" id="allOrdersCount">0 đơn</span>
-                </div>
-                <div class="order-list" id="allOrdersList">
-                    <!-- Dữ liệu sẽ được render bằng JavaScript -->
-                </div>
-                <a href="#" class="link-button">Xem tất cả 34 đơn hàng →</a>
-            </div>
-        </div>
-    </div>
-
-    <div style="padding: 0 40px 40px 40px;">
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Lịch sử nhập hàng hoàn thành</h2>
+                <h2 class="card-title">Danh Sách Đơn Nhập Hàng</h2>
+                <span class="badge gray" id="allOrdersCount">0 đơn</span>
             </div>
             <table class="history-table">
                 <thead>
@@ -497,14 +537,34 @@
                         <th style="width: 15%;"></th>
                     </tr>
                 </thead>
-                <tbody>
-                   
+                <tbody id="allOrdersTable">
                 </tbody>
             </table>
-            <a href="#" class="link-button">Xem tất cả lịch sử</a>
         </div>
     </div>
 
+    <div class="content-grid">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Đơn hàng đang xử lý</h2>
+                <span class="badge brown" id="processingCount">0 đơn hàng</span>
+            </div>
+            <div class="order-list" id="processingOrdersList">
+                <!-- Dữ liệu sẽ được render bằng JavaScript -->
+            </div>
+        </div>
+
+        <!-- ✅ LỊCH SỬ HOÀN THÀNH - Dạng CARD LIST -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Đơn hàng đã xử lý</h2>
+                <span class="badge gray" id="completedCount">0 đơn</span>
+            </div>
+            <div class="order-list" id="completedOrdersList">
+                <!-- Dữ liệu dạng card -->
+            </div>
+        </div>
+    </div>
 
     <script>
         // Dữ liệu từ server
@@ -517,26 +577,34 @@
             return parseFloat(value || 0).toLocaleString('vi-VN') + 'đ';
         }
 
+        // Hàm format số tiền ngắn gọn (cho stats)
+        function formatCurrencyShort(value) {
+            const num = parseFloat(value || 0);
+            if (num >= 1000000000) {
+                return (num / 1000000000).toFixed(1) + 'B';
+            } else if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toLocaleString('vi-VN');
+        }
+
         // Hàm format ngày
         function formatDate(dateString) {
             if (!dateString) return '-';
-
             const date = new Date(dateString);
-
             if (isNaN(date.getTime())) return '-';
-
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
             return `${day}/${month}/${year}`;
         }
 
-        // Hàm tính tổng tiền đơn hàng - ✅ SỬA: Dùng PascalCase
+        // Hàm tính tổng tiền đơn hàng
         function calculateTotal(order) {
             const details = order.PurchaseOrderDetails || order.purchaseOrderDetails;
-            if (!details || details.length === 0) {
-                return 0;
-            }
+            if (!details || details.length === 0) return 0;
             return details.reduce((sum, detail) => {
                 const subtotal = detail.Subtotal || detail.subtotal;
                 const quantity = detail.Quantity || detail.quantity;
@@ -545,29 +613,9 @@
             }, 0);
         }
 
-        // Hàm lấy tên nhà cung cấp
-        function getSupplierName(supplierId) {
-            if (!supplierId) return 'Chưa xác định';
-
-            const supplierMap = {
-                1: "Công ty Hải Sản Biển Đông",
-                2: "Công ty Lương Thực Miền Nam",
-                3: "Rau Sạch Đà Lạt",
-                4: "Thịt Sản Biển Đông",
-                5: "Gia Vị Việt Nam",
-                6: "Thịt Sạch Miền Bắc",
-                7: "Rau Củ Đà Lạt",
-                8: "Lương Thực Việt Nam",
-                9: "Hải Sản Tươi Sống",
-                10: "Gia Vị Truyền Thống"
-            };
-            return supplierMap[supplierId] || `NCC #${supplierId}`;
-        }
-
         // Hàm lấy class trạng thái
         function getStatusClass(status) {
             if (!status) return 'status-pending';
-
             switch (status.toLowerCase()) {
                 case 'pending': return 'status-pending';
                 case 'processing': return 'status-processing';
@@ -580,16 +628,104 @@
         // Hàm lấy tên trạng thái tiếng Việt
         function getStatusText(status) {
             if (!status) return 'Chờ duyệt';
-
             switch (status.toLowerCase()) {
                 case 'pending': return 'Chờ duyệt';
                 case 'processing': return 'Đang xử lý';
                 case 'completed': return 'Hoàn thành';
-                case 'cancelled': return 'Đã hủy';
+                case 'cancelled': return 'Từ chối';
                 default: return status;
             }
         }
 
+        // HÀM MỚI: Cập nhật thống kê
+        function updateStatistics(orders = null) {
+            const dataToUse = orders || purchaseList;
+
+            // Tổng số đơn
+            const totalOrders = dataToUse.length;
+            document.getElementById('totalOrders').textContent = totalOrders;
+
+            // Tổng giá trị
+            const totalValue = dataToUse.reduce((sum, order) => sum + calculateTotal(order), 0);
+            document.getElementById('totalValue').textContent = formatCurrencyShort(totalValue) + 'đ';
+
+            // Đơn đang xử lý (bao gồm pending và processing)
+            const processingCount = dataToUse.filter(o => {
+                const status = (o.Status || o.status || '').toLowerCase();
+                return status === 'processing' || status === 'pending';
+            }).length;
+            document.getElementById('processingOrders').textContent = processingCount;
+
+            // Giá trị trung bình
+            const avgValue = totalOrders > 0 ? totalValue / totalOrders : 0;
+            document.getElementById('avgValue').textContent = formatCurrencyShort(avgValue) + 'đ';
+
+            // Cập nhật text ngày tháng
+            const dateFrom = document.getElementById('filterDateFrom')?.value;
+            const dateTo = document.getElementById('filterDateTo')?.value;
+
+            let dateRangeText = 'Tất cả';
+            if (dateFrom && dateTo) {
+                dateRangeText = `${formatDate(dateFrom)} - ${formatDate(dateTo)}`;
+            } else if (dateFrom) {
+                dateRangeText = `Từ ${formatDate(dateFrom)}`;
+            } else if (dateTo) {
+                dateRangeText = `Đến ${formatDate(dateTo)}`;
+            }
+
+            document.getElementById('statDateRange').textContent = dateRangeText;
+            document.getElementById('statDateRange2').textContent = dateRangeText;
+            document.getElementById('statDateRange3').textContent = dateRangeText;
+        }
+
+        // HÀM CẢI TIẾN: Lọc đơn hàng với nhiều tiêu chí
+        function filterOrders() {
+            const dateFrom = document.getElementById('filterDateFrom')?.value;
+            const dateTo = document.getElementById('filterDateTo')?.value;
+            const status = document.getElementById('filterStatus')?.value;
+            const keyword = document.getElementById('searchInput')?.value.trim().toLowerCase();
+
+            return purchaseList.filter(order => {
+                const orderDate = new Date(order.OrderDate || order.orderDate);
+                const orderId = (order.PurchaseOrderId || order.purchaseOrderId || '').toLowerCase();
+                const supplierName = (order.Supplier?.Name || '').toLowerCase();
+                const orderStatus = (order.Status || order.status || '').toLowerCase();
+
+                // Lọc theo ngày
+                if (dateFrom) {
+                    const fromDate = new Date(dateFrom);
+                    fromDate.setHours(0, 0, 0, 0);
+                    if (orderDate < fromDate) return false;
+                }
+                if (dateTo) {
+                    const toDate = new Date(dateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    if (orderDate > toDate) return false;
+                }
+
+                // Lọc theo trạng thái
+                if (status) {
+                    const filterStatus = status.toLowerCase();
+                    if (filterStatus === 'processing') {
+                        // Đang xử lý bao gồm cả pending và processing
+                        if (orderStatus !== 'processing' && orderStatus !== 'pending') return false;
+                    } else if (orderStatus !== filterStatus) {
+                        return false;
+                    }
+                }
+
+                // Tìm kiếm theo mã đơn HOẶC tên nhà cung cấp
+                if (keyword) {
+                    const matchOrderId = orderId.includes(keyword);
+                    const matchSupplier = supplierName.includes(keyword);
+                    if (!matchOrderId && !matchSupplier) return false;
+                }
+
+                return true;
+            });
+        }
+
+        // Render đơn hàng đang xử lý
         function renderProcessingOrders() {
             const processingOrders = purchaseList.filter(p => {
                 const status = (p.Status || p.status || '').toLowerCase();
@@ -597,11 +733,7 @@
             });
 
             const container = document.getElementById('processingOrdersList');
-
-            if (!container) {
-                console.error('Container processingOrdersList không tồn tại!');
-                return;
-            }
+            if (!container) return;
 
             if (processingOrders.length === 0) {
                 container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Không có đơn hàng đang xử lý</div>';
@@ -612,7 +744,156 @@
             container.innerHTML = processingOrders.map(order => {
                 const total = calculateTotal(order);
                 const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
-                const supplierName = order.Supplier?.Name || 'Chưa xác định'; // ✅ Lấy từ object Supplier
+                const supplierName = order.Supplier?.Name || 'Chưa xác định';
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+
+                return `
+                        <div class="order-item">
+                            <div class="order-header">
+                                <div>
+                                    <div class="order-id">Mã đơn: ${orderId}</div>
+                                    <div class="order-details">Nhà cung cấp: ${supplierName}</div>
+                                </div>
+                                <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                            </div>
+                            <div class="order-details">Ngày nhập: ${formatDate(orderDate)}</div>
+                            <div class="order-footer">
+                                <span class="order-price">${formatCurrency(total)}</span>
+                                <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                            </div>
+                        </div>
+                    `;
+            }).join('');
+
+            document.getElementById('processingCount').textContent = `${processingOrders.length} đơn hàng`;
+        }
+
+        // Render lịch sử hoàn thành
+        function renderCompletedHistory() {
+            const completedOrders = purchaseList.filter(p => {
+                const status = (p.Status || p.status || '').toLowerCase();
+                return status === 'completed' || status === 'cancelled';
+            });
+
+            const container = document.getElementById('completedOrdersList');
+            if (!container) return;
+
+            if (completedOrders.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Chưa có đơn hàng đã xử lý</div>';
+                document.getElementById('completedCount').textContent = '0 đơn';
+                return;
+            }
+
+            container.innerHTML = completedOrders.map(order => {
+                const total = calculateTotal(order);
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierName = order.Supplier?.Name || 'Chưa xác định';
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+
+                return `
+                        <div class="order-item">
+                            <div class="order-header">
+                                <div>
+                                    <div class="order-id">Mã đơn: ${orderId}</div>
+                                    <div class="order-details">Nhà cung cấp: ${supplierName}</div>
+                                </div>
+                                <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
+                            </div>
+                            <div class="order-details">Ngày nhập: ${formatDate(orderDate)}</div>
+                            <div class="order-footer">
+                                <span class="order-price">${formatCurrency(total)}</span>
+                                <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
+                            </div>
+                        </div>
+                    `;
+            }).join('');
+
+            document.getElementById('completedCount').textContent = `${completedOrders.length} đơn`;
+        }
+
+        // Render tất cả đơn hàng
+        function renderAllOrders(filteredList = null) {
+            let orders = filteredList || purchaseList;
+
+            // Sắp xếp theo giá trị nếu được chọn
+            const sortValue = document.getElementById('sortByValue')?.value;
+            if (sortValue) {
+                orders = [...orders].sort((a, b) => {
+                    const totalA = calculateTotal(a);
+                    const totalB = calculateTotal(b);
+                    return sortValue === 'asc' ? totalA - totalB : totalB - totalA;
+                });
+            }
+
+            const tbody = document.getElementById('allOrdersTable');
+            if (!tbody) return;
+
+            tbody.innerHTML = orders.map(order => {
+                const total = calculateTotal(order);
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierName = order.Supplier?.Name || 'Chưa xác định';
+                const status = order.Status || order.status || '';
+                const orderDate = order.OrderDate || order.orderDate || '';
+
+                return `
+                        <tr>
+                            <td>${orderId}</td>
+                            <td>${supplierName}</td>
+                            <td>${formatDate(orderDate)}</td>
+                            <td class="price-completed">${formatCurrency(total)}</td>
+                            <td><span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span></td>
+                            <td><button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button></td>
+                        </tr>
+                    `;
+            }).join('');
+
+            document.getElementById('allOrdersCount').textContent = `${orders.length} đơn`;
+        }
+        // HÀM CẢI TIẾN: Áp dụng bộ lọc
+        function applyFilters() {
+            const filtered = filterOrders();
+
+            // Lọc và render tất cả 3 bảng
+            renderAllOrders(filtered);
+            renderProcessingOrdersFiltered(filtered);
+            renderCompletedHistoryFiltered(filtered);
+
+            updateStatistics(filtered);
+        }
+
+        // Đặt lại bộ lọc
+        function resetFilters() {
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('sortByValue').value = '';
+            document.getElementById('searchInput').value = '';
+            renderAllOrders();
+            updateStatistics();
+        }
+
+        // Render đơn đang xử lý với dữ liệu đã lọc
+        function renderProcessingOrdersFiltered(filteredOrders) {
+            const processingOrders = filteredOrders.filter(p => {
+                const status = (p.Status || p.status || '').toLowerCase();
+                return status === 'processing' || status === 'pending';
+            });
+
+            const container = document.getElementById('processingOrdersList');
+            if (!container) return;
+
+            if (processingOrders.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Không có đơn hàng đang xử lý</div>';
+                document.getElementById('processingCount').textContent = '0 đơn hàng';
+                return;
+            }
+
+            container.innerHTML = processingOrders.map(order => {
+                const total = calculateTotal(order);
+                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
+                const supplierName = order.Supplier?.Name || 'Chưa xác định';
                 const status = order.Status || order.status || '';
                 const orderDate = order.OrderDate || order.orderDate || '';
 
@@ -620,12 +901,12 @@
                     <div class="order-item">
                         <div class="order-header">
                             <div>
-                                <div class="order-id">Mã: ${orderId}</div>
-                                <div class="order-details">NCC: ${supplierName}</div>
+                                <div class="order-id">Mã đơn: ${orderId}</div>
+                                <div class="order-details">Nhà cung cấp: ${supplierName}</div>
                             </div>
                             <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
                         </div>
-                        <div class="order-details">Ngày tạo: ${formatDate(orderDate)}</div>
+                        <div class="order-details">Ngày nhập: ${formatDate(orderDate)}</div>
                         <div class="order-footer">
                             <span class="order-price">${formatCurrency(total)}</span>
                             <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
@@ -637,25 +918,26 @@
             document.getElementById('processingCount').textContent = `${processingOrders.length} đơn hàng`;
         }
 
-        function renderAllOrders(filteredList = null) {
-            const orders = filteredList || purchaseList;
-            const container = document.getElementById('allOrdersList');
+        // Render đơn đã xử lý với dữ liệu đã lọc
+        function renderCompletedHistoryFiltered(filteredOrders) {
+            const completedOrders = filteredOrders.filter(p => {
+                const status = (p.Status || p.status || '').toLowerCase();
+                return status === 'completed' || status === 'cancelled';
+            });
 
-            if (!container) {
-                console.error('Container allOrdersList không tồn tại!');
+            const container = document.getElementById('completedOrdersList');
+            if (!container) return;
+
+            if (completedOrders.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Chưa có đơn hàng đã xử lý</div>';
+                document.getElementById('completedCount').textContent = '0 đơn';
                 return;
             }
 
-            if (orders.length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">Không tìm thấy đơn hàng nào</div>';
-                document.getElementById('allOrdersCount').textContent = '0 đơn';
-                return;
-            }
-
-            container.innerHTML = orders.map(order => {
+            container.innerHTML = completedOrders.map(order => {
                 const total = calculateTotal(order);
                 const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
-                const supplierName = order.Supplier?.Name || 'Chưa xác định'; // ✅ Lấy từ object Supplier
+                const supplierName = order.Supplier?.Name || 'Chưa xác định';
                 const status = order.Status || order.status || '';
                 const orderDate = order.OrderDate || order.orderDate || '';
 
@@ -663,12 +945,12 @@
                     <div class="order-item">
                         <div class="order-header">
                             <div>
-                                <div class="order-id">Mã: ${orderId}</div>
-                                <div class="order-details">NCC: ${supplierName}</div>
+                                <div class="order-id">Mã đơn: ${orderId}</div>
+                                <div class="order-details">Nhà cung cấp: ${supplierName}</div>
                             </div>
                             <span class="order-status ${getStatusClass(status)}">${getStatusText(status)}</span>
                         </div>
-                        <div class="order-details">Ngày: ${formatDate(orderDate)}</div>
+                        <div class="order-details">Ngày nhập: ${formatDate(orderDate)}</div>
                         <div class="order-footer">
                             <span class="order-price">${formatCurrency(total)}</span>
                             <button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button>
@@ -677,63 +959,11 @@
                 `;
             }).join('');
 
-            document.getElementById('allOrdersCount').textContent = `${orders.length} đơn`;
+            document.getElementById('completedCount').textContent = `${completedOrders.length} đơn`;
         }
 
-        function renderCompletedHistory() {
-            const completedOrders = purchaseList.filter(p => {
-                const status = (p.Status || p.status || '').toLowerCase();
-                return status === 'completed';
-            });
-
-            const tbody = document.querySelector('.history-table tbody');
-
-            if (completedOrders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">Chưa có đơn hàng hoàn thành</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = completedOrders.map(order => {
-                const total = calculateTotal(order);
-                const orderId = order.PurchaseOrderId || order.purchaseOrderId || 'N/A';
-                const supplierName = order.Supplier?.Name || 'Chưa xác định'; // ✅ Lấy từ object Supplier
-                const status = order.Status || order.status || '';
-                const orderDate = order.OrderDate || order.orderDate || '';
-
-                return `
-                    <tr>
-                        <td>${orderId}</td>
-                        <td>${supplierName}</td>
-                        <td>${formatDate(orderDate)}</td>
-                        <td class="price-completed">${formatCurrency(total)}</td>
-                        <td><span class="order-status status-completed">${getStatusText(status)}</span></td>
-                        <td><button class="btn-view" onclick="viewOrder('${orderId}')">Xem</button></td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function searchOrders(keyword) {
-            keyword = keyword.trim().toLowerCase();
-
-            if (!keyword) {
-                renderAllOrders();
-                return;
-            }
-
-            const filtered = purchaseList.filter(order => {
-                const orderId = (order.PurchaseOrderId || order.purchaseOrderId || '').toLowerCase();
-                const supplierName = (order.Supplier?.Name || '').toLowerCase(); // ✅ Lấy từ object Supplier
-
-                return orderId.includes(keyword) || supplierName.includes(keyword);
-            });
-
-            renderAllOrders(filtered);
-        }
-
-        // Xem chi tiết đơn hàng - REDIRECT dựa trên trạng thái
+        // Xem chi tiết đơn hàng
         function viewOrder(orderId) {
-            // Tìm đơn hàng trong danh sách
             const order = purchaseList.find(o =>
                 (o.PurchaseOrderId || o.purchaseOrderId) === orderId
             );
@@ -745,34 +975,52 @@
 
             const status = (order.Status || order.status || '').toLowerCase();
 
-            // Nếu đã hoàn thành hoặc bị hủy -> Chuyển sang màn hình Done
             if (status === 'completed' || status === 'cancelled') {
                 window.location.href = `/DetailImport/Done/${orderId}`;
-            }
-            // Nếu đang xử lý -> Chuyển sang màn hình Detail (xác nhận)
-            else {
+            } else {
                 window.location.href = `/DetailImport/Detail/${orderId}`;
             }
         }
 
         // Khởi tạo khi load trang
         document.addEventListener('DOMContentLoaded', () => {
-            if (!purchaseList || purchaseList.length === 0) {
-                console.warn('Không có dữ liệu purchaseList');
-            }
-
+            updateStatistics();
             renderProcessingOrders();
-            renderAllOrders();
             renderCompletedHistory();
+            renderAllOrders();
 
-            // Gắn sự kiện tìm kiếm
-            const searchInput = document.querySelector('.search-input');
+            // Gắn sự kiện tìm kiếm realtime - FIX: kiểm tra giá trị trước khi lọc
+            const searchInput = document.getElementById('searchInput');
             if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    searchOrders(e.target.value);
+                searchInput.addEventListener('input', () => {
+                    // Nếu input trống và không có filter nào khác, hiển thị tất cả
+                    const hasOtherFilters =
+                        document.getElementById('filterDateFrom')?.value ||
+                        document.getElementById('filterDateTo')?.value ||
+                        document.getElementById('filterStatus')?.value;
+
+                    if (!searchInput.value.trim() && !hasOtherFilters) {
+                        renderAllOrders();
+                        updateStatistics();
+                    } else {
+                        applyFilters();
+                    }
                 });
             }
+
+            // Gắn sự kiện thay đổi cho date và status
+            // Gắn sự kiện thay đổi cho date, status và sort
+            const dateFrom = document.getElementById('filterDateFrom');
+            const dateTo = document.getElementById('filterDateTo');
+            const statusFilter = document.getElementById('filterStatus');
+            const sortFilter = document.getElementById('sortByValue');
+
+            if (dateFrom) dateFrom.addEventListener('change', applyFilters);
+            if (dateTo) dateTo.addEventListener('change', applyFilters);
+            if (statusFilter) statusFilter.addEventListener('change', applyFilters);
+            if (sortFilter) sortFilter.addEventListener('change', applyFilters);
         });
     </script>
+    <script src="~/js/importWarehouse/reportImport.js"></script>
 </body>
 </html>

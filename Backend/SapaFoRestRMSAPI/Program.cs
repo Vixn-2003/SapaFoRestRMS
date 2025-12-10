@@ -21,7 +21,10 @@ using SapaFoRestRMSAPI.Services;
 using System.Text;
 using SapaFoRestRMSAPI.Hubs;
 using BusinessAccessLayer.Services.Inventory;
+using QuestPDF.Infrastructure;
 
+// ✅ FIX: Configure QuestPDF License (Community - Free for commercial use)
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -177,6 +180,7 @@ builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService
 builder.Services.AddHostedService<ReorderLevelBackgroundJob>();
 
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IPurchaseOrderDetailService, PurchaseOrderDetailService>();
 
 
 
@@ -255,8 +259,14 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 //DashBoardTable
 builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
 builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
+builder.Services.AddScoped<ISupplierManagerService, SupplierManagerService>();
+// capacityStatistic
+builder.Services.AddScoped<ICapacityStatisticsRepository, CapacityStatisticsRepository>();
+builder.Services.AddScoped<ICapacityStatisticsService, CapacityStatisticsService>();
 
-
+//
+builder.Services.Configure<MomoOptions>(builder.Configuration.GetSection("Momo"));
+builder.Services.AddSingleton<IMomoService, MomoService>();
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 //daytype
 builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
@@ -276,6 +286,7 @@ builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ICustomerVipService, CustomerVipService>();
 
 // AuditLog Service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
@@ -289,6 +300,7 @@ builder.Services.AddScoped<IReceiptService>(sp =>
     var env = sp.GetRequiredService<IWebHostEnvironment>();
     var logger = sp.GetRequiredService<ILogger<ReceiptService>>();
     var configuration = sp.GetRequiredService<IConfiguration>();
+    var serviceProvider = sp; // Pass service provider to access ICloudinaryService
     var webRootPath = string.IsNullOrWhiteSpace(env.WebRootPath)
         ? Path.Combine(env.ContentRootPath, "wwwroot")
         : env.WebRootPath;
@@ -298,7 +310,7 @@ builder.Services.AddScoped<IReceiptService>(sp =>
         Directory.CreateDirectory(webRootPath);
     }
 
-    return new ReceiptService(unitOfWork, webRootPath, logger, configuration);
+    return new ReceiptService(unitOfWork, webRootPath, logger, configuration, serviceProvider);
 });
 
 // SalaryChangeRequest Service/Repository
@@ -421,15 +433,16 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
-    await DataSeeder.SeedPositionsAsync(ctx);
+    //await DataSeeder.SeedPositionsAsync(ctx);
+    //await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
     //await DataSeeder.SeedTestCustomerAsync(ctx);
     //await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
     //await MenuDataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
     //await MenuDataSeeder.SeedKitchenOrdersAsync(ctx);
-    
-    //// 🔹 Seed thêm dữ liệu workflow thu ngân + combo cho bếp (gồm Order 3–8)
+
+    // 🔹 Seed thêm dữ liệu workflow thu ngân + combo cho bếp (gồm Order 3–8)
     //await DataSeeder.SeedCashierWorkflowTestAsync(ctx);
-    await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
+    //await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);

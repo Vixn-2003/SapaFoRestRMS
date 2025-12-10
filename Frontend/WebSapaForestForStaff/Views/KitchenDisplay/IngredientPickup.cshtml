@@ -1,0 +1,422 @@
+@{
+    ViewData["Title"] = "Lấy Nguyên Liệu - " + (ViewBag.CategoryName ?? "Tất cả");
+    Layout = "~/Views/Shared/_LayoutKitchen.cshtml";
+}
+
+@section Styles {
+    <style>
+        .pickup-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .pickup-header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .pickup-title {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .pickup-subtitle {
+            font-size: 18px;
+            color: #6c757d;
+        }
+
+        .pickup-filters {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .refresh-btn {
+            padding: 8px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #0056b3;
+        }
+
+        .pickup-table-section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .pickup-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .pickup-table thead {
+            background: #f8f9fa;
+        }
+
+        .pickup-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .pickup-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .pickup-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .pickup-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .menu-item-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .ingredient-name {
+            color: #495057;
+        }
+
+        .warehouse-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #e7f3ff;
+            color: #0066cc;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .batch-info {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .expiry-date {
+            font-size: 12px;
+        }
+
+        .expiry-date.warning {
+            color: #ff9800;
+            font-weight: 600;
+        }
+
+        .expiry-date.danger {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .quantity-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #28a745;
+            color: white;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state-message {
+            font-size: 18px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .auto-refresh-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @@keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+}
+
+<div class="pickup-container">
+    <div class="pickup-header">
+        <h1 class="pickup-title">Lấy Nguyên Liệu</h1>
+        <p class="pickup-subtitle">Danh sách nguyên liệu cần lấy từ lô hàng cho các món đang nấu</p>
+    </div>
+
+    <div class="pickup-filters">
+        <div class="filter-group">
+            <label class="filter-label">Trạm:</label>
+            <select id="categoryFilter" class="filter-select">
+                <option value="">Tất cả trạm</option>
+            </select>
+        </div>
+        <button class="refresh-btn" onclick="loadPickupList()">
+            🔄 Làm mới
+            <span id="autoRefreshIndicator" class="auto-refresh-indicator" style="display: none;"></span>
+        </button>
+    </div>
+
+    <div class="pickup-table-section">
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            Đang tải dữ liệu...
+        </div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📦</div>
+            <div class="empty-state-message">Không có nguyên liệu cần lấy</div>
+        </div>
+        <table id="pickupTable" class="pickup-table" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Món ăn</th>
+                    <th>Số lượng</th>
+                    <th>Bàn</th>
+                    <th>Nguyên liệu</th>
+                    <th>Kho</th>
+                    <th>Lô hàng</th>
+                    <th>Hạn sử dụng</th>
+                    <th>Số lượng cần lấy</th>
+                </tr>
+            </thead>
+            <tbody id="pickupTableBody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiBaseUrl = '@ViewBag.ApiBaseUrl';
+        let autoRefreshInterval = null;
+        let currentCategory = '@ViewBag.CategoryName';
+
+        // Load categories on page load
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/ManagerCategory`);
+                if (response.ok) {
+                    const categories = await response.json();
+                    const select = document.getElementById('categoryFilter');
+                    
+                    // Clear existing options except "Tất cả trạm"
+                    select.innerHTML = '<option value="">Tất cả trạm</option>';
+                    
+                    if (Array.isArray(categories)) {
+                        categories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat.categoryName || cat.name || cat;
+                            option.textContent = cat.categoryName || cat.name || cat;
+                            if (currentCategory && option.value === currentCategory) {
+                                option.selected = true;
+                            }
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Load pickup list
+        async function loadPickupList() {
+            const category = document.getElementById('categoryFilter').value;
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const emptyState = document.getElementById('emptyState');
+            const pickupTable = document.getElementById('pickupTable');
+            const tableBody = document.getElementById('pickupTableBody');
+
+            loadingIndicator.style.display = 'block';
+            emptyState.style.display = 'none';
+            pickupTable.style.display = 'none';
+
+            try {
+                const url = category 
+                    ? `${apiBaseUrl}/InventoryIngredient/kitchen-pickup?categoryName=${encodeURIComponent(category)}`
+                    : `${apiBaseUrl}/InventoryIngredient/kitchen-pickup`;
+                
+                const response = await fetch(url);
+                const result = await response.json();
+
+                loadingIndicator.style.display = 'none';
+
+                if (result.success && result.data && result.data.length > 0) {
+                    tableBody.innerHTML = '';
+                    result.data.forEach(item => {
+                        const row = createPickupRow(item);
+                        tableBody.appendChild(row);
+                    });
+                    pickupTable.style.display = 'table';
+                } else {
+                    emptyState.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading pickup list:', error);
+                loadingIndicator.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.querySelector('.empty-state-message').textContent = 'Lỗi khi tải dữ liệu';
+            }
+        }
+
+        function createPickupRow(item) {
+            const row = document.createElement('tr');
+            
+            // Calculate expiry status
+            let expiryClass = '';
+            let expiryText = item.expiryDate || 'Không có';
+            if (item.expiryDate) {
+                const expiry = new Date(item.expiryDate);
+                const today = new Date();
+                const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysUntilExpiry < 0) {
+                    expiryClass = 'danger';
+                    expiryText = `${item.expiryDate} (Đã hết hạn)`;
+                } else if (daysUntilExpiry <= 3) {
+                    expiryClass = 'warning';
+                    expiryText = `${item.expiryDate} (Còn ${daysUntilExpiry} ngày)`;
+                } else {
+                    expiryText = `${item.expiryDate} (Còn ${daysUntilExpiry} ngày)`;
+                }
+            }
+
+            row.innerHTML = `
+                <td>
+                    <div class="menu-item-name">${escapeHtml(item.menuItemName)}</div>
+                </td>
+                <td>${item.orderQuantity}</td>
+                <td>${item.tableName || '-'}</td>
+                <td>
+                    <div class="ingredient-name">${escapeHtml(item.ingredientName)}</div>
+                    <div class="batch-info">Đơn vị: ${item.unitName || '-'}</div>
+                </td>
+                <td>
+                    <span class="warehouse-badge">${escapeHtml(item.warehouseName)}</span>
+                </td>
+                <td>
+                    <div class="batch-info">Lô #${item.batchId}</div>
+                </td>
+                <td>
+                    <div class="expiry-date ${expiryClass}">${expiryText}</div>
+                </td>
+                <td>
+                    <span class="quantity-badge">${formatNumber(item.quantityToPick)} ${item.unitName || ''}</span>
+                </td>
+            `;
+
+            return row;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatNumber(num) {
+            return parseFloat(num).toFixed(2).replace(/\.?0+$/, '');
+        }
+
+        // Auto refresh every 10 seconds
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            autoRefreshInterval = setInterval(() => {
+                loadPickupList();
+            }, 10000);
+            document.getElementById('autoRefreshIndicator').style.display = 'inline-block';
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            document.getElementById('autoRefreshIndicator').style.display = 'none';
+        }
+
+        // Event listeners
+        document.getElementById('categoryFilter').addEventListener('change', () => {
+            loadPickupList();
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCategories().then(() => {
+                loadPickupList();
+                startAutoRefresh();
+            });
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
+    </script>
+}
+

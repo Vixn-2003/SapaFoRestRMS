@@ -422,10 +422,22 @@
                         <label for="timeCook">Thời gian nấu (phút)</label>
                         <input type="number"
                                id="timeCook"
-                               name="timeCook"
+                               name="ProductsMenu.TimeCook"
                                asp-for="ProductsMenu.TimeCook"
                                placeholder="Nhập số phút"
                                min="0"
+                               step="1"
+                               style="padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="batchSize">Số lượng nấu mỗi mẻ</label>
+                        <input type="number"
+                               id="batchSize"
+                               name="ProductsMenu.BatchSize"
+                               asp-for="ProductsMenu.BatchSize"
+                               placeholder="VD: 5 (món/mẻ)"
+                               min="1"
                                step="1"
                                style="padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
                     </div>
@@ -459,11 +471,11 @@
 
                     <div class="form-group">
                         <label for="CourseType">Kiểu món</label>
-                        <select asp-for="ProductsMenu.CourseType" class="form-control">
-                            <option value="Drink">Nước uống</option>
-                            <option value="Dessert">Món tráng miệng</option>
-                            <option value="MainDish">Món chính</option>
-                            <option value="Appetizer">Món khai vị</option>
+                        <select asp-for="ProductsMenu.CourseType" class="form-control" id="courseType">
+                            <option value="Đồ uống">Đồ uống</option>
+                            <option value="Món tráng miệng">Món tráng miệng</option>
+                            <option value="Món chính">Món chính</option>
+                            <option value="Món khai vị">Món khai vị</option>
                         </select>
                     </div>
 
@@ -490,7 +502,7 @@
                 </div>
 
                 <div class="ingredients-section">
-                    <h2>🥗 Danh sách nguyên liệu</h2>
+                    <h2> Danh sách nguyên liệu</h2>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
                         <!-- Bảng trái: Danh sách nguyên liệu có thể chọn -->

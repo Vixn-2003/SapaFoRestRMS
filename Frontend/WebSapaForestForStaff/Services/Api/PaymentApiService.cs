@@ -18,12 +18,12 @@ namespace WebSapaForestForStaff.Services.Api
 
         public async Task<List<OrderDto>> GetPendingOrdersAsync()
         {
-            return await FetchOrdersByStatusAsync("pending");
+            return await FetchOrdersByStatusAsync("Confirmed");
         }
 
         public async Task<List<OrderDto>> GetPaidOrdersAsync()
         {
-            return await FetchOrdersByStatusAsync("processed");
+            return await FetchOrdersByStatusAsync("Paid");
         }
 
         public async Task<List<OrderDto>> GetOrdersByStatusAndDateAsync(string statusFilter, DateOnly date)
@@ -53,6 +53,11 @@ namespace WebSapaForestForStaff.Services.Api
             return await response.Content.ReadFromJsonAsync<OrderDetailDto>();
         }
 
+        /// <summary>
+        /// ⚠️ KHÔNG DÙNG CHO CASHIER FLOW NỮA
+        /// Method này có thể dùng cho waiter flow hoặc mục đích khác
+        /// Cashier KHÔNG xác nhận món, chỉ xử lý thanh toán
+        /// </summary>
         public async Task<ApiResult> ConfirmCustomerOrderAsync(ConfirmOrderRequest request)
         {
             var response = await SendWithAutoRefreshAsync(client =>
@@ -72,21 +77,47 @@ namespace WebSapaForestForStaff.Services.Api
             var response = await SendWithAutoRefreshAsync(client =>
                 client.PostAsJsonAsync(BuildApiUrl("/payment/payments/initiate"), request));
 
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                // Đọc message chi tiết từ API để hiển thị cho thu ngân
+                var message = await ReadApiMessageAsync(response) ?? "Không thể khởi tạo thanh toán.";
+                _logger.LogWarning("InitiatePaymentAsync failed for OrderId {OrderId} with status {StatusCode}: {Message}",
+                    request.OrderId, (int)response.StatusCode, message);
+
+                // Ném exception có message rõ ràng để controller bắt và hiển thị
+                throw new InvalidOperationException(message);
+            }
+
             return await response.Content.ReadFromJsonAsync<PaymentSessionDto>();
         }
 
         public async Task<ApiResult> ConfirmPaymentAsync(PaymentConfirmRequest request)
         {
+            // ✅ DEBUG: Log request
+            _logger.LogInformation("[ConfirmPaymentAsync] Sending request: OrderId={OrderId}, PaymentMethod={PaymentMethod}, Amount={Amount}", 
+                request.OrderId, request.PaymentMethod, request.Amount);
+            
             var response = await SendWithAutoRefreshAsync(client =>
                 client.PostAsJsonAsync(BuildApiUrl("/payment/payments/confirm"), request));
 
+            // ✅ DEBUG: Log response status
+            _logger.LogInformation("[ConfirmPaymentAsync] Response status: {StatusCode}", response.StatusCode);
+
             if (!response.IsSuccessStatusCode)
             {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("[ConfirmPaymentAsync] Failed with status {StatusCode}. Response body: {ResponseBody}", 
+                    response.StatusCode, responseBody);
+                
                 var message = await ReadApiMessageAsync(response) ?? "Thanh toán thất bại";
+                _logger.LogWarning("[ConfirmPaymentAsync] Error message: {Message}", message);
+                
                 return new ApiResult(false, message);
             }
 
+            var successBody = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("[ConfirmPaymentAsync] Success response: {ResponseBody}", successBody);
+            
             return new ApiResult(true, "Thanh toán thành công");
         }
 
@@ -145,6 +176,71 @@ namespace WebSapaForestForStaff.Services.Api
             }
 
             return result;
+        }
+
+        public async Task<DiscountApplyResponse?> ApplyDiscountAsync(DiscountRequest request)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl("/payment/discounts/validate"), request));
+
+            var result = new DiscountApplyResponse();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                result.Success = false;
+                result.Message = await ReadApiMessageAsync(response) ?? "Không thể áp dụng ưu đãi";
+                return result;
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<DiscountApplyResponse>();
+            return payload;
+        }
+
+        public async Task<ApiResult> ProcessCombinedPaymentAsync(CombinedPaymentRequest request)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl("/payment/combined"), request));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể xử lý thanh toán kết hợp";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Thanh toán kết hợp thành công");
+        }
+
+        public async Task<ApiResult> CancelOrderAsync(int orderId, string reason)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.DeleteAsync(BuildApiUrl($"/payment/orders/{orderId}/cancel?reason={Uri.EscapeDataString(reason)}")));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể hủy đơn hàng";
+                return new ApiResult(false, message);
+            }
+            return new ApiResult(true, "Đã hủy đơn hàng thành công");
+        }
+
+        public async Task<ApiResult> UndoConfirmOrderAsync(int orderId, UndoConfirmRequest request)
+        {
+            // Backend API nhận OrderId từ route và request body chỉ có StaffId và Reason
+            var requestBody = new
+            {
+                StaffId = request.StaffId,
+                Reason = request.Reason
+            };
+
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PutAsJsonAsync(BuildApiUrl($"/payment/orders/{orderId}/undo-confirm"), requestBody));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể hoàn tác xác nhận đơn hàng";
+                return new ApiResult(false, message);
+            }
+            return new ApiResult(true, "Đã hoàn tác xác nhận đơn hàng thành công");
         }
 
         private async Task<List<OrderDto>> FetchOrdersByStatusAsync(string statusFilter)

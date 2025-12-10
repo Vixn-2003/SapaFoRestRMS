@@ -132,6 +132,8 @@
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="OrderId" value="@Model.OrderId" />
                         <input type="hidden" name="SessionId" value="@Model.Session?.SessionId" />
+                        <input type="hidden" name="PaymentMethod" value="@paymentMethod" />
+                        <input type="hidden" name="Amount" value="@amount" />
                         <a class="btn btn-outline-secondary"
                            href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = Model.OrderId })">
                             ← Quay lại chọn phương thức

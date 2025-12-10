@@ -8,7 +8,7 @@ namespace BusinessAccessLayer.Services.Interfaces
         /// <summary>
         /// Lấy danh sách orders để theo dõi tiến độ phục vụ
         /// </summary>
-        Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null);
+        Task<WaiterOrderTrackingDto> GetOrderTrackingAsync(int? waiterUserId = null, List<int>? tableIds = null);
 
         /// <summary>
         /// Yêu cầu làm gấp một món

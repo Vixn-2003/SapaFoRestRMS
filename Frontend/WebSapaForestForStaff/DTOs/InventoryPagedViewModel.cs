@@ -15,5 +15,7 @@ namespace WebSapaForestForStaff.DTOs
         public DateTime? ToDate { get; set; }
 
         public List<UnitDTO> Units { get; set; } = new List<UnitDTO>();
+
+
     }
 }

@@ -1,6 +1,7 @@
 ﻿@{
     ViewData["Title"] = "Danh sách đặt bàn của khách hàng";
 }
+<link rel="stylesheet" href="~/css/reservation-edit-modal.css" asp-append-version="true" />
 
 <div class="container mt-4">
     <h3 class="mb-3">Danh sách đặt bàn của bạn</h3>
@@ -51,44 +52,56 @@
 </div>
 
 <!-- ✏️ Modal cập nhật -->
-<div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cập nhật đặt bàn</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="editId">
+<!-- 🌿 Modal Cập nhật Đặt bàn – Rừng Xanh Sapa -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content edit-modal-content">
 
-                <div class="mb-3">
-                    <label>Ngày đặt</label>
-                    <input type="date" id="editDate" class="form-control">
-                </div>
-
-                <div class="mb-3">
-                    <label>Giờ đặt (8:00 - 22:00)</label>
-                    <select id="editTime" class="form-select"></select>
-                </div>
-
-                <div class="mb-3">
-                    <label>Số khách</label>
-                    <input type="number" id="editGuests" class="form-control" min="1">
-                </div>
-
-                <div class="mb-3">
-                    <label>Ghi chú</label>
-                    <textarea id="editNotes" class="form-control"></textarea>
-                </div>
+            <!-- Header -->
+            <div class="modal-header edit-modal-header">
+                <h5 class="modal-title edit-modal-title">
+                    <i class="bi bi-pencil-square me-2"></i> Cập nhật đặt bàn
+                </h5>
+                <button type="button" class="btn-close edit-close-btn" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button class="btn btn-primary" id="btnSaveEdit">Lưu thay đổi</button>
+            <!-- Body -->
+            <div class="modal-body edit-modal-body">
+                <input type="hidden" id="editId" />
+
+                <div class="mb-3">
+                    <label class="form-label">Ngày đặt</label>
+                    <input type="date" id="editDate" class="form-control edit-input">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Giờ đặt (8:00 - 22:00)</label>
+                    <select id="editTime" class="form-select edit-input"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Số khách</label>
+                    <input type="number" id="editGuests" class="form-control edit-input" min="1">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Ghi chú</label>
+                    <textarea id="editNotes" class="form-control edit-input edit-textarea"></textarea>
+                </div>
             </div>
+
+            <!-- Footer -->
+            <div class="modal-footer edit-modal-footer">
+                <button class="btn btn-secondary edit-btn-cancel" data-bs-dismiss="modal">Hủy</button>
+                <button class="btn btn-primary edit-btn-save" id="btnSaveEdit">
+                    <i class="bi bi-save me-1"></i> Lưu thay đổi
+                </button>
+            </div>
+
         </div>
     </div>
 </div>
+
 
 @section Scripts {
     <script>
@@ -185,9 +198,9 @@
                         <td>${r.notes || ''}</td>
                         <td>
                             <button class="btn btn-sm btn-warning me-2" onclick="openEdit(${r.reservationId})"
-                                ${r.status === 'Cancelled' ? 'disabled' : ''}>Sửa</button>
+                                        ${r.status !== 'Pending' ? 'disabled' : ''}>Sửa</button>
                             <button class="btn btn-sm btn-danger" onclick="cancelReservation(${r.reservationId})"
-                                ${r.status === 'Cancelled' ? 'disabled' : ''}>Hủy</button>
+                                ${r.status !== 'Pending' ? 'disabled' : ''}>Hủy</button>
                         </td>
                     </tr>
                 `);
@@ -225,21 +238,32 @@
         }
 
         // ✏️ Mở modal edit
-        function openEdit(id) {
+               function openEdit(id) {
             const item = allData.find(x => x.reservationId === id);
             if (!item) return;
 
+            // Luôn tạo danh sách giờ trước khi set value
+            populateTimeOptions();
+
             $('#editId').val(item.reservationId);
-            $('#editDate').val(item.reservationDate.split('T')[0]);
-            $('#editTime').val(formatTime(item.reservationTime));
+
+            // Set ngày
+            $('#editDate').val(item.reservationDate.split("T")[0]);
+
+            // Set giờ chuẩn bằng hàm extractTimeForSelect()
+            const timeValue = extractTimeForSelect(item.reservationTime);
+            $('#editTime').val(timeValue);
+
             $('#editGuests').val(item.numberOfGuests);
             $('#editNotes').val(item.notes);
 
             const editable = item.status !== "Cancelled";
-            $('#editDate, #editTime, #editGuests, #editNotes, #btnSaveEdit').prop('disabled', !editable);
+            $('#editDate, #editTime, #editGuests, #editNotes, #btnSaveEdit')
+                .prop('disabled', !editable);
 
             $('#editModal').modal('show');
         }
+
 
         // 💾 Lưu thay đổi
         $('#btnSaveEdit').click(async function () {
@@ -315,5 +339,28 @@
             populateTimeOptions();
             loadReservations();
         });
+                // 🕒 Tách HH:mm từ mọi kiểu dữ liệu
+        function extractTimeForSelect(value) {
+            if (!value) return "";
+
+            // Nếu backend trả dạng "2025-02-10T18:30:00"
+            if (typeof value === "string" && value.includes("T")) {
+                return value.split("T")[1].substring(0, 5);
+            }
+
+            // Nếu chuỗi giờ "18:30:00"
+            if (typeof value === "string" && value.length >= 5) {
+                return value.substring(0, 5);
+            }
+
+            // Nếu backend trả dạng Date object
+            const d = new Date(value);
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().substring(11, 16);
+            }
+
+            return "";
+        }
+
     </script>
 }

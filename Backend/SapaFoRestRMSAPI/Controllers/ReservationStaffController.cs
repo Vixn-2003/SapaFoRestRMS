@@ -1,9 +1,6 @@
 ﻿using BusinessAccessLayer.DTOs;
-using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SapaFoRestRMSAPI.Services;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -21,13 +18,13 @@ namespace SapaFoRestRMSAPI.Controllers
 
         [HttpGet("reservations/pending-confirmed")]
         public async Task<IActionResult> GetPendingAndConfirmedReservations(
-    [FromQuery] string? status,
-    [FromQuery] DateTime? date,
-    [FromQuery] string? customerName,
-    [FromQuery] string? phone,
-    [FromQuery] string? timeSlot,
-    [FromQuery] int page = 1,
-    [FromQuery] int pageSize = 10)
+            [FromQuery] string? status,
+            [FromQuery] DateTime? date,
+            [FromQuery] string? customerName,
+            [FromQuery] string? phone,
+            [FromQuery] string? timeSlot,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
             var result = await _service.GetPendingAndConfirmedReservationsAsync(
                 status, date, customerName, phone, timeSlot, page, pageSize);
@@ -58,6 +55,7 @@ namespace SapaFoRestRMSAPI.Controllers
             var result = await _service.GetBookedTableIdsAsync(reservationDate, timeSlot);
             return Ok(new { BookedTableIds = result });
         }
+
         [HttpGet("tables/booked-with-time")]
         public async Task<IActionResult> GetBookedTablesWithTime(DateTime reservationDate, string timeSlot)
         {
@@ -66,7 +64,11 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         [HttpGet("tables/suggest-by-areas")]
-        public async Task<IActionResult> SuggestTablesByAreas(DateTime reservationDate, string timeSlot, int numberOfGuests, int? currentReservationId = null)
+        public async Task<IActionResult> SuggestTablesByAreas(
+            DateTime reservationDate,
+            string timeSlot,
+            int numberOfGuests,
+            int? currentReservationId = null)
         {
             var result = await _service.SuggestTablesByAreasAsync(reservationDate, timeSlot, numberOfGuests, currentReservationId);
             return Ok(result);
@@ -99,6 +101,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
         [HttpPut("cancel/{id}")]
         public async Task<IActionResult> CancelReservation(int id, [FromQuery] bool refund = false)
         {
@@ -116,6 +119,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return BadRequest(new { Message = ex.Message });
             }
         }
+
         [HttpPost("add")]
         public async Task<IActionResult> AddReservation([FromBody] ReservationCreateDto dto)
         {
@@ -149,6 +153,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
         [HttpPut("update/{reservationId}")]
         public async Task<IActionResult> UpdateReservation(int reservationId, [FromBody] ReservationUpdateDto dto)
         {
@@ -173,6 +178,13 @@ namespace SapaFoRestRMSAPI.Controllers
                     message = ex.Message
                 });
             }
+        }
+
+        [HttpGet("reservations/pending-count")]
+        public async Task<IActionResult> GetPendingCount()
+        {
+            int count = await _service.GetPendingCountAsync();
+            return Ok(new { pendingCount = count });
         }
     }
 }

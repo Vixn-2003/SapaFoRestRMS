@@ -3,6 +3,7 @@ using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
 using DomainAccessLayer.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using QuestPDF.Fluent;
@@ -20,16 +21,48 @@ public class ReceiptService : IReceiptService
     private readonly string _webRootPath;
     private readonly ILogger<ReceiptService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly ICloudinaryService? _cloudinaryService;
 
-    public ReceiptService(IUnitOfWork unitOfWork, string webRootPath, ILogger<ReceiptService> logger, IConfiguration configuration)
+    public ReceiptService(
+        IUnitOfWork unitOfWork, 
+        string webRootPath, 
+        ILogger<ReceiptService> logger, 
+        IConfiguration configuration,
+        IServiceProvider? serviceProvider = null)
     {
         _unitOfWork = unitOfWork;
         _webRootPath = webRootPath ?? throw new ArgumentNullException(nameof(webRootPath));
         _logger = logger;
         _configuration = configuration;
         
-        // Set QuestPDF license (free for non-commercial use)
-        QuestPDF.Settings.License = LicenseType.Community;
+        // Get CloudinaryService from DI if available (optional dependency)
+        try
+        {
+            _cloudinaryService = serviceProvider?.GetService<ICloudinaryService>();
+            if (_cloudinaryService != null)
+            {
+                _logger.LogInformation("CloudinaryService is available. Receipts will be uploaded to Cloudinary.");
+            }
+            else
+            {
+                _logger.LogInformation("CloudinaryService is not available. Receipts will be stored locally only.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get CloudinaryService. Receipts will be stored locally only.");
+            _cloudinaryService = null;
+        }
+    }
+
+    /// <summary>
+    /// Làm tròn lên mệnh giá 1000 VND
+    /// Ví dụ: 157600 → 158000, 157400 → 158000, 157000 → 157000
+    /// </summary>
+    private static decimal RoundUpToThousand(decimal amount)
+    {
+        if (amount <= 0) return 0;
+        return Math.Ceiling(amount / 1000m) * 1000m;
     }
 
     public async Task<string> GenerateReceiptPdfAsync(int orderId, CancellationToken ct = default)
@@ -59,9 +92,55 @@ public class ReceiptService : IReceiptService
         {
             foreach (var od in order.OrderDetails)
             {
-                // Skip removed items
-                if (od.Status == "Removed")
+                // Bỏ qua món đã bị xóa hoặc đã hủy
+                var status = (od.Status ?? "").Trim();
+                var statusLower = status.ToLower();
+                
+                if (statusLower == "removed" || statusLower == "cancelled" || statusLower == "đã hủy")
                 {
+                    continue;
+                }
+
+                // ✅ LOGIC MỚI: Chỉ tính tiền món có Status = "Cooking", "Done", "Ready"
+                // Không tính tiền món có Status = "Pending"
+                
+                // Danh sách status được phép thanh toán
+                var billableStatuses = new[] { "cooking", "done", "ready", "served", "đang chế biến", "đã xong", "sẵn sàng" };
+                bool isBillable = billableStatuses.Any(s => statusLower == s);
+
+                // ✅ XỬ LÝ COMBO: Nếu là combo, kiểm tra OrderComboItems
+                if (od.ComboId.HasValue && od.OrderComboItems != null && od.OrderComboItems.Any())
+                {
+                    // Bỏ qua các món đã bị hủy trong combo khi kiểm tra
+                    var activeComboItems = od.OrderComboItems.Where(oci =>
+                    {
+                        var comboItemStatus = (oci.Status ?? "").Trim().ToLower();
+                        return comboItemStatus != "cancelled" && comboItemStatus != "đã hủy" && comboItemStatus != "removed";
+                    }).ToList();
+
+                    // Nếu không còn món nào active trong combo → không tính tiền
+                    if (!activeComboItems.Any())
+                    {
+                        continue;
+                    }
+
+                    // Nếu có ít nhất 1 món trong combo đã sẵn sàng (Cooking/Done/Ready) thì thanh toán toàn bộ combo
+                    bool hasReadyComboItem = activeComboItems.Any(oci =>
+                    {
+                        var comboItemStatus = (oci.Status ?? "").Trim().ToLower();
+                        return billableStatuses.Any(s => comboItemStatus == s);
+                    });
+
+                    if (!hasReadyComboItem)
+                    {
+                        // Combo chưa có món nào sẵn sàng → không tính tiền
+                        continue;
+                    }
+                    // Nếu có món sẵn sàng → tính tiền toàn bộ combo (logic bên dưới)
+                }
+                else if (!isBillable)
+                {
+                    // Món lẻ chưa sẵn sàng (Status = "Pending") → không tính tiền
                     continue;
                 }
 
@@ -83,13 +162,23 @@ public class ReceiptService : IReceiptService
             }
         }
         
-        var vatAmount = subtotal * 0.1m; // 10% VAT
-        var serviceFee = subtotal * 0.05m; // 5% service fee
+        // ✅ Làm tròn Subtotal lên mệnh giá 1000
+        subtotal = RoundUpToThousand(subtotal);
         
-        // Get discount from latest payment if available
-        var discountAmount = order.Payments?.OrderByDescending(p => p.PaymentDate ?? DateTime.MinValue).FirstOrDefault()?.DiscountAmount ?? 0;
+        // Tính VAT (10%) từ Subtotal đã làm tròn
+        var vatAmount = RoundUpToThousand(subtotal * 0.1m);
         
+        // Tính phí dịch vụ (5%) từ Subtotal đã làm tròn
+        var serviceFee = RoundUpToThousand(subtotal * 0.05m);
+        
+        // Get discount from latest payment if available và làm tròn
+        var discountAmount = RoundUpToThousand(
+            order.Payments?.OrderByDescending(p => p.PaymentDate ?? DateTime.MinValue).FirstOrDefault()?.DiscountAmount ?? 0
+        );
+        
+        // Tính tổng cộng và làm tròn
         var totalAmount = order.TotalAmount ?? (subtotal + vatAmount + serviceFee - discountAmount);
+        totalAmount = RoundUpToThousand(totalAmount);
 
         // Get payment method from latest transaction
         var latestTransaction = order.Transactions?.OrderByDescending(t => t.CreatedAt).FirstOrDefault();
@@ -340,8 +429,33 @@ public class ReceiptService : IReceiptService
 
         _logger.LogInformation("Finished generating receipt for order {OrderId}. File saved to {PdfPath} ({FileSize} bytes)", orderId, pdfPath, fileSize);
 
-        // Return relative URL path
-        return $"/receipts/{pdfFileName}";
+        // ✅ Upload PDF to Cloudinary if service is available
+        string? cloudinaryUrl = null;
+        if (_cloudinaryService != null)
+        {
+            try
+            {
+                var pdfBytes = await System.IO.File.ReadAllBytesAsync(pdfPath, ct);
+                cloudinaryUrl = await _cloudinaryService.UploadPdfAsync(pdfBytes, pdfFileName, "receipts");
+                
+                if (!string.IsNullOrEmpty(cloudinaryUrl))
+                {
+                    _logger.LogInformation("Successfully uploaded receipt PDF to Cloudinary for order {OrderId}. URL: {CloudinaryUrl}", orderId, cloudinaryUrl);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to upload receipt PDF to Cloudinary for order {OrderId}. Will use local file.", orderId);
+                }
+            }
+            catch (Exception cloudinaryEx)
+            {
+                // Log error but don't fail - fallback to local storage
+                _logger.LogWarning(cloudinaryEx, "Error uploading receipt PDF to Cloudinary for order {OrderId}. Will use local file.", orderId);
+            }
+        }
+
+        // Return Cloudinary URL if available, otherwise return local path
+        return cloudinaryUrl ?? $"/receipts/{pdfFileName}";
     }
 
     /// <summary>

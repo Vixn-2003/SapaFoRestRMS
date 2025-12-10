@@ -13,6 +13,8 @@ public partial class Customer
 
     public string? Notes { get; set; }
 
+    public bool IsVip { get; set; }
+
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
     public virtual ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();

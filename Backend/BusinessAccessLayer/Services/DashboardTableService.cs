@@ -3,6 +3,7 @@ using BusinessAccessLayer.DTOs.OrderGuest;
 using BusinessAccessLayer.DTOs.OrderGuest.ListOrder;
 using BusinessAccessLayer.Hubs;
 using BusinessAccessLayer.Services.Interfaces;
+using BusinessAccessLayer.Constants;
 using DataAccessLayer.Common;
 using DataAccessLayer.Dbcontext;
 using DataAccessLayer.Repositories;
@@ -376,6 +377,9 @@ namespace BusinessAccessLayer.Services
                 if (latestOrder != null)
                 {
                     screenDto.ActiveOrderId = latestOrder.OrderId;
+                    // ✅ Đưa trạng thái order hiện tại ra FE để dùng cho flow waiter/cashier
+                    // Chuẩn hoá về lowercase để so sánh đơn giản ở frontend
+                    screenDto.OrderStatus = latestOrder.Status?.ToLowerInvariant();
 
                     foreach (var od in latestOrder.OrderDetails)
                     {
@@ -424,6 +428,47 @@ namespace BusinessAccessLayer.Services
                             });
                         }
                     }
+                }
+            }
+
+            // ✅ TÍNH TOÁN SỐ LƯỢNG MÓN THEO TRẠNG THÁI (Backend)
+            screenDto.TotalQuantity = screenDto.OrderedItems.Sum(item => item.Quantity);
+            
+            foreach (var item in screenDto.OrderedItems)
+            {
+                var status = (item.Status ?? "").Trim();
+                var statusLower = status.ToLower();
+                
+                // Đã phục vụ & đang nấu: Status = "Cooking", "Done", "Ready", "Served"
+                var isReady = statusLower == "cooking" ||
+                             statusLower == "done" ||
+                             statusLower == "ready" ||
+                             statusLower == "served" ||
+                             statusLower == "đang chế biến" ||
+                             statusLower == "đã xong" ||
+                             statusLower == "sẵn sàng";
+                
+                // Chưa nấu: Status = "Pending"
+                var isPending = statusLower == "pending" ||
+                               statusLower == "đã gửi" ||
+                               string.IsNullOrEmpty(status);
+                
+                // Món đã hủy: Status = "Cancelled", "Removed"
+                var isCancelled = statusLower == "cancelled" ||
+                                 statusLower == "hủy" ||
+                                 statusLower == "removed";
+                
+                if (isReady)
+                {
+                    screenDto.QtyServedAndCooking += item.Quantity;
+                }
+                else if (isPending)
+                {
+                    screenDto.QtyNotCooked += item.Quantity;
+                }
+                else if (isCancelled)
+                {
+                    screenDto.QtyCancelled += item.Quantity;
                 }
             }
 
@@ -484,6 +529,26 @@ namespace BusinessAccessLayer.Services
                 await _dashboardRepo.AddOrderAsync(currentOrder);
                 // Lưu ngay lập tức để DB sinh ra OrderId (VD: 501)
                 await _dashboardRepo.SaveChangesAsync();
+            }
+            else
+            {
+                // Không cho phép chỉnh sửa/thêm món nếu order đã xác nhận thanh toán hoặc đang chờ thanh toán
+                var lockedStatuses = new[]
+                {
+                    OrderStatusConstants.Confirmed,
+                    OrderStatusConstants.PendingPayment,
+                    "WaitingForPayment",
+                    "Processing",
+                    OrderStatusConstants.Paid,
+                    "Completed",
+                    "Success"
+                };
+
+                if (!string.IsNullOrWhiteSpace(currentOrder.Status) &&
+                    lockedStatuses.Contains(currentOrder.Status, StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Đơn hàng {currentOrder.OrderId} đã được xác nhận/đang thanh toán, không thể thêm hoặc chỉnh sửa món.");
+                }
             }
 
             // BƯỚC 3: XỬ LÝ TỪNG MÓN ĂN

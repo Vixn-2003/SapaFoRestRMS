@@ -1,7 +1,7 @@
 ﻿@model WebSapaForestForStaff.DTOs.Inventory.AuditInventoryPagedViewModel
 @{
     Layout = "_LayoutInventory";
-    ViewData["Title"] = "Danh sách đơn kiểm kê";
+    ViewData["Title"] = "Quản lý đơn kiểm kê";
 }
 
 <style>
@@ -766,7 +766,7 @@
 }
 
 .audit-image-viewer-header {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        background: #3d3d3d;
     padding: 1.5rem 2rem;
     display: flex;
     justify-content: space-between;
@@ -1038,17 +1038,261 @@
         transform: translateY(0) scale(1);
     }
 }
-    
-</style>
 
+    /* Tab Styles */
+    .audit-tabs-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .audit-tab {
+        padding: 1rem 2rem;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+        .audit-tab:hover {
+            color: #9333ea;
+            background: #faf5ff;
+        }
+
+        .audit-tab.active {
+            color: #9333ea;
+            border-bottom-color: #9333ea;
+            background: #faf5ff;
+        }
+
+    .audit-tab-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 0.5rem;
+        background: #e5e7eb;
+        color: #374151;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-left: 0.5rem;
+    }
+
+    .audit-tab.active .audit-tab-badge {
+        background: #9333ea;
+        color: white;
+    }
+
+    .audit-section-red {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        border-left-color: #ef4444;
+    }
+
+        .audit-section-red h3 {
+            color: #991b1b;
+        }
+
+        .audit-section-red label {
+            color: #991b1b;
+        }
+
+        .audit-section-red value {
+            color: #7f1d1d;
+            font-weight: 600;
+        }
+
+
+    .audit-status-cancelled {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #ef4444;
+    }
+
+    /* Toast Notification System */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.toast {
+    background: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 320px;
+    max-width: 450px;
+    animation: slideInRight 0.3s ease-out;
+    pointer-events: auto;
+    border-left: 4px solid;
+}
+
+.toast.toast-success {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.toast.toast-error {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.toast.toast-warning {
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.toast.toast-info {
+    border-left-color: #3b82f6;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.toast.slide-out {
+    animation: slideOutRight 0.3s ease-out forwards;
+}
+
+@@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@@keyframes slideOutRight {
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.toast-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.toast.toast-success .toast-icon {
+    background: #10b981;
+    color: white;
+}
+
+.toast.toast-error .toast-icon {
+    background: #ef4444;
+    color: white;
+}
+
+.toast.toast-warning .toast-icon {
+    background: #f59e0b;
+    color: white;
+}
+
+.toast.toast-info .toast-icon {
+    background: #3b82f6;
+    color: white;
+}
+
+.toast-content {
+    flex: 1;
+}
+
+.toast-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.toast.toast-success .toast-title {
+    color: #065f46;
+}
+
+.toast.toast-error .toast-title {
+    color: #991b1b;
+}
+
+.toast.toast-warning .toast-title {
+    color: #92400e;
+}
+
+.toast.toast-info .toast-title {
+    color: #1e40af;
+}
+
+.toast-message {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.toast.toast-success .toast-message {
+    color: #047857;
+}
+
+.toast.toast-error .toast-message {
+    color: #7f1d1d;
+}
+
+.toast.toast-warning .toast-message {
+    color: #78350f;
+}
+
+.toast.toast-info .toast-message {
+    color: #1e3a8a;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    font-size: 20px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #374151;
+}
+</style>
+<div class="toast-container" id="toastContainer"></div>
 <div class="audit-list-container">
     <div class="audit-list-header">
+        <!-- TIÊU ĐỀ -->
         <div class="audit-list-title-section">
             <div class="audit-list-title-left">
-
                 <div class="audit-list-title">
-                    <h1>Danh sách đơn kiểm kê</h1>
-                    <p class="audit-list-subtitle">Quản lý các đơn kiểm kê nguyên liệu</p>
+                    <h1>Quản lý đơn kiểm kê</h1>
+                    <p class="audit-list-subtitle">Quản lý các đơn kiểm kê mặt hàng</p>
                 </div>
             </div>
             <div class="audit-list-stats">
@@ -1057,56 +1301,69 @@
             </div>
         </div>
 
+        <!-- TABS -->
+        <div class="audit-tabs-container">
+            <button class="audit-tab" data-tab="processing" onclick="switchTab('processing')">
+                Đang xử lý
+                <span class="audit-tab-badge" id="processingCount">0</span>
+            </button>
+            <button class="audit-tab" data-tab="completed" onclick="switchTab('completed')">
+                Đã xử lý
+                <span class="audit-tab-badge" id="completedCount">0</span>
+            </button>
+            <button class="audit-tab active" data-tab="all" onclick="switchTab('all')">
+                Tất cả
+                <span class="audit-tab-badge" id="allCount">0</span>
+            </button>
+        </div>
+
+        <!-- FILTERS -->
         <div class="audit-filter-grid">
             <div class="audit-form-group" style="grid-column: span 2;">
                 <label class="audit-form-label">Tìm kiếm</label>
                 <div class="audit-search-wrapper">
                     <span class="audit-search-icon">&#128269;</span>
-                    <input type="text" 
+                    <input type="text"
                            id="searchInput"
-                           placeholder="Mã đơn, tên nguyên liệu, mã lô..."
+                           placeholder="Mã đơn, tên mặt hàng, mã lô..."
                            class="audit-form-input with-icon" />
                 </div>
             </div>
 
+            <!-- SẮP XẾP THEO -->
             <div class="audit-form-group">
-                <label class="audit-form-label">Trạng thái</label>
-                <select id="statusFilter" class="audit-form-select">
-                    <option value="">Tất cả</option>
-                    <option value="processing">Đang xử lý</option>
-                    <option value="completed">Đã xử lý</option>
+                <label class="audit-form-label">Sắp xếp theo</label>
+                <select id="sortByFilter" class="audit-form-select">
+                    <option value="time">Thời gian (Mới nhất)</option>
+                    <option value="code">Mã đơn (A-Z)</option>
+                    <option value="ingredient">Tên mặt hàng (A-Z)</option>
                 </select>
             </div>
 
             <div class="audit-form-group">
                 <label class="audit-form-label">Từ ngày</label>
-                <input type="date" 
+                <input type="date"
                        id="dateFromFilter"
                        class="audit-form-input" />
             </div>
 
             <div class="audit-form-group">
                 <label class="audit-form-label">Đến ngày</label>
-                <input type="date" 
+                <input type="date"
                        id="dateToFilter"
                        class="audit-form-input" />
-            </div>
-
-            <div class="audit-form-group" style="display: flex; align-items: flex-end;">
-                <button type="button" onclick="applyFilters()" class="audit-btn-filter">
-                    &#128269; Tìm kiếm
-                </button>
             </div>
         </div>
     </div>
 
+    <!-- BẢNG DỮ LIỆU -->
     <div class="audit-table-container">
         <table class="audit-table">
             <thead>
                 <tr>
                     <th>Mã đơn</th>
                     <th>Mã lô</th>
-                    <th>Nguyên liệu</th>
+                    <th>mặt hàng</th>
                     <th class="text-center">Điều chỉnh</th>
                     <th>Người tạo</th>
                     <th>Thời gian</th>
@@ -1130,7 +1387,7 @@
                 {
                     @foreach (var audit in Model.Audits)
                     {
-                        <tr class="audit-row" 
+                        <tr class="audit-row"
                             data-audit-id="@audit.AuditId"
                             data-audit-code="@audit.AuditId"
                             data-purchase-order-id="@audit.PurchaseOrderId"
@@ -1155,7 +1412,7 @@
                             data-ingredient-status="@(audit.IngredientStatus ?? "normal")"
                             data-expiry-date="@(audit.ExpiryDate ?? "")">
                             <td>
-                                <span class="audit-id">@audit.AuditId</span>
+                                <span class="audit-code">@audit.AuditId</span>
                             </td>
                             <td>
                                 <span class="audit-batch-code">@audit.PurchaseOrderId</span>
@@ -1260,151 +1517,291 @@
 </div>
 
 <script>
-    // Global variables
-    let currentPage = 1;
-    const itemsPerPage = 10;
-    let allRows = [];
-    let filteredRows = [];
+    function showToast(type, title, message, duration = 4000) {
+        const container = document.getElementById('toastContainer');
 
-    document.addEventListener('DOMContentLoaded', function() {
-        allRows = Array.from(document.querySelectorAll('.audit-row'));
-        filteredRows = [...allRows];
-        updatePagination();
-        
-        // Real-time search
-        document.getElementById('searchInput').addEventListener('input', applyFilters);
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
-        document.getElementById('dateToFilter').addEventListener('change', applyFilters);
-    });
+        // Tạo toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
 
-    function applyFilters() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-        const status = document.getElementById('statusFilter').value;
-        const dateFrom = document.getElementById('dateFromFilter').value;
-        const dateTo = document.getElementById('dateToFilter').value;
+        // Icon theo loại
+        const icons = {
+            success: '✓',
+            error: '✕',
+            warning: '⚠',
+            info: 'ℹ'
+        };
 
-        filteredRows = allRows.filter(row => {
-            // Lấy các giá trị từ data attributes
-            const auditCode = (row.dataset.auditCode || '').toLowerCase();
-            const purchaseOrderId = (row.dataset.purchaseOrderId || '').toLowerCase();
-            const ingredientName = (row.dataset.ingredientName || '').toLowerCase();
-            const ingredientCode = (row.dataset.ingredientCode || '').toLowerCase();
-            const auditStatus = row.dataset.auditStatus || '';
-            const createdAt = row.dataset.createdAt || '';
+        toast.innerHTML = `
+                <div class="toast-icon">${icons[type] || 'ℹ'}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.closest('.toast').remove()">×</button>
+            `;
 
-            // Search filter - tìm kiếm trong mã đơn, mã lô, tên và mã nguyên liệu
-            const matchSearch = !searchTerm || 
-                auditCode.includes(searchTerm) ||
-                purchaseOrderId.includes(searchTerm) ||
-                ingredientName.includes(searchTerm) ||
-                ingredientCode.includes(searchTerm);
+        container.appendChild(toast);
 
-            // Status filter
-            const matchStatus = !status || auditStatus === status;
+        // Auto remove sau duration
+        setTimeout(() => {
+            toast.classList.add('slide-out');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
 
-            // Date filter
-            let matchDate = true;
-            if (dateFrom || dateTo) {
-                const rowDate = parseDate(createdAt);
-                if (!rowDate) {
-                    matchDate = false;
-                } else {
-                if (dateFrom) {
-                    const fromDate = new Date(dateFrom);
-                        fromDate.setHours(0, 0, 0, 0);
-                    matchDate = matchDate && rowDate >= fromDate;
-                }
-                if (dateTo) {
-                    const toDate = new Date(dateTo);
-                        toDate.setHours(23, 59, 59, 999);
-                    matchDate = matchDate && rowDate <= toDate;
-                }
-            }
-            }
 
-            return matchSearch && matchStatus && matchDate;
+    const currentUser = {
+        userId: parseInt('@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value' || '0'),
+        fullName: '@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value',
+        phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value',
+        email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value',
+        // ✅ LẤY POSITION TỪ CLAIMS
+        position: '@Html.Raw(User.FindFirst("Positions")?.Value ?? "Nhân viên kho")'
+    };
+
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let allRows = [];
+        let filteredRows = [];
+        let currentTab = 'all'; // Mặc định tab "Tất cả"
+
+        document.addEventListener('DOMContentLoaded', function () {
+            allRows = Array.from(document.querySelectorAll('.audit-row'));
+
+            // Sắp xếp mặc định theo thời gian (mới nhất lên đầu)
+            sortRowsByTime(allRows, true);
+
+            filteredRows = [...allRows];
+
+            // Cập nhật số lượng cho các tab
+            updateTabCounts();
+
+            // Mặc định hiển thị tab "Tất cả"
+            switchTab('all');
+
+            // Event listeners
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('sortByFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateToFilter').addEventListener('change', applyFilters);
         });
 
-        currentPage = 1;
-        updatePagination();
-    }
+        // Đếm số lượng đơn theo trạng thái
+        function updateTabCounts() {
+            const processingCount = allRows.filter(row => row.dataset.auditStatus === 'processing').length;
+            const completedCount = allRows.filter(row => row.dataset.auditStatus === 'completed').length;
+            const allCount = allRows.length;
 
-    function parseDate(dateStr) {
-        if (!dateStr) return null;
-
-        try {
-        // Parse "dd/MM/yyyy HH:mm" format
-        const parts = dateStr.split(' ');
-            if (parts.length < 1) return null;
-
-        const dateParts = parts[0].split('/');
-            if (dateParts.length !== 3) return null;
-
-            const day = parseInt(dateParts[0]);
-            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
-            const year = parseInt(dateParts[2]);
-
-            const date = new Date(year, month, day);
-
-            // Validate date
-            if (isNaN(date.getTime())) return null;
-
-            return date;
-        } catch (error) {
-            console.error('Error parsing date:', dateStr, error);
-            return null;
-        }
-    }
-
-    function updatePagination() {
-        // Hide all rows
-        allRows.forEach(row => row.classList.add('hidden'));
-
-        // Show filtered rows for current page
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = Math.min(startIndex + itemsPerPage, filteredRows.length);
-        
-        for (let i = startIndex; i < endIndex; i++) {
-            filteredRows[i].classList.remove('hidden');
+            document.getElementById('processingCount').textContent = processingCount;
+            document.getElementById('completedCount').textContent = completedCount;
+            document.getElementById('allCount').textContent = allCount;
         }
 
-        // Update pagination info
-        document.getElementById('showingFrom').textContent = filteredRows.length > 0 ? startIndex + 1 : 0;
-        document.getElementById('showingTo').textContent = endIndex;
-        document.getElementById('totalVisible').textContent = filteredRows.length;
-        document.getElementById('totalAuditsCount').textContent = filteredRows.length;
+        // Chuyển tab
+        function switchTab(tab) {
+            currentTab = tab;
 
-        // Update page number
-        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-        document.getElementById('currentPageBtn').textContent = filteredRows.length > 0 ? currentPage : 0;
+            // Cập nhật active state cho tabs
+            document.querySelectorAll('.audit-tab').forEach(tabEl => {
+                if (tabEl.dataset.tab === tab) {
+                    tabEl.classList.add('active');
+                } else {
+                    tabEl.classList.remove('active');
+                }
+            });
 
-        // Enable/disable pagination buttons
-        const prevBtn = document.getElementById('prevBtn');
-        const nextBtn = document.getElementById('nextBtn');
-
-        if (currentPage <= 1) {
-            prevBtn.classList.add('disabled');
-        } else {
-            prevBtn.classList.remove('disabled');
+            // Reset về trang 1 và áp dụng filters
+            currentPage = 1;
+            applyFilters();
         }
 
-        if (currentPage >= totalPages) {
-            nextBtn.classList.add('disabled');
-        } else {
-            nextBtn.classList.remove('disabled');
-        }
-    }
+        // Áp dụng filters
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const sortBy = document.getElementById('sortByFilter').value;
+            const dateFrom = document.getElementById('dateFromFilter').value;
+            const dateTo = document.getElementById('dateToFilter').value;
 
-    function changePage(direction) {
-        const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
-        const newPage = currentPage + direction;
+            filteredRows = allRows.filter(row => {
+                // Lọc theo tab
+                if (currentTab !== 'all') {
+                    const status = row.dataset.auditStatus;
+                    if (status !== currentTab) return false;
+                }
 
-        if (newPage >= 1 && newPage <= totalPages) {
-            currentPage = newPage;
+                // Lấy các giá trị từ data attributes
+                const auditCode = (row.dataset.auditCode || '').toLowerCase();
+                const purchaseOrderId = (row.dataset.purchaseOrderId || '').toLowerCase();
+                const ingredientName = (row.dataset.ingredientName || '').toLowerCase();
+                const ingredientCode = (row.dataset.ingredientCode || '').toLowerCase();
+                const createdAt = row.dataset.createdAt || '';
+
+                // Search filter
+                const matchSearch = !searchTerm ||
+                    auditCode.includes(searchTerm) ||
+                    purchaseOrderId.includes(searchTerm) ||
+                    ingredientName.includes(searchTerm) ||
+                    ingredientCode.includes(searchTerm);
+
+                // Date filter
+                let matchDate = true;
+                if (dateFrom || dateTo) {
+                    const rowDate = parseDate(createdAt);
+                    if (!rowDate) {
+                        matchDate = false;
+                    } else {
+                        if (dateFrom) {
+                            const fromDate = new Date(dateFrom);
+                            fromDate.setHours(0, 0, 0, 0);
+                            matchDate = matchDate && rowDate >= fromDate;
+                        }
+                        if (dateTo) {
+                            const toDate = new Date(dateTo);
+                            toDate.setHours(23, 59, 59, 999);
+                            matchDate = matchDate && rowDate <= toDate;
+                        }
+                    }
+                }
+
+                return matchSearch && matchDate;
+            });
+
+            // Sắp xếp
+            sortFilteredRows(sortBy);
+
+            currentPage = 1;
             updatePagination();
         }
-    }
+
+        // Sắp xếp rows đã lọc
+        function sortFilteredRows(sortBy) {
+            switch (sortBy) {
+                case 'time':
+                    sortRowsByTime(filteredRows, true); // true = mới nhất lên đầu
+                    break;
+                case 'code':
+                    filteredRows.sort((a, b) => {
+                        const codeA = a.dataset.auditCode || '';
+                        const codeB = b.dataset.auditCode || '';
+                        return codeA.localeCompare(codeB);
+                    });
+                    break;
+                case 'ingredient':
+                    filteredRows.sort((a, b) => {
+                        const nameA = a.dataset.ingredientName || '';
+                        const nameB = b.dataset.ingredientName || '';
+                        return nameA.localeCompare(nameB, 'vi');
+                    });
+                    break;
+            }
+        }
+
+        // Sắp xếp theo thời gian
+        function sortRowsByTime(rows, newestFirst = true) {
+            rows.sort((a, b) => {
+                const dateA = parseDate(a.dataset.createdAt);
+                const dateB = parseDate(b.dataset.createdAt);
+
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+
+                return newestFirst ? dateB - dateA : dateA - dateB;
+            });
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+
+            try {
+                const parts = dateStr.split(' ');
+                if (parts.length < 1) return null;
+
+                const dateParts = parts[0].split('/');
+                if (dateParts.length !== 3) return null;
+
+                const day = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]) - 1;
+                const year = parseInt(dateParts[2]);
+
+                // Nếu có giờ phút
+                let hours = 0, minutes = 0;
+                if (parts.length > 1) {
+                    const timeParts = parts[1].split(':');
+                    if (timeParts.length === 2) {
+                        hours = parseInt(timeParts[0]);
+                        minutes = parseInt(timeParts[1]);
+                    }
+                }
+
+                const date = new Date(year, month, day, hours, minutes);
+
+                if (isNaN(date.getTime())) return null;
+
+                return date;
+            } catch (error) {
+                console.error('Error parsing date:', dateStr, error);
+                return null;
+            }
+        }
+
+        function updatePagination() {
+            // Hide all rows
+            allRows.forEach(row => row.classList.add('hidden'));
+
+            // Show filtered rows for current page
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredRows.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                filteredRows[i].classList.remove('hidden');
+            }
+
+            // Update pagination info
+            document.getElementById('showingFrom').textContent = filteredRows.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('showingTo').textContent = endIndex;
+            document.getElementById('totalVisible').textContent = filteredRows.length;
+
+            // Cập nhật số ở tab hiện tại
+            const currentTabElement = document.querySelector(`.audit-tab[data-tab="${currentTab}"]`);
+            if (currentTabElement) {
+                const badge = currentTabElement.querySelector('.audit-tab-badge');
+                if (badge) {
+                    document.getElementById('totalAuditsCount').textContent = filteredRows.length;
+                }
+            }
+
+            // Update page number
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+            document.getElementById('currentPageBtn').textContent = filteredRows.length > 0 ? currentPage : 0;
+
+            // Enable/disable pagination buttons
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (currentPage <= 1) {
+                prevBtn.classList.add('disabled');
+            } else {
+                prevBtn.classList.remove('disabled');
+            }
+
+            if (currentPage >= totalPages) {
+                nextBtn.classList.add('disabled');
+            } else {
+                nextBtn.classList.remove('disabled');
+            }
+        }
+
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+            const newPage = currentPage + direction;
+
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                updatePagination();
+            }
+        }
 
     function showAuditDetail(row) {
         const originalQuantity = parseFloat(row.dataset.originalQuantity);
@@ -1450,30 +1847,30 @@
 
         const ingredientStatusBadge = getIngredientStatusBadge(audit.ingredientStatus);
 
-        const confirmerSection = audit.auditStatus === 'completed' ? `
-            <div class="audit-info-section audit-section-green">
-                <h3>
-                    &#9989; Người xác nhận
-                </h3>
-                <div class="audit-info-grid">
-                    <div class="audit-info-item">
-                        <label>Họ tên</label>
-                        <value>${audit.confirmerName || '---'}</value>
-                    </div>
-                    <div class="audit-info-item">
-                        <label>Chức vụ</label>
-                        <value>${audit.confirmerPosition || '---'}</value>
-                    </div>
-                    <div class="audit-info-item">
-                        <label>SĐT</label>
-                        <value>${audit.confirmerPhone || '---'}</value>
-                    </div>
+        const confirmerSection = (audit.auditStatus === 'completed' || audit.auditStatus === 'cancelled') ? `
+        <div class="audit-info-section ${audit.auditStatus === 'completed' ? 'audit-section-green' : 'audit-section-red'}">
+            <h3>
+                ${audit.auditStatus === 'completed' ? 'Người xác nhận' : 'Người từ chối'}
+            </h3>
+            <div class="audit-info-grid">
+                <div class="audit-info-item">
+                    <label>Họ tên</label>
+                    <value>${audit.confirmerName || 'Chưa có thông tin'}</value>
                 </div>
-                <div style="margin-top: 1rem; font-size: 0.875rem; color: #047857;">
-                    &#128197; Thời gian: ${audit.confirmedAt || '---'}
+                <div class="audit-info-item">
+                    <label>Chức vụ</label>
+                    <value>${audit.confirmerPosition || 'Chưa có thông tin'}</value>
+                </div>
+                <div class="audit-info-item">
+                    <label>SĐT</label>
+                    <value>${audit.confirmerPhone || 'Chưa có thông tin'}</value>
                 </div>
             </div>
-        ` : '';
+            <div style="margin-top: 1rem; font-size: 0.875rem; color: ${audit.auditStatus === 'completed' ? '#047857' : '#991b1b'};">
+                📅 Thời gian: ${audit.confirmedAt || 'Chưa có thông tin'}
+            </div>
+        </div>
+    ` : '';
 
         const imageSection = `
         <div class="audit-info-section" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-left: 4px solid #8b5cf6;">
@@ -1539,10 +1936,10 @@
                         Đóng
                     </button>
                     <button class="audit-btn-reject" onclick="rejectAudit('${audit.auditId}')" disabled id="rejectBtn">
-                        ❌ Từ chối
+                         Từ chối
                     </button>
                     <button class="audit-btn-confirm" onclick="confirmAudit('${audit.auditId}')" disabled id="confirmBtn">
-                        ✅ Xác nhận
+                         Xác nhận
                     </button>
                 </div>
             </div>
@@ -1563,7 +1960,7 @@
                     Đóng
                 </button>
                 <button class="audit-btn-confirm" onclick="printAudit('${audit.auditId}')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
-                    🖨️ In đơn kiểm kê
+                    In đơn kiểm kê
                 </button>
             </div>
         </div>
@@ -1577,15 +1974,17 @@
                             <h2>Chi tiết đơn kiểm kê</h2>
                             <p>Mã đơn: ${audit.auditId}</p>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            ${audit.auditStatus === 'processing' ?
-                '<span class="audit-status-badge audit-status-processing">&#128337; Đang xử lý</span>' :
-                '<span class="audit-status-badge audit-status-completed">&#9989; Đã xử lý</span>'
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+        ${audit.auditStatus === 'processing' ?
+                '<span class="audit-status-badge audit-status-processing"> Đang xử lý</span>' :
+                audit.auditStatus === 'completed' ?
+                    '<span class="audit-status-badge audit-status-completed"> Đã xử lý</span>' :
+                    '<span class="audit-status-badge audit-status-cancelled"> Đã từ chối</span>'
             }
-                            <button class="audit-modal-close" onclick="closeAuditModal()">
-                                &times;
-                            </button>
-                        </div>
+        <button class="audit-modal-close" onclick="closeAuditModal()">
+            &times;
+        </button>
+    </div>
                     </div>
                 </div>
 
@@ -1593,7 +1992,7 @@
                     <!-- Thông tin lô -->
                     <div class="audit-info-section audit-section-purple">
                         <h3>
-                            &#128230; Thông tin lô nguyên liệu
+                            &#128230; Thông tin lô mặt hàng
                         </h3>
                         <div class="audit-info-grid">
                             <div class="audit-info-item">
@@ -1601,11 +2000,11 @@
                                 <value>${audit.purchaseOrderId}</value>
                             </div>
                             <div class="audit-info-item">
-                                <label>Mã nguyên liệu</label>
+                                <label>Mã mặt hàng</label>
                                 <value>${audit.ingredientCode}</value>
                             </div>
                             <div class="audit-info-item">
-                                <label>Tên nguyên liệu</label>
+                                <label>Tên mặt hàng</label>
                                 <value>${audit.ingredientName}</value>
                             </div>
                             <div class="audit-info-item">
@@ -1687,8 +2086,6 @@
 
         modal.classList.add('active');
 
-        // Thêm event listener cho checkbox nếu đơn đang xử lý
-        // Thêm event listener cho checkbox nếu đơn đang xử lý
         if (audit.auditStatus === 'processing') {
             const checkbox = document.getElementById('confirmCheckbox');
             const confirmBtn = document.getElementById('confirmBtn');
@@ -1706,22 +2103,22 @@
                     document.getElementById('confirmerRoleHighlight').textContent = '⏳ Đang tải...';
 
                     try {
-                        // Lấy thông tin từ session
-                        const currentUser = await getCurrentUserFromSession();
+                        // ✅ LẤY THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT VÌ ĐÃ CÓ SẴN)
+                        const user = await getCurrentUserFromSession();
 
                         // Hiển thị thông tin
-                        document.getElementById('confirmerIdDisplay').textContent = currentUser.userId;
-                        document.getElementById('confirmerNameDisplay').textContent = currentUser.fullName;
-                        document.getElementById('confirmerPhoneDisplay').textContent = currentUser.phone;
-                        document.getElementById('confirmerPositionDisplay').textContent = currentUser.position;
-                        document.getElementById('confirmerRoleHighlight').textContent = currentUser.position;
+                        document.getElementById('confirmerIdDisplay').textContent = user.userId;
+                        document.getElementById('confirmerNameDisplay').textContent = user.fullName;
+                        document.getElementById('confirmerPhoneDisplay').textContent = user.phone;
+                        document.getElementById('confirmerPositionDisplay').textContent = user.position;
+                        document.getElementById('confirmerRoleHighlight').textContent = user.position;
 
                         // Enable cả 2 nút
                         confirmBtn.disabled = false;
                         rejectBtn.disabled = false;
                     } catch (error) {
                         console.error('Error loading user info:', error);
-                        alert('❌ Không thể tải thông tin người dùng: ' + error.message);
+                        showToast('error', 'Lỗi tải thông tin', error.message || 'Không thể tải thông tin người dùng');
                         this.checked = false;
                         confirmerInfoSection.style.display = 'none';
                     }
@@ -1737,22 +2134,31 @@
 
 
     async function getCurrentUserFromSession() {
+        // ✅ VALIDATE DỮ LIỆU TỪ CLAIMS
+        if (!currentUser || !currentUser.userId || currentUser.userId === 0) {
+            throw new Error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+        }
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // ✅ PARSE POSITION NẾU LÀ JSON ARRAY
+        let position = currentUser.position;
+        try {
+            // Nếu position là JSON array (VD: ["Nhân viên kho", "Thu ngân"])
+            const positions = JSON.parse(position);
+            if (Array.isArray(positions) && positions.length > 0) {
+                position = positions[0]; // Lấy position đầu tiên
+            }
+        } catch (e) {
+            // Nếu không phải JSON, giữ nguyên string
+            console.log('Position is a simple string:', position);
+        }
 
-        // DỮ LIỆU TẠM - Thay bằng API call thật sau
-        // const response = await fetch('/AuditInventory/GetCurrentUser');
-        // const result = await response.json();
-        // if (!result.success) {
-        //     throw new Error(result.message);
-        // }
-        // return result;
-
+        // ✅ TRẢ VỀ THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT)
         return {
-            userId: 3,
-            fullName: 'Nguyễn Văn A',
-            phone: '0912345678',
-            position: 'Quản lý kho'
+            userId: currentUser.userId,
+            fullName: currentUser.fullName,
+            phone: currentUser.phone,
+            position: position,
+            email: currentUser.email
         };
     }
 
@@ -1785,38 +2191,36 @@
         const checkbox = document.getElementById('confirmCheckbox');
 
         if (!checkbox.checked) {
-            alert('Vui lòng xác nhận bằng cách check vào ô checkbox!');
+            showToast('warning', 'Chưa xác nhận', 'Vui lòng tick vào ô checkbox để xác nhận!');
             return;
         }
 
-        // Hiển thị popup xác nhận tùy chỉnh
         const isConfirmed = await showConfirmModal({
             type: 'success',
             icon: '✅',
             title: 'Xác nhận đơn kiểm kê',
             message: 'Bạn có chắc chắn muốn XÁC NHẬN đơn kiểm kê này?',
             warning: null,
-            buttonText: '✅ Xác nhận',
+            buttonText: 'Xác nhận',
             buttonClass: 'confirm-modal-btn-confirm'
         });
 
         if (!isConfirmed) return;
 
-        // Disable button để tránh click nhiều lần
         confirmBtn.disabled = true;
         confirmBtn.textContent = '⏳ Đang xử lý...';
 
         try {
-            // Lấy thông tin người xác nhận từ session
-            const currentUser = await getCurrentUserFromSession();
+            // ✅ LẤY THÔNG TIN TỪ CLAIMS
+            const user = await getCurrentUserFromSession();
 
             const requestData = {
                 auditId: auditId,
                 auditStatus: 'completed',
-                confirmerId: currentUser.userId,
-                confirmerName: currentUser.fullName,
-                confirmerPhone: currentUser.phone,
-                confirmerPosition: currentUser.position,
+                confirmerId: user.userId,
+                confirmerName: user.fullName,
+                confirmerPhone: user.phone,
+                confirmerPosition: user.position,
                 confirmedAt: new Date().toISOString()
             };
 
@@ -1833,10 +2237,9 @@
             const result = await response.json();
 
             if (result.success) {
-                // Show success modal
                 await showConfirmModal({
                     type: 'success',
-                    icon: '🎉',
+                    icon: '',
                     title: 'Thành công!',
                     message: 'Xác nhận đơn kiểm kê thành công!',
                     warning: null,
@@ -1846,18 +2249,17 @@
                 closeAuditModal();
                 location.reload();
             } else {
-                // Show error modal
                 await showConfirmModal({
                     type: 'danger',
                     icon: '❌',
                     title: 'Lỗi',
                     message: result.message || 'Không thể xác nhận đơn kiểm kê',
                     warning: null,
-                    buttonText: '❌ Đóng',
+                    buttonText: ' Đóng',
                     buttonClass: 'confirm-modal-btn-reject'
                 });
                 confirmBtn.disabled = false;
-                confirmBtn.innerHTML = '✅ Xác nhận';
+                confirmBtn.innerHTML = ' Xác nhận';
             }
         } catch (error) {
             console.error('Error confirming audit:', error);
@@ -1865,53 +2267,52 @@
                 type: 'danger',
                 icon: '❌',
                 title: 'Lỗi',
-                message: 'Có lỗi xảy ra khi xác nhận: ' + error.message,
+                message: error.message || 'Có lỗi xảy ra khi xác nhận',
                 warning: null,
-                buttonText: '❌ Đóng',
+                buttonText: ' Đóng',
                 buttonClass: 'confirm-modal-btn-reject'
             });
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = '✅ Xác nhận';
+            confirmBtn.innerHTML = ' Xác nhận';
         }
     }
+
 
     async function rejectAudit(auditId) {
         const rejectBtn = document.getElementById('rejectBtn');
         const checkbox = document.getElementById('confirmCheckbox');
 
         if (!checkbox.checked) {
-            alert('Vui lòng xác nhận bằng cách check vào ô checkbox!');
+            showToast('warning', 'Chưa xác nhận', 'Vui lòng tick vào ô checkbox để xác nhận!');
             return;
         }
 
-        // Hiển thị popup xác nhận tùy chỉnh
         const isConfirmed = await showConfirmModal({
             type: 'danger',
             icon: '⚠️',
             title: 'Từ chối đơn kiểm kê',
             message: 'Bạn có chắc chắn muốn TỪ CHỐI đơn kiểm kê này?',
-            warning: '⚠️ Hành động này không thể hoàn tác!',
-            buttonText: '❌ Từ chối',
+            warning: ' Hành động này không thể hoàn tác!',
+            buttonText: ' Từ chối',
             buttonClass: 'confirm-modal-btn-reject'
         });
 
         if (!isConfirmed) return;
 
-        // Disable button để tránh click nhiều lần
         rejectBtn.disabled = true;
-        rejectBtn.textContent = '⏳ Đang xử lý...';
+        rejectBtn.textContent = ' Đang xử lý...';
 
         try {
-            // Lấy thông tin người xử lý từ session
-            const currentUser = await getCurrentUserFromSession();
+            // ✅ LẤY THÔNG TIN TỪ CLAIMS
+            const user = await getCurrentUserFromSession();
 
             const requestData = {
                 auditId: auditId,
                 auditStatus: 'cancelled',
-                confirmerId: currentUser.userId,
-                confirmerName: currentUser.fullName,
-                confirmerPhone: currentUser.phone,
-                confirmerPosition: currentUser.position,
+                confirmerId: user.userId,
+                confirmerName: user.fullName,
+                confirmerPhone: user.phone,
+                confirmerPosition: user.position,
                 confirmedAt: new Date().toISOString()
             };
 
@@ -1928,31 +2329,29 @@
             const result = await response.json();
 
             if (result.success) {
-                // Show success modal
                 await showConfirmModal({
                     type: 'success',
                     icon: '✅',
                     title: 'Thành công!',
                     message: 'Từ chối đơn kiểm kê thành công!',
                     warning: null,
-                    buttonText: '✅ Đóng',
+                    buttonText: ' Đóng',
                     buttonClass: 'confirm-modal-btn-confirm'
                 });
                 closeAuditModal();
                 location.reload();
             } else {
-                // Show error modal
                 await showConfirmModal({
                     type: 'danger',
                     icon: '❌',
                     title: 'Lỗi',
                     message: result.message || 'Không thể từ chối đơn kiểm kê',
                     warning: null,
-                    buttonText: '❌ Đóng',
+                    buttonText: ' Đóng',
                     buttonClass: 'confirm-modal-btn-reject'
                 });
                 rejectBtn.disabled = false;
-                rejectBtn.innerHTML = '❌ Từ chối';
+                rejectBtn.innerHTML = ' Từ chối';
             }
         } catch (error) {
             console.error('Error rejecting audit:', error);
@@ -1960,13 +2359,13 @@
                 type: 'danger',
                 icon: '❌',
                 title: 'Lỗi',
-                message: 'Có lỗi xảy ra khi từ chối: ' + error.message,
+                message: error.message || 'Có lỗi xảy ra khi từ chối',
                 warning: null,
-                buttonText: '❌ Đóng',
+                buttonText: ' Đóng',
                 buttonClass: 'confirm-modal-btn-reject'
             });
             rejectBtn.disabled = false;
-            rejectBtn.innerHTML = '❌ Từ chối';
+            rejectBtn.innerHTML = ' Từ chối';
         }
     }
 
@@ -2030,7 +2429,7 @@
             // Cancel button
             const cancelBtn = document.createElement('button');
             cancelBtn.className = 'confirm-modal-btn confirm-modal-btn-cancel';
-            cancelBtn.innerHTML = '❌ Hủy bỏ';
+            cancelBtn.innerHTML = 'Hủy bỏ';
             cancelBtn.onclick = () => {
                 closeConfirmModal();
                 resolve(false);

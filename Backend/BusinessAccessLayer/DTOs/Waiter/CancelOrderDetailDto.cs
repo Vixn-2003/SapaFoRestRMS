@@ -6,6 +6,10 @@ namespace BusinessAccessLayer.DTOs.Waiter
     public class CancelOrderDetailDto
     {
         public int OrderDetailId { get; set; }
+        /// <summary>
+        /// OrderComboItemId - null nếu là món lẻ, có giá trị nếu là món trong combo
+        /// </summary>
+        public int? OrderComboItemId { get; set; }
         public int WaiterUserId { get; set; } // ID của waiter hủy
         public string Reason { get; set; } = string.Empty; // Lý do hủy: khách đổi ý...
     }

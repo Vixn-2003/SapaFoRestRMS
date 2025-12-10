@@ -239,6 +239,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
             entity.Property(e => e.LoyaltyPoints).HasDefaultValue(0);
             entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.IsVip)
+                .HasDefaultValue(false);
 
             entity.HasOne(d => d.User).WithMany(p => p.Customers)
                 .HasForeignKey(d => d.UserId)

@@ -123,6 +123,21 @@
                 .footer-sapa i:hover {
                     color: #FFD54F;
                 }
+
+        /* BỎ HOÀN TOÀN BACKGROUND XANH LÁ CÂY CỦA MODAL */
+        #reservationModal .modal-content {
+            background: transparent !important;
+            color: #333 !important;
+            border: none !important;
+            box-shadow: none !important;
+            pointer-events: auto;
+        }
+
+        /* Modal body cũng trong suốt */
+        #reservationModal .modal-body {
+            background: transparent !important;
+            padding: 0 !important;
+        }
     </style>
 
     @RenderSection("Styles", required: false)
@@ -145,6 +160,21 @@
                         <li class="nav-item"><a class="nav-link" asp-controller="Menu" asp-action="Index">Thực Đơn</a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="About" asp-action="Index">Giới thiệu</a></li>
                         <li class="nav-item"><a class="nav-link" asp-controller="Contact" asp-action="Index">Ưu Đãi</a></li>
+                        <li class="nav-item">
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <a class="nav-link" asp-controller="Reservation" asp-action="ReservationList">
+                                    Đơn Đặt Bàn Của Bạn
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="nav-link" href="javascript:void(0);" onclick="openLoginModal();">
+                                    Đơn Đặt Bàn Của Bạn
+                                </a>
+                            }
+                        </li>
+
                     </ul>
                     <div class="d-flex align-items-center">
                         <div class="me-3 hotline">
@@ -184,54 +214,66 @@
     <!-- Modal Đăng nhập (OTP) -->
     <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
+            <div class="modal-content login-modal">
                 <div class="modal-header">
                     <h5 class="modal-title" id="loginModalLabel">Đăng nhập</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close login-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
                 <div class="modal-body">
-                    <div class="alert alert-info d-flex align-items-center" role="alert">
+
+                    <!-- Thông báo -->
+                    <div class="alert alert-info d-flex align-items-center login-alert" role="alert">
                         <i class="bi bi-info-circle me-2"></i>
                         <span>Đăng nhập để xem lịch sử đặt bàn.</span>
                     </div>
-                    <!-- Step 1: Nhập SĐT để nhận OTP -->
+
+                    <!-- STEP 1: NHẬP SỐ ĐIỆN THOẠI -->
                     <form id="loginRequestOtpForm" method="post" action="/Auth/RequestOtp">
                         @Html.AntiForgeryToken()
+
                         <div class="mb-3">
                             <label for="loginPhone" class="form-label">Số điện thoại</label>
-                            <input type="text" class="form-control" id="loginPhone" name="Phone" placeholder="VD: 0912345678" />
+                            <input type="text" class="form-control login-input" id="loginPhone" name="Phone" placeholder="VD: 0912345678" />
                         </div>
+
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary" id="loginSendOtpBtn">Gửi mã OTP</button>
+                            <button type="submit" class="btn btn-primary login-btn">Gửi mã OTP</button>
                         </div>
                     </form>
 
-                    <!-- Step 2: Xác thực OTP -->
+                    <!-- STEP 2: NHẬP OTP -->
                     <form id="loginVerifyOtpForm" method="post" action="/Auth/VerifyOtp" style="display:none;">
                         @Html.AntiForgeryToken()
                         <input type="hidden" id="verifyPhoneHidden" name="Phone" />
-                        <div class="mb-3 mt-2">
+
+                        <div class="mb-3 mt-3">
                             <label for="loginOtpCode" class="form-label">Mã OTP</label>
-                            <input type="text" class="form-control" id="loginOtpCode" name="Code" placeholder="Nhập mã OTP" />
+                            <input type="text" class="form-control login-input" id="loginOtpCode" name="Code" placeholder="Nhập mã OTP" />
                         </div>
+
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success" id="loginVerifyBtn">Đăng nhập</button>
-                            <button type="button" class="btn btn-link" id="loginBackToPhoneBtn">Quay lại</button>
+                            <button type="submit" class="btn btn-success login-btn">Đăng nhập</button>
+                            <button type="button" class="btn btn-link login-back-btn" id="loginBackToPhoneBtn">Quay lại</button>
                         </div>
                     </form>
+
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Đặt bàn -->
-    <div class="modal fade" id="reservationModal" tabindex="-1" aria-labelledby="reservationModalLabel" aria-hidden="true">
+
+    <!-- Modal Đặt bàn - ĐÃ BỎ HOÀN TOÀN BACKGROUND XANH -->
+    <div class="modal fade"
+         id="reservationModal"
+         tabindex="-1"
+         data-bs-backdrop="static"
+         data-bs-keyboard="false"
+         aria-labelledby="reservationModalLabel"
+         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Đặt bàn</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
                 <div class="modal-body">
                     @await Html.PartialAsync("_ReservationForm", new WebSapaFoRestForCustomer.Models.ReservationViewModel())
                 </div>
@@ -343,26 +385,77 @@
                     type: 'POST',
                     data: $form.serialize(),
                     headers: { 'RequestVerificationToken': token },
-                            success: function (result) {
-           
-            if (result.message && !result.success) {
-                toastr.info(result.message);
-                return;
-            }
+                    success: function (result) {
 
-           
-            if (result && result.success !== undefined) {
-                if (result.success) {
-                    toastr.success(result.message || 'Đặt bàn thành công!');
-                    $('#reservationModal').modal('hide');
-                } else {
-                    toastr.error(result.message || 'Đặt bàn thất bại!');
-                }
-            } else {
-                // Trường hợp form có lỗi validation → render lại form
-                $('#reservationModal .modal-body').html(result);
-            }
-        },
+                        // Nếu server trả JSON dạng string, parse lại
+                        if (typeof result === "string") {
+                            try {
+                                result = JSON.parse(result);
+                            } catch {
+                                // nếu parse lỗi thì coi như form validation → render lại form HTML
+                                $('#reservationModal .modal-body').html(result);
+                                return;
+                            }
+                        }
+
+                        // Có field success => JSON chuẩn
+                        if (result && typeof result.success !== "undefined") {
+                            if (result.success) {
+                                // Ghép thông tin để show
+                                let msg = result.message || "Đặt bàn thành công!";
+                                let extra = "";
+
+                                if (result.requiredDeposit) {
+                                    const formatted = Number(result.requiredDeposit).toLocaleString('vi-VN');
+                                    extra += `<br/>Tiền cọc: <strong>${formatted} đ</strong>`;
+                                }
+
+                                if (result.timeSlot) {
+                                    extra += `<br/>Ca: <strong>${result.timeSlot}</strong>`;
+                                }
+
+                                if (result.orderId) {
+                                    extra += `<br/>Mã đơn (orderId): <code>${result.orderId}</code>`;
+                                    console.log("orderId để test IPN:", result.orderId);
+                                }
+
+                                toastr.success(msg + extra);
+
+                                // ✅ NÚT THANH TOÁN NẰM TRONG FORM
+                                if (result.payUrl) {
+                                    // Tìm form và thêm nút vào cuối form (trước khi đóng </form>)
+                                    const $form = $('#reservationForm');
+
+                                    // Xóa nút cũ nếu có
+                                    $form.find('#btnPayDeposit').remove();
+
+                                    // Tạo nút mới và thêm vào cuối form
+                                    const $btn = $('<button type="button" id="btnPayDeposit" class="btn btn-success w-100 mt-3"><i class="bi bi-credit-card me-2"></i>Thanh toán tiền đặt cọc</button>');
+
+                                    // Thêm nút vào trước nút submit
+                                    $form.find('button[type="submit"]').before($btn);
+
+                                    // Ẩn nút submit gốc
+                                    $form.find('button[type="submit"]').hide();
+
+                                    // Gán sự kiện click
+                                    $btn.off('click').on('click', function () {
+                                        window.open(result.payUrl, '_blank');
+                                    });
+
+                                } else {
+                                    // Không có payUrl (dev mode/fake payment) → đóng modal
+                                    $('#reservationModal').modal('hide');
+                                }
+                            } else {
+                                // ✅ chỗ này sẽ hiển thị lỗi validate (tên trống, sđt trống, v.v.)
+                                toastr.error(result.message || 'Đặt bàn thất bại!');
+                            }
+                        } else {
+                            // Trả HTML (form với lỗi) → render lại
+                            $('#reservationModal .modal-body').html(result);
+                        }
+                    },
 
                     error: function (xhr) {
                         console.error(xhr.responseText);
@@ -373,7 +466,7 @@
 
         });
 
-        // Gửi OTP bằng fetch
+        // Gửi OTP bằng fetch (cho form trong modal)
         $(document).on('click', '#sendOtpBtn', async function (e) {
             e.preventDefault();
             var $form = $(this).closest('form');
@@ -402,6 +495,27 @@
             }
         });
 
+        function openLoginModal() {
+            var loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginModal.show();
+        }
+         // toastr đã được cấu hình ở trên rồi
+
+        @* Thành công *@
+        @if (TempData["ReservationSuccess"] != null)
+        {
+                <text>
+                    toastr.success('@TempData["ReservationSuccess"]');
+                </text>
+        }
+
+        @* Thất bại *@
+        @if (TempData["ReservationError"] != null)
+        {
+                <text>
+                    toastr.error('@TempData["ReservationError"]');
+                </text>
+        }
     </script>
 
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>

@@ -51,5 +51,7 @@ namespace BusinessAccessLayer.Services
             var export = await _unitOfWork.StockTransaction.GetAllExport();
             return _mapper.Map<IEnumerable<StockTransactionInventoryDTO>>(export);
         }
+
+        
     }
 }

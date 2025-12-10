@@ -1,18 +1,23 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using System.Security.Claims;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.DTOs.OrderGuest;
 using WebSapaForestForStaff.DTOs.OrderGuest.ListOrder;
+using WebSapaForestForStaff.Services.Api.Interfaces;
+using WebSapaForestForStaff.DTOs.Payment;
 
 namespace WebSapaForestForStaff.Controllers
 {
     public class DashboardTableController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IPaymentApiService _paymentApiService;
 
-        public DashboardTableController(IHttpClientFactory httpClientFactory)
+        public DashboardTableController(IHttpClientFactory httpClientFactory, IPaymentApiService paymentApiService)
         {
             _httpClientFactory = httpClientFactory;
+            _paymentApiService = paymentApiService;
         }
 
         // Tên Action nên là "Index" để dễ dàng map với View
@@ -215,12 +220,112 @@ namespace WebSapaForestForStaff.Controllers
             ViewData["CurrentSearch"] = searchString;
             ViewData["CurrentCategory"] = categoryId;
             ViewData["TableId"] = id; // Lưu lại ID bàn để dùng cho Form Action
+            
+            // ✅ Lấy PositionId từ User Claims
+            var positionIdClaim = User.FindFirst("PositionId")?.Value;
+            ViewData["UserPositionId"] = positionIdClaim != null && int.TryParse(positionIdClaim, out var posId) ? posId : 0;
 
             // Mẹo: Để hiển thị danh sách các nút Category (Tất cả, Đồ ăn, Đồ uống...), 
             // bạn nên gọi thêm 1 API lấy danh sách Category ở đây và gán vào ViewBag.
             // Ví dụ: ViewBag.Categories = await _categoryService.GetAllAsync();
 
             return View(model);
+        }
+
+        /// <summary>
+        /// Waiter xác nhận đơn hàng (chuyển status sang "Confirmed")
+        /// POST /DashboardTable/ConfirmOrder
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmOrder([FromBody] ConfirmOrderRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.ConfirmCustomerOrderAsync(request);
+                
+                if (result.Success)
+                {
+                    return Ok(new { message = result.Message ?? "Xác nhận đơn hàng thành công" });
+                }
+                else
+                {
+                    return BadRequest(new { message = result.Message ?? "Không thể xác nhận đơn hàng" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Hủy đơn hàng và giải phóng bàn
+        /// POST /DashboardTable/CancelOrder
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelOrder([FromBody] CancelOrderRequest request)
+        {
+            if (!ModelState.IsValid || request.OrderId <= 0)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.CancelOrderAsync(request.OrderId, request.Reason ?? "Khách rời đi trước khi món làm");
+                
+                if (result.Success)
+                {
+                    return Ok(new { message = result.Message ?? "Đã hủy đơn hàng thành công" });
+                }
+                else
+                {
+                    return BadRequest(new { message = result.Message ?? "Không thể hủy đơn hàng" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Hoàn tác xác nhận đơn hàng (chuyển status từ "Confirmed" về "WaitingConfirmation")
+        /// POST /DashboardTable/UndoConfirmOrder
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UndoConfirmOrder([FromBody] UndoConfirmRequest request)
+        {
+            if (!ModelState.IsValid || request.OrderId <= 0)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.UndoConfirmOrderAsync(request.OrderId, request);
+                
+                if (result.Success)
+                {
+                    return Ok(new { message = result.Message ?? "Đã hoàn tác xác nhận đơn hàng thành công" });
+                }
+                else
+                {
+                    return BadRequest(new { message = result.Message ?? "Không thể hoàn tác xác nhận đơn hàng" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi: {ex.Message}" });
+            }
         }
 
 

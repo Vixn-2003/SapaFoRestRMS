@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="QuestPDF" Version="2025.7.4" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.5.1" />
   </ItemGroup>
 
@@ -22,15 +23,16 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+
+	  <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.4.9" />
   </ItemGroup>
+	
+	
 
   <ItemGroup>
     <Folder Include="DTOs\Filter\" />
     <Folder Include="Views\Admin\Users\" />
     <Folder Include="Views\Auth\" />
-    <Folder Include="Views\CashierFlow\ShiftManagement\" />
-    <Folder Include="Views\Manager\" />
-    <Folder Include="Views\Staff\" />
   </ItemGroup>
 
 </Project>

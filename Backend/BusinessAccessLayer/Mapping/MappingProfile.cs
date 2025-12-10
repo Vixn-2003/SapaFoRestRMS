@@ -75,7 +75,6 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.IsActive));
             CreateMap<WarehouseDTO, Warehouse>();
             CreateMap<Warehouse, WarehouseDTO>();
-            CreateMap<StockTransaction, StockTransactionDTO>();
             CreateMap<StockTransactionDTO, StockTransaction>();
             CreateMap<AuditInventoryRequestDTO, AuditInventory>();
             CreateMap<AuditInventory, AuditInventoryRequestDTO>();
@@ -83,6 +82,21 @@ namespace BusinessAccessLayer.Mapping
             .ForMember(d => d.AuditStatus, opt => opt.MapFrom(src => src.AuditStatus));
 
             CreateMap<AuditInventory, AuditInventoryResponseDTO>();
+
+            CreateMap<InventoryBatch, PurchaseOrderDetailWithSupplierDTO>()
+               .ForMember(dest => dest.IngredientName,
+                   opt => opt.MapFrom(src => src.Ingredient.Name))
+               .ForMember(dest => dest.IngredientCode,
+                   opt => opt.MapFrom(src => src.Ingredient.IngredientCode))
+               .ForMember(dest => dest.WarehouseName,
+                   opt => opt.MapFrom(src => src.Warehouse.Name))
+               .ForMember(dest => dest.Unit,
+                   opt => opt.MapFrom(src => src.Ingredient.Unit.UnitName))
+               .ForMember(dest => dest.PurchaseOrderId,
+                   opt => opt.MapFrom(src =>
+                       src.PurchaseOrderDetail != null && src.PurchaseOrderDetail.PurchaseOrder != null
+                           ? src.PurchaseOrderDetail.PurchaseOrder.PurchaseOrderId
+                           : null));
 
 
             CreateMap<BestSellerDto, MenuItem>();
@@ -180,6 +194,43 @@ namespace BusinessAccessLayer.Mapping
             CreateMap<Transaction, TransactionDto>();
             CreateMap<Unit, UnitDTO>();
 
+
+            CreateMap<Supplier, SupplierListDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.SupplierId))
+            .ForMember(dest => dest.Code, opt => opt.MapFrom(src => src.CodeSupplier))
+            .ForMember(dest => dest.Contact, opt => opt.MapFrom(src => src.ContactInfo))
+            // Giả lập IsActive = true, bạn cần thêm trường này vào model Supplier nếu muốn quản lý
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+
+            // Các trường thống kê KHÔNG CÒN thuộc tính OnTimeRate
+            .ForMember(dest => dest.TotalOrders, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalValue, opt => opt.Ignore())
+            .ForMember(dest => dest.LastOrder, opt => opt.Ignore());
+
+            CreateMap<PurchaseOrder, OrderHistoryDto>()
+        .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.PurchaseOrderId))
+        .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.OrderDate))
+
+        // Bỏ qua Total và Items vì chúng được Service tính toán sau
+        .ForMember(dest => dest.Total, opt => opt.Ignore())
+        .ForMember(dest => dest.Items, opt => opt.Ignore());
+
+            CreateMap<Supplier, TopSupplierDto>()
+    .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+    .ForMember(dest => dest.Value, opt => opt.Ignore())
+    .ForMember(dest => dest.Orders, opt => opt.Ignore());
+
+            CreateMap<CreateSupplierDTO, Supplier>()
+       .ForMember(dest => dest.SupplierId, opt => opt.Ignore())
+       .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+       .ForMember(dest => dest.PurchaseOrders, opt => opt.Ignore());
+
+            CreateMap<UpdateSupplierDTO, Supplier>()
+                .ForMember(dest => dest.SupplierId, opt => opt.Ignore())
+                .ForMember(dest => dest.CodeSupplier, opt => opt.Ignore()) // Không cho phép sửa mã
+                .ForMember(dest => dest.IsActive, opt => opt.Ignore())
+                .ForMember(dest => dest.PurchaseOrders, opt => opt.Ignore());
+
             CreateMap<StockTransaction, StockTransactionInventoryDTO>()
     // ===== Transaction =====
     .ForMember(dest => dest.BatchId, opt => opt.MapFrom(src => src.BatchId))
@@ -188,6 +239,7 @@ namespace BusinessAccessLayer.Mapping
     .ForMember(dest => dest.QuantityRemaining, opt => opt.MapFrom(src => src.Batch.QuantityRemaining))
     .ForMember(dest => dest.ExpiryDate, opt => opt.MapFrom(src => src.Batch.ExpiryDate))
     .ForMember(dest => dest.BatchCreatedAt, opt => opt.MapFrom(src => src.Batch.CreatedAt))
+    
 
     // ===== Ingredient =====
     .ForMember(dest => dest.IngredientId, opt => opt.MapFrom(src => src.Batch.IngredientId))
@@ -217,8 +269,22 @@ namespace BusinessAccessLayer.Mapping
      .ForMember(dest => dest.SupplierCode,
         opt => opt.MapFrom(src => src.Batch.PurchaseOrderDetail.PurchaseOrder.Supplier.CodeSupplier));
 
-    
 
+            CreateMap<PurchaseOrderDetail, PurchaseOrderDetailWithSupplierDTO>()
+                    .ForMember(dest => dest.SupplierId,
+                        opt => opt.MapFrom(src => src.PurchaseOrder.SupplierId))
+                    .ForMember(dest => dest.OrderDate,
+                        opt => opt.MapFrom(src => src.PurchaseOrder.OrderDate))
+                    .ForMember(dest => dest.Status,
+                        opt => opt.MapFrom(src => src.PurchaseOrder.Status))
+                    .ForMember(dest => dest.SupplierName,
+                        opt => opt.MapFrom(src => src.PurchaseOrder.Supplier.Name))
+                    .ForMember(dest => dest.SupplierCode,
+                        opt => opt.MapFrom(src => src.PurchaseOrder.Supplier.CodeSupplier))
+                    .ForMember(dest => dest.SupplierPhone,
+                        opt => opt.MapFrom(src => src.PurchaseOrder.Supplier.Phone))
+                    .ForMember(dest => dest.SupplierEmail,
+                        opt => opt.MapFrom(src => src.PurchaseOrder.Supplier.Email));
         }
 
     }

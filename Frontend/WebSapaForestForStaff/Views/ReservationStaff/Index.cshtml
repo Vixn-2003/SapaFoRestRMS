@@ -1,6 +1,9 @@
 ﻿@model ReservationListViewModel
+@using WebSapaForestForStaff.DTOs
+@using WebSapaForestForStaff.DTOs.TimeSlotCapacity
+
 @{
-    Layout = "_LayoutReservation";
+    Layout = "_LayoutManager";
     ViewData["Title"] = "Quản lý đặt bàn - Nhà hàng Sapa Forest";
 }
 
@@ -24,6 +27,99 @@
     </span>
 </div>
 
+@* ====== THỐNG KÊ SỨC CHỨA THEO NGÀY + CA ====== *@
+@if (ViewBag.CapacitySummary != null)
+{
+    var cap = ViewBag.CapacitySummary as DayCapacitySummaryDto;
+
+    if (cap != null)
+    {
+        <div class="card mb-3 shadow-sm" style="border-left:4px solid #0d6efd;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h5 class="mb-1">
+                            <i class="bi bi-graph-up-arrow me-2"></i>
+                            Sức chứa ngày @cap.Date.ToString("dd/MM/yyyy")
+                        </h5>
+                        <small class="text-muted">
+                            Tổng quan tình trạng bàn trong ngày (tất cả các ca)
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Tổng quan trong ngày -->
+                <div class="row text-center mb-3">
+                    @* <div class="col-md-4 mb-2">
+                        <div class="bg-light border rounded p-2">
+                            <div class="text-muted small">Tổng sức chứa</div>
+                            <div class="fs-5 fw-semibold">@cap.TotalRestaurantCapacity người</div>
+                        </div>
+                    </div> *@
+                   @*  <div class="col-md-4 mb-2">
+                        <div class="bg-light border rounded p-2">
+                            <div class="text-muted small">Số lượng chỗ đã </div>
+                            <div class="fs-5 fw-semibold text-danger">@cap.TotalReservedGuestsInDay người</div>
+                        </div>
+                    </div> *@
+                  @*   <div class="col-md-4 mb-2">
+                        <div class="bg-light border rounded p-2">
+                            <div class="text-muted small">Còn lại trong ngày</div>
+                            <div class="fs-5 fw-semibold text-success">@cap.RemainingCapacityForDay người</div>
+                        </div>
+                    </div> *@
+                </div>
+
+                <!-- Theo từng ca -->
+                @if (cap.TimeSlots != null && cap.TimeSlots.Any())
+                {
+                    <hr class="my-2" />
+                    <div class="row">
+                        @foreach (var ts in cap.TimeSlots)
+                        {
+                            var percentUsed = ts.TotalCapacity == 0
+                                ? 0
+                                : (int)Math.Round((double)ts.ReservedGuests * 100 / ts.TotalCapacity);
+
+                            var barClass = percentUsed switch
+                            {
+                                >= 90 => "bg-danger",
+                                >= 70 => "bg-warning",
+                                _ => "bg-success"
+                            };
+
+                            <div class="col-md-4 mb-3">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-semibold">@ts.TimeSlot</span>
+                                        <span class="badge bg-light text-dark border">
+                                            @percentUsed% dùng
+                                        </span>
+                                    </div>
+                                    <small class="text-muted d-block mb-1">
+                                        Sức chứa: @ts.TotalCapacity • Số lượng Chỗ đã xếp: @ts.ReservedGuests • Sức chứa Còn lại: @ts.RemainingCapacity
+                                    </small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar @barClass" role="progressbar"
+                                             style="width: @percentUsed%"
+                                             aria-valuenow="@percentUsed" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted small">
+                        Chưa có đơn đặt bàn nào trong ngày này.
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
 
 <!-- Thông báo hủy đơn -->
 @if (TempData["CancelReservationError"] != null)
@@ -86,7 +182,7 @@
 
 <div class="mb-3 text-end">
     <a asp-action="CreateReservation" class="btn btn-success">
-        <i class="bi bi-plus-circle"></i> Tạo đơn tại quầy
+        <i class="bi bi-plus-circle"></i> Tạo đơn thông tin đặt bàn
     </a>
 </div>
 
@@ -205,7 +301,7 @@
 <!-- Phân trang -->
 @if (Model.TotalPages > 1)
 {
-    <nav aria-label="Page navigation">
+    <nav style="margin-top:10px" aria-label="Page navigation">
         <ul class="pagination justify-content-center">
             @for (int i = 1; i <= Model.TotalPages; i++)
             {

@@ -18,10 +18,8 @@ namespace DataAccessLayer.Repositories.Interfaces
 
         Task<User?> GetByPhoneAsync(string phone);
         Task<User> CreateAsync(User user);
-        public Task<User?> GetByIdAsync(int id)
-        {
-            throw new NotImplementedException();
-        }
+        public Task<User?> GetByIdAsync(int id);
+      
 
         public Task<IEnumerable<User>> GetAllAsync()
         {

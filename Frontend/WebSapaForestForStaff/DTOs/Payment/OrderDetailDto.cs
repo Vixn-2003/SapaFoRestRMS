@@ -13,6 +13,7 @@ namespace WebSapaForestForStaff.DTOs.Payment
         public string OrderCode { get; set; } = string.Empty;
         public List<string>? TableNumbers { get; set; }
         public string? TableNumber { get; set; }
+        public int? CustomerId { get; set; }
         public string? CustomerName { get; set; }
         public string? CustomerPhone { get; set; }
         public string? CustomerEmail { get; set; }
@@ -24,12 +25,25 @@ namespace WebSapaForestForStaff.DTOs.Payment
         public string? PaymentMethod { get; set; }
         [JsonPropertyName("orderItems")]
         public List<OrderItemDto> Items { get; set; } = new();
+        public List<TransactionDto>? Transactions { get; set; }
         public decimal Subtotal { get; set; }
         public decimal VatAmount { get; set; }
         public decimal ServiceFee { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal? DepositAmount { get; set; }
         public bool? DepositPaid { get; set; }
+        /// <summary>
+        /// Số tiền cần trả lại cho khách khi tiền cọc lớn hơn tổng tiền thanh toán
+        /// </summary>
+        public decimal? DepositRefundAmount { get; set; }
+        /// <summary>
+        /// Số tiền khách đưa khi thanh toán tiền mặt
+        /// </summary>
+        public decimal? AmountReceived { get; set; }
+        /// <summary>
+        /// Tiền thối lại cho khách khi thanh toán tiền mặt (khi AmountReceived > TotalAmount)
+        /// </summary>
+        public decimal? ChangeAmount { get; set; }
         public decimal TotalAmount { get; set; }
 
         // Legacy alias
@@ -52,6 +66,10 @@ namespace WebSapaForestForStaff.DTOs.Payment
             get => TotalAmount != 0 ? TotalAmount : Subtotal;
             set => TotalAmount = value;
         }
+
+        // 🔖 Thông tin ưu đãi hiện tại (nếu backend có trả về thêm)
+        public string? AppliedVoucherCode { get; set; }
+        public int? AppliedPromotionId { get; set; }
     }
 }
 

@@ -12,6 +12,10 @@ namespace WebSapaForestForStaff.Services.Api.Interfaces
         Task<PaymentSessionDto?> InitiatePaymentAsync(PaymentInitiateRequest request);
         Task<BaseApiService.ApiResult> ConfirmPaymentAsync(PaymentConfirmRequest request);
         Task<ReceiptFileDto?> GenerateReceiptAsync(int orderId);
+        Task<DiscountApplyResponse?> ApplyDiscountAsync(DiscountRequest request);
+        Task<BaseApiService.ApiResult> ProcessCombinedPaymentAsync(CombinedPaymentRequest request);
+        Task<BaseApiService.ApiResult> CancelOrderAsync(int orderId, string reason);
+        Task<BaseApiService.ApiResult> UndoConfirmOrderAsync(int orderId, UndoConfirmRequest request);
     }
 }
 

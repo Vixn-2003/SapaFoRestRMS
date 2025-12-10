@@ -1,6 +1,21 @@
 ﻿
 <!DOCTYPE html>
 <html lang="en">
+@using System.Security.Claims
+@{
+    // Lấy thông tin từ claims để tránh gọi API (tránh redirect sang host API)
+    string GetClaim(string type) => User.FindFirst(type)?.Value ?? string.Empty;
+
+    var avatarUrl = !string.IsNullOrWhiteSpace(GetClaim("AvatarUrl"))
+        ? GetClaim("AvatarUrl")
+        : Url.Content("~/assets/images/faces/face8.jpg");
+
+    var displayName = !string.IsNullOrWhiteSpace(User.Identity?.Name)
+        ? User.Identity.Name
+        : GetClaim(ClaimTypes.Name) ?? "User";
+
+    var displayEmail = GetClaim(ClaimTypes.Email);
+}
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -552,10 +567,10 @@
                 </div>
                 <div>
                     <a class="navbar-brand brand-logo" href="/HomeManager/Index">
-                        <img src="~/assets/images/logo.svg" alt="logo" />
+                        <img src="~/assets/images/MainLogo.png" alt="logo" style="height:60px;" />
                     </a>
                     <a class="navbar-brand brand-logo-mini" href="/HomeManager/Index">
-                        <img src="~/assets/images/logo-mini.svg" alt="logo" />
+                        <img src="~/assets/images/MainLogo.png" alt="logo" style="height:60px;" />
                     </a>
                 </div>
             </div>
@@ -563,7 +578,7 @@
 
                 <ul class="navbar-nav">
                     <li class="nav-item fw-semibold d-none d-lg-block ms-0">
-                        <h1 class="welcome-text">Chào mừng, <span class="text-black fw-bold">@(User.Identity?.Name ?? "User")</span></h1>
+                        <h1 class="welcome-text">Chào mừng, <span class="text-black fw-bold">@displayName</span></h1>
                         <h3 class="welcome-sub-text">Chúc làm việc tốt!!! </h3>
                     </li>
                 </ul>
@@ -571,14 +586,14 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown d-none d-lg-block user-dropdown">
                         <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img class="img-xs rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
+                            <img class="img-xs rounded-circle" src="@avatarUrl" alt="Profile image">
                         </a>
                         <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
                             <div class="dropdown-header text-center">
-                                <img class="img-md rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
+                                <img class="img-md rounded-circle" src="@avatarUrl" alt="Profile image">
 
-                                <p class="mb-1 mt-3 fw-semibold">@(User.Identity?.Name ?? "User")</p>
-                                <p class="fw-light text-muted mb-0">@(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "")</p>
+                                <p class="mb-1 mt-3 fw-semibold">@displayName</p>
+                                <p class="fw-light text-muted mb-0">@displayEmail</p>
                             </div>
                             <a class="dropdown-item" asp-controller="UserProfile" asp-action="Index">
                                 <i class="dropdown-item-icon mdi mdi-account-circle text-primary me-2"></i>Hồ sơ của tôi
@@ -607,7 +622,7 @@
                     <li class="nav-item menu-items">
                         <a class="nav-link" asp-controller="ReservationStaff" asp-action="Index">
                             <span class="menu-icon"><i class="mdi mdi-calendar-check"></i></span>
-                            <span class="menu-title">Đặt bàn</span>
+                            <span class="menu-title"> Đơn Đặt bàn</span>
 
                             <i class="menu-arrow"></i>
                         </a>
@@ -622,32 +637,19 @@
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
                             <i class="menu-icon mdi mdi-card-text-outline"></i>
-                            <span class="menu-title">Quản lý đơn</span>
+                            <span class="menu-title">Quản lý Nhân Viên</span>
                             <i class="menu-arrow"></i>
                         </a>
-                        <div class="collapse" id="form-elements">
-                            <ul class="nav flex-column sub-menu">
-                                <li class="nav-item"><a class="nav-link" href="pages/forms/basic_elements.html">Basic Elements</a></li>
-                            </ul>
-                        </div>
+                       
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="CashierPaymentFlow" asp-action="OrderSelection">
-                            <i class="menu-icon mdi mdi-receipt"></i>
-                            <span class="menu-title">Xử lý hóa đơn</span>
-                        </a>
-                    </li>
+                  
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
                             <i class="menu-icon mdi mdi-chart-line"></i>
                             <span class="menu-title">Thống kê</span>
                             <i class="menu-arrow"></i>
                         </a>
-                        <div class="collapse" id="charts">
-                            <ul class="nav flex-column sub-menu">
-                                <li class="nav-item"> <a class="nav-link" href="pages/charts/chartjs.html">ChartJs</a></li>
-                            </ul>
-                        </div>
+                       
                     </li>
                     <li class="nav-item">
     <a class="nav-link" data-bs-toggle="collapse" href="#tables" aria-expanded="false" aria-controls="tables">
@@ -657,6 +659,9 @@
     </a>
     <div class="collapse" id="tables">
         <ul class="nav flex-column sub-menu">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/AreaManage">Quản lý khu vực bàn</a>
+                                </li>
             <li class="nav-item">
                 <a class="nav-link" href="/TableManage">Quản lý bàn</a>
             </li>
@@ -673,52 +678,7 @@
 </li>
 <!-- Add this to your sidebar in _Layout.cshtml -->
 
-<li class="nav-item">
-    <a class="nav-link" data-bs-toggle="collapse" href="#kitchenMenu" aria-expanded="false" aria-controls="kitchenMenu">
-        <i class="menu-icon mdi mdi-chef-hat"></i>
-        <span class="menu-title">Màn hình bếp</span>
-        <i class="menu-arrow"></i>
-    </a>
-    <div class="collapse" id="kitchenMenu">
-        <ul class="nav flex-column sub-menu">
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Index">
-                    <i class="mdi mdi-monitor"></i> Bếp phó (KDS)
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Khai Vị">
-                    <i class="mdi mdi-leaf"></i> Trạm Khai Vị
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Lẩu">
-                    <i class="mdi mdi-pot-steam"></i> Trạm Lẩu
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Nướng than">
-                    <i class="mdi mdi-fire"></i> Trạm Nướng than
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Xào – Chiên">
-                    <i class="mdi mdi-stove"></i> Trạm Xào – Chiên
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Trạm Cơm – Canh">
-                    <i class="mdi mdi-bowl"></i> Trạm Cơm – Canh
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="KitchenDisplay" asp-action="Station" asp-route-categoryName="Tráng Miệng">
-                    <i class="mdi mdi-cupcake"></i> Trạm Tráng Miệng
-                </a>
-            </li>
-        </ul>
-    </div>
-</li>
+
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
                             <i class="menu-icon mdi mdi-layers-outline"></i>
@@ -732,20 +692,10 @@
                         </div>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="collapse" href="#auth" aria-expanded="false" aria-controls="auth">
-                            <i class="menu-icon mdi mdi-account-circle-outline"></i>
-                            <span class="menu-title">Quản lý khách hàng</span>
-                            <i class="menu-arrow"></i>
+                        <a class="nav-link" asp-controller="ManagerCustomer" asp-action="Index">
+                            <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
+                            <span class="menu-title">Quản lý Khách hàng</span>
                         </a>
-                        <div class="collapse" id="auth">
-                            <ul class="nav flex-column sub-menu">
-                                <li class="nav-item"> <a class="nav-link" href="pages/samples/blank-page.html"> Blank Page </a></li>
-                                <li class="nav-item"> <a class="nav-link" href="pages/samples/error-404.html"> 404 </a></li>
-                                <li class="nav-item"> <a class="nav-link" href="pages/samples/error-500.html"> 500 </a></li>
-                                <li class="nav-item"> <a class="nav-link" href="pages/samples/login.html"> Login </a></li>
-                                <li class="nav-item"> <a class="nav-link" href="pages/samples/register.html"> Register </a></li>
-                            </ul>
-                        </div>
                     </li>
 
                     <li class="nav-item">
@@ -807,26 +757,24 @@
                         </div>
                     </li>
                     <li class="nav-item menu-items">
-                        <a class="nav-link" asp-controller="TableManage" asp-action="Index">
+                        <a class="nav-link" asp-controller="SystemLogo" asp-action="Index">
                             <span class="menu-icon"><i class="mdi mdi-table-chair"></i></span>
-                            <span class="menu-title">Bàn ăn</span>
+                            <span class="menu-title">Quản Lý Logo </span>
                         </a>
                     </li>
                     <li class="nav-item menu-items">
-                        <a class="nav-link" asp-controller="Menu" asp-action="Index">
+                        <a class="nav-link" asp-controller="BrandBanner" asp-action="Index">
+                            <span class="menu-icon"><i class="mdi mdi-table-chair"></i></span>
+                            <span class="menu-title">Quản Lý Banner </span>
+                        </a>
+                    </li>
+                    <li class="nav-item menu-items">
+                        <a class="nav-link" asp-controller="EventManage" asp-action="Index">
                             <span class="menu-icon"><i class="mdi mdi-food"></i></span>
-                            <span class="menu-title">Thực đơn</span>
+                            <span class="menu-title">Quản lý sự kiện </span>
                         </a>
                     </li>
-                    <li class="nav-item"> <a class="nav-link" asp-controller="ExportInventory" asp-action="Index">
-                        
-                     <i class="menu-icon mdi mdi-file-document"></i> <span class="menu-title">Quản lý kho</span> </a> </li>
-                    <li class="nav-item menu-items">
-                        <a class="nav-link" asp-controller="Staff" asp-action="Index">
-                            <span class="menu-icon"><i class="mdi mdi-account-group"></i></span>
-                            <span class="menu-title">Nhân viên</span>
-                        </a>
-                    </li>
+                    
                 </ul>
             </nav>
 

@@ -24,6 +24,13 @@ namespace BusinessAccessLayer.Services.Interfaces
         // Batch reservation methods
         Task<(bool success, string message)> ReserveBatchesForOrderDetailAsync(int orderDetailId);
         Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailAsync(int orderDetailId);
+        Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailWithQuantityAsync(int orderDetailId, int quantityToConsume);
         Task<(bool success, string message)> ReleaseReservedBatchesForOrderDetailAsync(int orderDetailId);
+        
+        // Kitchen ingredient pickup
+        Task<List<BusinessAccessLayer.DTOs.Kitchen.IngredientPickupDTO>> GetIngredientPickupListAsync(string? categoryName = null);
+        
+        // Ingredient shortage detection
+        Task<List<BusinessAccessLayer.DTOs.Kitchen.IngredientShortageDTO>> GetIngredientShortageListAsync();
     }
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace WebSapaForestForStaff.DTOs
 {
@@ -15,8 +16,9 @@ namespace WebSapaForestForStaff.DTOs
         public string? Phone { get; set; }
 
         [Display(Name = "Ảnh đại diện")]
-        [Url(ErrorMessage = "Đường dẫn ảnh đại diện không hợp lệ")]
         public string? AvatarUrl { get; set; }
+
+        public IFormFile? AvatarFile { get; set; }
     }
 }
 
