@@ -25,7 +25,21 @@ namespace DataAccessLayer.Repositories
             await _context.SaveChangesAsync();
             return reservation;
         }
-      public async Task<(List<Reservation> Data, int TotalCount)> GetPendingAndConfirmedReservationsAsync(
+        public async Task<Reservation?> GetByIdAsync(int id)
+        {
+            return await _context.Reservations
+                .Include(r => r.Customer)
+                .ThenInclude(c => c.User)
+                .Include(r => r.ReservationDeposits)
+                .FirstOrDefaultAsync(r => r.ReservationId == id);
+        }
+
+        public async Task UpdateAsync(Reservation reservation)
+        {
+            _context.Reservations.Update(reservation);
+            await _context.SaveChangesAsync();
+        }
+        public async Task<(List<Reservation> Data, int TotalCount)> GetPendingAndConfirmedReservationsAsync(
     string? status = null,
     DateTime? date = null,
     string? customerName = null,
@@ -69,6 +83,7 @@ namespace DataAccessLayer.Repositories
     var data = await query
         .OrderByDescending(r => r.ReservationDate)
         .ThenBy(r => r.ReservationTime)
+        .ThenByDescending(r => r.Customer.LoyaltyPoints ?? 0)
         .Skip((page - 1) * pageSize)
         .Take(pageSize)
         .ToListAsync();

@@ -258,8 +258,13 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
 builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
 builder.Services.AddScoped<ISupplierManagerService, SupplierManagerService>();
+// capacityStatistic
+builder.Services.AddScoped<ICapacityStatisticsRepository, CapacityStatisticsRepository>();
+builder.Services.AddScoped<ICapacityStatisticsService, CapacityStatisticsService>();
 
-
+//
+builder.Services.Configure<MomoOptions>(builder.Configuration.GetSection("Momo"));
+builder.Services.AddSingleton<IMomoService, MomoService>();
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 //daytype
 builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
