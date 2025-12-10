@@ -6,7 +6,11 @@ using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
+using static BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo;
 using static BusinessAccessLayer.Services.OrderTableService;
+using ComboDetailDto = BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo.ComboDetailDto;
+using ComboItemDto = BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo.ComboItemDto;
+using MenuItemDto = BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo.MenuItemDto;
 
 namespace BusinessAccessLayer.Services
 {
@@ -275,6 +279,67 @@ namespace BusinessAccessLayer.Services
 
             // 4. Gọi Repo để thực hiện lưu xuống DB
             await _repo.UpdateComboAsync(existingCombo, newComboItems);
+        }
+        public async Task<ComboDetailDto> GetByIdAsync(int id)
+        {
+            var entity = await _repo.GetComboWithItemsAsync(id);
+            if (entity == null) throw new KeyNotFoundException("Combo not found");
+
+            // Map Entity -> DTO
+            return new ComboDetailDto
+            {
+                ComboId = entity.ComboId,
+                Name = entity.Name,
+                SellingPrice = entity.Price,
+                Description = entity.Description,
+                IsAvailable = (bool)entity.IsAvailable,
+                ImageUrl = entity.ImageUrl,
+                Items = entity.ComboItems.Select(ci => new ComboItemDto
+                {
+                    MenuItemId = ci.MenuItemId,
+                    MenuItemName = ci.MenuItem.Name,
+                    OriginalPrice = ci.MenuItem.Price,
+                    Quantity = ci.Quantity
+                }).ToList()
+            };
+        }
+
+        public async Task<List<MenuItemDto>> SearchMenuAsync(string keyword)
+        {
+            var entities = await _repo.SearchMenuItemsAsync(keyword);
+            return entities.Select(x => new MenuItemDto
+            {
+                MenuItemId = x.MenuItemId,
+                Name = x.Name,
+                Price = x.Price
+            }).ToList();
+        }
+
+        public async Task UpdateAsync(int id, UpdateComboDto request)
+        {
+            var entity = await _repo.GetComboWithItemsAsync(id);
+            if (entity == null) throw new KeyNotFoundException("Combo not found");
+
+            // Map Header
+            entity.Name = request.Name;
+            entity.Price = request.SellingPrice;
+            entity.Description = request.Description;
+            entity.IsAvailable = request.IsAvailable;
+            entity.ImageUrl = request.ImageUrl;
+
+            // Map Items
+            var newItems = request.Items.Select(x => new ComboItem
+            {
+                MenuItemId = x.MenuItemId,
+                Quantity = x.Quantity
+            }).ToList();
+
+            await _repo.UpdateComboAsync(entity, newItems);
+        }
+
+        Task<ComboDetailDto> IManagerComboService.GetComboByIdAsync(int id)
+        {
+            throw new NotImplementedException();
         }
     }
 }

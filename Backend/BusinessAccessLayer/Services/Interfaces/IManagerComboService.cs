@@ -1,11 +1,8 @@
-﻿using BusinessAccessLayer.DTOs;
-using BusinessAccessLayer.DTOs.ManagementCombo;
+﻿using BusinessAccessLayer.DTOs.ManagementCombo;
 using BusinessAccessLayer.DTOs.Manager;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using static BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo;
+using ComboDetailDto = BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo.ComboDetailDto;
+using MenuItemDto = BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo.MenuItemDto;
 
 namespace BusinessAccessLayer.Services.Interfaces
 {
@@ -29,5 +26,8 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<ComboDetailDto> GetComboByIdAsync(int id);
 
         Task UpdateComboAsync(int id, UpdateComboRequest request);
+        Task<ComboDetailDto> GetByIdAsync(int id);
+        Task<List<MenuItemDto>> SearchMenuAsync(string keyword);
+        Task UpdateAsync(int id, UpdateComboDto request);
     }
 }

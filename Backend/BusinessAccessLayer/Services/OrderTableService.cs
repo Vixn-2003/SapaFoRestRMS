@@ -399,9 +399,6 @@ namespace BusinessAccessLayer.Services
 
         public async Task<OrderResultDto> SubmitOrderAsync(SubmitOrderRequest orderDto)
         {
-            // =========================================================================
-            // BƯỚC 1: CHUẨN BỊ DỮ LIỆU (Validation & Fetch Data)
-            // =========================================================================
 
             // 1.1 Kiểm tra Bàn / Reservation
             var reservation = await _orderTableRepository.GetActiveReservationByTableIdAsync(orderDto.TableId);
@@ -424,11 +421,6 @@ namespace BusinessAccessLayer.Services
                                              .Where(c => comboIds.Contains(c.ComboId) && c.IsAvailable == true)
                                              .ToListAsync();
             var comboPriceMap = combosFromDb.ToDictionary(c => c.ComboId, c => c.Price);
-
-
-            // =========================================================================
-            // BƯỚC 2: KHỞI TẠO CẤU TRÚC OBJECT (Chưa lưu DB)
-            // =========================================================================
 
             // Tạo Order cha
             var newOrder = new Order
@@ -461,7 +453,6 @@ namespace BusinessAccessLayer.Services
                 }
             }
 
-            // 2.2 Xử lý COMBO -> Thêm vào list OrderDetails + Tự tạo OrderComboItems con
             foreach (var cartCombo in orderDto.Combos)
             {
                 if (comboPriceMap.TryGetValue(cartCombo.ComboId, out var price))
@@ -477,8 +468,6 @@ namespace BusinessAccessLayer.Services
                         CreatedAt = DateTime.Now,
                         Notes = cartCombo.Notes ?? "",
 
-                        // ⭐ KHỞI TẠO LUÔN LIST CON TẠI ĐÂY ⭐
-                        // EF Core sẽ tự hiểu đây là con của comboDetail
                         OrderComboItems = new List<OrderComboItem>()
                     };
 
@@ -515,19 +504,9 @@ namespace BusinessAccessLayer.Services
                 throw new Exception("Giỏ hàng trống hoặc các món/combo đã chọn không hợp lệ.");
             }
 
-
-            // =========================================================================
-            // BƯỚC 3: LƯU VÀO DATABASE (QUAN TRỌNG: CHỈ SAVE 1 LẦN)
-            // =========================================================================
             try
             {
-                // Chỉ cần Add Order cha, EF tự động duyệt cây để Add hết con cháu
                 _context.Orders.Add(newOrder);
-
-                // SaveChangesAsync sẽ tự động thực hiện Transaction:
-                // 1. Insert Order -> Có OrderId
-                // 2. Insert OrderDetails (dùng OrderId ở trên) -> Có OrderDetailId
-                // 3. Insert OrderComboItems (dùng OrderDetailId ở trên)
                 await _context.SaveChangesAsync();
             }
             catch (Exception ex)
@@ -537,10 +516,6 @@ namespace BusinessAccessLayer.Services
                 throw new Exception($"Lỗi lưu đơn hàng: {msg}");
             }
 
-
-            // =========================================================================
-            // BƯỚC 4: TRỪ KHO (INVENTORY) - Chạy sau khi đã Save thành công
-            // =========================================================================
             foreach (var orderDetail in newOrder.OrderDetails)
             {
                 // TH1: Trừ kho món lẻ

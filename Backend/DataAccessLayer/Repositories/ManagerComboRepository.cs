@@ -215,28 +215,38 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(c => c.ComboId == comboId);
         }
 
+        public async Task<Combo?> GetComboWithItemsAsync(int id)
+        {
+            return await _context.Combos
+                .Include(c => c.ComboItems)
+                .ThenInclude(ci => ci.MenuItem) // Include để lấy Tên và Giá gốc
+                .FirstOrDefaultAsync(c => c.ComboId == id);
+        }
+
+        public async Task<List<MenuItem>> SearchMenuItemsAsync(string keyword)
+        {
+            var query = _context.MenuItems.AsQueryable();
+            if (!string.IsNullOrEmpty(keyword))
+                query = query.Where(x => x.Name.Contains(keyword));
+
+            return await query.Take(20).ToListAsync(); // Lấy tối đa 20 món
+        }
+
         public async Task UpdateComboAsync(Combo combo, List<ComboItem> newItems)
         {
-            // 1. Xóa toàn bộ các món cũ trong bảng trung gian của Combo này
-            // Lưu ý: combo.ComboItems là list cũ đã được Load từ hàm GetComboByIdWithItemsAsync
-            if (combo.ComboItems != null && combo.ComboItems.Any())
-            {
+            // 1. Xóa items cũ trong bảng trung gian
+            if (combo.ComboItems != null)
                 _context.ComboItems.RemoveRange(combo.ComboItems);
-            }
 
-            // 2. Gán danh sách món mới vào
-            // EF Core sẽ tự động nhận biết đây là các bản ghi mới cần Insert
+            // 2. Thêm items mới
             foreach (var item in newItems)
             {
-                item.ComboId = combo.ComboId; // Đảm bảo Foreign Key đúng
+                item.ComboId = combo.ComboId;
                 _context.ComboItems.Add(item);
             }
 
-            // 3. Update thông tin cơ bản của Combo (Name, Price...)
-            // Vì 'combo' là object đang được tracking, ta chỉ cần gọi Update hoặc để EF tự detect
+            // 3. Update thông tin chung
             _context.Combos.Update(combo);
-
-            // 4. Lưu tất cả thay đổi trong 1 Transaction
             await _context.SaveChangesAsync();
         }
     }

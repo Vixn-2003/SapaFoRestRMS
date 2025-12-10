@@ -79,13 +79,6 @@ namespace BusinessAccessLayer.Services
 
                 CustomerPhone = data.ActiveReservation?.Customer?.User?.Phone ?? null,
 
-    //            GrandTotal = data.ActiveReservation == null
-    //? 0
-    //: data.ActiveReservation.Orders
-    //    .SelectMany(o => o.OrderDetails)
-    //    .Where(od => od.Status == "Cooking" || od.Status == "Ready" || od.Status == "Done" || od.Status == "Pending")
-    //    .Sum(od => od.Quantity * od.UnitPrice),
-
                 GrandTotal = data.ActiveReservation == null
     ? 0
     : data.ActiveReservation.Orders

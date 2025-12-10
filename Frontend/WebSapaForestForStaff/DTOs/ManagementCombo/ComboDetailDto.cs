@@ -15,6 +15,7 @@ namespace WebSapaForestForStaff.DTOs.ManagementCombo
         public decimal OriginalPrice { get; set; } // Tổng tiền các món cộng lại
         public decimal SellingPrice { get; set; }  // Giá bán thực tế
 
+        public string ImageUrl { get; set; }
         public decimal SavingsAmount => OriginalPrice - SellingPrice; // Tiết kiệm được bao nhiêu
         public List<MenuItemDto> Items { get; set; }
     }

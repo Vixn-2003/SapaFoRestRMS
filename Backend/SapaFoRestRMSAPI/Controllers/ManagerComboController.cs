@@ -2,6 +2,7 @@
 using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using static BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -131,28 +132,52 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCombo(int id, [FromBody] UpdateComboRequest request)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> UpdateCombo(int id, [FromBody] UpdateComboRequest request)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(ModelState);
+        //    }
 
-            try
-            {
-                await _managerComboService.UpdateComboAsync(id, request);
-                return Ok(new { message = "Cập nhật Combo thành công!" });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                // Log error
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
+        //    try
+        //    {
+        //        await _managerComboService.UpdateComboAsync(id, request);
+        //        return Ok(new { message = "Cập nhật Combo thành công!" });
+        //    }
+        //    catch (KeyNotFoundException ex)
+        //    {
+        //        return NotFound(new { message = ex.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // Log error
+        //        return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
+        //    }
+        //}
+
+        // GET: api/combos/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(int id)
+        {
+            var result = await _managerComboService.GetByIdAsync(id);
+            return Ok(result);
+        }
+
+        // GET: api/combos/menu?keyword=abc
+        [HttpGet("AllMenu")]
+        public async Task<IActionResult> GetMenu([FromQuery] string keyword = "")
+        {
+            var result = await _managerComboService.SearchMenuAsync(keyword);
+            return Ok(result);
+        }
+
+        // PUT: api/combos/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateComboDto request)
+        {
+            await _managerComboService.UpdateAsync(id, request);
+            return Ok(new { message = "Updated successfully" });
         }
     }
 }

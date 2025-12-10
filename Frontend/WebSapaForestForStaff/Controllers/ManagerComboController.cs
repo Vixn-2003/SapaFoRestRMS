@@ -155,28 +155,36 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         // GET: Combo/Edit/5
-        [HttpGet("EditCombo")]
-        public async Task<ActionResult> Edit(int id)
+        [HttpGet("EditCombo/{id}")]
+        public async Task<IActionResult> EditCombo(int id)
         {
             try
             {
-                var response = await _httpClient.GetAsync($"ManagerCombo/GetComboBy/{id}");
-                if (response.IsSuccessStatusCode)
+                // Gọi API ManagerCombo
+                var response = await _httpClient.GetAsync($"ManagerCombo/{id}");
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    var combo = await response.Content.ReadFromJsonAsync<ComboDetailDto>();
-                    return View(combo); // trả model sang View
+                    return NotFound($"Combo với id={id} không tồn tại.");
                 }
-                else
-                {
-                    return NotFound();
-                }
+
+                // Đọc dữ liệu JSON trả về thành DTO
+                var combo = await response.Content.ReadFromJsonAsync<ComboDetailDto>();
+
+                if (combo == null)
+                    return NotFound("Không thể đọc dữ liệu combo.");
+
+                // Truyền combo sang view EditCombo.cshtml
+                return View("EditCombo", combo); // 🎯 Tên view giữ nguyên
             }
             catch (Exception ex)
             {
-                // log exception
-                return StatusCode(500, ex.Message);
+                // Trả về lỗi chi tiết hơn để debug
+                return StatusCode(500, $"Lỗi khi lấy combo: {ex.Message}");
             }
         }
+
+
 
 
         // POST: ComboController/Edit/5
@@ -194,25 +202,5 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        // GET: ComboController/Delete/5
-        public ActionResult Delete(int id)
-        {
-            return View();
-        }
-
-        // POST: ComboController/Delete/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
     }
 }

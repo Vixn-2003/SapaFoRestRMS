@@ -15,5 +15,8 @@ namespace BusinessAccessLayer.DTOs.ManagementCombo
         [Required]
         [Range(1, 100, ErrorMessage = "Số lượng phải từ 1 trở lên")]
         public int Quantity { get; set; }
+
+        public decimal Price { get; set; }
+        public string Name { get; set; }
     }
 }

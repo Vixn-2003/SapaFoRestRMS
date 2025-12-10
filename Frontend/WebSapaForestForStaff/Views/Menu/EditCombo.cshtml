@@ -24,33 +24,41 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Giá bán (VNĐ)</label>
-                        <input asp-for="SellingPrice" class="form-control" />
+                        <label class="form-label">Tổng tiền các món (VNĐ)</label>
+                        <input asp-for="OriginalPrice" type="number" class="form-control" readonly />
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Mô tả</label>
-@*                         <textarea asp-for="Description" class="form-control" rows="3"></textarea>
- *@                    </div>
+                        <label class="form-label">Giá bán thực tế (VNĐ)</label>
+                        <input asp-for="SellingPrice" type="number" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tiết kiệm được (VNĐ)</label>
+                        <input value="@Model.SavingsAmount.ToString("N0")" class="form-control" readonly />
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label">Hình ảnh</label>
                         <div class="d-flex align-items-center gap-3">
-@*                             <img src="@Model.ImageUrl" alt="Combo Image" style="max-height: 100px;" />
- *@                            <button class="btn btn-warning">
-                                <i class="mdi mdi-upload"></i> Tải ảnh lên
-                            </button>
+                            @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                            {
+                                <img src="@Model.ImageUrl" alt="Combo Image" style="max-height: 100px;" />
+                            }
+                            <input asp-for="ImageUrl" class="form-control" placeholder="Nhập URL ảnh hoặc tải lên" />
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Món ăn trong Combo (@Model.Items.Count)</label>
                         <div id="selectedDishes" class="border rounded p-3" style="min-height: 300px; max-height: 400px; overflow-y: auto;">
-                            @foreach (var item in Model.Items)
+                            @for (int i = 0; i < Model.Items.Count; i++)
                             {
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span>@item.Name</span>
-                                    <span>@item.Price.ToString("N0") đ</span>
+                                    <input type="hidden" asp-for="Items[@i].MenuItemId" />
+                                    <span>@Model.Items[i].Name</span>
+                                    <input asp-for="Items[@i].Quantity" type="number" class="form-control" style="width: 80px;" />
+                                    <span class="ms-2">@Model.Items[i].Price.ToString("N0") đ</span>
                                 </div>
                             }
                         </div>

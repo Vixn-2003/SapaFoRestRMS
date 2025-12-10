@@ -15,6 +15,7 @@ namespace WebSapaForestForStaff.DTOs.ManagementCombo
         public string? CategoryName { get; set; } // Map từ MenuCategories
         public bool IsAvailable { get; set; }
         public string? Description { get; set; }
+        public int Quantity { get; set; }
 
         public List<ComboDisplayDto> Combos { get; set; }
     }
