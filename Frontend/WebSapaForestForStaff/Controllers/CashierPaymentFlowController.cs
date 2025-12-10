@@ -174,38 +174,63 @@ namespace WebSapaForestForStaff.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmQrPayment([FromForm] ConfirmQrPaymentRequest request)
         {
+            // ✅ DEBUG: Log request
+            System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Called with OrderId: {request?.OrderId}, Notes: {request?.Notes}");
+            
             if (request == null || request.OrderId <= 0)
             {
+                System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Invalid request: OrderId = {request?.OrderId}");
                 TempData["ErrorMessage"] = "Dữ liệu không hợp lệ";
                 return RedirectToAction(nameof(Payment), new { id = request?.OrderId ?? 0 });
             }
 
-            var order = await _paymentApiService.GetOrderDetailAsync(request.OrderId);
-            if (order == null)
+            try
             {
-                TempData["ErrorMessage"] = $"Không tìm thấy đơn hàng {request.OrderId}";
-                return RedirectToAction(nameof(OrderSelection));
+                var order = await _paymentApiService.GetOrderDetailAsync(request.OrderId);
+                if (order == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Order not found: {request.OrderId}");
+                    TempData["ErrorMessage"] = $"Không tìm thấy đơn hàng {request.OrderId}";
+                    return RedirectToAction(nameof(OrderSelection));
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Order found: {request.OrderId}, TotalAmount: {order.TotalAmount}, Status: {order.Status}");
+
+                var confirmRequest = new PaymentConfirmRequest
+                {
+                    OrderId = request.OrderId,
+                    PaymentMethod = "QRBankTransfer",
+                    Amount = order.TotalAmount,
+                    Notes = request.Notes ?? "Thu ngân xác nhận đã nhận tiền qua QR",
+                    SessionId = string.Empty,
+                    CashGiven = null
+                };
+
+                System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Sending confirm request: OrderId={confirmRequest.OrderId}, Amount={confirmRequest.Amount}, PaymentMethod={confirmRequest.PaymentMethod}");
+                
+                var result = await _paymentApiService.ConfirmPaymentAsync(confirmRequest);
+                
+                System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] API result: Success={result.Success}, Message={result.Message}");
+                
+                if (!result.Success)
+                {
+                    var errorMsg = result.Message ?? "Xác nhận thanh toán thất bại";
+                    System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Payment failed: {errorMsg}");
+                    TempData["ErrorMessage"] = errorMsg;
+                    return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+                }
+
+                TempData["SuccessMessage"] = "✅ Đã xác nhận thanh toán QR thành công!";
+                System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Payment successful, redirecting to Receipt for OrderId: {request.OrderId}");
+                return RedirectToAction(nameof(Receipt), new { orderId = request.OrderId });
             }
-
-            var confirmRequest = new PaymentConfirmRequest
+            catch (Exception ex)
             {
-                OrderId = request.OrderId,
-                PaymentMethod = "QRBankTransfer",
-                Amount = order.TotalAmount,
-                Notes = request.Notes ?? "Thu ngân xác nhận đã nhận tiền qua QR",
-                SessionId = string.Empty,
-                CashGiven = null
-            };
-
-            var result = await _paymentApiService.ConfirmPaymentAsync(confirmRequest);
-            if (!result.Success)
-            {
-                TempData["ErrorMessage"] = result.Message ?? "Xác nhận thanh toán thất bại";
+                System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Exception: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] StackTrace: {ex.StackTrace}");
+                TempData["ErrorMessage"] = $"Lỗi khi xác nhận thanh toán: {ex.Message}";
                 return RedirectToAction(nameof(Payment), new { id = request.OrderId });
             }
-
-            TempData["SuccessMessage"] = "✅ Đã xác nhận thanh toán QR thành công!";
-            return RedirectToAction(nameof(Receipt), new { orderId = request.OrderId });
         }
 
         /// <summary>

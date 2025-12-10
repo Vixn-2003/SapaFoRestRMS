@@ -265,6 +265,24 @@
 </style>
 
 <div class="cashier-shell">
+    <!-- ✅ HIỂN THỊ TOAST NOTIFICATION TỪ TEMPDATA -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast('@Html.Raw(TempData["SuccessMessage"])', 'success');
+            });
+        </script>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast('@Html.Raw(TempData["ErrorMessage"])', 'error');
+            });
+        </script>
+    }
+    
     <!-- HEADER FULL-WIDTH: Thông tin đơn + khách + trạng thái -->
     <div class="payment-page-header">
         <div class="payment-header-card">
