@@ -472,10 +472,10 @@
                     <div class="form-group">
                         <label for="CourseType">Kiểu món</label>
                         <select asp-for="ProductsMenu.CourseType" class="form-control">
-                            <option value="Drink">Nước uống</option>
-                            <option value="Dessert">Món tráng miệng</option>
-                            <option value="MainDish">Món chính</option>
-                            <option value="Appetizer">Món khai vị</option>
+                            <option value="Nước uống">Nước uống</option>
+                            <option value="Món tráng miệng">Món tráng miệng</option>
+                            <option value="Món chính">Món chính</option>
+                            <option value="Món khai vị">Món khai vị</option>
                         </select>
                     </div>
 
@@ -946,6 +946,11 @@
             const timeCook = document.getElementById('timeCook').value;
             if (timeCook && timeCook.trim() !== '') {
                 formData.append('ProductsMenu.TimeCook', timeCook);
+            }
+
+            const batchSize = document.getElementById('batchSize').value;
+            if (batchSize && batchSize.trim() !== '') {
+                formData.append('ProductsMenu.BatchSize', batchSize);
             }
 
             formData.append('ProductsMenu.BillingType', document.getElementById('billingType').value);
