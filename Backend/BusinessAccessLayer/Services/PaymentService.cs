@@ -39,10 +39,10 @@ public class PaymentService : IPaymentService
     private static readonly HashSet<string> PendingStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
         "Pending",
-        "pending-payment",
+        OrderStatusConstants.PendingPayment,
         "WaitingForPayment",
         "Processing",
-        "Confirmed",  // Đơn đã được khách xác nhận, chờ thanh toán
+        OrderStatusConstants.Confirmed,  // Đơn đã được khách xác nhận, chờ thanh toán
         "Cooking",
         "Ready",
         "Late",
@@ -59,15 +59,9 @@ public class PaymentService : IPaymentService
     public async Task<OrderListResponseDto> GetOrdersAsync(DateOnly? date = default, string? statusFilter = null, string sortOrder = "desc", CancellationToken ct = default)
     {
         var selectedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        IEnumerable<Order> orders;
-        if (date.HasValue)
-        {
-            orders = await _unitOfWork.Payments.GetOrdersByDateAsync(selectedDate);
-        }
-        else
-        {
-            orders = await _unitOfWork.Payments.GetAllOrdersWithDetailsAsync();
-        }
+
+        // 🔄 Luôn lấy toàn bộ orders, sau đó filter theo ngày dựa trên PaidAt (nếu có) hoặc CreatedAt
+        var orders = await _unitOfWork.Payments.GetAllOrdersWithDetailsAsync();
         var orderDtos = new List<OrderDto>();
 
         foreach (var order in orders)
@@ -78,19 +72,41 @@ public class PaymentService : IPaymentService
             orderDtos.Add(orderDto);
         }
 
+        // ✅ Filter theo ngày: ưu tiên PaidAt, fallback CreatedAt cho đơn chưa thanh toán
+        if (date.HasValue)
+        {
+            orderDtos = orderDtos.Where(o =>
+                (o.PaidAt.HasValue && DateOnly.FromDateTime(o.PaidAt.Value) == selectedDate) ||
+                (!o.PaidAt.HasValue && o.CreatedAt.HasValue && DateOnly.FromDateTime(o.CreatedAt.Value) == selectedDate)
+            ).ToList();
+        }
+
+        // Tính lại tổng số sau khi filter theo ngày
         var pendingCount = orderDtos.Count(o => IsPendingStatus(o.Status));
         var processedCount = orderDtos.Count(o => IsProcessedStatus(o.Status));
 
         IEnumerable<OrderDto> filteredOrders = orderDtos;
         if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
-            if (statusFilter.Equals("pending", StringComparison.OrdinalIgnoreCase))
+            // ✅ Hỗ trợ cả "pending"/"processed" và "Confirmed"/"Paid"
+            var statusLower = statusFilter.ToLowerInvariant();
+            
+            if (statusLower == "pending" || statusLower == "confirmed" || statusLower == "pendingpayment")
             {
+                // Filter orders với status pending (bao gồm Confirmed, PendingPayment, etc.)
                 filteredOrders = orderDtos.Where(o => IsPendingStatus(o.Status));
             }
-            else if (statusFilter.Equals("processed", StringComparison.OrdinalIgnoreCase))
+            else if (statusLower == "processed" || statusLower == "paid" || statusLower == "completed" || statusLower == "success")
             {
+                // Filter orders với status processed (bao gồm Paid, Completed, Success)
                 filteredOrders = orderDtos.Where(o => IsProcessedStatus(o.Status));
+            }
+            else
+            {
+                // ✅ Filter theo status chính xác nếu không match với pending/processed
+                filteredOrders = orderDtos.Where(o => 
+                    !string.IsNullOrWhiteSpace(o.Status) && 
+                    o.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase));
             }
         }
 
@@ -110,18 +126,51 @@ public class PaymentService : IPaymentService
 
     public async Task<OrderDto?> GetOrderDetailAsync(int orderId, CancellationToken ct = default)
     {
+        // ✅ DEBUG: Log để trace
+        System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] Loading order {orderId}");
+        
         var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
 
         if (order == null)
         {
+            System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] Order {orderId} not found");
             return null;
         }
+
+        // ✅ DEBUG: Log order data trước khi map
+        System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] Order {orderId} - CustomerId: {order.CustomerId}, ReservationId: {order.ReservationId}, Customer: {order.Customer != null}, Customer.User: {order.Customer?.User != null}, Reservation.Customer: {order.Reservation?.Customer != null}, Reservation.Customer.User: {order.Reservation?.Customer?.User != null}");
 
         var orderDto = _mapper.Map<OrderDto>(order);
 
         // Tính toán các khoản tiền
         CalculateOrderAmounts(order, orderDto);
         PopulateOrderMetadata(order, orderDto);
+        
+        // ✅ DEBUG: Log orderDto sau khi populate
+        System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] OrderDto {orderId} - CustomerId: {orderDto.CustomerId}, CustomerName: {orderDto.CustomerName}, CustomerPhone: {orderDto.CustomerPhone}");
+        
+        // Lấy số tiền khách đưa và tiền thối lại từ transaction cuối cùng (nếu có)
+        if (order.Transactions != null && order.Transactions.Any())
+        {
+            var latestTransaction = order.Transactions
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefault();
+            
+            if (latestTransaction != null)
+            {
+                // Lấy số tiền khách đưa (cho thanh toán tiền mặt)
+                if (latestTransaction.AmountReceived.HasValue && latestTransaction.AmountReceived.Value > 0)
+                {
+                    orderDto.AmountReceived = latestTransaction.AmountReceived.Value;
+                }
+                
+                // Lấy tiền thối lại
+                if (latestTransaction.RefundAmount.HasValue && latestTransaction.RefundAmount.Value > 0)
+                {
+                    orderDto.ChangeAmount = latestTransaction.RefundAmount.Value;
+                }
+            }
+        }
         
         // Cập nhật lại Status của combo dựa trên trạng thái các món con trong combo (từ KDS)
         await UpdateComboStatusesFromKitchenAsync(orderDto, ct);
@@ -216,19 +265,25 @@ public class PaymentService : IPaymentService
             }
 
             var vouchers = await voucherService.GetAllAsync();
+            var today = DateTime.Today;
+            
+            // ✅ VALIDATION ĐẦY ĐỦ: Code, IsDelete, Status, và THỜI HẠN
             var voucher = vouchers.FirstOrDefault(v =>
                 string.Equals(v.Code, request.VoucherCode!.Trim(), StringComparison.OrdinalIgnoreCase) &&
                 v.IsDelete != true &&
-                string.Equals(v.Status, "Đang sử dụng", StringComparison.OrdinalIgnoreCase));
+                string.Equals(v.Status, "Đang sử dụng", StringComparison.OrdinalIgnoreCase) &&
+                // ✅ Check thời hạn: StartDate <= today <= EndDate
+                (!v.StartDate.HasValue || v.StartDate.Value.Date <= today) &&
+                (!v.EndDate.HasValue || v.EndDate.Value.Date >= today));
 
             if (voucher == null)
             {
-                throw new KeyNotFoundException("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
+                throw new KeyNotFoundException("Mã giảm giá không hợp lệ, đã hết hạn hoặc chưa đến thời gian sử dụng.");
             }
 
             var subtotal = orderDto.Subtotal ?? 0;
 
-            // Check điều kiện giá trị tối thiểu
+            // ✅ Check điều kiện giá trị tối thiểu
             if (voucher.MinOrderValue.HasValue && subtotal < voucher.MinOrderValue.Value)
             {
                 throw new InvalidOperationException(
@@ -256,12 +311,73 @@ public class PaymentService : IPaymentService
         }
 
         // ✅ Làm tròn discount amount lên mệnh giá 1000
-        orderDto.DiscountAmount = RoundUpToThousand(discountAmount);
+        var roundedDiscountAmount = RoundUpToThousand(discountAmount);
+        orderDto.DiscountAmount = roundedDiscountAmount;
 
         // Tính lại tổng tiền sau ưu đãi và làm tròn
         var totalBeforeRounding = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
                                   (orderDto.ServiceFee ?? 0) - orderDto.DiscountAmount.Value;
         orderDto.TotalAmount = RoundUpToThousand(totalBeforeRounding);
+
+        // ✅ FIX: Lưu discount vào Payment record trong database
+        // Tìm Payment record của order (nếu có) hoặc tạo mới
+        var payment = order.Payments?.OrderByDescending(p => p.PaymentDate ?? DateTime.MinValue).FirstOrDefault();
+        
+        int? voucherId = null;
+        if (!string.IsNullOrWhiteSpace(request.VoucherCode))
+        {
+            var voucherService = _serviceProvider.GetService<IVoucherService>();
+            if (voucherService != null)
+            {
+                var vouchers = await voucherService.GetAllAsync();
+                var today = DateTime.Today;
+                var voucher = vouchers.FirstOrDefault(v =>
+                    string.Equals(v.Code, request.VoucherCode!.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    v.IsDelete != true &&
+                    string.Equals(v.Status, "Đang sử dụng", StringComparison.OrdinalIgnoreCase) &&
+                    (!v.StartDate.HasValue || v.StartDate.Value.Date <= today) &&
+                    (!v.EndDate.HasValue || v.EndDate.Value.Date >= today));
+                voucherId = voucher?.VoucherId;
+            }
+        }
+
+        if (payment == null)
+        {
+            // Tạo Payment record mới để lưu discount
+            payment = new Payment
+            {
+                OrderId = request.OrderId,
+                PaymentMethod = "Pending", // Tạm thời, sẽ cập nhật khi thanh toán
+                Subtotal = orderDto.Subtotal ?? 0,
+                DiscountAmount = roundedDiscountAmount,
+                Vatpercent = 10, // Default VAT
+                Vatamount = orderDto.VatAmount ?? 0,
+                FinalAmount = orderDto.TotalAmount ?? 0,
+                VoucherId = voucherId,
+                PaymentDate = null // Chưa thanh toán
+            };
+            // Thêm Payment vào order và save
+            if (order.Payments == null)
+            {
+                order.Payments = new List<Payment>();
+            }
+            order.Payments.Add(payment);
+        }
+        else
+        {
+            // Cập nhật Payment record hiện có
+            payment.DiscountAmount = roundedDiscountAmount;
+            payment.VoucherId = voucherId;
+            payment.Subtotal = orderDto.Subtotal ?? 0;
+            payment.Vatamount = orderDto.VatAmount ?? 0;
+            payment.FinalAmount = orderDto.TotalAmount ?? 0;
+        }
+
+        // Update order để trigger save Payment changes
+        await _unitOfWork.Payments.UpdateAsync(order);
+        
+        // Save changes để lưu discount vào database
+        await _unitOfWork.SaveChangesAsync();
 
         return orderDto;
     }
@@ -298,13 +414,10 @@ public class PaymentService : IPaymentService
 
         var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
 
-        // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION NGAY KHI BẮT ĐẦU THANH TOÁN
-        await ReleaseTablesAndCompleteReservationAsync(request.OrderId, null, ct);
-
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
 
-    public async Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, CancellationToken ct = default)
+    public async Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, int userId, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
 
@@ -320,49 +433,98 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Đơn hàng chưa được khách xác nhận, không thể thanh toán. Vui lòng yêu cầu khách xác nhận số lượng món đã dùng trước.");
         }
 
-        // Validate payment amount
-        var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
-        var expectedAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
+        // ✅ FIX: Nếu có SessionId, tìm transaction đã tạo từ InitiatePayment và sử dụng amount từ đó
+        Transaction? existingTransaction = null;
+        decimal expectedAmount = request.Amount;
+
+        if (!string.IsNullOrEmpty(request.SessionId))
+        {
+            existingTransaction = await _unitOfWork.Payments.GetTransactionBySessionIdAsync(request.SessionId);
+            if (existingTransaction != null)
+            {
+                // Sử dụng amount từ transaction đã tạo (đã tính đúng với discount)
+                expectedAmount = existingTransaction.Amount;
+                
+                // Validate: amount từ request phải khớp với amount trong transaction
+                if (Math.Abs(request.Amount - existingTransaction.Amount) > 0.01m)
+                {
+                    throw new InvalidOperationException($"Số tiền thanh toán không khớp với phiên thanh toán. Phiên: {existingTransaction.Amount:N0} ₫, Nhận được: {request.Amount:N0} ₫");
+                }
+            }
+        }
+
+        // Nếu không có existing transaction, tính lại amount (cho backward compatibility)
+        if (existingTransaction == null)
+        {
+            var orderDto = _mapper.Map<OrderDto>(order);
+            CalculateOrderAmounts(order, orderDto);
+            expectedAmount = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
                             (orderDto.ServiceFee ?? 0) - (orderDto.DiscountAmount ?? 0);
 
-        if (request.Amount != expectedAmount)
-        {
-            throw new InvalidOperationException($"Số tiền thanh toán không khớp. Mong đợi: {expectedAmount}, Nhận được: {request.Amount}");
+            if (Math.Abs(request.Amount - expectedAmount) > 0.01m)
+            {
+                throw new InvalidOperationException($"Số tiền thanh toán không khớp. Mong đợi: {expectedAmount:N0} ₫, Nhận được: {request.Amount:N0} ₫");
+            }
         }
 
         // Validate cash payment
         if (request.PaymentMethod == "Cash" && request.CashGiven.HasValue)
         {
-            if (request.CashGiven.Value < request.Amount)
+            if (request.CashGiven.Value < expectedAmount)
             {
                 throw new InvalidOperationException("Số tiền khách đưa không đủ!");
             }
         }
 
-        // Tạo transaction
-        var transaction = new Transaction
+        Transaction savedTransaction;
+        
+        if (existingTransaction != null)
         {
-            OrderId = request.OrderId,
-            TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
-            Amount = request.Amount,
-            PaymentMethod = request.PaymentMethod,
-            Status = "Success",
-            CreatedAt = DateTime.UtcNow,
-            CompletedAt = DateTime.UtcNow,
-            SessionId = request.SessionId,
-            Notes = request.Notes
-        };
+            // ✅ Cập nhật transaction đã tồn tại thay vì tạo mới
+            existingTransaction.Status = "Paid";
+            existingTransaction.CompletedAt = DateTime.UtcNow;
+            existingTransaction.Notes = request.Notes ?? existingTransaction.Notes;
+            
+            if (request.PaymentMethod == "Cash" && request.CashGiven.HasValue)
+            {
+                existingTransaction.AmountReceived = request.CashGiven.Value;
+                existingTransaction.RefundAmount = request.CashGiven.Value - existingTransaction.Amount;
+            }
+            
+            await _unitOfWork.Payments.UpdateTransactionAsync(existingTransaction);
+            savedTransaction = existingTransaction;
+        }
+        else
+        {
+            // Tạo transaction mới (backward compatibility)
+            var transaction = new Transaction
+            {
+                OrderId = request.OrderId,
+                TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
+                Amount = request.Amount,
+                PaymentMethod = request.PaymentMethod,
+                Status = "Paid",
+                CreatedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                SessionId = request.SessionId,
+                Notes = request.Notes
+            };
+
+            savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
+        }
 
         // Cập nhật trạng thái đơn hàng
         order.Status = OrderStatusConstants.Paid;
         await _unitOfWork.Payments.UpdateAsync(order);
 
-        // Lưu transaction
-        var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
+        // 🔓 Giải phóng bàn và hoàn thành reservation
+        await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
         // Save changes
         await _unitOfWork.SaveChangesAsync();
+
+        // ✅ Trigger post-payment actions (VIP update, LoyaltyPoints +1, etc.)
+        await TriggerPostPaymentActionsAsync(request.OrderId, savedTransaction.TransactionId, ct);
 
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
@@ -380,6 +542,9 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException("Đơn hàng không có món để xác nhận.");
         }
 
+        // ✅ Danh sách status được phép thanh toán (billable)
+        var billableStatuses = new[] { "Cooking", "Done", "Ready", "Served", "cooking", "done", "ready", "served", "Đang chế biến", "Đã xong", "Sẵn sàng", "Đã phục vụ" };
+        
         foreach (var confirmed in request.Items)
         {
             var detail = order.OrderDetails.FirstOrDefault(d => d.OrderDetailId == confirmed.OrderDetailId);
@@ -390,7 +555,28 @@ public class PaymentService : IPaymentService
 
             if (confirmed.IsRemoved)
             {
-                // Món bị hủy: set cả Quantity và QuantityUsed về 0
+                // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+                // Phải gọi TRƯỚC khi set status = Removed để release có thể check status Pending/Cooking
+                if (detail.MenuItem != null)
+                {
+                    try
+                    {
+                        var inventoryService = _serviceProvider.GetRequiredService<IInventoryIngredientService>();
+                        var releaseResult = await inventoryService.ReleaseReservedBatchesForOrderDetailAsync(detail.OrderDetailId);
+                        if (!releaseResult.success)
+                        {
+                            // Log warning nhưng không fail việc hủy món
+                            Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {detail.OrderDetailId}: {releaseResult.message}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error nhưng không fail việc hủy món
+                        Console.WriteLine($"Error releasing reserved batches for order detail {detail.OrderDetailId}: {ex.Message}");
+                    }
+                }
+                
+                // Món bị hủy: set cả Quantity và QuantityUsed về 0 (SAU KHI đã release)
                 detail.Quantity = 0;
                 detail.QuantityUsed = 0;
                 detail.Status = "Removed";
@@ -401,7 +587,88 @@ public class PaymentService : IPaymentService
                 // Chỉ cập nhật QuantityUsed (SL thực tế khách dùng)
                 // Giữ nguyên detail.Quantity (đây là SL ban đầu đặt)
                 detail.QuantityUsed = confirmed.QuantityUsed < 0 ? 0 : confirmed.QuantityUsed;
-                detail.Status = "Confirmed";
+                
+                // ✅ FIX BUG: CHỈ chuyển status thành "Done" nếu món có status billable
+                // KHÔNG chuyển món "Pending" thành "Done"
+                var currentStatus = (detail.Status ?? "").Trim();
+                bool isBillable = billableStatuses.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase));
+                
+                if (isBillable)
+                {
+                    // Món đã được bếp xử lý (Cooking/Done/Ready/Served) → chuyển thành Done để thanh toán
+                    detail.Status = "Done";
+                }
+                // Nếu món có status "Pending" → GIỮ NGUYÊN status, KHÔNG chuyển thành "Done"
+                // Món "Pending" sẽ không được tính vào hóa đơn
+            }
+        }
+
+        // ✅ TỰ ĐỘNG CHUYỂN TRẠNG THÁI CÁC MÓN CÓ STATUS "Cooking", "Done", "Ready", "Served" THÀNH "Done"
+        // Các món này sẽ được lấy ra để thanh toán
+        // ⚠️ KHÔNG chuyển món có status "Pending" thành "Done"
+        var billableStatusesForAutoUpdate = new[] { "Cooking", "Done", "Ready", "Served", "cooking", "done", "ready", "served", "Đang chế biến", "Đã xong", "Sẵn sàng", "Đã phục vụ" };
+        
+        foreach (var detail in order.OrderDetails)
+        {
+            // Bỏ qua món đã bị hủy
+            if (detail.Status == "Removed" || detail.Status == "Cancelled")
+            {
+                continue;
+            }
+
+            // ✅ Bỏ qua món đã được xử lý trong request.Items (đã được set status ở trên)
+            // Kiểm tra xem món này có trong request.Items không
+            var wasProcessedInRequest = request.Items.Any(item => item.OrderDetailId == detail.OrderDetailId);
+            if (wasProcessedInRequest)
+            {
+                continue; // Đã xử lý rồi, không xử lý lại
+            }
+
+            var currentStatus = (detail.Status ?? "").Trim();
+            
+            // ✅ XỬ LÝ MÓN LẺ (KHÔNG PHẢI COMBO)
+            if (!detail.ComboId.HasValue)
+            {
+                // ⚠️ CHỈ chuyển status thành "Done" nếu món có status billable (Cooking/Done/Ready/Served)
+                // KHÔNG chuyển món "Pending" thành "Done"
+                if (billableStatusesForAutoUpdate.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
+                {
+                    detail.Status = "Done";
+                    
+                    // Nếu là món ConsumptionBased và chưa có QuantityUsed → set QuantityUsed = Quantity
+                    if (detail.MenuItem?.BillingType == ItemBillingType.ConsumptionBased && 
+                        !detail.QuantityUsed.HasValue)
+                    {
+                        detail.QuantityUsed = detail.Quantity;
+                    }
+                }
+                // Nếu món có status "Pending" → GIỮ NGUYÊN, KHÔNG chuyển thành "Done"
+            }
+            // ✅ XỬ LÝ COMBO
+            else if (detail.ComboId.HasValue)
+            {
+                // ⚠️ CHỈ chuyển status thành "Done" nếu combo có status billable
+                // KHÔNG chuyển combo "Pending" thành "Done"
+                if (billableStatusesForAutoUpdate.Any(s => string.Equals(s, currentStatus, StringComparison.OrdinalIgnoreCase)))
+                {
+                    detail.Status = "Done";
+                    
+                    // ✅ CHUYỂN TRẠNG THÁI TẤT CẢ MÓN CON TRONG COMBO THÀNH "Done" (chỉ món con có status billable)
+                    if (detail.OrderComboItems != null && detail.OrderComboItems.Any())
+                    {
+                        foreach (var comboItem in detail.OrderComboItems)
+                        {
+                            var comboItemStatus = (comboItem.Status ?? "").Trim();
+                            // ⚠️ CHỈ chuyển các món con có status Cooking/Done/Ready/Served thành Done
+                            // KHÔNG chuyển món con "Pending" thành "Done"
+                            if (billableStatusesForAutoUpdate.Any(s => string.Equals(s, comboItemStatus, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                comboItem.Status = "Done";
+                            }
+                        }
+                    }
+                }
+                // Nếu combo có status "Pending" → GIỮ NGUYÊN, KHÔNG chuyển thành "Done"
             }
         }
 
@@ -674,11 +941,49 @@ public class PaymentService : IPaymentService
             orderDto.TableNumber = string.Join(", ", tableNumbers);
         }
 
+        // ✅ FIX: Đảm bảo CustomerId được set (từ Order hoặc Reservation)
+        if (order.CustomerId.HasValue)
+        {
+            orderDto.CustomerId = order.CustomerId.Value;
+        }
+        else if (order.Reservation != null && order.Reservation.CustomerId > 0)
+        {
+            // Fallback: Lấy CustomerId từ Reservation nếu Order không có
+            // Reservation.CustomerId là int (không nullable), không phải int?
+            orderDto.CustomerId = order.Reservation.CustomerId;
+        }
+        
+        // ✅ FIX: Lấy customer info từ Customer.User hoặc Reservation.Customer.User
         if (order.Customer?.User != null)
         {
             orderDto.CustomerName = order.Customer.User.FullName;
             orderDto.CustomerPhone = order.Customer.User.Phone;
             orderDto.CustomerEmail = order.Customer.User.Email;
+        }
+        else if (order.Reservation?.Customer?.User != null)
+        {
+            // Fallback: Lấy từ Reservation nếu Customer.User không có
+            orderDto.CustomerName = order.Reservation.Customer.User.FullName;
+            orderDto.CustomerPhone = order.Reservation.Customer.User.Phone;
+            orderDto.CustomerEmail = order.Reservation.Customer.User.Email;
+            
+            // ✅ Đảm bảo CustomerId được set từ Reservation
+            // Reservation.CustomerId là int (không nullable), không phải int?
+            if (!orderDto.CustomerId.HasValue && order.Reservation.CustomerId > 0)
+            {
+                orderDto.CustomerId = order.Reservation.CustomerId;
+            }
+        }
+        else if (order.Reservation != null && !string.IsNullOrWhiteSpace(order.Reservation.CustomerNameReservation))
+        {
+            // Fallback: Lấy từ Reservation.CustomerNameReservation nếu không có User
+            orderDto.CustomerName = order.Reservation.CustomerNameReservation;
+        }
+        
+        // ✅ DEBUG: Log để trace customer info
+        if (orderDto.CustomerId.HasValue && string.IsNullOrWhiteSpace(orderDto.CustomerName))
+        {
+            System.Diagnostics.Debug.WriteLine($"[PopulateOrderMetadata] Order {order.OrderId} has CustomerId={orderDto.CustomerId} but CustomerName is null. Order.Customer={order.Customer != null}, Order.Customer.User={order.Customer?.User != null}, Reservation.Customer={order.Reservation?.Customer != null}, Reservation.Customer.User={order.Reservation?.Customer?.User != null}");
         }
 
         if (order.Reservation?.Staff != null)
@@ -730,7 +1035,7 @@ public class PaymentService : IPaymentService
 
         // Tính tổng tiền
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+      CalculateOrderAmounts(order, orderDto);
 
         // Use custom amount if provided, otherwise use total amount
         var totalAmount = customAmount ?? orderDto.TotalAmount ?? 0;
@@ -775,7 +1080,7 @@ public class PaymentService : IPaymentService
         }
 
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+       CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
         var depositRefundAmount = orderDto.DepositRefundAmount ?? 0;
 
@@ -832,8 +1137,13 @@ public class PaymentService : IPaymentService
                 // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION
                 await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
+                // Trigger post-payment actions (VIP update, LoyaltyPoints, etc.)
+                await TriggerPostPaymentActionsAsync(request.OrderId, savedTransaction.TransactionId, ct);
+
                 // Unlock order
                 await UnlockOrderAsync(request.OrderId, ct);
+
+                await _unitOfWork.SaveChangesAsync();
 
                 return _mapper.Map<TransactionDto>(savedTransaction);
             }
@@ -915,10 +1225,156 @@ public class PaymentService : IPaymentService
             // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION
             await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
+            // Trigger post-payment actions (VIP update, LoyaltyPoints, etc.)
+            // Wrap trong try-catch để đảm bảo SaveChangesAsync luôn được gọi
+            try
+            {
+                await TriggerPostPaymentActionsAsync(request.OrderId, savedTransaction.TransactionId, ct);
+            }
+            catch (Exception postActionEx)
+            {
+                // Log lỗi nhưng không fail payment
+                await _auditLogService.LogEventAsync(
+                    eventType: "PostPaymentActionError",
+                    entityType: "Order",
+                    entityId: request.OrderId,
+                    description: $"Lỗi trong post-payment actions: {postActionEx.Message}",
+                    userId: userId,
+                    ct: ct);
+            }
+
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
 
+            // ✅ QUAN TRỌNG: Save changes để đảm bảo order status = Paid được lưu vào database
+            await _unitOfWork.SaveChangesAsync();
+
             return _mapper.Map<TransactionDto>(savedTransaction);
+        }
+        catch
+        {
+            // Unlock order nếu có lỗi
+            await UnlockOrderAsync(request.OrderId, ct);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Xử lý thanh toán kết hợp (Cash + QR)
+    /// Tạo 2 transactions riêng biệt cho Cash và QR
+    /// </summary>
+    public async Task<List<TransactionDto>> ProcessCombinedPaymentAsync(CombinedPaymentRequestDto request, int userId, CancellationToken ct = default)
+    {
+        // Validate order exists
+        var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
+        if (order == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy đơn hàng với ID: {request.OrderId}");
+        }
+
+        // Check if order is already paid
+        if (order.Status == "Paid")
+        {
+            throw new InvalidOperationException("Đơn hàng đã được thanh toán");
+        }
+
+        // Calculate total amount
+        var orderDto = _mapper.Map<OrderDto>(order);
+         CalculateOrderAmounts(order, orderDto);
+        var totalAmount = orderDto.TotalAmount ?? 0;
+
+        // Validate tổng hai phần phải bằng totalAmount
+        var partsTotal = request.CashAmount + request.QrAmount;
+        if (Math.Abs(partsTotal - totalAmount) > 0.01m) // Cho phép sai số nhỏ do làm tròn
+        {
+            throw new InvalidOperationException($"Tổng hai phần thanh toán ({partsTotal:N0} VND) không khớp với tổng đơn hàng ({totalAmount:N0} VND)");
+        }
+
+        // Validate cash amount
+        if (request.CashReceived.HasValue && request.CashReceived.Value < request.CashAmount)
+        {
+            throw new InvalidOperationException($"Số tiền khách đưa ({request.CashReceived.Value:N0} VND) nhỏ hơn phần thanh toán tiền mặt ({request.CashAmount:N0} VND)");
+        }
+
+        // Lock order
+        await LockOrderAsync(new OrderLockRequestDto { OrderId = request.OrderId }, userId, ct);
+
+        try
+        {
+            var transactions = new List<Transaction>();
+
+            // ✅ Tạo transaction cho Cash payment
+            decimal? cashRefundAmount = null;
+            if (request.CashReceived.HasValue && request.CashReceived.Value > request.CashAmount)
+            {
+                cashRefundAmount = RoundUpToThousand(request.CashReceived.Value - request.CashAmount);
+            }
+
+            var cashTransaction = new Transaction
+            {
+                OrderId = request.OrderId,
+                TransactionCode = $"TXN-CASH-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}",
+                Amount = request.CashAmount,
+                AmountReceived = request.CashReceived ?? request.CashAmount,
+                RefundAmount = cashRefundAmount,
+                PaymentMethod = "Cash",
+                Status = "Paid",
+                CreatedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                IsManualConfirmed = true,
+                ConfirmedByUserId = userId,
+                Notes = $"Thanh toán kết hợp - Phần tiền mặt: {request.CashAmount:N0} VND" + (cashRefundAmount.HasValue ? $", Tiền thối: {cashRefundAmount.Value:N0} VND" : "")
+            };
+
+            var savedCashTransaction = await _unitOfWork.Payments.SaveTransactionAsync(cashTransaction);
+            transactions.Add(savedCashTransaction);
+
+            // ✅ Tạo transaction cho QR payment
+            var qrTransaction = new Transaction
+            {
+                OrderId = request.OrderId,
+                TransactionCode = $"TXN-QR-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}",
+                Amount = request.QrAmount,
+                PaymentMethod = "QRBankTransfer",
+                Status = "Paid", // Combined payment: QR được xác nhận ngay khi cashier confirm
+                CreatedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow,
+                IsManualConfirmed = true,
+                ConfirmedByUserId = userId,
+                Notes = $"Thanh toán kết hợp - Phần QR: {request.QrAmount:N0} VND"
+            };
+
+            var savedQrTransaction = await _unitOfWork.Payments.SaveTransactionAsync(qrTransaction);
+            transactions.Add(savedQrTransaction);
+
+            // Cập nhật trạng thái order
+            order.Status = OrderStatusConstants.Paid;
+            await _unitOfWork.Payments.UpdateAsync(order);
+
+            // Log audit
+            await _auditLogService.LogEventAsync(
+                "combined_payment_success",
+                "Order",
+                request.OrderId,
+                $"Thanh toán kết hợp thành công. Cash: {request.CashAmount:N0} VND, QR: {request.QrAmount:N0} VND. Tổng: {totalAmount:N0} VND",
+                null,
+                userId,
+                null,
+                ct
+            );
+
+            // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION
+            await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+
+            // Trigger post-payment actions
+            await TriggerPostPaymentActionsAsync(request.OrderId, savedCashTransaction.TransactionId, ct);
+
+            // Unlock order
+            await UnlockOrderAsync(request.OrderId, ct);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return transactions.Select(t => _mapper.Map<TransactionDto>(t)).ToList();
         }
         catch
         {
@@ -1279,8 +1735,11 @@ public class PaymentService : IPaymentService
                 ct
             );
 
-            // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION KHI BẮT ĐẦU SPLIT BILL
-            await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+            // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION CHỈ KHI ĐÃ PAID TOÀN BỘ
+            if (allPaid)
+            {
+                await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+            }
 
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
@@ -1328,7 +1787,7 @@ public class PaymentService : IPaymentService
 
         // Calculate total amount
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+       CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
 
         if (totalAmount <= 0)
@@ -1594,6 +2053,7 @@ public class PaymentService : IPaymentService
                 ct: ct
             );
         }
+
         catch (Exception ex)
         {
             // Log error but don't fail the payment - table release is secondary
@@ -1624,6 +2084,59 @@ public class PaymentService : IPaymentService
             var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
             if (order != null && order.TotalAmount.HasValue)
             {
+                // Step 8.1.1: Re-evaluate VIP status for the customer after successful payment
+                try
+                {
+                    var vipService = _serviceProvider.GetService<ICustomerVipService>();
+                    if (vipService != null && order.CustomerId.HasValue)
+                    {
+                        await vipService.AutoUpdateVipWhenPaymentCompletedAsync(order.OrderId, ct);
+                    }
+                }
+                catch (Exception vipEx)
+                {
+                    await _auditLogService.LogEventAsync(
+                        eventType: "VipEvaluationError",
+                        entityType: "Customer",
+                        entityId: order.CustomerId ?? 0,
+                        description: $"Không thể cập nhật VIP sau thanh toán: {vipEx.Message}",
+                        userId: null,
+                        ct: ct);
+                }
+
+                // Step 8.1.2: Tăng LoyaltyPoints +1 cho Customer sau khi thanh toán thành công
+                try
+                {
+                    if (order.Customer != null)
+                    {
+                        // Tăng LoyaltyPoints +1 (nếu null thì set = 1)
+                        order.Customer.LoyaltyPoints = (order.Customer.LoyaltyPoints ?? 0) + 1;
+                        
+                        // Save changes để lưu LoyaltyPoints
+                        await _unitOfWork.SaveChangesAsync();
+                        
+                        // Log việc tăng điểm
+                        await _auditLogService.LogEventAsync(
+                            eventType: "LoyaltyPointsIncreased",
+                            entityType: "Customer",
+                            entityId: order.Customer.CustomerId,
+                            description: $"Tăng điểm tích lũy +1 sau thanh toán thành công. Điểm hiện tại: {order.Customer.LoyaltyPoints}",
+                            userId: null,
+                            ct: ct);
+                    }
+                }
+                catch (Exception loyaltyEx)
+                {
+                    // Log lỗi nhưng không fail payment
+                    await _auditLogService.LogEventAsync(
+                        eventType: "LoyaltyPointsError",
+                        entityType: "Customer",
+                        entityId: order.CustomerId ?? 0,
+                        description: $"Không thể tăng điểm tích lũy sau thanh toán: {loyaltyEx.Message}",
+                        userId: null,
+                        ct: ct);
+                }
+
                 // Step 8.2: Record revenue (placeholder - implement RevenueService if needed)
                 // await _revenueService.RecordAsync(orderId, order.TotalAmount.Value, transactionId, ct);
 
@@ -1784,6 +2297,28 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException(validationReason);
         }
 
+        // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+        // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
+        // Phải gọi TRƯỚC khi set status = Removed để release có thể check status Pending/Cooking
+        if (orderDetail.MenuItem != null)
+        {
+            try
+            {
+                var inventoryService = _serviceProvider.GetRequiredService<IInventoryIngredientService>();
+                var releaseResult = await inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
+                if (!releaseResult.success)
+                {
+                    // Log warning nhưng không fail việc hủy món
+                    Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {orderDetailId}: {releaseResult.message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error nhưng không fail việc hủy món
+                Console.WriteLine($"Error releasing reserved batches for order detail {orderDetailId}: {ex.Message}");
+            }
+        }
+
         // Mark as removed
         orderDetail.Status = "Removed";
         orderDetail.Quantity = 0;
@@ -1831,11 +2366,6 @@ public class PaymentService : IPaymentService
         // Check kitchen status
         var status = orderDetail.Status ?? "Pending";
 
-        if (status == "Cooking")
-        {
-            return (false, "Món đang được chế biến, không thể hủy");
-        }
-
         if (status == "Done" || status == "Served")
         {
             return (false, "Món đã hoàn thành, không thể hủy");
@@ -1846,8 +2376,8 @@ public class PaymentService : IPaymentService
             return (false, "Món đã được hủy trước đó");
         }
 
-        // Can cancel if status is Pending or Confirmed (NotStarted)
-        if (status == "Pending" || status == "Confirmed")
+        // Can cancel if status is Pending, Confirmed, or Cooking
+        if (status == "Pending" || status == "Cooking")
         {
             return (true, "Có thể hủy món");
         }
@@ -1888,23 +2418,47 @@ public class PaymentService : IPaymentService
             }
         }
 
-        // Cập nhật trạng thái đơn hàng thành "Cancelled"
-        order.Status = "Cancelled";
-
+        // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
         // Hủy tất cả các món trong đơn (nếu chưa được chế biến)
         if (order.OrderDetails != null)
         {
+            var inventoryService = _serviceProvider.GetRequiredService<IInventoryIngredientService>();
+            
             foreach (var detail in order.OrderDetails)
             {
                 var status = (detail.Status ?? "").Trim().ToLower();
-                if (status == "pending" || status == "confirmed" || status == "đã gửi")
+                if (status == "pending" || status == "confirmed" || status == "đã gửi" || status == "cooking")
                 {
+                    // ✅ Giải phóng reserved quantity TRƯỚC KHI set status = Cancelled
+                    // Phải gọi TRƯỚC để release có thể check status Pending/Cooking
+                    if (detail.MenuItem != null)
+                    {
+                        try
+                        {
+                            var releaseResult = await inventoryService.ReleaseReservedBatchesForOrderDetailAsync(detail.OrderDetailId);
+                            if (!releaseResult.success)
+                            {
+                                // Log warning nhưng không fail việc hủy món
+                                Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {detail.OrderDetailId}: {releaseResult.message}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log error nhưng không fail việc hủy món
+                            Console.WriteLine($"Error releasing reserved batches for order detail {detail.OrderDetailId}: {ex.Message}");
+                        }
+                    }
+                    
+                    // Sau khi release, mới set status = Cancelled
                     detail.Status = "Cancelled";
                     detail.Quantity = 0;
                     detail.QuantityUsed = 0;
                 }
             }
         }
+
+        // Cập nhật trạng thái đơn hàng thành "Cancelled"
+        order.Status = "Cancelled";
 
         await _unitOfWork.Payments.UpdateAsync(order);
         await _unitOfWork.SaveChangesAsync();

@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+@using System.Security.Claims
+@inject WebSapaForestForStaff.Services.ApiService ApiService
+@{
+    var profile = await ApiService.GetUserProfileAsync();
+    var avatarUrl = !string.IsNullOrWhiteSpace(profile?.AvatarUrl) ? profile.AvatarUrl : Url.Content("~/assets/images/faces/face8.jpg");
+    var displayName = profile?.FullName ?? User.Identity?.Name ?? "User";
+    var displayEmail = profile?.Email ?? User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+}
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -63,7 +71,7 @@
             <div class="navbar-menu-wrapper d-flex align-items-top">
                 <ul class="navbar-nav">
                     <li class="nav-item fw-semibold d-none d-lg-block ms-0">
-                        <h1 class="welcome-text">Hệ thống Bếp, <span class="text-black fw-bold">@(User.Identity?.Name ?? "User")</span></h1>
+                        <h1 class="welcome-text">Hệ thống Bếp, <span class="text-black fw-bold">@displayName</span></h1>
                         <h3 class="welcome-sub-text">Chúc làm việc tốt!!!</h3>
                     </li>
                 </ul>
@@ -71,13 +79,13 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown d-none d-lg-block user-dropdown">
                         <a class="nav-link" id="UserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img class="img-xs rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
+                            <img class="img-xs rounded-circle" src="@avatarUrl" alt="Profile image">
                         </a>
                         <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="UserDropdown">
                             <div class="dropdown-header text-center">
-                                <img class="img-md rounded-circle" src="~/assets/images/faces/face8.jpg" alt="Profile image">
-                                <p class="mb-1 mt-3 fw-semibold">@(User.Identity?.Name ?? "User")</p>
-                                <p class="fw-light text-muted mb-0">@(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "")</p>
+                                <img class="img-md rounded-circle" src="@avatarUrl" alt="Profile image">
+                                <p class="mb-1 mt-3 fw-semibold">@displayName</p>
+                                <p class="fw-light text-muted mb-0">@displayEmail</p>
                             </div>
                             <a class="dropdown-item" asp-controller="UserProfile" asp-action="Index">
                                 <i class="dropdown-item-icon mdi mdi-account-circle text-primary me-2"></i>Hồ sơ của tôi

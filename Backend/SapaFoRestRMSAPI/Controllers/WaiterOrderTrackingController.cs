@@ -109,6 +109,52 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// POST: api/WaiterOrderTracking/update-quantity
+        /// Cập nhật số lượng cho món có BillingType = 1 (ConsumptionBased)
+        /// Cho phép tăng/giảm số lượng kể cả sau khi xác nhận
+        /// </summary>
+        [HttpPost("update-quantity")]
+        public async Task<IActionResult> UpdateQuantity([FromBody] UpdateQuantityDto request)
+        {
+            try
+            {
+                var result = await _service.UpdateQuantityAsync(request);
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST: api/WaiterOrderTracking/confirm-consumption-quantity
+        /// Xác nhận số lượng đã lấy cho món có BillingType = 1 (ConsumptionBased)
+        /// Không cần chờ bếp, phục vụ có thể tự chủ động xác nhận
+        /// </summary>
+        [HttpPost("confirm-consumption-quantity")]
+        public async Task<IActionResult> ConfirmConsumptionQuantity([FromBody] ConfirmConsumptionQuantityDto request)
+        {
+            try
+            {
+                var result = await _service.ConfirmConsumptionQuantityAsync(request);
+                if (result.Success)
+                {
+                    return Ok(result);
+                }
+                return BadRequest(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
     }
 }
 

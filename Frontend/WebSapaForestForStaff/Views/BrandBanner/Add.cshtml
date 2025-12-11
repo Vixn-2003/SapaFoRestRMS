@@ -1,4 +1,7 @@
-﻿@model BrandBannerViewModel
+﻿@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+@model BrandBannerViewModel
 
 <h2>@(Model.BannerId == 0 ? "Thêm banner" : "Cập nhật banner")</h2>
 

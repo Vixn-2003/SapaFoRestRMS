@@ -55,6 +55,41 @@ namespace BusinessAccessLayer.Services
             return result?.SecureUrl?.ToString();
         }
 
+        /// <summary>
+        /// Upload PDF file to Cloudinary
+        /// </summary>
+        /// <param name="pdfBytes">PDF file as byte array</param>
+        /// <param name="fileName">File name (e.g., "RMS000123.pdf")</param>
+        /// <param name="folder">Cloudinary folder path (default: "receipts")</param>
+        /// <returns>Secure URL of uploaded PDF, or null if upload fails</returns>
+        public async Task<string?> UploadPdfAsync(byte[] pdfBytes, string fileName, string folder = "receipts")
+        {
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                return null;
+            }
+
+            try
+            {
+                using var stream = new MemoryStream(pdfBytes);
+                var uploadParams = new RawUploadParams
+                {
+                    File = new FileDescription(fileName, stream),
+                    Folder = folder,
+                    PublicId = Path.GetFileNameWithoutExtension(fileName) // Remove .pdf extension for public ID
+                };
+
+                // RawUploadParams automatically uses ResourceType.Raw
+                var result = await _cloudinary.UploadAsync(uploadParams);
+                return result?.SecureUrl?.ToString();
+            }
+            catch (Exception)
+            {
+                // Log error but don't throw - return null to allow fallback to local storage
+                return null;
+            }
+        }
+
         public async Task<bool> DeleteImageAsync(string imageUrl)
         {
             if (string.IsNullOrEmpty(imageUrl)) return false;
@@ -68,9 +103,13 @@ namespace BusinessAccessLayer.Services
                     .Replace(".jpg", "")
                     .Replace(".png", "")
                     .Replace(".jpeg", "")
+                    .Replace(".pdf", "") // Add PDF support
                     .Replace("/", "");
 
-                var deletionParams = new DeletionParams(publicId);
+                var deletionParams = new DeletionParams(publicId)
+                {
+                    ResourceType = ResourceType.Raw // For PDF files
+                };
                 var result = await _cloudinary.DestroyAsync(deletionParams);
 
                 return result.Result == "ok";

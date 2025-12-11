@@ -192,7 +192,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="profileForm">
+            <form id="profileForm" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
                 <div class="modal-body">
                     <input type="hidden" id="currentAvatarUrl" value="@Model.AvatarUrl" />
@@ -207,9 +207,13 @@
                         <div class="invalid-feedback"></div>
                     </div>
                     <div class="mb-3">
-                        <label for="editAvatarUrl" class="form-label">URL ảnh đại diện</label>
-                        <input type="url" class="form-control" id="editAvatarUrl" name="AvatarUrl" placeholder="Nhập URL ảnh đại diện (tùy chọn)">
-                        <small class="form-text text-muted">Bạn có thể nhập URL của ảnh đại diện từ internet</small>
+                        <label for="editAvatarFile" class="form-label">Ảnh đại diện (upload)</label>
+                        <input type="file"
+                               class="form-control"
+                               id="editAvatarFile"
+                               name="AvatarFile"
+                               accept="image/*">
+                        <small class="form-text text-muted">Chọn ảnh để tải lên Cloudinary</small>
                         <div class="invalid-feedback"></div>
                     </div>
                 </div>

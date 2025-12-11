@@ -65,8 +65,8 @@ namespace WebSapaForestForStaff.Controllers
                 if (User.IsInRole("Staff"))
                 {
                     // Check Staff positions by PositionId
-                    // 1: Waiter/Waitress      -> DashboardTable
-                    // 2: Cashier              -> DashboardTable
+                    // 1: Waiter/Waitress      -> DashboardTable/ListOrder
+                    // 2: Cashier              -> CashierFlow/OrderSelection
                     // 3: Kitchen Staff        -> KischenDisplay
                     // 4: Inventory Staff      -> DashboardInventory
                     var positionIdClaim = User.FindFirst("PositionId")?.Value;
@@ -75,10 +75,12 @@ namespace WebSapaForestForStaff.Controllers
                         switch (primaryPositionId)
                         {
                             case 1: // Waiter/Waitress
+                                return RedirectToAction("ListOrder", "DashboardTable");
+
                             case 2: // Cashier
-                                return RedirectToAction("Index", "DashboardTable");
+                                return RedirectToAction("OrderSelection", "CashierPaymentFlow");
                             case 3: // Kitchen Staff
-                                return RedirectToAction("Index", "KischenDisplay");
+                                return RedirectToAction("Index", "KitchenDisplay");
                             case 4: // Inventory Staff
                                 return RedirectToAction("Index", "DashboardInventory");
                         }
@@ -91,13 +93,17 @@ namespace WebSapaForestForStaff.Controllers
                         try
                         {
                             var positionIds = System.Text.Json.JsonSerializer.Deserialize<List<int>>(positionIdsJson) ?? new();
-                            if (positionIds.Contains(1) || positionIds.Contains(2))
+                            if (positionIds.Contains(1))
                             {
-                                return RedirectToAction("Index", "DashboardTable");
+                                return RedirectToAction("ListOrder", "DashboardTable");
+                            }
+                            if (positionIds.Contains(2))
+                            {
+                                return RedirectToAction("OrderSelection", "CashierPaymentFlow");
                             }
                             if (positionIds.Contains(3))
                             {
-                                return RedirectToAction("Index", "KischenDisplay");
+                                return RedirectToAction("Index", "KitchenDisplay");
                             }
                             if (positionIds.Contains(4))
                             {
@@ -196,15 +202,20 @@ namespace WebSapaForestForStaff.Controllers
                     {
                         var positionIds = authResponse.PositionIds;
 
-                        // Id = 1,2 (Waiter/Waitress, Cashier) -> DashboardTable
-                        if (positionIds.Contains(1) || positionIds.Contains(2))
+                        // Id = 1 (Waiter/Waitress) -> DashboardTable/ListOrder
+                        if (positionIds.Contains(1))
                         {
-                            redirectUrl = returnUrl ?? Url.Action("Index", "DashboardTable");
+                            redirectUrl = returnUrl ?? Url.Action("ListOrder", "DashboardTable");
+                        }
+                        // Id = 2 (Cashier) -> CashierFlow/OrderSelection
+                        else if (positionIds.Contains(2))
+                        {
+                            redirectUrl = returnUrl ?? Url.Action("OrderSelection", "CashierPaymentFlow");
                         }
                         // Id = 3 (Kitchen Staff) -> KischenDisplay
                         else if (positionIds.Contains(3))
                         {
-                            redirectUrl = returnUrl ?? Url.Action("Index", "KischenDisplay");
+                            redirectUrl = returnUrl ?? Url.Action("Index", "KitchenDisplay");
                         }
                         // Id = 4 (Inventory Staff) -> DashboardInventory
                         else if (positionIds.Contains(4))

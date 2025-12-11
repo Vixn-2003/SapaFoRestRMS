@@ -17,11 +17,12 @@
         var normalized = status?.ToLowerInvariant();
         return normalized switch
         {
-            "pending" => "bg-warning text-dark",
+            "waitingconfirmation" => "bg-warning text-dark",
             "confirmed" => "bg-primary",
-            "pending-payment" => "bg-info text-dark",
+            "pendingpayment" => "bg-info text-dark",
             "paid" => "bg-success",
             "completed" => "bg-success",
+            "cancelled" => "bg-secondary",
             _ => "bg-secondary"
         };
     }
@@ -31,11 +32,12 @@
         var normalized = status?.ToLowerInvariant();
         return normalized switch
         {
-            "pending" => "Chờ xác nhận",
+            "waitingconfirmation" => "Chờ xác nhận",
             "confirmed" => "Đã xác nhận",
-            "pending-payment" => "Chờ thanh toán",
+            "pendingpayment" => "Chờ thanh toán",
             "paid" => "Đã thanh toán",
             "completed" => "Hoàn tất",
+            "cancelled" => "Đã hủy",
             _ => status ?? "Không rõ"
         };
     }
@@ -62,6 +64,11 @@
             i.TotalPrice
         })
     });
+
+    // Pass voucher list to JavaScript context (for initial load)
+    var availableVouchersJson = ViewData["AvailableVouchers"] != null
+        ? JsonSerializer.Serialize(ViewData["AvailableVouchers"])
+        : "[]";
 }
 
 <style>
@@ -258,6 +265,24 @@
 </style>
 
 <div class="cashier-shell">
+    <!-- ✅ HIỂN THỊ TOAST NOTIFICATION TỪ TEMPDATA -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast('@Html.Raw(TempData["SuccessMessage"])', 'success');
+            });
+        </script>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast('@Html.Raw(TempData["ErrorMessage"])', 'error');
+            });
+        </script>
+    }
+    
     <!-- HEADER FULL-WIDTH: Thông tin đơn + khách + trạng thái -->
     <div class="payment-page-header">
         <div class="payment-header-card">
@@ -380,19 +405,13 @@
                             return false;
                         }
                         
-                        // ✅ LOGIC COMBO: Nếu là combo và status = "Pending" thì không đếm
-                        if (i.ComboId.HasValue)
+                        // ✅ Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                        if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
                         {
-                            // Combo ở trạng thái "Pending" → không đếm
-                            if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
-                            {
-                                return false;
-                            }
-                            // Combo có status khác "Pending" → đếm
-                            return true;
+                            return false;
                         }
                         
-                        // ✅ MÓN LẺ: Đếm tất cả (trừ cancelled/removed đã filter ở trên)
+                        // ✅ Các món có trạng thái khác "Pending" và không bị hủy → đếm
                         return true;
                     }).Count() ?? 0;
                 }
@@ -422,8 +441,9 @@
                                 else
                                 {
                                     // ✅ Filter logic:
-                                    // 1. Món lẻ: Hiển thị tất cả (trừ cancelled/removed)
-                                    // 2. Combo: Chỉ hiển thị nếu có ít nhất 1 món trong combo không ở trạng thái "Pending"
+                                    // 1. Bỏ qua các món đã bị hủy (cancelled/removed)
+                                    // 2. Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                                    // 3. Chỉ hiển thị các món có trạng thái khác "Pending" và không bị hủy
                                     var billableItems = Model.Items.Where(i =>
                                     {
                                         var status = (i.KitchenStatus ?? "").Trim().ToLower();
@@ -434,19 +454,13 @@
                                             return false;
                                         }
                                         
-                                        // ✅ LOGIC COMBO: Nếu là combo và status = "Pending" thì không hiển thị
-                                        if (i.ComboId.HasValue)
+                                        // ✅ Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                                        if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
                                         {
-                                            // Combo ở trạng thái "Pending" → không hiển thị
-                                            if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
-                                            {
-                                                return false;
-                                            }
-                                            // Combo có status khác "Pending" (Cooking, Done, Ready, etc.) → hiển thị
-                                            return true;
+                                            return false;
                                         }
                                         
-                                        // ✅ MÓN LẺ: Hiển thị tất cả (trừ cancelled/removed đã filter ở trên)
+                                        // ✅ Các món có trạng thái khác "Pending" và không bị hủy → hiển thị
                                         return true;
                                     }).ToList();
 
@@ -521,22 +535,21 @@
                                 </td>
                                 <td class="text-end fw-bold align-middle">@Model.ServiceFee.ToString("N0") ₫</td>
                             </tr>
-                            @if (Model.DiscountAmount > 0)
-                            {
+                            
                                 <tr>
                                     <td colspan="4" class="fw-semibold ps-3 align-middle">
                                         <i class="bi bi-tags me-2 text-secondary"></i>
                                         Giảm giá
                                         <i class="bi bi-info-circle ms-1 text-primary"
                                            data-bs-toggle="tooltip"
-                                           title="Giảm giá theo chương trình khuyến mãi hoặc mã ưu đãi áp dụng."></i>
+                                           title="Giảm giá theo chương trình khuyến mãi hoặc mã ưu đãi áp dụng."></i>, 
                                         <small class="text-muted d-block">
                                             Giảm giá – theo chương trình khuyến mãi / mã giảm giá đã áp dụng
                                         </small>
                                     </td>
                                     <td class="text-end fw-bold text-danger align-middle">-@Model.DiscountAmount.ToString("N0") ₫</td>
                                 </tr>
-                            }
+                            
                             @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
                             {
                                 <tr class="table-info">
@@ -550,7 +563,7 @@
                                     <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
                                 </tr>
                             }
-                             @* @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
+                             @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
                              {
                                  <tr class="table-warning">
                                      <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -564,28 +577,82 @@
                                          +@Model.DepositRefundAmount.Value.ToString("N0") ₫
                                      </td>
                                  </tr>
-                             } *@
-                            @* <tr class="table-success">
-                                <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                             }
+                            @{
+                                var totalBeforeDeposit = Model.Subtotal + Model.VatAmount + Model.ServiceFee - Model.DiscountAmount;
+                            }
+                            <tr class="table-info">
+                                <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#e7f3ff;">
                                     <span class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                        <i class="bi bi-calculator text-info fs-4"></i>
                                         <span class="fs-5">Tổng cộng thanh toán</span>
                                     </span>
                                     <small class="text-muted d-block mt-1">
-                                        @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
-                                        {
-                                            <text>Đã thanh toán đủ bằng tiền cọc. Cần trả lại: @Model.DepositRefundAmount.Value.ToString("N0") ₫</text>
-                                        }
-                                        else
-                                        {
-                                            <text>Tạm tính + VAT + Phí phục vụ - Giảm giá - Đặt cọc (nếu có)</text>
-                                        }
+                                        Tạm tính + VAT + Phí phục vụ - Giảm giá
                                     </small>
                                 </td>
-                                <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
-                                    @Model.TotalAmount.ToString("N0") ₫
+                                <td class="text-end fw-bold text-info align-middle" style="background:#e7f3ff; font-size:1.6rem;">
+                                    @totalBeforeDeposit.ToString("N0") ₫
                                 </td>
-                            </tr> *@
+                            </tr>
+                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                            {
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            Tổng cộng thanh toán - Đặt cọc (@Model.DepositAmount.Value.ToString("N0") ₫)
+                                            @if (Model.AmountReceived.HasValue && Model.AmountReceived.Value > 0)
+                                            {
+                                                <span class="text-info d-block mt-1">
+                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @Model.AmountReceived.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                            @if (Model.ChangeAmount.HasValue && Model.ChangeAmount.Value > 0)
+                                            {
+                                                <span class="text-warning d-block mt-1">
+                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @Model.ChangeAmount.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @Model.TotalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            Tổng cộng thanh toán (không có đặt cọc)
+                                            @if (Model.AmountReceived.HasValue && Model.AmountReceived.Value > 0)
+                                            {
+                                                <span class="text-info d-block mt-1">
+                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @Model.AmountReceived.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                            @if (Model.ChangeAmount.HasValue && Model.ChangeAmount.Value > 0)
+                                            {
+                                                <span class="text-warning d-block mt-1">
+                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @Model.ChangeAmount.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @Model.TotalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
                         </tfoot>
                     </table>
                 </div>
@@ -615,6 +682,70 @@
     <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
     <input type="hidden" name="Notes" id="cashPaymentNotes" />
 </form>
+
+<form id="qrConfirmForm"
+      asp-action="ConfirmQrPayment"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrderId" id="qrConfirmOrderId" />
+    <input type="hidden" name="Notes" id="qrConfirmNotes" />
+</form>
+
+<script>
+    // ✅ DEBUG: Add event listener để trace form submit
+    document.addEventListener('DOMContentLoaded', function() {
+        const cashPaymentForm = document.getElementById('cashPaymentForm');
+        if (cashPaymentForm) {
+            // Log khi form được submit
+            cashPaymentForm.addEventListener('submit', function(e) {
+                console.log('[DEBUG] Form submit event triggered');
+                console.log('[DEBUG] Form action:', this.action);
+                console.log('[DEBUG] Form method:', this.method);
+                console.log('[DEBUG] Form data:', {
+                    OrderId: document.getElementById('cashPaymentOrderId').value,
+                    AmountReceived: document.getElementById('cashPaymentAmountReceived').value,
+                    Notes: document.getElementById('cashPaymentNotes').value
+                });
+                
+                // Kiểm tra xem có event nào đang preventDefault không
+                if (e.defaultPrevented) {
+                    console.warn('[WARNING] Form submit was prevented by another handler!');
+                }
+            });
+            
+            // Log khi form submit hoàn tất (nếu có)
+            cashPaymentForm.addEventListener('submit', function() {
+                console.log('[DEBUG] Form submit completed');
+            }, { once: true });
+        }
+    });
+</script>
+
+<form id="combinedPaymentForm"
+      asp-action="ProcessCombinedPayment"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrderId" id="combinedPaymentOrderId" />
+    <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
+    <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
+    <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
+    <input type="hidden" name="Notes" id="combinedPaymentNotes" />
+</form>
+
+<form id="splitBillForm"
+      asp-action="ProcessSplitBill"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="orderId" id="splitBillOrderId" />
+    <input type="hidden" name="partsJson" id="splitBillPartsJson" />
+    <input type="hidden" name="notes" id="splitBillNotes" />
+</form>
 </div>
 
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_CashPaymentModal.cshtml")
@@ -624,7 +755,40 @@
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_PromotionModal.cshtml")
 
 @section Scripts {
+    <script src="~/js/split-bill.js"></script>
     <script>
+        // ✅ Toast notification function
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : (type === 'error' || type === 'danger' ? 'bg-danger' : type === 'warning' ? 'bg-warning' : 'bg-info');
+            const icon = type === 'success' ? 'fa-circle-check' : (type === 'error' || type === 'danger' ? 'fa-circle-exclamation' : type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info');
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            // Auto hide sau 3 giây
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+
         const orderContext = @Html.Raw(orderJson);
 
         const cashModal = new bootstrap.Modal('#cashPaymentModal');
@@ -752,42 +916,88 @@
         }
 
         function confirmCashPayment() {
-            const total = parseFloat(orderContext.Total ?? 0);
-            const depositRefund = parseFloat(orderContext.DepositRefundAmount ?? 0);
-            const orderId = orderContext.OrderId;
+            // ✅ DEBUG: Log để trace
+            console.log('[DEBUG] confirmCashPayment() called');
             
-            // ✅ XỬ LÝ TRƯỜNG HỢP DEPOSIT > TOTAL
-            if (total === 0 && depositRefund > 0) {
-                // Đã thanh toán đủ bằng tiền cọc, chỉ cần xác nhận đã trả lại tiền
-                if (!document.getElementById('refundConfirmed').checked) {
-                    showToast('Vui lòng xác nhận đã trả lại tiền cho khách hàng.', 'warning');
-                    return;
-                }
+            try {
+                const total = parseFloat(orderContext.Total ?? 0);
+                const depositRefund = parseFloat(orderContext.DepositRefundAmount ?? 0);
+                const orderId = orderContext.OrderId;
                 
-                // Submit form với AmountReceived = 0
-                document.getElementById('cashPaymentOrderId').value = orderId;
-                document.getElementById('cashPaymentAmountReceived').value = '0';
-                document.getElementById('cashPaymentNotes').value = `Đã thanh toán đủ bằng tiền cọc. Trả lại tiền thừa: ${depositRefund.toLocaleString('vi-VN')} ₫`;
-                document.getElementById('cashPaymentForm').submit();
-            } else {
-                // Trường hợp bình thường
-                const received = parseFloat(document.getElementById('amountReceived').value ?? 0);
-                if (!received || received < total) {
-                    showToast('Vui lòng nhập số tiền hợp lệ.', 'warning');
-                    return;
-                }
+                console.log('[DEBUG] OrderId:', orderId, 'Total:', total, 'DepositRefund:', depositRefund);
                 
-                if (received > total && !document.getElementById('refundConfirmed').checked) {
-                    showToast('Vui lòng xác nhận đã trả lại tiền thối cho khách hàng.', 'warning');
-                    return;
+                // ✅ XỬ LÝ TRƯỜNG HỢP DEPOSIT > TOTAL
+                if (total === 0 && depositRefund > 0) {
+                    // Đã thanh toán đủ bằng tiền cọc, chỉ cần xác nhận đã trả lại tiền
+                    if (!document.getElementById('refundConfirmed').checked) {
+                        console.log('[DEBUG] Refund not confirmed');
+                        showToast('Vui lòng xác nhận đã trả lại tiền cho khách hàng.', 'warning');
+                        return;
+                    }
+                    
+                    // Submit form với AmountReceived = 0
+                    console.log('[DEBUG] Submitting form with AmountReceived = 0');
+                    document.getElementById('cashPaymentOrderId').value = orderId;
+                    document.getElementById('cashPaymentAmountReceived').value = '0';
+                    document.getElementById('cashPaymentNotes').value = `Đã thanh toán đủ bằng tiền cọc. Trả lại tiền thừa: ${depositRefund.toLocaleString('vi-VN')} ₫`;
+                    
+                    const form = document.getElementById('cashPaymentForm');
+                    console.log('[DEBUG] Form element:', form);
+                    console.log('[DEBUG] Form action:', form?.action);
+                    console.log('[DEBUG] Form method:', form?.method);
+                    console.log('[DEBUG] Form values:', {
+                        OrderId: document.getElementById('cashPaymentOrderId').value,
+                        AmountReceived: document.getElementById('cashPaymentAmountReceived').value,
+                        Notes: document.getElementById('cashPaymentNotes').value
+                    });
+                    
+                    form.submit();
+                    console.log('[DEBUG] Form submitted');
+                } else {
+                    // Trường hợp bình thường
+                    const received = parseFloat(document.getElementById('amountReceived').value ?? 0);
+                    console.log('[DEBUG] Amount received:', received);
+                    
+                    if (!received || received < total) {
+                        console.log('[DEBUG] Invalid amount received');
+                        showToast('Vui lòng nhập số tiền hợp lệ.', 'warning');
+                        return;
+                    }
+                    
+                    if (received > total && !document.getElementById('refundConfirmed').checked) {
+                        console.log('[DEBUG] Refund required but not confirmed');
+                        showToast('Vui lòng xác nhận đã trả lại tiền thối cho khách hàng.', 'warning');
+                        return;
+                    }
+                    
+                    // Submit form với AmountReceived
+                    console.log('[DEBUG] Submitting form with AmountReceived =', received);
+                    document.getElementById('cashPaymentOrderId').value = orderId;
+                    document.getElementById('cashPaymentAmountReceived').value = received;
+                    document.getElementById('cashPaymentNotes').value = document.getElementById('paymentNotes')?.value || '';
+                    
+                    const form = document.getElementById('cashPaymentForm');
+                    console.log('[DEBUG] Form element:', form);
+                    console.log('[DEBUG] Form action:', form?.action);
+                    console.log('[DEBUG] Form method:', form?.method);
+                    console.log('[DEBUG] Form values:', {
+                        OrderId: document.getElementById('cashPaymentOrderId').value,
+                        AmountReceived: document.getElementById('cashPaymentAmountReceived').value,
+                        Notes: document.getElementById('cashPaymentNotes').value
+                    });
+                    
+                    form.submit();
+                    console.log('[DEBUG] Form submitted');
                 }
-                
-                // Submit form với AmountReceived
-                document.getElementById('cashPaymentOrderId').value = orderId;
-                document.getElementById('cashPaymentAmountReceived').value = received;
-                document.getElementById('cashPaymentNotes').value = document.getElementById('paymentNotes')?.value || '';
-                document.getElementById('cashPaymentForm').submit();
+            } catch (error) {
+                console.error('[ERROR] Error in confirmCashPayment:', error);
+                showToast('Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.', 'error');
             }
+        }
+                function generateVietQrUrl(bank, account, amount, addInfo) {
+            return `https://img.vietqr.io/image/${bank}-${account}-compact.png`
+                + `?amount=${amount}`
+                + `&addInfo=${encodeURIComponent(addInfo)}`;
         }
 
         // QR payment logic
@@ -801,54 +1011,121 @@
             setTimeout(loadQrPreview, 600);
         }
 
-        function loadQrPreview() {
+                      function loadQrPreview() {
+            const amount = orderContext.Total;
+            const orderCode = orderContext.OrderCode;
+            const transactionCode = `TXN-${Date.now()}`;
+
+            const bank = "MB";
+            const account = "0397604824";
+            const addInfo = `RMS#${orderCode}`;
+
+            // Tạo URL VietQR
+            const qrUrl = generateVietQrUrl(bank, account, amount, addInfo);
+
+            // Update UI
             document.getElementById('qrLoading').classList.add('d-none');
             document.getElementById('qrContent').classList.remove('d-none');
-            document.getElementById('qrAmount').textContent = formatCurrency(orderContext.Total);
-            document.getElementById('qrDescription').textContent = `RMS#${orderContext.OrderCode}`;
-            document.getElementById('qrTransactionCode').textContent = `TXN-${Date.now()}`;
-            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${orderContext.OrderCode}`;
+            document.getElementById('qrAmount').textContent = formatCurrency(amount);
+            document.getElementById('qrDescription').textContent = addInfo;
+            document.getElementById('qrTransactionCode').textContent = transactionCode;
+            document.getElementById('qrImage').src = qrUrl;
+
             document.getElementById('confirmQRPaymentBtn').classList.remove('d-none');
         }
+
+
 
         function retryLoadQR() {
             openQrPaymentModal();
         }
 
         function confirmQRPayment() {
-            submitPayment('qr', orderContext.Total);
+            const btn = document.getElementById('confirmQRPaymentBtn');
+            const original = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xác nhận...';
+            }
+
+            try {
+                // Submit form tới controller (không dùng fetch)
+                document.getElementById('qrConfirmOrderId').value = orderContext.OrderId;
+                document.getElementById('qrConfirmNotes').value = 'Thu ngân xác nhận đã nhận tiền qua QR';
+                document.getElementById('qrConfirmForm').submit();
+            } catch (error) {
+                console.error('[ERROR] confirmQRPayment:', error);
+                showToast(error.message || 'Đã xảy ra lỗi khi xác nhận thanh toán QR.', 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            }
         }
 
         // Combined payment logic
         function openCombinedPaymentModal() {
             populateOrderSummary('combined');
-            document.getElementById('cashAmount').value = (orderContext.Total / 2).toFixed(0);
+            const total = parseFloat(orderContext.Total || 0);
+            const halfAmount = Math.round(total / 2);
+            
+            // Reset các giá trị
+            document.getElementById('cashAmount').value = halfAmount;
             document.getElementById('cashReceived').value = '';
-            document.getElementById('qrAmount').value = (orderContext.Total / 2).toFixed(0);
             document.getElementById('cashChangeDisplay').classList.add('d-none');
             document.getElementById('combinedTotalValidation').classList.add('d-none');
             document.getElementById('combinedErrorMessages').innerHTML = '';
-            document.getElementById('qrCodeDisplay').classList.add('d-none');
+            
+            // Reset QR display
+            document.getElementById('combinedQrLoading').classList.add('d-none');
+            document.getElementById('combinedQrContent').classList.add('d-none');
+            document.getElementById('generateQrBtn').disabled = false;
+            
+            // Tính toán lại số tiền QR (tự động)
             updateCombinedPayment();
             combinedModal.show();
         }
 
         function updateCombinedPayment() {
-            const cashAmount = parseFloat(document.getElementById('cashAmount').value || 0);
-            const cashReceived = parseFloat(document.getElementById('cashReceived').value || 0);
-            const qrAmountInput = document.getElementById('qrAmount');
+            const cashAmountInput = document.getElementById('cashAmount');
+            const cashReceivedInput = document.getElementById('cashReceived');
+            
+            // Lấy giá trị và đảm bảo là số hợp lệ
+            let cashAmount = parseFloat(cashAmountInput.value || 0);
+            const cashReceived = parseFloat(cashReceivedInput.value || 0);
             const total = parseFloat(orderContext.Total || 0);
+            
+            // Đảm bảo cashAmount không vượt quá total
+            if (cashAmount > total) {
+                cashAmount = total;
+                cashAmountInput.value = total.toFixed(0);
+            }
+            
+            // Đảm bảo cashAmount không âm
+            if (cashAmount < 0) {
+                cashAmount = 0;
+                cashAmountInput.value = '0';
+            }
+            
+            // Tính số tiền QR còn lại (tự động) - không cần input nữa
+            const remaining = total - cashAmount;
+            const qrAmount = remaining > 0 ? remaining : 0;
+            
+            // Cập nhật hiển thị tiền thối lại
             const changeDisplay = document.getElementById('cashChangeDisplay');
             const changeAmount = document.getElementById('cashChangeAmount');
-
-            const remaining = total - cashAmount;
-            qrAmountInput.value = remaining > 0 ? remaining.toFixed(0) : 0;
-
-            if (cashReceived > cashAmount) {
+            
+            if (cashReceived > cashAmount && cashAmount > 0) {
                 changeDisplay.classList.remove('d-none');
                 changeAmount.textContent = formatCurrency(cashReceived - cashAmount);
             } else {
                 changeDisplay.classList.add('d-none');
+            }
+            
+            // Cập nhật QR amount nếu đã hiển thị QR
+            const qrContent = document.getElementById('combinedQrContent');
+            if (qrContent && !qrContent.classList.contains('d-none')) {
+                document.getElementById('combinedQrAmount').textContent = formatCurrency(qrAmount);
             }
 
             validateCombinedPayment();
@@ -857,8 +1134,11 @@
         function validateCombinedPayment() {
             const cashAmount = parseFloat(document.getElementById('cashAmount').value || 0);
             const cashReceived = parseFloat(document.getElementById('cashReceived').value || 0);
-            const qrAmount = parseFloat(document.getElementById('qrAmount').value || 0);
             const total = parseFloat(orderContext.Total || 0);
+            
+            // Tính qrAmount từ total - cashAmount (không lấy từ input nữa)
+            const qrAmount = total - cashAmount;
+            
             const validation = document.getElementById('combinedTotalValidation');
             const partsTotal = document.getElementById('combinedPartsTotal');
             const billTotal = document.getElementById('combinedBillTotal');
@@ -884,136 +1164,181 @@
             document.getElementById('confirmCombinedPaymentBtn').disabled = (sum !== total) || errors.length > 0;
         }
 
-        function generateCombinedQR() {
-            document.getElementById('qrCodeDisplay').classList.remove('d-none');
-            document.getElementById('combinedQrOrderCode').textContent = orderContext.OrderCode;
-            document.getElementById('combinedQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${orderContext.OrderCode}-COMBINED`;
+               function generateCombinedQR() {
+            document.getElementById('combinedQrLoading').classList.remove('d-none');
+            document.getElementById('combinedQrContent').classList.add('d-none');
+            document.getElementById('generateQrBtn').disabled = true;
+
+            setTimeout(() => {
+                document.getElementById('combinedQrLoading').classList.add('d-none');
+                document.getElementById('combinedQrContent').classList.remove('d-none');
+
+                const cashAmount = parseFloat(document.getElementById('cashAmount').value || 0);
+                const total = parseFloat(orderContext.Total || 0);
+                const qrAmount = total - cashAmount;
+
+                const orderCode = orderContext.OrderCode;
+                const transactionCode = `TXN-${Date.now()}`;
+                const bank = "MB";
+                const account = "0397604824";
+                const addInfo = `RMS#${orderCode}`;
+
+                const qrUrl = generateVietQrUrl(bank, account, qrAmount, addInfo);
+
+                document.getElementById('combinedQrAmount').textContent = formatCurrency(qrAmount);
+                document.getElementById('combinedQrDescription').textContent = addInfo;
+                document.getElementById('combinedQrTransactionCode').textContent = transactionCode;
+                document.getElementById('combinedQrImage').src = qrUrl;
+
+                document.getElementById('generateQrBtn').disabled = false;
+            }, 600);
         }
+
 
         function confirmCombinedPayment() {
             if (document.getElementById('confirmCombinedPaymentBtn').disabled) {
                 showToast('Vui lòng đảm bảo tổng hai phần khớp với tổng hóa đơn.', 'warning');
                 return;
             }
-            submitPayment('combined', orderContext.Total);
-        }
 
-        // Split bill logic
-        let splitParts = [];
+            const cashAmount = parseFloat(document.getElementById('cashAmount').value || 0);
+            const cashReceived = parseFloat(document.getElementById('cashReceived').value || 0) || null;
+            const total = parseFloat(orderContext.Total || 0);
+            
+            // Tính qrAmount từ total - cashAmount (không lấy từ input nữa)
+            const qrAmount = total - cashAmount;
+            const notes = document.getElementById('combinedNotes')?.value || '';
 
-        function openSplitBillModal() {
-            populateOrderSummary('split');
-            document.getElementById('splitTotalAmount').textContent = formatCurrency(orderContext.Total);
-            document.getElementById('splitBillTotal').textContent = formatCurrency(orderContext.Total);
-            document.getElementById('splitTotalValidation').classList.add('d-none');
-            document.getElementById('splitNotes').value = '';
-            document.getElementById('numberOfParts').value = 2;
-            initializeSplitParts(2);
-            splitModal.show();
-        }
-
-        function initializeSplitParts(count) {
-            splitParts = Array.from({ length: count }, (_, index) => ({
-                id: index + 1,
-                name: `Khách ${index + 1}`,
-                amount: (orderContext.Total / count)
-            }));
-            renderSplitParts();
-            validateSplitTotal();
-        }
-
-        function renderSplitParts() {
-            const container = document.getElementById('splitPartsList');
-            container.innerHTML = splitParts.map(part => `
-                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                    <div class="flex-grow-1">
-                        <label class="form-label mb-1 fw-semibold">${part.name}</label>
-                        <input type="number"
-                               class="form-control"
-                               value="${part.amount.toFixed(0)}"
-                               min="0"
-                               step="1000"
-                               onchange="updateSplitAmount(${part.id}, this.value)">
-                    </div>
-                    <div>
-                        <button class="btn btn-outline-secondary" type="button" onclick="setSplitPaymentMethod(${part.id}, 'Cash')">
-                            💵
-                        </button>
-                        <button class="btn btn-outline-secondary" type="button" onclick="setSplitPaymentMethod(${part.id}, 'QR')">
-                            📱
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function setSplitPaymentMethod(id, method) {
-            const part = splitParts.find(p => p.id === id);
-            if (part) {
-                part.method = method;
-                showToast(`Đã chọn ${method} cho ${part.name}`, 'info');
-            }
-        }
-
-        function updateSplitAmount(id, value) {
-            const part = splitParts.find(p => p.id === id);
-            if (part) {
-                part.amount = parseFloat(value || 0);
-            }
-            validateSplitTotal();
-        }
-
-        function calculateEqualSplit() {
-            const parts = parseInt(document.getElementById('numberOfParts').value || 2);
-            initializeSplitParts(parts);
-        }
-
-        function increaseParts() {
-            const numberInput = document.getElementById('numberOfParts');
-            if (parseInt(numberInput.value) < 10) {
-                numberInput.value = parseInt(numberInput.value) + 1;
-                calculateEqualSplit();
-            }
-        }
-
-        function decreaseParts() {
-            const numberInput = document.getElementById('numberOfParts');
-            if (parseInt(numberInput.value) > 2) {
-                numberInput.value = parseInt(numberInput.value) - 1;
-                calculateEqualSplit();
-            }
-        }
-
-        function changeSplitType() {
-            const isEqual = document.getElementById('splitEqual').checked;
-            document.getElementById('equalSplitSection').classList.toggle('d-none', !isEqual);
-            if (!isEqual) {
-                splitParts.forEach(part => part.amount = 0);
-                renderSplitParts();
-            } else {
-                calculateEqualSplit();
-            }
-        }
-
-        function validateSplitTotal() {
-            const total = splitParts.reduce((sum, part) => sum + (part.amount || 0), 0);
-            document.getElementById('splitPartsTotal').textContent = formatCurrency(total);
-            const matches = Math.round(total) === Math.round(orderContext.Total);
-            document.getElementById('splitTotalValidation').classList.toggle('d-none', matches);
-            document.getElementById('confirmSplitBillBtn').disabled = !matches;
-        }
-
-        function confirmSplitBill() {
-            if (document.getElementById('confirmSplitBillBtn').disabled) {
-                showToast("Tổng tiền các phần chưa khớp với tổng hóa đơn.", "warning");
+            if (cashAmount <= 0 || qrAmount <= 0) {
+                showToast('Vui lòng nhập số tiền hợp lệ cho cả hai phần.', 'warning');
                 return;
             }
-            submitPayment('split', orderContext.Total);
+
+            const btn = document.getElementById('confirmCombinedPaymentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+            try {
+                // Gán giá trị vào form và submit (không dùng fetch)
+                document.getElementById('combinedPaymentOrderId').value = orderContext.OrderId;
+                document.getElementById('combinedPaymentCashAmount').value = cashAmount;
+                document.getElementById('combinedPaymentCashReceived').value = cashReceived ?? '';
+                document.getElementById('combinedPaymentQrAmount').value = qrAmount;
+                document.getElementById('combinedPaymentNotes').value = notes;
+
+                document.getElementById('combinedPaymentForm').submit();
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Lỗi: ' + (error.message || 'Không thể xử lý thanh toán. Vui lòng thử lại.'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận thanh toán';
+            }
         }
 
-        // Promotion modal logic - chỉ mở modal, form sẽ submit POST
-        function openPromotionModal() {
+        // Split bill logic (delegates to dedicated split-bill.js)
+        function openSplitBillModal() {
+            // Sử dụng module SplitBill (wwwroot/js/split-bill.js)
+            if (window.SplitBill && typeof window.SplitBill.openSplitBill === 'function') {
+                window.SplitBill.openSplitBill(orderContext.OrderId, {
+                    orderCode: orderContext.OrderCode,
+                    tableNumber: orderContext.Tables,
+                    total: orderContext.Total
+                });
+            } else {
+                showToast('Không thể mở chức năng chia hóa đơn. Vui lòng tải lại trang.', 'error');
+            }
+        }
+
+        // Promotion modal logic - load voucher list khi mở modal
+        async function openPromotionModal() {
+            // Hiển thị loading state
+            const voucherListContainer = document.getElementById('voucherListContainer');
+            if (voucherListContainer) {
+                voucherListContainer.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Đang tải...</span></div><p class="mt-2 text-muted">Đang tải danh sách voucher...</p></div>';
+            }
+            
             promoModal.show();
+            
+            // Load voucher list qua AJAX
+            try {
+                const subtotal = parseFloat(orderContext.Subtotal || 0);
+                const response = await fetch(`/cashier-flow/vouchers/available?subtotal=${subtotal}`);
+                
+                if (!response.ok) {
+                    throw new Error('Không thể tải danh sách voucher');
+                }
+                
+                const vouchers = await response.json();
+                renderVoucherList(vouchers);
+            } catch (error) {
+                console.error('Error loading vouchers:', error);
+                const voucherListContainer = document.getElementById('voucherListContainer');
+                if (voucherListContainer) {
+                    voucherListContainer.innerHTML = `
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-exclamation-triangle fs-1 d-block mb-2"></i>
+                            <p class="mb-0">Không thể tải danh sách voucher.</p>
+                            <small>Vui lòng nhập mã voucher thủ công ở cột bên trái.</small>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Render voucher list vào modal
+        function renderVoucherList(vouchers) {
+            const voucherListContainer = document.getElementById('voucherListContainer');
+            if (!voucherListContainer) return;
+
+            // Update count badge
+            updateVoucherCount(vouchers ? vouchers.length : 0);
+
+            if (!vouchers || vouchers.length === 0) {
+                voucherListContainer.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        <p class="mb-0">Không có voucher nào khả dụng cho đơn hàng này.</p>
+                        <small>Vui lòng nhập mã voucher thủ công ở cột bên trái.</small>
+                    </div>
+                `;
+                return;
+            }
+
+            const voucherHtml = vouchers.map(voucher => {
+                const discountText = voucher.discountType === "Phần trăm" 
+                    ? `${voucher.discountValue}%` 
+                    : `${parseFloat(voucher.discountValue).toLocaleString('vi-VN')} ₫`;
+                const conditionText = voucher.minOrderValue 
+                    ? `Đơn tối thiểu ${parseFloat(voucher.minOrderValue).toLocaleString('vi-VN')} ₫` 
+                    : "Không giới hạn";
+                
+                // Escape HTML để tránh XSS
+                const code = (voucher.code || '').replace(/['"]/g, '');
+                const description = (voucher.description || '').replace(/['"]/g, '');
+                
+                return `
+                    <div class="voucher-item" onclick="selectVoucher('${code}')">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="voucher-code">${code}</div>
+                                ${description ? `<div class="voucher-desc">${description}</div>` : ''}
+                                <div class="voucher-condition">
+                                    <i class="bi bi-info-circle me-1"></i>${conditionText}
+                                    ${voucher.maxDiscount && voucher.discountType === "Phần trăm" 
+                                        ? ` • Tối đa ${parseFloat(voucher.maxDiscount).toLocaleString('vi-VN')} ₫` 
+                                        : ''}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="voucher-discount">-${discountText}</div>
+                                <small class="text-muted">Giảm giá</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            voucherListContainer.innerHTML = voucherHtml;
         }
 
         // Tự động mở modal nếu có lỗi từ server (để user thấy và sửa)

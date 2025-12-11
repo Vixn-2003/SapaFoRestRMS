@@ -7,6 +7,7 @@ let currentOrders = [];
 let currentGroupedItems = [];
 let currentViewMode = 'theo-ban';
 let currentStatusFilter = 'all'; // 'all', 'Pending', 'Cooking', 'Late', 'Ready', 'Done'
+let fallbackPollingInterval = null; // Fallback polling khi SignalR disconnect
 
 // Main initialization function - OPTIMIZED
 (function () {
@@ -119,24 +120,32 @@ function initializeSignalR() {
 
         signalRConnection.onreconnecting(() => {
             // Reconnecting...
+            showSignalRBanner(true);
         });
 
         signalRConnection.onreconnected(() => {
             // Reconnected
+            showSignalRBanner(false);
+            stopFallbackPolling();
         });
 
         signalRConnection.onclose(() => {
             // Connection closed
+            showSignalRBanner(true);
+            startFallbackPolling();
         });
 
         // OPTIMIZED: Start connection trong background, không block
         signalRConnection.start()
             .then(() => {
                 console.log('SignalR connected successfully');
+                showSignalRBanner(false);
+                stopFallbackPolling();
             })
             .catch(err => {
                 console.error('SignalR connection error:', err);
-                // Don't show error to user, just log it - API connection error will be shown separately
+                showSignalRBanner(true);
+                startFallbackPolling();
                 // Retry sau 5 giây
                 setTimeout(() => {
                     if (signalRConnection && signalRConnection.state === signalR.HubConnectionState.Disconnected) {
@@ -727,6 +736,64 @@ function refreshOrders() {
     showSuccess('Đã làm mới');
 }
 
+// Show/hide SignalR connection status banner
+function showSignalRBanner(show) {
+    const banner = document.getElementById('signalrStatusBanner');
+    if (banner) {
+        if (show) {
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+}
+
+// Start fallback polling when SignalR is disconnected (10-20s interval)
+function startFallbackPolling() {
+    // Clear existing interval if any
+    stopFallbackPolling();
+    
+    // Random interval between 10-20 seconds
+    const interval = 10000 + Math.random() * 10000; // 10-20 seconds
+    
+    fallbackPollingInterval = setInterval(() => {
+        console.log('[Fallback Polling] Refreshing data...');
+        if (currentViewMode === 'theo-tung-mon') {
+            loadGroupedItems();
+        } else {
+            loadOrdersByTable();
+        }
+        loadIngredientShortage();
+    }, interval);
+    
+    console.log(`[Fallback Polling] Started with interval: ${Math.round(interval/1000)}s`);
+}
+
+// Stop fallback polling
+function stopFallbackPolling() {
+    if (fallbackPollingInterval) {
+        clearInterval(fallbackPollingInterval);
+        fallbackPollingInterval = null;
+        console.log('[Fallback Polling] Stopped');
+    }
+}
+
+// Retry SignalR connection manually
+function retrySignalRConnection() {
+    if (signalRConnection) {
+        signalRConnection.stop().then(() => {
+            signalRConnection = null;
+            initializeSignalR();
+        }).catch(err => {
+            console.error('Error stopping SignalR:', err);
+            signalRConnection = null;
+            initializeSignalR();
+        });
+    } else {
+        initializeSignalR();
+    }
+}
+
 // Load orders grouped by table
 async function loadOrdersByTable() {
     // Check if we're still in the correct view mode
@@ -795,7 +862,7 @@ async function loadOrdersByTable() {
     } catch (error) {
         console.error('Error loading orders by table:', error);
         if (currentViewMode === 'theo-ban') {
-            let errorMessage = 'Không thể kết nối đến server';
+            let errorMessage = 'Không thể tải order. Vui lòng thử lại.';
             if (error.name === 'AbortError' || error.message === 'The operation was aborted.') {
                 errorMessage = 'Kết nối quá lâu. Vui lòng kiểm tra lại server.';
             } else if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED'))) {
@@ -812,6 +879,9 @@ async function loadOrdersByTable() {
                         <li>Kết nối mạng ổn định</li>
                         <li>Firewall không chặn kết nối</li>
                     </ul>
+                    <button class="btn btn-primary mt-3" onclick="refreshOrders()">
+                        <i class="mdi mdi-refresh"></i> Làm mới
+                    </button>
                 </div>
             `;
         }
@@ -1107,7 +1177,7 @@ async function loadGroupedItems() {
     } catch (error) {
         console.error('[loadGroupedItems] Error:', error);
         if (currentViewMode === 'theo-tung-mon') {
-            let errorMessage = 'Không thể kết nối đến server';
+            let errorMessage = 'Không thể tải order. Vui lòng thử lại.';
             if (error.name === 'AbortError' || error.message === 'The operation was aborted.') {
                 errorMessage = 'Kết nối quá lâu. Vui lòng kiểm tra lại server.';
             } else if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED'))) {
@@ -1124,6 +1194,9 @@ async function loadGroupedItems() {
                         <li>Kết nối mạng ổn định</li>
                         <li>Firewall không chặn kết nối</li>
                     </ul>
+                    <button class="btn btn-primary mt-3" onclick="refreshOrders()">
+                        <i class="mdi mdi-refresh"></i> Làm mới
+                    </button>
                 </div>
             `;
         }
@@ -1532,8 +1605,6 @@ function createModalIfNotExists() {
                     <button class="btn-modal btn-modal-cancel" onclick="closeOrderModal()">Hủy</button>
                     <button class="btn-modal btn-modal-select-all" onclick="selectAllItems()">Chọn tất cả</button>
                     <button class="btn-modal btn-modal-fire" onclick="fireSelectedItems()">Bắt đầu nấu</button>
-                    <button class="btn-modal btn-modal-unfulfill" onclick="unfulfillSelectedItems()">Hủy sẵn sàng</button>
-                    <button class="btn-modal btn-modal-fulfill" onclick="fulfillSelectedItems()">Sẵn sàng</button>
                 </div>
             </div>
         `;
@@ -1642,11 +1713,13 @@ function renderModalItems(items) {
         return;
     }
 
-    // Món có thể thao tác (không lấy Done), Ready vẫn cho phép chọn để hủy sẵn sàng
+    // Món có thể thao tác: bỏ Done, Ready và Cancelled
     const cookableItems = items.filter(item => {
         const status = (item.status || '').toLowerCase().trim();
         const isDone = status.includes('done') || status.includes('hoàn thành') || status.includes('xong');
-        return !isDone;
+        const isReady = status.includes('ready') || status.includes('sẵn sàng');
+        const isCancelled = status.includes('cancelled') || status.includes('hủy') || status.includes('đã hủy');
+        return !isDone && !isReady && !isCancelled;
     });
 
     itemsList.innerHTML = cookableItems.map(item => {
@@ -1659,7 +1732,7 @@ function renderModalItems(items) {
         const status = (item.status || '').toLowerCase().trim();
         const isDone = status.includes('done') || status.includes('hoàn thành') || status.includes('xong');
         const isReady = status.includes('ready') || status.includes('sẵn sàng');
-        const isDisabled = isDone; // Ready vẫn cho phép thao tác (để hủy sẵn sàng)
+        const isDisabled = isDone || isReady;
         
         // Lấy trạng thái để hiển thị trong tên món
         const statusText = getModalStatusText(item.status || 'Pending');
@@ -1782,12 +1855,13 @@ function toggleModalItemSelection(itemId, event) {
 function selectAllItems() {
     if (!currentModalOrder) return;
 
-    // Hiển thị tất cả items, nhưng chỉ chọn các món có thể nấu (không chọn Done, nhưng cho phép Ready)
+    // Hiển thị tất cả items, nhưng chỉ chọn các món có thể nấu (bỏ Ready/Done)
     const allItems = currentModalOrder.items || [];
     const cookableItems = allItems.filter(item => {
         const status = (item.status || '').toLowerCase().trim();
         const isDone = status.includes('done') || status.includes('hoàn thành') || status.includes('xong');
-        return !isDone; // ✅ Chỉ bỏ Done, Ready vẫn cho phép chọn (để hủy sẵn sàng)
+        const isReady = status.includes('ready') || status.includes('sẵn sàng');
+        return !isDone && !isReady;
     });
 
     // Sử dụng itemKey (orderComboItemId hoặc orderDetailId) để kiểm tra và set
@@ -1872,40 +1946,90 @@ async function fireSelectedItems() {
         }
     });
 
-    if (selectedItems.length === 0) {
+    // Loại bỏ các món đã hủy khỏi danh sách xử lý để không tính thiếu nguyên liệu
+    const activeSelectedItems = selectedItems.filter(sel => {
+        const detail = currentModalOrder?.items?.find(d =>
+            (sel.orderComboItemId && d.orderComboItemId === sel.orderComboItemId) ||
+            (!sel.orderComboItemId && d.orderDetailId === sel.orderDetailId)
+        );
+        if (!detail) return false;
+        const status = (detail.status || '').toLowerCase().trim();
+        const isCancelled = status.includes('cancelled') || status.includes('hủy') || status.includes('đã hủy');
+        return !isCancelled;
+    });
+
+    if (activeSelectedItems.length === 0) {
         showError('Vui lòng chọn ít nhất một món');
         return;
     }
 
     try {
-        const promises = [];
-        const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
-        
-        selectedItems.forEach(({ orderDetailId, orderComboItemId, quantity }) => {
-            // Tìm detail để lấy tổng số lượng
-            const detail = currentModalOrder?.items?.find(d => 
-                (orderComboItemId && d.orderComboItemId === orderComboItemId) ||
-                (!orderComboItemId && d.orderDetailId === orderDetailId)
-            );
-            const totalQty = detail?.quantity || quantity;
-            
-            // Nếu quantity < totalQuantity, gọi API split (chỉ áp dụng cho món lẻ, không áp dụng cho combo items)
-            if (!orderComboItemId && quantity < totalQty) {
-                promises.push(startCookingWithQuantityAPI(orderDetailId, quantity));
-            } else {
-                // Nếu quantity = totalQuantity hoặc là combo item, chỉ cần update status
-                promises.push(updateItemStatusAPI(orderDetailId, 'Cooking', orderComboItemId));
-            }
+        const totalQuantity = activeSelectedItems.reduce((sum, item) => sum + item.quantity, 0);
+
+        // Gọi batch-cook API để gom tất cả món trong 1 call
+        const response = await fetch(`${API_BASE}/KitchenDisplay/batch-cook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: 1,
+                items: activeSelectedItems.map(i => ({
+                    orderDetailId: i.orderDetailId,
+                    orderComboItemId: i.orderComboItemId || null,
+                    quantity: i.quantity
+                }))
+            })
         });
 
-        await Promise.all(promises);
-        showSuccess(`Đã bắt đầu nấu ${totalQuantity} món (${selectedItems.length} đơn)`);
+        const result = await response.json();
+
+        if (!result.success) {
+            const itemErrors = (result.items || [])
+                .filter(it => !it.success && it.message)
+                .map(it => it.message);
+
+            const shortageErrors = itemErrors.filter(e => e.includes('Không đủ nguyên liệu') || e.includes('thiếu'));
+            if (shortageErrors.length > 0) {
+                const totalShortage = calculateTotalShortage(shortageErrors);
+                showIngredientShortagePopupWithTotal(totalShortage, activeSelectedItems, shortageErrors);
+                highlightItemsWithShortage(activeSelectedItems);
+                return;
+            }
+
+            const firstError = itemErrors[0] || result.message || 'Không thể bắt đầu nấu';
+            showError(firstError);
+            if (firstError.includes('Order đã thay đổi từ hệ thống') || 
+                firstError.includes('đã bị hủy') ||
+                firstError.includes('đã hoàn thành')) {
+                reloadCurrentView();
+                closeOrderModal();
+            }
+            return;
+        }
+
+        // Nếu không có errors, thành công
+        showSuccess(`Đã bắt đầu nấu ${totalQuantity} món (${activeSelectedItems.length} đơn)`);
         selectedModalItems.clear();
         reloadCurrentView();
         closeOrderModal();
     } catch (error) {
         console.error('Error starting cooking:', error);
-        showError('Không thể bắt đầu nấu: ' + error.message);
+        const errorMessage = error.message || 'Không thể bắt đầu nấu';
+        
+        // A4: Nếu thiếu nguyên liệu, hiển thị popup riêng và highlight món
+        if (errorMessage.includes('Không đủ nguyên liệu') || errorMessage.includes('thiếu')) {
+            showIngredientShortagePopup(errorMessage, selectedItems);
+            highlightItemsWithShortage(selectedItems);
+        }
+        // A3: Nếu order đã thay đổi từ hệ thống, reload order
+        else if (errorMessage.includes('Order đã thay đổi từ hệ thống') || 
+            errorMessage.includes('đã bị hủy') ||
+            errorMessage.includes('đã hoàn thành')) {
+            showError(errorMessage);
+            reloadCurrentView();
+            closeOrderModal();
+        } else {
+            showError('Không thể bắt đầu nấu: ' + errorMessage);
+        }
     }
 }
 
@@ -1961,7 +2085,22 @@ async function startCookingForItem(itemData) {
             reloadCurrentView();
         } catch (error) {
             console.error('Error starting cooking:', error);
-            showError('Không thể bắt đầu nấu: ' + error.message);
+            const errorMessage = error.message || 'Không thể bắt đầu nấu';
+            
+            // A4: Nếu thiếu nguyên liệu, hiển thị popup riêng và highlight món
+            if (errorMessage.includes('Không đủ nguyên liệu') || errorMessage.includes('thiếu')) {
+                showIngredientShortagePopup(errorMessage, activeSelectedItems);
+                highlightItemsWithShortage(activeSelectedItems);
+            }
+            // A3: Nếu order đã thay đổi từ hệ thống, reload order
+            else if (errorMessage.includes('Order đã thay đổi từ hệ thống') || 
+                errorMessage.includes('đã bị hủy') ||
+                errorMessage.includes('đã hoàn thành')) {
+                showError(errorMessage);
+                reloadCurrentView();
+            } else {
+                showError('Không thể bắt đầu nấu: ' + errorMessage);
+            }
         }
     } else {
         // No batch size, use simple confirmation
@@ -1981,7 +2120,26 @@ async function startCookingForItem(itemData) {
             reloadCurrentView();
         } catch (error) {
             console.error('Error starting cooking:', error);
-            showError('Không thể bắt đầu nấu: ' + error.message);
+            const errorMessage = error.message || 'Không thể bắt đầu nấu';
+            
+            // A4: Nếu thiếu nguyên liệu, hiển thị popup riêng và highlight món
+            if (errorMessage.includes('Không đủ nguyên liệu') || errorMessage.includes('thiếu')) {
+                const selectedItems = details.map(d => ({ 
+                    orderDetailId: d.orderDetailId, 
+                    orderComboItemId: d.orderComboItemId || null 
+                }));
+                showIngredientShortagePopup(errorMessage, selectedItems);
+                highlightItemsWithShortage(selectedItems);
+            }
+            // A3: Nếu order đã thay đổi từ hệ thống, reload order
+            else if (errorMessage.includes('Order đã thay đổi từ hệ thống') || 
+                errorMessage.includes('đã bị hủy') ||
+                errorMessage.includes('đã hoàn thành')) {
+                showError(errorMessage);
+                reloadCurrentView();
+            } else {
+                showError('Không thể bắt đầu nấu: ' + errorMessage);
+            }
         }
     }
 }
@@ -2304,196 +2462,6 @@ function toggleBatchItem(orderDetailId, event) {
     }
 }
 
-// Unfulfill selected items - ✅ SỬA: Hủy Ready thay vì Done
-async function unfulfillSelectedItems() {
-    // Lấy giá trị trực tiếp từ các input
-    const quantityInputs = document.querySelectorAll('.modal-quantity-input');
-    const selectedItems = [];
-    
-    quantityInputs.forEach(input => {
-        const orderDetailId = parseInt(input.getAttribute('data-order-detail-id'));
-        const orderComboItemIdAttr = input.getAttribute('data-order-combo-item-id');
-        const orderComboItemId = orderComboItemIdAttr ? parseInt(orderComboItemIdAttr) : null;
-        const quantity = parseInt(input.value) || 0;
-        if (quantity > 0) {
-            selectedItems.push({ orderDetailId, orderComboItemId, quantity });
-        }
-    });
-
-    if (selectedItems.length === 0) {
-        showError('Vui lòng chọn ít nhất một món');
-        return;
-    }
-
-    const confirmed = await showConfirmPopup(`Xác nhận hủy sẵn sàng ${selectedItems.length} món?`);
-    if (!confirmed) {
-        return;
-    }
-
-    const promises = selectedItems.map(({ orderDetailId, orderComboItemId }) => {
-        const item = currentModalOrder.items.find(i => 
-            (orderComboItemId && i.orderComboItemId === orderComboItemId) ||
-            (!orderComboItemId && (
-                i.orderDetailId === orderDetailId || 
-                i.OrderDetailId === orderDetailId ||
-                parseInt(i.orderDetailId) === parseInt(orderDetailId) ||
-                parseInt(i.OrderDetailId) === parseInt(orderDetailId)
-            ))
-        );
-        
-        if (!item) {
-            console.error('Item not found:', orderDetailId, orderComboItemId, 'in items:', currentModalOrder.items);
-            throw new Error(`Không tìm thấy món với ID ${orderComboItemId || orderDetailId}`);
-        }
-        
-        // ✅ SỬA: Chuyển từ Ready về Cooking thay vì Done về Cooking
-        // Kiểm tra cả tiếng Anh và tiếng Việt, cả uppercase và lowercase
-        const status = (item.status || '').trim();
-        const statusLower = status.toLowerCase();
-        const isReady = statusLower.includes('ready') || statusLower.includes('sẵn sàng') || 
-                       status === 'Ready' || status === 'Sẵn sàng';
-        
-        const newStatus = isReady ? 'Cooking' : item.status;
-        console.log(`Hủy sẵn sàng: Item ${orderComboItemId || orderDetailId}, status: ${status} -> ${newStatus}`);
-        
-        return updateItemStatusAPI(orderDetailId, newStatus, orderComboItemId);
-    });
-
-    try {
-        await Promise.all(promises);
-        showSuccess(`Đã hủy sẵn sàng ${selectedItems.length} món`);
-        selectedModalItems.clear();
-        reloadCurrentView();
-        closeOrderModal();
-
-        // Nếu đang hiển thị danh sách đơn vừa sẵn sàng thì reload lại
-        const completedColumn = document.getElementById('completedOrdersColumn');
-        if (completedColumn && !completedColumn.classList.contains('hidden')) {
-            loadRecentlyFulfilledOrders();
-        }
-    } catch (error) {
-        showError('Không thể hủy sẵn sàng');
-    }
-}
-// ===========================
-// FULFILL FUNCTION - FIXED VERSION
-// ===========================
-
-// Đánh dấu các món đã chọn là "Sẵn sàng" (Ready)
-async function fulfillSelectedItems() {
-    // Lấy giá trị trực tiếp từ các input
-    const quantityInputs = document.querySelectorAll('.modal-quantity-input');
-    const selectedItems = [];
-
-    quantityInputs.forEach(input => {
-        const orderDetailId = parseInt(input.getAttribute('data-order-detail-id'));
-        const ociAttr = input.getAttribute('data-order-combo-item-id');
-        const orderComboItemId = ociAttr ? parseInt(ociAttr) : null;
-        const quantity = parseInt(input.value) || 0;
-        if (quantity > 0) {
-            selectedItems.push({ orderDetailId, orderComboItemId, quantity });
-        }
-    });
-
-    if (selectedItems.length === 0) {
-        showError('Vui lòng chọn ít nhất một món');
-        return;
-    }
-
-    if (!currentModalOrder) {
-        console.error('currentModalOrder is null');
-        showError('Không tìm thấy thông tin đơn hàng');
-        return;
-    }
-
-    const pendingItems = [];
-    const cookingItems = []; // Cooking items
-    const lateItems = [];    // Late items
-    const readyItems = [];
-    const doneItems = [];
-
-    // Phân loại theo trạng thái thực tế
-    selectedItems.forEach(({ orderDetailId, orderComboItemId }) => {
-        const item = currentModalOrder.items.find(i =>
-            (orderComboItemId && i.orderComboItemId === orderComboItemId) ||
-            (!orderComboItemId && i.orderDetailId === orderDetailId)
-        );
-
-        if (!item) return;
-
-        const rawStatus = item.status;
-        const status = (rawStatus || 'Pending').trim();
-
-        if (status === 'Pending' || status === 'Chờ') {
-            pendingItems.push({
-                orderDetailId,
-                orderComboItemId,
-                name: item.menuItemName || `Món ${orderDetailId}`,
-                status
-            });
-        } else if (status === 'Cooking' || status === 'Đang nấu') {
-            cookingItems.push({ orderDetailId, orderComboItemId });
-        } else if (status === 'Late' || status === 'Trễ') {
-            lateItems.push({ orderDetailId, orderComboItemId });
-        } else if (status === 'Ready' || status === 'Sẵn sàng') {
-            readyItems.push({ orderDetailId, orderComboItemId, name: item.menuItemName || `Món ${orderDetailId}`, status });
-        } else if (status === 'Done' || status === 'Hoàn thành' || status === 'Xong') {
-            doneItems.push({ orderDetailId, orderComboItemId, name: item.menuItemName || `Món ${orderDetailId}`, status });
-        } else {
-            pendingItems.push({ orderDetailId, orderComboItemId, name: item.menuItemName || `Món ${orderDetailId}`, status });
-        }
-    });
-
-    // Không cho phép đánh dấu Ready cho món vẫn Pending
-    if (pendingItems.length > 0) {
-        const itemNames = pendingItems.map(i => i.name).join(', ');
-        showError(`Các món sau chưa nấu: ${itemNames}<br>Vui lòng bắt đầu nấu trước!`);
-        return;
-    }
-
-    // Cho phép Cooking + Late chuyển sang Ready
-    const itemsToMarkReady = [...cookingItems, ...lateItems];
-
-    if (itemsToMarkReady.length === 0) {
-        if (readyItems.length > 0) {
-            showError('Các món đã chọn đã sẵn sàng rồi');
-        } else if (doneItems.length > 0) {
-            showError('Các món đã hoàn thành không thể chuyển sang sẵn sàng');
-        } else {
-            showError('Không có món nào đang nấu hoặc trễ để đánh dấu sẵn sàng');
-        }
-        return;
-    }
-
-    // Gọi API update từng món
-    const promises = itemsToMarkReady.map(key =>
-        updateItemStatusAPI(key.orderDetailId, 'Ready', key.orderComboItemId)
-    );
-
-    try {
-        await Promise.all(promises);
-
-        // Cập nhật local state đúng từng món
-        itemsToMarkReady.forEach(key => {
-            const item = currentModalOrder.items.find(i =>
-                (key.orderComboItemId && i.orderComboItemId === key.orderComboItemId) ||
-                (!key.orderComboItemId && i.orderDetailId === key.orderDetailId)
-            );
-            if (item) {
-                item.status = 'Ready';
-            }
-        });
-
-        showSuccess(`Đã đánh dấu ${itemsToMarkReady.length} món sẵn sàng`);
-        selectedModalItems.clear();
-        renderModalItems(currentModalOrder.items);
-        reloadCurrentView();
-        closeOrderModal();
-    } catch (error) {
-        console.error('❌ Promise.all failed:', error);
-        showError('Không thể đánh dấu sẵn sàng: ' + error.message);
-    }
-}
 
 // ===========================
 // UPDATE ITEM STATUS API
@@ -3016,6 +2984,177 @@ async function recallOrderDetail(orderDetailId, itemName) {
     }
 }
 
+// Calculate total shortage from error messages
+function calculateTotalShortage(errorMessages) {
+    const shortageMap = new Map(); // Map<ingredientName, totalShortage>
+    
+    errorMessages.forEach(errorMsg => {
+        // Parse error message: "Không đủ nguyên liệu: {ingredientName}. Thiếu: {quantity} {unit}"
+        const match = errorMsg.match(/Không đủ nguyên liệu:\s*(.+?)\.\s*Thiếu:\s*([\d.]+)\s*(.*)/);
+        if (match) {
+            const ingredientName = match[1].trim();
+            const shortage = parseFloat(match[2]) || 0;
+            const unit = match[3].trim();
+            
+            const key = `${ingredientName} (${unit})`;
+            if (shortageMap.has(key)) {
+                shortageMap.set(key, shortageMap.get(key) + shortage);
+            } else {
+                shortageMap.set(key, shortage);
+            }
+        }
+    });
+    
+    return shortageMap;
+}
+
+// A4: Show ingredient shortage popup with total shortage
+function showIngredientShortagePopupWithTotal(totalShortageMap, selectedItems, errorMessages) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-popup-overlay';
+    overlay.id = 'ingredientShortagePopup';
+    
+    const popup = document.createElement('div');
+    popup.className = 'confirm-popup';
+    
+    const menuItemNames = selectedItems.map(item => {
+        const detail = currentModalOrder?.items?.find(d => 
+            (item.orderComboItemId && d.orderComboItemId === item.orderComboItemId) ||
+            (!item.orderComboItemId && d.orderDetailId === item.orderDetailId)
+        );
+        return detail?.menuItemName || 'Món ăn';
+    }).join(', ');
+    
+    // Build shortage list HTML
+    let shortageListHTML = '';
+    totalShortageMap.forEach((totalShortage, ingredientKey) => {
+        shortageListHTML += `<li style="margin-bottom: 8px;"><strong>${ingredientKey}:</strong> <span style="color: #dc3545; font-weight: 600;">Thiếu ${totalShortage}</span></li>`;
+    });
+    
+    popup.innerHTML = `
+        <div class="confirm-popup-header">
+            <i class="mdi mdi-alert-circle confirm-popup-icon"></i>
+            <h3 class="confirm-popup-title">Không đủ nguyên liệu để nấu món</h3>
+        </div>
+        <div class="confirm-popup-body">
+            <p style="font-size: 16px; margin-bottom: 15px;"><strong>Món bị thiếu:</strong> ${menuItemNames}</p>
+            <p style="color: #dc3545; font-weight: 600; margin-bottom: 15px; font-size: 18px;">Tổng số nguyên liệu thiếu:</p>
+            <ul style="text-align: left; margin-left: 20px; color: #333;">
+                ${shortageListHTML}
+            </ul>
+            <p style="color: #666; font-size: 14px; margin-top: 15px;">Vui lòng xử lý món khác hoặc báo quản lý để bổ sung nguyên liệu.</p>
+        </div>
+        <div class="confirm-popup-footer">
+            <button class="btn btn-primary" onclick="closeIngredientShortagePopup()">Đã hiểu</button>
+        </div>
+    `;
+    
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+    
+    // Close on overlay click
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeIngredientShortagePopup();
+        }
+    });
+}
+
+// A4: Show ingredient shortage popup (single error)
+function showIngredientShortagePopup(errorMessage, selectedItems) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-popup-overlay';
+    overlay.id = 'ingredientShortagePopup';
+    
+    const popup = document.createElement('div');
+    popup.className = 'confirm-popup';
+    
+    const menuItemNames = selectedItems.map(item => {
+        const detail = currentModalOrder?.items?.find(d => 
+            (item.orderComboItemId && d.orderComboItemId === item.orderComboItemId) ||
+            (!item.orderComboItemId && d.orderDetailId === item.orderDetailId)
+        );
+        return detail?.menuItemName || 'Món ăn';
+    }).join(', ');
+    
+    popup.innerHTML = `
+        <div class="confirm-popup-header">
+            <i class="mdi mdi-alert-circle confirm-popup-icon"></i>
+            <h3 class="confirm-popup-title">Không đủ nguyên liệu để nấu món này</h3>
+        </div>
+        <div class="confirm-popup-body">
+            <p style="font-size: 16px; margin-bottom: 15px;"><strong>Món bị thiếu:</strong> ${menuItemNames}</p>
+            <p style="color: #dc3545; font-weight: 600; margin-bottom: 15px;">${errorMessage}</p>
+            <p style="color: #666; font-size: 14px;">Vui lòng xử lý món khác hoặc báo quản lý để bổ sung nguyên liệu.</p>
+        </div>
+        <div class="confirm-popup-footer">
+            <button class="btn btn-primary" onclick="closeIngredientShortagePopup()">Đã hiểu</button>
+        </div>
+    `;
+    
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+    
+    // Close on overlay click
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeIngredientShortagePopup();
+        }
+    });
+}
+
+// Close ingredient shortage popup
+function closeIngredientShortagePopup() {
+    const popup = document.getElementById('ingredientShortagePopup');
+    if (popup) {
+        popup.remove();
+    }
+}
+
+// A4: Highlight items with shortage by adding red badge "Thiếu"
+function highlightItemsWithShortage(selectedItems) {
+    selectedItems.forEach(({ orderDetailId, orderComboItemId }) => {
+        // Find order card
+        const orderCard = document.querySelector(`[data-order-id]`);
+        if (!orderCard) return;
+        
+        // Find item in modal or in order card
+        let itemElement = null;
+        if (orderComboItemId) {
+            itemElement = document.querySelector(`[data-order-combo-item-id="${orderComboItemId}"]`);
+        } else {
+            itemElement = document.querySelector(`[data-order-detail-id="${orderDetailId}"]`);
+        }
+        
+        if (itemElement) {
+            // Check if badge already exists
+            let badge = itemElement.querySelector('.shortage-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'badge bg-danger shortage-badge';
+                badge.textContent = 'Thiếu';
+                badge.style.marginLeft = '8px';
+                badge.style.fontSize = '12px';
+                
+                // Insert badge after item name or at the end of item element
+                const itemName = itemElement.querySelector('.item-name, .menu-item-name, .order-item-name');
+                if (itemName) {
+                    itemName.appendChild(badge);
+                } else {
+                    itemElement.appendChild(badge);
+                }
+            }
+            
+            // Add visual highlight
+            itemElement.style.borderLeft = '3px solid #dc3545';
+            itemElement.style.backgroundColor = '#fff5f5';
+        }
+    });
+    
+    // Also reload to show updated shortage status
+    reloadCurrentView();
+}
+
 // Load ingredient shortage list
 async function loadIngredientShortage() {
     try {
@@ -3044,6 +3183,19 @@ async function loadIngredientShortage() {
     }
 }
 
+// Helper functions
+function formatNumber(num) {
+    if (num == null || isNaN(num)) return '0';
+    return parseFloat(num).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Render ingredient shortage list
 function renderIngredientShortage(shortageList) {
     const panel = document.getElementById('shortageAlertPanel');
@@ -3057,57 +3209,103 @@ function renderIngredientShortage(shortageList) {
     // Show panel
     panel.style.display = 'block';
 
-    // Update count
-    countBadge.textContent = shortageList.length;
-
-    // Group by menu item
-    const grouped = {};
+    // ✅ TỔNG HỢP THEO NGUYÊN LIỆU (không theo món) - TỔNG QUAN CHO BẾP PHÓ
+    const ingredientSummary = {};
     shortageList.forEach(item => {
-        const key = `${item.orderDetailId}_${item.menuItemName}`;
-        if (!grouped[key]) {
-            grouped[key] = {
-                orderDetailId: item.orderDetailId,
-                menuItemName: item.menuItemName,
-                orderId: item.orderId,
-                tableName: item.tableName,
-                isUrgent: item.isUrgent,
-                ingredients: []
+        const key = `${item.ingredientId}_${item.ingredientName}_${item.unitName || ''}`;
+        if (!ingredientSummary[key]) {
+            ingredientSummary[key] = {
+                ingredientId: item.ingredientId,
+                ingredientName: item.ingredientName,
+                unitName: item.unitName || '',
+                totalShortage: 0,
+                totalRequired: 0,
+                totalReserved: 0,
+                affectedDishes: new Set(), // Set để tránh trùng lặp món
+                urgentCount: 0
             };
         }
-        grouped[key].ingredients.push({
-            ingredientName: item.ingredientName,
-            unitName: item.unitName,
-            requiredQuantity: item.requiredQuantity,
-            reservedQuantity: item.reservedQuantity,
-            shortageQuantity: item.shortageQuantity
-        });
+        
+        ingredientSummary[key].totalShortage += item.shortageQuantity || 0;
+        ingredientSummary[key].totalRequired += item.requiredQuantity || 0;
+        ingredientSummary[key].totalReserved += item.reservedQuantity || 0;
+        ingredientSummary[key].affectedDishes.add(item.menuItemName);
+        if (item.isUrgent) {
+            ingredientSummary[key].urgentCount++;
+        }
     });
 
-    // Render grouped items
+    // Update count - số lượng nguyên liệu thiếu (không phải số món)
+    const uniqueIngredientCount = Object.keys(ingredientSummary).length;
+    countBadge.textContent = uniqueIngredientCount;
+
+    // Sắp xếp: nguyên liệu có số lượng thiếu nhiều nhất trước, sau đó theo tên
+    const sortedIngredients = Object.values(ingredientSummary).sort((a, b) => {
+        if (b.totalShortage !== a.totalShortage) {
+            return b.totalShortage - a.totalShortage; // Thiếu nhiều nhất trước
+        }
+        return a.ingredientName.localeCompare(b.ingredientName);
+    });
+
+    // Render tổng quan theo nguyên liệu
     let html = '';
-    Object.values(grouped).forEach(group => {
-        const urgentBadge = group.isUrgent ? '<span class="urgent-badge-shortage">ƯU TIÊN</span>' : '';
+    
+    if (sortedIngredients.length === 0) {
+        html = '<div class="text-center text-muted py-3">Không có nguyên liệu thiếu</div>';
+    } else {
+        // Summary header
         html += `
-            <div class="shortage-item ${group.isUrgent ? 'urgent' : ''}">
-                <div class="shortage-item-info">
-                    <div class="shortage-item-name">
-                        ${escapeHtml(group.menuItemName)}${urgentBadge}
-                        ${group.tableName ? `<small class="text-muted"> - Bàn ${escapeHtml(group.tableName)}</small>` : ''}
-                    </div>
-                    <div class="shortage-item-details">
-                        ${group.ingredients.map(ing => 
-                            `${escapeHtml(ing.ingredientName)}: Cần ${formatNumber(ing.requiredQuantity)} ${ing.unitName || ''}, Đã reserve ${formatNumber(ing.reservedQuantity)} ${ing.unitName || ''}`
-                        ).join('<br>')}
-                    </div>
+            <div style="background: #fff3cd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
+                <div style="font-weight: 600; color: #856404; margin-bottom: 8px;">
+                    <i class="mdi mdi-information" style="margin-right: 6px;"></i>
+                    Tổng quan nguyên liệu thiếu
                 </div>
-                <div class="shortage-item-quantity">
-                    ${group.ingredients.map(ing => 
-                        `<div class="shortage-quantity-badge">Thiếu ${formatNumber(ing.shortageQuantity)} ${ing.unitName || ''}</div>`
-                    ).join('<br style="margin-top: 4px;">')}
+                <div style="font-size: 14px; color: #856404;">
+                    Có <strong>${uniqueIngredientCount}</strong> nguyên liệu đang thiếu, ảnh hưởng đến <strong>${shortageList.length}</strong> món
                 </div>
             </div>
         `;
-    });
+
+        // Render từng nguyên liệu với tổng số thiếu
+        sortedIngredients.forEach(ing => {
+            const affectedDishesList = Array.from(ing.affectedDishes);
+            const urgentBadge = ing.urgentCount > 0 ? `<span class="urgent-badge-shortage">${ing.urgentCount} món ưu tiên</span>` : '';
+            
+            html += `
+                <div class="shortage-item ${ing.urgentCount > 0 ? 'urgent' : ''}" style="margin-bottom: 12px;">
+                    <div class="shortage-item-info" style="flex: 1;">
+                        <div class="shortage-item-name" style="font-size: 16px; margin-bottom: 8px;">
+                            <i class="mdi mdi-food-variant" style="margin-right: 6px; color: #dc3545;"></i>
+                            <strong>${escapeHtml(ing.ingredientName)}</strong>${urgentBadge}
+                        </div>
+                        <div class="shortage-item-details" style="font-size: 13px; line-height: 1.6;">
+                            <div style="margin-bottom: 4px;">
+                                <span style="color: #6c757d;">Tổng cần:</span> 
+                                <strong>${formatNumber(ing.totalRequired)} ${ing.unitName}</strong>
+                            </div>
+                            <div style="margin-bottom: 4px;">
+                                <span style="color: #6c757d;">Đã reserve:</span> 
+                                <strong>${formatNumber(ing.totalReserved)} ${ing.unitName}</strong>
+                            </div>
+                            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0;">
+                                <span style="color: #6c757d; font-size: 12px;">Ảnh hưởng:</span> 
+                                <span style="color: #495057; font-size: 12px;">${affectedDishesList.slice(0, 3).map(d => escapeHtml(d)).join(', ')}${affectedDishesList.length > 3 ? ` và ${affectedDishesList.length - 3} món khác` : ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shortage-item-quantity" style="text-align: right; min-width: 150px;">
+                        <div class="shortage-quantity-badge" style="font-size: 18px; padding: 10px 16px; margin-bottom: 8px;">
+                            <i class="mdi mdi-alert" style="margin-right: 4px;"></i>
+                            Thiếu ${formatNumber(ing.totalShortage)} ${ing.unitName}
+                        </div>
+                        <div style="font-size: 11px; color: #6c757d; margin-top: 4px;">
+                            ${affectedDishesList.length} món
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    }
 
     body.innerHTML = html;
 }

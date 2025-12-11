@@ -18,12 +18,12 @@ namespace WebSapaForestForStaff.Services.Api
 
         public async Task<List<OrderDto>> GetPendingOrdersAsync()
         {
-            return await FetchOrdersByStatusAsync("pending");
+            return await FetchOrdersByStatusAsync("Confirmed");
         }
 
         public async Task<List<OrderDto>> GetPaidOrdersAsync()
         {
-            return await FetchOrdersByStatusAsync("processed");
+            return await FetchOrdersByStatusAsync("Paid");
         }
 
         public async Task<List<OrderDto>> GetOrdersByStatusAndDateAsync(string statusFilter, DateOnly date)
@@ -93,15 +93,31 @@ namespace WebSapaForestForStaff.Services.Api
 
         public async Task<ApiResult> ConfirmPaymentAsync(PaymentConfirmRequest request)
         {
+            // ✅ DEBUG: Log request
+            _logger.LogInformation("[ConfirmPaymentAsync] Sending request: OrderId={OrderId}, PaymentMethod={PaymentMethod}, Amount={Amount}", 
+                request.OrderId, request.PaymentMethod, request.Amount);
+            
             var response = await SendWithAutoRefreshAsync(client =>
                 client.PostAsJsonAsync(BuildApiUrl("/payment/payments/confirm"), request));
 
+            // ✅ DEBUG: Log response status
+            _logger.LogInformation("[ConfirmPaymentAsync] Response status: {StatusCode}", response.StatusCode);
+
             if (!response.IsSuccessStatusCode)
             {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("[ConfirmPaymentAsync] Failed with status {StatusCode}. Response body: {ResponseBody}", 
+                    response.StatusCode, responseBody);
+                
                 var message = await ReadApiMessageAsync(response) ?? "Thanh toán thất bại";
+                _logger.LogWarning("[ConfirmPaymentAsync] Error message: {Message}", message);
+                
                 return new ApiResult(false, message);
             }
 
+            var successBody = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("[ConfirmPaymentAsync] Success response: {ResponseBody}", successBody);
+            
             return new ApiResult(true, "Thanh toán thành công");
         }
 
@@ -178,6 +194,20 @@ namespace WebSapaForestForStaff.Services.Api
 
             var payload = await response.Content.ReadFromJsonAsync<DiscountApplyResponse>();
             return payload;
+        }
+
+        public async Task<ApiResult> ProcessCombinedPaymentAsync(CombinedPaymentRequest request)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl("/payment/combined"), request));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể xử lý thanh toán kết hợp";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Thanh toán kết hợp thành công");
         }
 
         public async Task<ApiResult> CancelOrderAsync(int orderId, string reason)

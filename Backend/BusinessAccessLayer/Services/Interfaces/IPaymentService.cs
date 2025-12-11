@@ -33,7 +33,7 @@ public interface IPaymentService
     /// <summary>
     /// Xử lý thanh toán (xác nhận thanh toán)
     /// </summary>
-    Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, CancellationToken ct = default);
+    Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, int userId, CancellationToken ct = default);
     Task<OrderDto> ConfirmOrderAsync(CustomerConfirmRequestDto request, CancellationToken ct = default);
 
     Task<bool> UndoConfirmOrderAsync(int orderId, UndoConfirmRequestDto request, CancellationToken ct = default);
@@ -55,6 +55,11 @@ public interface IPaymentService
     /// CASE 1: Xử lý thanh toán tiền mặt với validation
     /// </summary>
     Task<TransactionDto> ProcessCashPaymentAsync(CashPaymentRequestDto request, int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Xử lý thanh toán kết hợp (Cash + QR)
+    /// </summary>
+    Task<List<TransactionDto>> ProcessCombinedPaymentAsync(CombinedPaymentRequestDto request, int userId, CancellationToken ct = default);
 
     /// <summary>
     /// CASE 2: Kiểm tra trạng thái thanh toán

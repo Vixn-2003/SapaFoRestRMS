@@ -1,0 +1,256 @@
+@model WebSapaForestForStaff.DTOs.ShiftManagement.ShiftDto
+
+@{
+    ViewData["Title"] = "Xem xét kết quả";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    var difference = ViewData["Difference"] as WebSapaForestForStaff.DTOs.ShiftManagement.ShiftDifferenceDto;
+}
+
+<style>
+    .review-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .step-header {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border-radius: 18px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(239, 68, 68, 0.2);
+    }
+
+    .review-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        margin-bottom: 24px;
+    }
+
+    .comparison-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 20px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .comparison-row:last-child {
+        border-bottom: none;
+    }
+
+    .difference-card {
+        border-radius: 16px;
+        padding: 24px;
+        margin: 24px 0;
+        border: 3px solid;
+    }
+
+    .difference-card.balanced {
+        background: #f0fdf4;
+        border-color: #10b981;
+    }
+
+    .difference-card.surplus {
+        background: #dbeafe;
+        border-color: #3b82f6;
+    }
+
+    .difference-card.shortage {
+        background: #fef2f2;
+        border-color: #ef4444;
+    }
+
+    .difference-amount {
+        font-size: 42px;
+        font-weight: 800;
+    }
+
+    .notes-section {
+        margin-top: 24px;
+    }
+</style>
+
+<div class="review-container">
+    <!-- Step Header -->
+    <div class="step-header">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-clipboard-check fs-1 me-3"></i>
+            <div>
+                <h3 class="mb-1">Xem xét kết quả kiểm kê</h3>
+                <p class="mb-0 opacity-90">Bước 3/4: Kiểm tra chênh lệch và thêm ghi chú</p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar" role="progressbar" style="width: 75%; background-color: white;"></div>
+        </div>
+    </div>
+
+    <!-- Comparison Card -->
+    <div class="review-card">
+        <h5 class="mb-4"><i class="bi bi-calculator me-2 text-primary"></i>So sánh số liệu</h5>
+
+        <div class="comparison-row">
+            <span class="text-muted">Số dư đầu ca:</span>
+            <span class="fw-bold fs-5">@difference?.OpeningBalance.ToString("N0") ₫</span>
+        </div>
+
+        <div class="comparison-row">
+            <span class="text-muted">+ Doanh thu tiền mặt trong ca:</span>
+            <span class="fw-bold fs-5 text-success">@difference?.TotalRevenueCash.ToString("N0") ₫</span>
+        </div>
+
+        <div class="comparison-row">
+            <span class="text-muted"><strong>= Số dư kỳ vọng:</strong></span>
+            <span class="fw-bold fs-4 text-primary">@difference?.ExpectedClosingBalance.ToString("N0") ₫</span>
+        </div>
+
+        <div class="comparison-row">
+            <span class="text-muted">Số dư thực tế (kiểm kê):</span>
+            <span class="fw-bold fs-5 text-info">@difference?.ActualClosingBalance.ToString("N0") ₫</span>
+        </div>
+    </div>
+
+    <!-- Difference Card -->
+    @if (difference != null)
+    {
+        var cardClass = difference.HasDifference 
+            ? (difference.Difference > 0 ? "surplus" : "shortage") 
+            : "balanced";
+        var iconClass = difference.Difference > 0 ? "bi-arrow-up-circle" : difference.Difference < 0 ? "bi-arrow-down-circle" : "bi-check-circle";
+        var statusText = difference.DifferenceType switch
+        {
+            "Surplus" => "Thừa tiền",
+            "Shortage" => "Thiếu tiền",
+            _ => "Cân bằng"
+        };
+
+        <div class="difference-card @cardClass">
+            <div class="text-center">
+                <i class="bi @iconClass fs-1 mb-3"></i>
+                <h4 class="mb-2">@statusText</h4>
+                <div class="difference-amount">
+                    @if (difference.Difference != 0)
+                    {
+                        <span>@(difference.Difference > 0 ? "+" : "")@difference.Difference.ToString("N0") ₫</span>
+                    }
+                    else
+                    {
+                        <span>✓ Số dư khớp chính xác</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (difference.HasDifference)
+        {
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Yêu cầu giải trình:</strong> Có chênh lệch @Math.Abs(difference.Difference).ToString("N0") ₫. Vui lòng nhập ghi chú giải thích lý do.
+            </div>
+
+            <!-- Notes Section -->
+            <div class="review-card notes-section">
+                <h5 class="mb-3"><i class="bi bi-pencil-square me-2 text-danger"></i>Ghi chú giải trình (Bắt buộc)</h5>
+                
+                <textarea class="form-control" id="closingNotes" rows="4" 
+                          placeholder="Ví dụ: Tiền lẻ trả khách, chi phí phát sinh, ..."></textarea>
+                
+                <div class="form-text mt-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Ghi rõ lý do chênh lệch để dễ dàng tra cứu sau này.
+                </div>
+            </div>
+        }
+    }
+
+    <!-- Actions -->
+    <div class="d-flex gap-3 mt-4">
+        <a asp-action="ClosingDenominations" class="btn btn-outline-secondary btn-lg">
+            <i class="bi bi-arrow-left me-2"></i>Kiểm lại
+        </a>
+        <button type="button" onclick="proceedToConfirm()" class="btn btn-danger btn-lg flex-grow-1" id="proceedBtn">
+            <i class="bi bi-arrow-right me-2"></i>Xác nhận kết ca
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const shiftId = @Model.ShiftId;
+        const hasDifference = @(difference?.HasDifference.ToString().ToLower() ?? "false");
+
+        async function proceedToConfirm() {
+            // If has difference, require notes
+            if (hasDifference) {
+                const notes = document.getElementById('closingNotes').value.trim();
+                
+                if (!notes) {
+                    showToast('Vui lòng nhập ghi chú giải trình chênh lệch', 'error');
+                    return;
+                }
+                
+                // Save notes first
+                try {
+                    const response = await fetch('/shift-management/closing/notes', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({
+                            shiftId: shiftId,
+                            notes: notes
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        showToast(result.message || 'Lỗi khi lưu ghi chú', 'error');
+                        return;
+                    }
+                } catch (error) {
+                    showToast('Lỗi khi lưu ghi chú', 'error');
+                    return;
+                }
+            }
+            
+            // Navigate to confirmation page
+            window.location.href = `/shift-management/closing/confirm?shiftId=${shiftId}`;
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+    </script>
+}
+

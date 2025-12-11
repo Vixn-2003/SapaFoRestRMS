@@ -52,6 +52,9 @@ public class PaymentController : ControllerBase
         try
         {
             var orders = await _paymentService.GetOrdersAsync(date, status, sortOrder, ct);
+            
+        
+            
             return Ok(orders);
         }
         catch (Exception ex)
@@ -75,6 +78,10 @@ public class PaymentController : ControllerBase
             {
                 return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {id}" });
             }
+
+            // ✅ DEBUG: Log để trace customer info
+            _logger.LogInformation("[GetOrderDetail] Order {OrderId} - CustomerId: {CustomerId}, CustomerName: {CustomerName}, CustomerPhone: {CustomerPhone}", 
+                id, order.CustomerId, order.CustomerName, order.CustomerPhone);
 
             return Ok(order);
         }
@@ -271,7 +278,38 @@ public class PaymentController : ControllerBase
             }
 
             var transaction = await _paymentService.InitiatePaymentAsync(request, ct);
-            return Ok(transaction);
+            
+            // If payment method is QR, generate QR code URL
+            string? qrCodeUrl = null;
+            if (transaction.PaymentMethod != null && 
+                (transaction.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) || 
+                 transaction.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    // Get bank configuration from appsettings.json
+                    var bankCode = _configuration["BankSettings:BankCode"] ?? "VCB";
+                    var account = _configuration["BankSettings:Account"] ?? "0123456789";
+
+                    // Generate VietQR URL
+                    var qrResponse = await _paymentService.GenerateVietQRAsync(request.OrderId, bankCode, account, null, ct);
+                    qrCodeUrl = qrResponse.QrUrl;
+                }
+                catch (Exception qrEx)
+                {
+                    _logger.LogWarning("Failed to generate QR code for order {OrderId}: {Error}", request.OrderId, qrEx.Message);
+                    // Continue without QR code - transaction is still created
+                }
+            }
+
+            // Return response in PaymentSessionDto format for frontend
+            return Ok(new
+            {
+                SessionId = transaction.SessionId ?? string.Empty,
+                QrCodeUrl = qrCodeUrl,
+                Amount = transaction.Amount,
+                PaymentMethod = transaction.PaymentMethod
+            });
         }
         catch (KeyNotFoundException ex)
         {
@@ -296,8 +334,12 @@ public class PaymentController : ControllerBase
             {
                 return BadRequest(ModelState);
             }
-
-            var transaction = await _paymentService.ProcessPaymentAsync(request, ct);
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+            var transaction = await _paymentService.ProcessPaymentAsync(request, userId.Value,ct);
             return Ok(new { 
                 success = true, 
                 message = "Thanh toán thành công",
@@ -402,8 +444,12 @@ public class PaymentController : ControllerBase
                 Amount = totalAmount,
                 Notes = "Thanh toán qua VietQR"
             };
-
-            var transaction = await _paymentService.ProcessPaymentAsync(paymentRequest, ct);
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+            var transaction = await _paymentService.ProcessPaymentAsync(paymentRequest,userId.Value, ct);
             
             return Ok(new
             {
@@ -462,6 +508,48 @@ public class PaymentController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Lỗi khi xử lý thanh toán tiền mặt", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xử lý thanh toán kết hợp (Cash + QR)
+    /// POST /api/payment/combined
+    /// </summary>
+    [HttpPost("combined")]
+    public async Task<IActionResult> ProcessCombinedPayment([FromBody] CombinedPaymentRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var transactions = await _paymentService.ProcessCombinedPaymentAsync(request, userId.Value, ct);
+            return Ok(new
+            {
+                success = true,
+                message = "Thanh toán kết hợp thành công",
+                transactions = transactions
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xử lý thanh toán kết hợp", error = ex.Message });
         }
     }
 
@@ -920,23 +1008,37 @@ public class PaymentController : ControllerBase
             _logger.LogInformation("Using receipt file path {PdfPath} for order {OrderId}", pdfPath, orderId);
 
             // Check if PDF exists, if not generate it
+            string receiptUrl;
             if (!System.IO.File.Exists(pdfPath))
             {
-                // Generate receipt
+                // Generate receipt (may return Cloudinary URL or local path)
                 _logger.LogInformation("Receipt PDF not found for order {OrderId}. Generating new file.", orderId);
-                await _receiptService.GenerateReceiptPdfAsync(orderId, ct);
+                receiptUrl = await _receiptService.GenerateReceiptPdfAsync(orderId, ct);
+            }
+            else
+            {
+                // PDF exists locally, but check if it's also on Cloudinary
+                receiptUrl = $"/receipts/{pdfFileName}";
             }
 
-            // Verify file exists after generation
+            // ✅ Check if receipt URL is Cloudinary URL (starts with https://)
+            if (!string.IsNullOrEmpty(receiptUrl) && receiptUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Receipt PDF is stored on Cloudinary for order {OrderId}. Redirecting to: {CloudinaryUrl}", orderId, receiptUrl);
+                // Redirect to Cloudinary URL
+                return Redirect(receiptUrl);
+            }
+
+            // ✅ Fallback to local file
             if (!System.IO.File.Exists(pdfPath))
             {
                 _logger.LogError("Receipt generation failed for order {OrderId}. File missing at {PdfPath}", orderId, pdfPath);
                 return NotFound(new { message = "Không thể tạo hóa đơn. Vui lòng thử lại." });
             }
 
-            // Return PDF file
+            // Return PDF file from local storage
             var fileBytes = await System.IO.File.ReadAllBytesAsync(pdfPath, ct);
-            _logger.LogInformation("Returning receipt PDF for order {OrderId}. Size: {ByteCount} bytes.", orderId, fileBytes.Length);
+            _logger.LogInformation("Returning receipt PDF from local storage for order {OrderId}. Size: {ByteCount} bytes.", orderId, fileBytes.Length);
             return File(fileBytes, "application/pdf", pdfFileName);
         }
         catch (KeyNotFoundException ex)
@@ -951,8 +1053,17 @@ public class PaymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error when downloading receipt for order {OrderId}", orderId);
-            return StatusCode(500, new { message = "Lỗi khi tải hóa đơn", error = ex.Message });
+            _logger.LogError(ex, "Unexpected error when downloading receipt for order {OrderId}. Exception: {ExceptionType}, Message: {Message}, StackTrace: {StackTrace}", 
+                orderId, ex.GetType().Name, ex.Message, ex.StackTrace);
+            
+            // Trả về error message chi tiết hơn để frontend có thể hiển thị
+            var errorMessage = $"Lỗi khi tải hóa đơn: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" Chi tiết: {ex.InnerException.Message}";
+            }
+            
+            return StatusCode(500, new { message = errorMessage, error = ex.Message, orderId = orderId });
         }
     }
 

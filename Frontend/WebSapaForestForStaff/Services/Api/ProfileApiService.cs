@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.Services.Api.Interfaces;
 
@@ -48,8 +49,20 @@ namespace WebSapaForestForStaff.Services.Api
         {
             try
             {
-                var json = JsonSerializer.Serialize(request);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var content = new MultipartFormDataContent();
+                content.Add(new StringContent(request.FullName), nameof(request.FullName));
+                content.Add(new StringContent(request.Phone ?? string.Empty), nameof(request.Phone));
+
+                if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+                {
+                    var streamContent = new StreamContent(request.AvatarFile.OpenReadStream());
+                    streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(request.AvatarFile.ContentType);
+                    content.Add(streamContent, nameof(request.AvatarFile), request.AvatarFile.FileName);
+                }
+                else if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+                {
+                    content.Add(new StringContent(request.AvatarUrl), nameof(request.AvatarUrl));
+                }
 
                 var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/profile", content));
 

@@ -7,7 +7,7 @@
     Layout = "_LayoutManager";
 }
 
-<div class="container mt-4">
+<div class=" mt-4">
     <h3>🪑 Thêm đơn đặt bàn mới</h3>
 
     @if (TempData["Success"] != null)
@@ -47,7 +47,7 @@
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Số lượng khách</label>
+            <label class="form-label">Số lượng người</label>
             <input asp-for="NumberOfGuests" type="number" min="1" class="form-control" required />
         </div>
 

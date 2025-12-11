@@ -1,0 +1,152 @@
+@model WebSapaForestForStaff.DTOs.Customers.CustomerVipStatisticsDto
+@{
+    ViewData["Title"] = "Chi tiết khách hàng";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0">Chi tiết khách hàng</h2>
+        <div class="text-muted">ID: @Model.CustomerId</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="@Url.Action("Index")">
+        <i class="mdi mdi-arrow-left"></i> Quay lại danh sách
+    </a>
+</div>
+
+<!-- Success/Error Messages from TempData -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="mdi mdi-check-circle me-2"></i>
+        <strong>Thành công!</strong> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="mdi mdi-alert-circle me-2"></i>
+        <strong>Lỗi!</strong> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <div class="fw-bold">@(!string.IsNullOrWhiteSpace(Model.FullName) ? Model.FullName : "Khách lẻ")</div>
+                <div class="text-muted">@Model.Phone</div>
+            </div>
+            <span id="vipBadge" class="badge @(Model.IsVip ? "bg-warning text-dark" : "bg-secondary")">
+                @(Model.IsVip ? "VIP" : "Normal")
+            </span>
+            @if (Model.IsManualOverride)
+            {
+                <span class="badge bg-info text-dark ms-2">Manual</span>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Tổng chi tiêu</div>
+                <div id="totalSpend" class="fs-4 fw-bold">@Model.TotalSpend.ToString("N0")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Số hóa đơn</div>
+                <div id="totalBills" class="fs-4 fw-bold">@Model.TotalBills</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Tổng khách</div>
+                <div id="totalGuests" class="fs-4 fw-bold">@Model.TotalGuests</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Lượt đặt bàn</div>
+                <div id="reservationCount" class="fs-4 fw-bold">@Model.NumberOfReservations</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Trung bình / Khách</div>
+                <div id="avgPerPerson" class="fs-4 fw-bold">@Model.AverageSpendPerPerson.ToString("N0")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Trung bình / Hóa đơn</div>
+                <div id="avgPerBill" class="fs-4 fw-bold">@Model.AverageSpendPerBill.ToString("N0")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2">
+    <form asp-action="Recalculate" asp-controller="ManagerCustomer" method="post" id="recalcForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="customerId" value="@Model.CustomerId" />
+        <button type="submit" class="btn btn-primary" id="recalcVipBtn">
+            <i class="mdi mdi-calculator"></i> Tính lại VIP
+        </button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle recalculate form submission with confirmation
+        const recalcForm = document.getElementById('recalcForm');
+        if (recalcForm) {
+            recalcForm.addEventListener('submit', function(e) {
+                if (!confirm('Bạn có chắc muốn tính lại trạng thái VIP cho khách hàng này?')) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Show loading state
+                const btn = document.getElementById('recalcVipBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+            });
+        }
+
+        // Auto-hide success/error messages after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+        
+        // Smooth scroll to messages if they exist
+        const alerts = document.querySelectorAll('.alert');
+        if (alerts.length > 0) {
+            alerts[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+</script>
+

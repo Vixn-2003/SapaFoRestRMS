@@ -43,6 +43,16 @@ public class OrderDto
     /// </summary>
     public decimal? DepositRefundAmount { get; set; }
 
+    /// <summary>
+    /// Số tiền khách đưa khi thanh toán tiền mặt
+    /// </summary>
+    public decimal? AmountReceived { get; set; }
+
+    /// <summary>
+    /// Tiền thối lại cho khách khi thanh toán tiền mặt (khi AmountReceived > TotalAmount)
+    /// </summary>
+    public decimal? ChangeAmount { get; set; }
+
     public string? Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }
@@ -57,5 +67,7 @@ public class OrderDto
     public string? PaymentMethod { get; set; }
 
     public List<OrderItemDto> OrderItems { get; set; } = new List<OrderItemDto>();
+
+    public List<TransactionDto> Transactions { get; set; } = new();
 }
 
