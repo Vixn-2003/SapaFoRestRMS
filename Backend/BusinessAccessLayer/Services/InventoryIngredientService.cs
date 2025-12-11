@@ -120,7 +120,9 @@ namespace BusinessAccessLayer.Services
                     var availableBatches = await _unitOfWork.InventoryIngredient.GetAvailableBatchesByIngredientAsync(recipe.IngredientId);
                     
                     decimal remainingToReserve = totalNeeded;
+                    var firstBatch = availableBatches.FirstOrDefault();
                     
+                    // Reserve từ các batch có available > 0
                     foreach (var batch in availableBatches)
                     {
                         if (remainingToReserve <= 0) break;
@@ -135,9 +137,40 @@ namespace BusinessAccessLayer.Services
                         await _unitOfWork.InventoryIngredient.UpdateBatchAsync(batch);
                     }
                     
+                    // ✅ CHO PHÉP AVAILABLE ÂM: Nếu còn thiếu, reserve thêm vào batch đầu tiên để available có thể âm
+                    // Điều này cho phép biết chính xác số lượng thiếu
                     if (remainingToReserve > 0)
                     {
-                        return (false, $"Không đủ nguyên liệu: {recipe.Ingredient?.Name ?? "N/A"}. Thiếu: {remainingToReserve}");
+                        // Nếu không có batch nào, cần tạo batch mới hoặc lấy batch đầu tiên (kể cả available <= 0)
+                        if (firstBatch == null)
+                        {
+                            // Lấy tất cả batches (kể cả available <= 0) để có thể reserve vào
+                            var allBatches = await _unitOfWork.InventoryIngredient.GetAllBatchesByIngredientAsync(recipe.IngredientId);
+                            firstBatch = allBatches.OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue)
+                                                   .ThenBy(b => b.CreatedAt)
+                                                   .FirstOrDefault();
+                        }
+                        
+                        if (firstBatch != null)
+                        {
+                            // Reserve phần thiếu vào batch đầu tiên (available sẽ âm)
+                            firstBatch.QuantityReserved += remainingToReserve;
+                            await _unitOfWork.InventoryIngredient.UpdateBatchAsync(firstBatch);
+                            
+                            // ✅ QUAN TRỌNG: Save changes trước khi return để đảm bảo available âm được lưu vào DB
+                            await _unitOfWork.SaveChangesAsync();
+                            
+                            // Tính available sau khi reserve (sẽ âm)
+                            var finalAvailable = firstBatch.QuantityRemaining - firstBatch.QuantityReserved;
+                            
+                            // Return false với message thiếu, nhưng đã reserve để available có thể âm
+                            return (false, $"Không đủ nguyên liệu: {recipe.Ingredient?.Name ?? "N/A"}. Thiếu: {remainingToReserve} {recipe.Ingredient?.Unit?.UnitName ?? ""}. Available: {finalAvailable}");
+                        }
+                        else
+                        {
+                            // Không có batch nào cả, không thể reserve
+                            return (false, $"Không đủ nguyên liệu: {recipe.Ingredient?.Name ?? "N/A"}. Thiếu: {remainingToReserve} {recipe.Ingredient?.Unit?.UnitName ?? ""}. Không có batch nào.");
+                        }
                     }
                 }
 
@@ -255,6 +288,12 @@ namespace BusinessAccessLayer.Services
 
         /// <summary>
         /// Release reserved batches when Hủy món (cancel order detail)
+        /// ✅ QUAN TRỌNG: Release số lượng đã reserve cho món này
+        /// Vì hệ thống không track batch nào reserve cho orderDetail nào,
+        /// nên release dựa trên số lượng cần thiết (recipe.QuantityNeeded * orderQuantity)
+        /// từ các batch có reserved > 0 (theo FEFO)
+        /// 
+        /// ⚠️ CHỈ RELEASE KHI STATUS LÀ Pending hoặc Cooking (món đã được reserve nguyên liệu)
         /// </summary>
         public async Task<(bool success, string message)> ReleaseReservedBatchesForOrderDetailAsync(int orderDetailId)
         {
@@ -265,6 +304,24 @@ namespace BusinessAccessLayer.Services
                 if (orderDetail == null || orderDetail.MenuItem == null)
                 {
                     return (false, "Không tìm thấy món ăn");
+                }
+
+                // ✅ QUAN TRỌNG: Chỉ release khi status là Pending hoặc Cooking
+                // Vì chỉ những món này mới được reserve nguyên liệu
+                var status = (orderDetail.Status ?? "").Trim();
+                var statusLower = status.ToLowerInvariant();
+                
+                // Normalize status để so sánh
+                var isPending = statusLower == "pending" || statusLower.Contains("chờ");
+                var isCooking = statusLower == "cooking" || statusLower.Contains("nấu") || statusLower.Contains("chế biến");
+                
+                // Nếu status đã là Cancelled/Removed/Done/Ready, có thể đã được release rồi hoặc chưa reserve
+                // Chỉ release khi status là Pending hoặc Cooking
+                if (!isPending && !isCooking)
+                {
+                    // Log nhưng không fail (có thể đã được release rồi hoặc chưa reserve)
+                    Console.WriteLine($"Info: OrderDetail {orderDetailId} có status '{status}', không cần release (chỉ release khi Pending/Cooking)");
+                    return (true, $"Món có status '{status}', không cần release nguyên liệu");
                 }
 
                 // Get recipes for this menu item
@@ -279,29 +336,80 @@ namespace BusinessAccessLayer.Services
                 // For each ingredient in the recipe, release reserved batches
                 foreach (var recipe in recipes)
                 {
+                    if (recipe.Ingredient == null) continue;
+                    
+                    // ✅ Số lượng cần release = số lượng đã reserve cho món này
+                    // Ví dụ: món gà luộc cần 100 gà, thì khi hủy phải release 100 gà
                     var totalToRelease = recipe.QuantityNeeded * orderQuantity;
                     
-                    // Get batches with reserved quantity for this ingredient
-                    var batches = await _unitOfWork.InventoryIngredient.getBatchById(recipe.IngredientId);
-                    var batchesList = batches.ToList();
+                    // ✅ Get ALL batches for this ingredient (kể cả available <= 0)
+                    // Để có thể release từ batch đã reserve (có thể available âm)
+                    var batches = await _unitOfWork.InventoryIngredient.GetAllBatchesByIngredientAsync(recipe.IngredientId);
+                    var batchesList = batches.OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue).ThenBy(b => b.CreatedAt).ToList();
+                    
+                    // ✅ Log để debug
+                    var totalReservedBefore = batchesList.Sum(b => b.QuantityReserved);
+                    Console.WriteLine($"[Release] OrderDetail {orderDetailId}: Ingredient {recipe.Ingredient.Name}, Need to release: {totalToRelease}, Total reserved before: {totalReservedBefore}");
+                    
+                    if (totalReservedBefore <= 0)
+                    {
+                        Console.WriteLine($"[Release] Warning: Không có batch nào có reserved > 0 cho ingredient {recipe.Ingredient.Name}");
+                        continue; // Skip ingredient này
+                    }
                     
                     decimal remainingToRelease = totalToRelease;
+                    bool hasChanges = false;
                     
-                    foreach (var batch in batchesList.OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue).ThenBy(b => b.CreatedAt))
+                    // ✅ Release từ các batch có reserved > 0 (theo FEFO)
+                    // Ưu tiên release từ batch có expiry sớm nhất trước
+                    // QUAN TRỌNG: Chỉ release đúng số lượng totalToRelease, không release tất cả
+                    // ✅ QUAN TRỌNG: batchesList đã được track từ GetAllBatchesByIngredientAsync
+                    // Chỉ cần thay đổi property, EF Core sẽ tự động detect và save khi SaveChangesAsync
+                    foreach (var batch in batchesList)
                     {
                         if (remainingToRelease <= 0) break;
                         
                         if (batch.QuantityReserved <= 0) continue;
                         
+                        // Release từ batch này (tối đa là reserved của batch hoặc phần còn lại)
+                        // Ví dụ: hủy 1 món gà cần 10000 → chỉ release 10000, không release tất cả reserved
                         var toRelease = Math.Min(batch.QuantityReserved, remainingToRelease);
+                        var reservedBefore = batch.QuantityReserved;
                         batch.QuantityReserved -= toRelease;
                         remainingToRelease -= toRelease;
+                        hasChanges = true;
                         
-                        await _unitOfWork.InventoryIngredient.UpdateBatchAsync(batch);
+                        Console.WriteLine($"[Release]   Batch {batch.BatchId}: Reserved {reservedBefore} -> {batch.QuantityReserved} (released {toRelease})");
+                    }
+                    
+                    // ✅ Kiểm tra nếu chưa release đủ (có thể do reserved không đủ)
+                    if (remainingToRelease > 0)
+                    {
+                        // Log warning nhưng vẫn tiếp tục (có thể đã được release từ nơi khác hoặc chưa reserve)
+                        Console.WriteLine($"[Release] Warning: Không thể release đủ {totalToRelease} {recipe.Ingredient.Name} cho OrderDetail {orderDetailId}. Còn thiếu: {remainingToRelease}");
+                    }
+                    
+                    if (hasChanges)
+                    {
+                        var totalReservedAfter = batchesList.Sum(b => b.QuantityReserved);
+                        Console.WriteLine($"[Release]   Total reserved after: {totalReservedAfter} (changed: {hasChanges})");
                     }
                 }
 
-                await _unitOfWork.SaveChangesAsync();
+                // ✅ Save changes ngay sau khi update tất cả batches
+                // Đảm bảo thay đổi được lưu vào DB
+                try
+                {
+                    await _unitOfWork.SaveChangesAsync();
+                    Console.WriteLine($"[Release] ✅ SaveChangesAsync thành công cho OrderDetail {orderDetailId}");
+                }
+                catch (Exception saveEx)
+                {
+                    Console.WriteLine($"[Release] ❌ SaveChangesAsync LỖI cho OrderDetail {orderDetailId}: {saveEx.Message}");
+                    Console.WriteLine($"[Release] Stack trace: {saveEx.StackTrace}");
+                    return (false, $"Lỗi khi lưu thay đổi: {saveEx.Message}");
+                }
+                
                 return (true, "Đã giải phóng nguyên liệu đã dành riêng thành công");
             }
             catch (Exception ex)
@@ -320,12 +428,14 @@ namespace BusinessAccessLayer.Services
             // Lấy tất cả active orders
             var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForStationAsync();
 
-            // Lấy tất cả OrderDetails có status = "Cooking" hoặc "Late"
+            // Lấy OrderDetails trạng thái chờ (Pending/Confirmed) để hiển thị thiếu nguyên liệu
             var cookingOrderDetails = activeOrders
                 .SelectMany(o => o.OrderDetails)
-                .Where(od => od.Status != null && 
-                             (od.Status.Equals("Cooking", StringComparison.OrdinalIgnoreCase) || 
-                              od.Status.Equals("Late", StringComparison.OrdinalIgnoreCase)))
+                .Where(od =>
+                {
+                    var status = (od.Status ?? "").Trim().ToLowerInvariant();
+                    return status == "pending";
+                })
                 .ToList();
 
             // Filter theo CategoryMenu nếu có
@@ -481,16 +591,20 @@ namespace BusinessAccessLayer.Services
 
                     var totalNeeded = recipe.QuantityNeeded * orderQuantity;
 
-                    // Lấy các batches đã reserve cho ingredient này
-                    var reservedBatches = await _unitOfWork.InventoryIngredient.GetReservedBatchesByIngredientAsync(recipe.IngredientId);
+                    // ✅ Lấy tất cả batches (kể cả available <= 0) để tính available chính xác
+                    var activeBatches = await _unitOfWork.InventoryIngredient.GetAllBatchesByIngredientAsync(recipe.IngredientId);
                     
-                    // Tính tổng số lượng đã reserve
-                    var totalReserved = reservedBatches.Sum(b => b.QuantityReserved);
-
-                    // Nếu số lượng cần lớn hơn số lượng đã reserve thì thiếu
-                    if (totalNeeded > totalReserved)
+                    // ✅ TÍNH AVAILABLE DỰA TRÊN QuantityRemaining - QuantityReserved (có thể âm)
+                    var availableQuantity = activeBatches.Sum(b => b.QuantityRemaining - b.QuantityReserved);
+                    
+                    // ✅ Thiếu nguyên liệu nếu available < nhu cầu (kể cả available âm hoặc chỉ không đủ)
+                    if (availableQuantity < totalNeeded)
                     {
-                        var shortageQuantity = totalNeeded - totalReserved;
+                        var shortageQuantity = totalNeeded - availableQuantity; // Số lượng thiếu (dương)
+                        
+                        // Tính tổng reserved để hiển thị
+                        var totalReserved = activeBatches.Sum(b => b.QuantityReserved);
+                        var totalRemaining = activeBatches.Sum(b => b.QuantityRemaining);
 
                         var shortageDto = new IngredientShortageDTO
                         {
