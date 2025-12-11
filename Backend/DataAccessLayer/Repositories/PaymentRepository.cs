@@ -234,5 +234,15 @@ public class PaymentRepository : IPaymentRepository
             .Include(od => od.Order)
             .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
     }
+
+    public async Task<IEnumerable<Transaction>> GetAllTransactionsAsync()
+    {
+        return await _context.Set<Transaction>()
+            .Include(t => t.Order)
+                .ThenInclude(o => o.Customer)
+            .Include(t => t.ConfirmedByUser)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
 }
 

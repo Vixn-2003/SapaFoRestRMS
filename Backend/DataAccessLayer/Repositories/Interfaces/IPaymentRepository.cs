@@ -71,5 +71,10 @@ public interface IPaymentRepository : IRepository<Order>
     /// Lấy OrderDetail theo ID (bao gồm MenuItem và Combo)
     /// </summary>
     Task<OrderDetail?> GetOrderDetailByIdAsync(int orderDetailId);
+
+    /// <summary>
+    /// Lấy tất cả transactions (cho Owner Revenue/Dashboard)
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetAllTransactionsAsync();
 }
 
