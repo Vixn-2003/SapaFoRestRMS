@@ -238,6 +238,8 @@ builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 builder.Services.AddScoped<IAreaService, AreaService>();
 
+builder.Services.AddScoped<IManagerComboRepository, ManagerComboRepository>();
+builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
 //voucher
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();

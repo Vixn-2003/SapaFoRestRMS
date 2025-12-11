@@ -371,5 +371,34 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/batch-cook
+        /// Gom nhiều hành động bắt đầu nấu vào một call để giảm số lượng fetch từ frontend
+        /// </summary>
+        [HttpPost("batch-cook")]
+        public async Task<IActionResult> BatchCook([FromBody] BatchCookRequest request)
+        {
+            try
+            {
+                if (request.Items == null || !request.Items.Any())
+                {
+                    return BadRequest(new { success = false, message = "Danh sách món trống" });
+                }
+
+                var result = await _kitchenService.BatchStartCookingAsync(request);
+
+                if (!result.Success)
+                {
+                    return Ok(new { success = false, message = result.Message, items = result.Items });
+                }
+
+                return Ok(new { success = true, message = result.Message, items = result.Items });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

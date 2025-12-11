@@ -21,14 +21,7 @@ namespace DataAccessLayer.Repositories
 
         public async Task<List<(Table Table, Reservation ActiveReservation)>> GetFilteredTablesWithStatusAsync(string? areaName, int? floor, string? searchString)
         {
-            // 1. Khởi tạo Query, Include thêm thông tin Khách hàng (Customer -> User) để tìm kiếm
-            //var query = _context.Tables
-            //    .Include(t => t.Area)
-            //    .Include(t => t.ReservationTables)
-            //        .ThenInclude(rt => rt.Reservation)
-            //            .ThenInclude(r => r.Customer) // Include thêm Customer
-            //                .ThenInclude(c => c.User) // Include thêm User để lấy FullName/Phone
-            //    .AsQueryable();
+          
 
             var query = _context.Tables
     .Include(t => t.Area)
@@ -56,9 +49,7 @@ namespace DataAccessLayer.Repositories
             // 3. ⭐️ LOGIC TÌM KIẾM NÂNG CAO (SỐ BÀN HOẶC TÊN/SĐT KHÁCH) ⭐️
             if (!string.IsNullOrEmpty(searchString))
             {
-                // Tìm các bàn thỏa mãn 1 trong 2 điều kiện:
-                // A. Số bàn chứa từ khóa
-                // B. HOẶC Bàn đang có đơn (Active/Confirmed) mà Tên/SĐT khách chứa từ khóa
+               
                 query = query.Where(t =>
                     t.TableNumber.Contains(searchString)
                     ||
@@ -179,6 +170,7 @@ namespace DataAccessLayer.Repositories
 
             return new PagedList<Reservation>(items, totalCount, parameters.PageNumber, parameters.PageSize);
         }
+
 
         // (2) Lấy chi tiết (Thay đổi: Guid -> int)
         public async Task<Reservation?> GetReservationDetailByIdAsync(int reservationId)
