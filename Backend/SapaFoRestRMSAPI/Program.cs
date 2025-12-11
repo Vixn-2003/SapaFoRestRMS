@@ -132,6 +132,7 @@ builder.Services.AddControllers();
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddAutoMapper(typeof(CounterStaffMappingProfile));
 
 
 // Add Repositories
@@ -290,6 +291,22 @@ builder.Services.AddScoped<ICustomerVipService, CustomerVipService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
+
+// Customer Management Service
+builder.Services.AddScoped<ICustomerManagementService, CustomerManagementService>();
+
+// Owner Dashboard Services
+builder.Services.AddScoped<IOwnerDashboardService, OwnerDashboardService>();
+builder.Services.AddScoped<IOwnerRevenueService, OwnerRevenueService>();
+builder.Services.AddScoped<IOwnerWarehouseAlertService, OwnerWarehouseAlertService>();
+
+// Counter Staff Dashboard Services
+builder.Services.AddScoped<ICounterStaffDashboardRepository, CounterStaffDashboardRepository>();
+builder.Services.AddScoped<ICounterStaffDashboardService, CounterStaffDashboardService>();
+builder.Services.AddScoped<ICounterStaffOrderRepository, CounterStaffOrderRepository>();
+builder.Services.AddScoped<ICounterStaffOrderService, CounterStaffOrderService>();
+builder.Services.AddScoped<ICounterTransactionRepository, CounterTransactionRepository>();
+builder.Services.AddScoped<ICounterTransactionService, CounterTransactionService>();
 
 // Receipt Service - Pass WebRootPath from IWebHostEnvironment
 builder.Services.AddScoped<IReceiptService>(sp =>

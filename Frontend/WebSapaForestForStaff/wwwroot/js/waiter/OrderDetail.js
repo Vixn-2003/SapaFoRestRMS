@@ -7,6 +7,7 @@
 // ================================
 var cartItems = [];
 var tableId = window.__TABLE_ID__ || 0;
+var orderStatus = window.__ORDER_STATUS__ || '';
 var tempItemToAdd = null;
 var pendingModification = null;
 
@@ -88,11 +89,11 @@ function renderCart() {
             var unitPriceStr = item.price.toLocaleString('vi-VN');
 
             // ================================
-            // Buttons — Chỉ Pending mới có
+            // Buttons — Hiển thị khi chưa Cancelled và chưa Finished
             // ================================
             var actionBtns = '';
 
-            if (isPending) {
+            if (!isCancelled && !isFinished) {
                 var hasNote = item.note && item.note.trim().length > 0;
                 var iconNoteClass = hasNote ? "text-warning" : "text-secondary";
 
@@ -110,14 +111,14 @@ function renderCart() {
             }
 
             // ================================
-            // Note — chỉ Pending được chỉnh
+            // Note — Finished chỉ đọc, còn lại có thể chỉnh
             // ================================
             var noteHtml = '';
             if (!isCancelled) {
                 var noteContent = item.note || '';
 
-                // Nếu không phải Pending → chỉ hiển thị
-                if (!isPending) {
+                // Nếu đã Finished → chỉ hiển thị readonly
+                if (isFinished) {
                     if (noteContent.trim() !== '') {
                         noteHtml = `
                             <div class="text-muted fst-italic small mt-1" style="font-size:11px;">
@@ -126,6 +127,7 @@ function renderCart() {
                     }
                 }
                 else {
+                    // Chưa Finished → cho phép chỉnh sửa
                     var noteDisplay = noteContent.trim().length > 0 ? 'block' : 'none';
                     noteHtml = `
                         <div class="note-box" data-index="${realIndex}" style="display:${noteDisplay}; margin-top:5px;">
@@ -141,6 +143,7 @@ function renderCart() {
 
             if (!isCancelled) {
                 if (isFinished) {
+                    // Đã xong → Chỉ hiển thị số lượng
                     controlsHtml = `
                         <div class="d-flex justify-content-between align-items-center mt-2">
                             <div class="fw-bold text-success" style="font-size:13px;">SL: ${item.quantity}</div>
@@ -149,16 +152,8 @@ function renderCart() {
                             </div>
                         </div>`;
                 }
-                else if (!isPending) {
-                    controlsHtml = `
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <div class="fw-bold text-muted" style="font-size:13px;">SL: ${item.quantity}</div>
-                            <div class="text-muted small" style="font-size:10px;">
-                                ${unitPriceStr} x ${item.quantity} = <strong>${priceStr}</strong>
-                            </div>
-                        </div>`;
-                }
                 else {
+                    // Chưa Finished → Cho phép chỉnh số lượng
                     controlsHtml = `
                         <div class="d-flex justify-content-between align-items-center mt-2">
                             <div class="qty-control" data-index="${realIndex}">
@@ -203,8 +198,11 @@ function renderCart() {
     $('#lblSubTotal').text(grandTotal.toLocaleString('vi-VN') + ' đ');
     $('#lblGrandTotal').text(grandTotal.toLocaleString('vi-VN') + ' đ');
 
+    // Hiển thị nút "Lưu Order" chỉ khi có thay đổi VÀ order chưa Confirmed
     var hasChanges = cartItems.some(x => x.isNew || x.isDirty || x.isDeleted);
-    if (hasChanges) $('.btn-save-order').show();
+    var isOrderConfirmed = orderStatus && orderStatus.toLowerCase() === 'confirmed';
+    
+    if (hasChanges && !isOrderConfirmed) $('.btn-save-order').show();
     else $('.btn-save-order').hide();
 }
 
@@ -214,11 +212,21 @@ function renderCart() {
 function changeQty(index, change) {
     var item = cartItems[index];
 
-    var isPending = item.status === "Pending" || item.status === "Đã gửi";
-    if (!isPending) {
+    // Kiểm tra order đã Confirmed chưa
+    if (orderStatus && orderStatus.toLowerCase() === 'confirmed') {
+        showWarningModal({
+            type: 'orderConfirmed',
+            message: 'Đơn hàng đã được xác nhận, không thể chỉnh sửa món.'
+        });
+        return;
+    }
+
+    // Kiểm tra món đã Finished chưa
+    var isFinished = item.status === "Done" || item.status === "Served" || item.status === "Đã xong";
+    if (isFinished) {
         showWarningModal({
             type: 'invalidStatus',
-            message: 'Chỉ món chưa chế biến (Pending) mới được chỉnh số lượng.'
+            message: 'Món đã hoàn thành, không thể chỉnh số lượng.'
         });
         return;
     }
@@ -249,6 +257,25 @@ function executeChangeQty(index, change) {
 function removeItem(index) {
     var item = cartItems[index];
 
+    // Kiểm tra order đã Confirmed chưa
+    if (orderStatus && orderStatus.toLowerCase() === 'confirmed') {
+        showWarningModal({
+            type: 'orderConfirmed',
+            message: 'Đơn hàng đã được xác nhận, không thể xóa món.'
+        });
+        return;
+    }
+
+    // Kiểm tra món đã Finished chưa
+    var isFinished = item.status === "Done" || item.status === "Served" || item.status === "Đã xong";
+    if (isFinished) {
+        showWarningModal({
+            type: 'invalidStatus',
+            message: 'Món đã hoàn thành, không thể xóa.'
+        });
+        return;
+    }
+
     if (!item.isNew) {
         showWarningModal({ type: 'delete', index: index });
         return;
@@ -273,8 +300,18 @@ function executeRemoveItem(index) {
 function toggleNote(index) {
     var item = cartItems[index];
 
-    var isPending = item.status === "Pending" || item.status === "Đã gửi";
-    if (!isPending) return;
+    // Kiểm tra order đã Confirmed chưa
+    if (orderStatus && orderStatus.toLowerCase() === 'confirmed') {
+        showWarningModal({
+            type: 'orderConfirmed',
+            message: 'Đơn hàng đã được xác nhận, không thể chỉnh sửa ghi chú.'
+        });
+        return;
+    }
+
+    // Kiểm tra món đã Finished chưa
+    var isFinished = item.status === "Done" || item.status === "Served" || item.status === "Đã xong";
+    if (isFinished) return;
 
     var $noteBox = $('.note-box[data-index="' + index + '"]');
     $noteBox.toggle();
@@ -359,6 +396,15 @@ $(document).ready(function () {
     // Add new item to cart
     // ================================
     $(document).on('click', '.btn-select-item', function () {
+        // Kiểm tra order đã Confirmed chưa
+        if (orderStatus && orderStatus.toLowerCase() === 'confirmed') {
+            showWarningModal({
+                type: 'orderConfirmed',
+                message: 'Đơn hàng đã được xác nhận, không thể thêm món mới.'
+            });
+            return;
+        }
+
         var $btn = $(this);
         var itemId = $btn.data('id');
         var isCombo = $btn.data('iscombo') === true || $btn.data('iscombo') === "True";
@@ -406,6 +452,11 @@ $(document).ready(function () {
     // Save Order
     // ================================
     $('.btn-save-order').click(function () {
+        // Kiểm tra order đã Confirmed chưa
+        if (orderStatus && orderStatus.toLowerCase() === 'confirmed') {
+            alert('⚠️ Đơn hàng đã được xác nhận, không thể lưu thay đổi.');
+            return;
+        }
 
         var $btn = $(this);
         $btn.prop('disabled', true).text('Đang lưu...');

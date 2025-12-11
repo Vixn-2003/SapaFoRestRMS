@@ -125,12 +125,12 @@
                
                 @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
                 {
-                    <a asp-controller="ShiftManagement" 
+                    @* <a asp-controller="ShiftManagement" 
                        asp-action="Index" 
                        class="menu-item @(currentController == "ShiftManagement" ? "active" : "")">
                         <i class="fa-solid fa-calendar-check me-1"></i>
                         Quản lý Ca làm việc
-                    </a>
+                    </a> *@
                     <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" 
                        class="menu-item @(currentController == "CashierPaymentFlow" ? "active" : "")">
                         Danh sách order

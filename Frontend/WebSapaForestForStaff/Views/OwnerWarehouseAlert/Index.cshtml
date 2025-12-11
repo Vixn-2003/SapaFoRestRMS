@@ -1,0 +1,265 @@
+@model WebSapaForestForStaff.Models.Owner.WarehouseAlertViewModel
+@{
+    ViewData["Title"] = "Warehouse Alerts";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .alert-card {
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .alert-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .alert-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .severity-critical { color: #dc3545; font-weight: bold; }
+        .severity-low { color: #ffc107; }
+        .severity-warning { color: #fd7e14; }
+    </style>
+}
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">⚠️ Warehouse Alerts</h2>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+        </div>
+    }
+    else if (Model.HasData)
+    {
+        <!-- Alert Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="alert-card bg-warning text-white">
+                    <div class="alert-label">Tồn Kho Thấp</div>
+                    <div class="alert-value">@Model.Summary.LowStockCount</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="alert-card bg-danger text-white">
+                    <div class="alert-label">Sắp Hết Hạn</div>
+                    <div class="alert-value">@Model.Summary.NearExpiryCount</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="alert-card bg-dark text-white">
+                    <div class="alert-label">Đã Hết Hạn</div>
+                    <div class="alert-value">@Model.Summary.ExpiredCount</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="alert-card bg-info text-white">
+                    <div class="alert-label">Tổng Cảnh Báo</div>
+                    <div class="alert-value">@Model.Summary.TotalAlertsCount</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie"></i> Phân Loại Cảnh Báo
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="alertCategoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar"></i> Mức Tồn Kho vs Ngưỡng Đặt Hàng
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="stockLevelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expiry Timeline Chart -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-clock"></i> Thời Gian Hết Hạn (15 batch gần nhất)
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="expiryTimelineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Low Stock Items Table -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-warning text-white">
+                        <i class="fas fa-box"></i> Nguyên Liệu Tồn Kho Thấp
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Mã NL</th>
+                                        <th>Tên Nguyên Liệu</th>
+                                        <th>Số Lượng Hiện Tại</th>
+                                        <th>Ngưỡng Đặt Hàng</th>
+                                        <th>Thiếu Hụt</th>
+                                        <th>Kho</th>
+                                        <th>Mức Độ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.LowStockItems)
+                                    {
+                                        <tr>
+                                            <td>@item.IngredientCode</td>
+                                            <td>@item.IngredientName</td>
+                                            <td>@item.CurrentQuantity.ToString("N2") @item.Unit</td>
+                                            <td>@item.ReorderLevel.ToString("N2") @item.Unit</td>
+                                            <td class="text-danger">@item.ShortageAmount.ToString("N2") @item.Unit</td>
+                                            <td>@item.WarehouseName</td>
+                                            <td>
+                                                <span class="severity-@item.Severity.ToLower()">
+                                                    @item.Severity
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Near Expiry Items Table -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <i class="fas fa-calendar-times"></i> Nguyên Liệu Sắp Hết Hạn
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Batch ID</th>
+                                        <th>Tên Nguyên Liệu</th>
+                                        <th>Số Lượng</th>
+                                        <th>Ngày Hết Hạn</th>
+                                        <th>Còn Lại (ngày)</th>
+                                        <th>Kho</th>
+                                        <th>Mức Độ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.NearExpiryItems)
+                                    {
+                                        <tr>
+                                            <td>@item.BatchId</td>
+                                            <td>@item.IngredientName</td>
+                                            <td>@item.Quantity.ToString("N2") @item.Unit</td>
+                                            <td>@item.ExpiryDate.ToString("dd/MM/yyyy")</td>
+                                            <td class="text-danger">@item.DaysUntilExpiry ngày</td>
+                                            <td>@item.WarehouseName</td>
+                                            <td>
+                                                <span class="severity-@item.Severity.ToLower()">
+                                                    @item.Severity
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expired Items Table -->
+        @if (Model.ExpiredItems.Any())
+        {
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <i class="fas fa-trash"></i> Nguyên Liệu Đã Hết Hạn
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Batch ID</th>
+                                            <th>Tên Nguyên Liệu</th>
+                                            <th>Số Lượng</th>
+                                            <th>Ngày Hết Hạn</th>
+                                            <th>Đã Hết Hạn (ngày)</th>
+                                            <th>Kho</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.ExpiredItems)
+                                        {
+                                            <tr class="table-danger">
+                                                <td>@item.BatchId</td>
+                                                <td>@item.IngredientName</td>
+                                                <td>@item.Quantity.ToString("N2") @item.Unit</td>
+                                                <td>@item.ExpiryDate.ToString("dd/MM/yyyy")</td>
+                                                <td>@item.DaysExpired ngày</td>
+                                                <td>@item.WarehouseName</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        var warehouseData = {
+            categoryDistribution: @Html.Raw(Json.Serialize(Model.CategoryDistribution)),
+            stockLevelChart: @Html.Raw(Json.Serialize(Model.StockLevelChart)),
+            expiryTimeline: @Html.Raw(Json.Serialize(Model.ExpiryTimeline))
+        };
+    </script>
+    <script src="~/js/owner-warehouse-charts.js"></script>
+}
+
