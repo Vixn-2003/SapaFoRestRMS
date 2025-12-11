@@ -297,6 +297,9 @@ builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
 // Customer Management Service
 builder.Services.AddScoped<ICustomerManagementService, CustomerManagementService>();
 
+// Staff Management Service
+builder.Services.AddScoped<IStaffManagementService, StaffManagementService>();
+
 // Owner Dashboard Services
 builder.Services.AddScoped<IOwnerDashboardService, OwnerDashboardService>();
 builder.Services.AddScoped<IOwnerRevenueService, OwnerRevenueService>();
@@ -309,6 +312,10 @@ builder.Services.AddScoped<ICounterStaffOrderRepository, CounterStaffOrderReposi
 builder.Services.AddScoped<ICounterStaffOrderService, CounterStaffOrderService>();
 builder.Services.AddScoped<ICounterTransactionRepository, CounterTransactionRepository>();
 builder.Services.AddScoped<ICounterTransactionService, CounterTransactionService>();
+
+// Admin Dashboard Services
+builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 
 // Receipt Service - Pass WebRootPath from IWebHostEnvironment
 builder.Services.AddScoped<IReceiptService>(sp =>

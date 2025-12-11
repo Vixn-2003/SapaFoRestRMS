@@ -40,6 +40,8 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
         IReservationRepository Reservations { get; }
         
         ICustomerManagementRepository CustomerManagement { get; }
+        
+        IStaffManagementRepository StaffManagement { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

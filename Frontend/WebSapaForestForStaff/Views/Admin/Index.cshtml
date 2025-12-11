@@ -1,47 +1,513 @@
 @model WebSapaForestForStaff.Models.Admin.AdminDashboardViewModel
 @{
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
-    ViewData["Title"] = "Admin Dashboard";
+    ViewData["Title"] = "Admin Dashboard - Tổng quan Hệ thống";
 }
 
-<div class="row">
-    <div class="col-12 grid-margin">
-        <div class="card">
+@section Styles {
+    <style>
+        .dashboard-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .kpi-card {
+            border-left: 4px solid;
+            height: 100%;
+        }
+        .kpi-card.primary { border-left-color: #007bff; }
+        .kpi-card.success { border-left-color: #28a745; }
+        .kpi-card.warning { border-left-color: #ffc107; }
+        .kpi-card.danger { border-left-color: #dc3545; }
+        .kpi-card.info { border-left-color: #17a2b8; }
+        .kpi-card.secondary { border-left-color: #6c757d; }
+        
+        .kpi-icon {
+            font-size: 2.5rem;
+            opacity: 0.3;
+        }
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0;
+        }
+        .kpi-label {
+            color: #6c757d;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .section-title {
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #007bff;
+        }
+        .table-sm td, .table-sm th {
+            padding: 0.5rem;
+        }
+        .badge-role {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .quick-action-btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+}
+
+<!-- Page Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card dashboard-card">
             <div class="card-body">
-                <h4 class="card-title">Trang quản trị hệ thống</h4>
-                <p>
-                    Quản trị toàn bộ hệ thống: tạo tài khoản, phân quyền, kiểm soát truy cập; quản lý thực đơn, giá, khuyến mãi và báo cáo để hệ thống vận hành an toàn, ổn định.
+                <h3 class="card-title mb-2">
+                    <i class="fas fa-chart-line text-primary"></i>
+                    Admin Dashboard - Tổng quan Hệ thống
+                </h3>
+                <p class="text-muted mb-0">
+                    Quản trị toàn bộ hệ thống: người dùng, hoạt động, doanh thu và cảnh báo kho hàng
                 </p>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-primary text-white">
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <strong>Cảnh báo!</strong> @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- KPI Cards Section -->
+<div class="row mb-4">
+    <!-- Total Users -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card kpi-card primary dashboard-card">
             <div class="card-body">
-                <h4 class="mb-2">Tổng người dùng</h4>
-                <h2 class="fw-bold">@Model.TotalUsers</h2>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="kpi-label">Tổng Người Dùng</div>
+                        <h2 class="kpi-value text-primary">@Model.Dashboard.KpiCards.TotalUsers</h2>
+                        <small class="text-success">
+                            <i class="fas fa-user-check"></i> 
+                            @Model.Dashboard.KpiCards.ActiveUsers hoạt động
+                        </small>
+                    </div>
+                    <div>
+                        <i class="fas fa-users kpi-icon text-primary"></i>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-info text-white">
+
+    <!-- Today Revenue -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card kpi-card success dashboard-card">
             <div class="card-body">
-                <h4 class="mb-2">Đơn đặt (Chờ/Xác nhận)</h4>
-                <h2 class="fw-bold">@Model.TotalReservationsPendingOrConfirmed</h2>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                        <h2 class="kpi-value text-success">@Model.Dashboard.KpiCards.TodayRevenue.ToString("N0")</h2>
+                        <small class="text-muted">VNĐ</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-dollar-sign kpi-icon text-success"></i>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-success text-white">
+
+    <!-- Today Reservations -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card kpi-card info dashboard-card">
             <div class="card-body">
-                <h4 class="mb-2">Sự kiện/KM</h4>
-                <h2 class="fw-bold">@Model.TotalEvents</h2>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="kpi-label">Đặt Bàn Hôm Nay</div>
+                        <h2 class="kpi-value text-info">@Model.Dashboard.KpiCards.TodayReservations</h2>
+                        <small class="text-muted">Reservations</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar-check kpi-icon text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Count -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card kpi-card danger dashboard-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="kpi-label">Cảnh Báo Kho</div>
+                        <h2 class="kpi-value text-danger">@Model.Dashboard.KpiCards.TotalAlertsCount</h2>
+                        <small class="text-muted">Cần xử lý</small>
+                    </div>
+                    <div>
+                        <i class="fas fa-exclamation-triangle kpi-icon text-danger"></i>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Additional KPI Cards Row -->
+<div class="row mb-4">
+    <!-- Today Orders -->
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card kpi-card warning dashboard-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">Đơn Hàng</div>
+                <h3 class="kpi-value text-warning mb-0">@Model.Dashboard.KpiCards.TodayOrders</h3>
+            </div>
+        </div>
+    </div>
 
+    <!-- Completed Payments -->
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card kpi-card success dashboard-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">Thanh Toán</div>
+                <h3 class="kpi-value text-success mb-0">@Model.Dashboard.KpiCards.CompletedPaymentsToday</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Payments -->
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card kpi-card warning dashboard-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">Chờ TT</div>
+                <h3 class="kpi-value text-warning mb-0">@Model.Dashboard.KpiCards.PendingPayments</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Month Revenue -->
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card kpi-card secondary dashboard-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">DT Tháng</div>
+                <h3 class="kpi-value text-secondary mb-0">@(Model.Dashboard.KpiCards.MonthRevenue / 1000000).ToString("N1")M</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Users -->
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card kpi-card success dashboard-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">Hoạt Động</div>
+                <h3 class="kpi-value text-success mb-0">@Model.Dashboard.KpiCards.ActiveUsers</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inactive Users -->
+    <div class="col-xl-2 col-md-4 mb-3">
+        <div class="card kpi-card secondary dashboard-card">
+            <div class="card-body text-center">
+                <div class="kpi-label">Không Hoạt Động</div>
+                <h3 class="kpi-value text-secondary mb-0">@Model.Dashboard.KpiCards.InactiveUsers</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row mb-4">
+    <!-- User Roles Distribution - Pie Chart -->
+    <div class="col-xl-4 col-lg-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-tag text-primary"></i>
+                    Phân Bố Người Dùng Theo Vai Trò
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="userRolesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Last 7 Days - Line Chart -->
+    <div class="col-xl-8 col-lg-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line text-success"></i>
+                    Doanh Thu 7 Ngày Gần Nhất
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Orders Last 7 Days - Bar Chart -->
+    <div class="col-xl-8 col-lg-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-shopping-cart text-info"></i>
+                    Đơn Hàng 7 Ngày Gần Nhất
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warehouse Alerts - Donut Chart -->
+    <div class="col-xl-4 col-lg-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-warehouse text-warning"></i>
+                    Cảnh Báo Kho Hàng
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="warehouseAlertsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics and Logs Section -->
+<div class="row mb-4">
+    <!-- Top 5 Best Selling Categories -->
+    <div class="col-xl-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy text-warning"></i>
+                    Top 5 Danh Mục Bán Chạy Nhất
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Danh Mục</th>
+                                <th class="text-end">Đã Bán</th>
+                                <th class="text-end">Doanh Thu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Dashboard.Top5BestSellingCategories.Any())
+                            {
+                                int index = 1;
+                                foreach (var category in Model.Dashboard.Top5BestSellingCategories)
+                                {
+                                    <tr>
+                                        <td><strong>@index</strong></td>
+                                        <td>@category.CategoryName</td>
+                                        <td class="text-end">@category.ItemsSold</td>
+                                        <td class="text-end text-success"><strong>@category.Revenue.ToString("N0") VNĐ</strong></td>
+                                    </tr>
+                                    index++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Chưa có dữ liệu</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 5 Active Users -->
+    <div class="col-xl-6 mb-4">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-check text-primary"></i>
+                    Top 5 Người Dùng Hoạt Động Nhiều Nhất
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Username</th>
+                                <th>Họ Tên</th>
+                                <th class="text-end">Đăng Nhập</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Dashboard.Top5ActiveUsers.Any())
+                            {
+                                int index = 1;
+                                foreach (var user in Model.Dashboard.Top5ActiveUsers)
+                                {
+                                    <tr>
+                                        <td><strong>@index</strong></td>
+                                        <td>@user.Username</td>
+                                        <td>@user.FullName</td>
+                                        <td class="text-end"><span class="badge bg-primary">@user.LoginCount lần</span></td>
+                                    </tr>
+                                    index++;
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Chưa có dữ liệu</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Logs Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-history text-secondary"></i>
+                    Hoạt Động Hệ Thống Gần Nhất
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 180px;">Thời Gian</th>
+                                <th style="width: 150px;">Người Dùng</th>
+                                <th>Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Dashboard.RecentLogs.Any())
+                            {
+                                foreach (var log in Model.Dashboard.RecentLogs)
+                                {
+                                    <tr>
+                                        <td><small>@log.TimeFormatted</small></td>
+                                        <td><span class="badge bg-secondary">@log.Username</span></td>
+                                        <td><small>@log.Action</small></td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">Chưa có log nào</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="card dashboard-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt text-warning"></i>
+                    Thao Tác Nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <a href="/Users" class="btn btn-outline-primary quick-action-btn">
+                            <i class="fas fa-users"></i> Quản Lý User
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <a href="/DashboardTable" class="btn btn-outline-info quick-action-btn">
+                            <i class="fas fa-shopping-cart"></i> Quản Lý Order
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <a href="/Inventory/DashboardInventory" class="btn btn-outline-warning quick-action-btn">
+                            <i class="fas fa-warehouse"></i> Cảnh Báo Kho
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <a href="/OwnerRevenue" class="btn btn-outline-success quick-action-btn">
+                            <i class="fas fa-chart-bar"></i> Báo Cáo DT
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <a href="/ReservationStaff" class="btn btn-outline-secondary quick-action-btn">
+                            <i class="fas fa-calendar"></i> Đặt Bàn
+                        </a>
+                    </div>
+                    <div class="col-md-2 col-sm-6 mb-2">
+                        <a href="/ShiftManagement" class="btn btn-outline-dark quick-action-btn">
+                            <i class="fas fa-clock"></i> Quản Lý Ca
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <script>
+        // Pass data from Razor to JavaScript
+        var userRolesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard.UserRoleDistribution));
+        var revenueData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard.RevenueLast7Days));
+        var ordersData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard.OrdersLast7Days));
+        var warehouseAlertsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard.WarehouseAlerts));
+    </script>
+    
+    <script src="~/js/admin-dashboard.js"></script>
+}
