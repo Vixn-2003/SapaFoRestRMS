@@ -55,6 +55,27 @@ namespace BusinessAccessLayer.DTOs.Waiter
         public bool CanReturn { get; set; } // Có thể trả (đã nấu/đã ra)
         public bool CanRequestUrgent { get; set; } // Có thể yêu cầu làm gấp
         public bool IsSplit { get; set; } // Đã được tách từ order detail gốc (bếp phó nấu một phần)
+        
+        /// <summary>
+        /// BillingType của món: 0=Unspecified, 1=ConsumptionBased, 2=KitchenPrepared
+        /// Món có BillingType = 1 (ConsumptionBased) có thể tăng/giảm số lượng kể cả sau khi xác nhận
+        /// </summary>
+        public int? BillingType { get; set; }
+        
+        /// <summary>
+        /// True nếu là món ConsumptionBased (BillingType = 1) - có thể tăng/giảm số lượng
+        /// </summary>
+        public bool IsConsumptionBased => BillingType == 1;
+        
+        /// <summary>
+        /// Số lượng thực tế đã sử dụng (cho ConsumptionBased items)
+        /// </summary>
+        public int? QuantityUsed { get; set; }
+        
+        /// <summary>
+        /// True nếu có thể xác nhận số lượng ngay (cho món ConsumptionBased, không cần chờ Ready)
+        /// </summary>
+        public bool CanConfirmQuantity { get; set; }
     }
 }
 

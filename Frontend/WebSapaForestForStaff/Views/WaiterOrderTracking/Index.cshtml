@@ -730,6 +730,8 @@
                                         var isPending = itemStatusLower.Contains("pending") || itemStatusLower.Contains("chờ") || itemStatusLower.Contains("chờ bếp");
                                         var isCooking = itemStatusLower.Contains("cooking") || itemStatusLower.Contains("chế biến") || itemStatusLower.Contains("đang nấu");
                                         var isReadyStatus = itemStatusLower.Contains("ready") || itemStatusLower.Contains("sẵn sàng");
+                                        var isConsumptionBased = item.BillingType.HasValue && item.BillingType.Value == 1;
+                                        var canConfirmQuantity = item.CanConfirmQuantity || (isConsumptionBased && !isDone);
                                     }
                                     <div class="item-row @(isReady ? "ready" : "") @(item.IsUrgent ? "urgent" : "")"
                                          data-item-id="@item.OrderDetailId"
@@ -802,8 +804,30 @@
                                                 </div>
                                             }
                                             
-                                            <!-- Ready Status - Button LẤY MÓN lớn -->
-                                                @if (isReadyStatus)
+                                            <!-- Món ConsumptionBased - Button XÁC NHẬN SỐ LƯỢNG (không cần chờ Ready) -->
+                                            @if (canConfirmQuantity && !isDone)
+                                            {
+                                                var quantityInputId = $"quantity_{item.OrderDetailId}_{(item.OrderComboItemId ?? 0)}";
+                                                var comboItemId = item.OrderComboItemId ?? 0;
+                                                var menuItemNameEscaped = item.MenuItemName.Replace("'", "\\'");
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <input type="number" 
+                                                           id="@quantityInputId" 
+                                                           class="form-control" 
+                                                           style="width: 80px; text-align: center;" 
+                                                           value="@(item.QuantityUsed ?? item.Quantity)" 
+                                                           min="1" 
+                                                           onchange="updateConsumptionQuantity(@item.OrderDetailId, @comboItemId, this.value)" />
+                                                    <button class="btn-pickup" style="background: #10b981; border-color: #10b981; flex: 1;" 
+                                                            onclick="event.stopPropagation(); confirmConsumptionQuantity(@item.OrderDetailId, @comboItemId, '@menuItemNameEscaped')">
+                                                        <i class="fas fa-check-circle"></i>
+                                                        XÁC NHẬN
+                                                    </button>
+                                                </div>
+                                            }
+                                            
+                                            <!-- Ready Status - Button LẤY MÓN lớn (chỉ cho món KitchenPrepared) -->
+                                            @if (isReadyStatus && !isConsumptionBased)
                                             {
                                                 @if (item.IsSplit)
                                                 {
@@ -880,6 +904,35 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-primary" onclick="submitPickupRequest()">Xác nhận lấy món</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Consumption Quantity Modal -->
+<div class="modal fade" id="confirmConsumptionQuantityModal" tabindex="-1" aria-labelledby="confirmConsumptionQuantityModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmConsumptionQuantityModalLabel">Xác nhận số lượng đã lấy</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="confirmConsumptionOrderDetailId" />
+                <input type="hidden" id="confirmConsumptionOrderComboItemId" />
+                <div class="mb-3">
+                    <label for="confirmConsumptionMenuItemName" class="form-label">Món:</label>
+                    <input type="text" class="form-control" id="confirmConsumptionMenuItemName" readonly />
+                </div>
+                <div class="mb-3">
+                    <label for="confirmConsumptionQuantity" class="form-label">Số lượng đã lấy:</label>
+                    <input type="number" class="form-control" id="confirmConsumptionQuantity" min="1" value="1" />
+                    <small class="form-text text-muted">Số lượng đặt: <span id="confirmConsumptionOrderQuantity">1</span> | Đã lấy: <span id="confirmConsumptionQuantityUsed">0</span></small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="submitConfirmConsumptionQuantity()">Xác nhận</button>
             </div>
         </div>
     </div>
@@ -1182,6 +1235,8 @@
                     const statusClass = getStatusClassFromJS(item.status);
                     const statusText = getStatusTextFromJS(item.status);
                     const isWaitingLong = (item.waitingMinutes || 0) > 60;
+                    const isConsumptionBased = item.billingType === 1 || item.billingType === "1";
+                    const canConfirmQuantity = item.canConfirmQuantity || (isConsumptionBased && !isDone);
                     
                     html += `
                         <div class="item-row-wrapper" data-item-status="${item.status || ''}" data-is-done="${isDone ? "true" : "false"}">
@@ -1203,7 +1258,22 @@
                                     <div class="action-buttons-row">
                                         ${item.canCancel ? `<button class="btn-action-item btn-cancel" onclick="cancelItem(${item.orderDetailId}, ${item.orderComboItemId || 0})">Hủy</button>` : ''}
                                         ${item.canRequestUrgent ? `<button class="btn-action-item btn-urgent" onclick="requestUrgent(${item.orderDetailId}, ${item.orderComboItemId || 0}, ${item.isUrgent ? 'true' : 'false'})">${item.isUrgent ? 'Hủy gấp' : 'Làm gấp'}</button>` : ''}
-                                        ${item.status && (item.status.toLowerCase().includes("ready") || item.status.toLowerCase().includes("sẵn sàng")) ? `<button class="btn-action-item btn-pickup" onclick="handleServed(${item.orderDetailId}, ${item.orderComboItemId || 0}, ${item.quantity || 1})">Lấy món</button>` : ''}
+                                        ${(item.canConfirmQuantity || (item.billingType === 1 && !isDone)) ? `
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <input type="number" 
+                                                       id="quantity_${item.orderDetailId}_${item.orderComboItemId || 0}" 
+                                                       class="form-control" 
+                                                       style="width: 80px; text-align: center; padding: 4px 8px;" 
+                                                       value="${item.quantityUsed || item.quantity || 1}" 
+                                                       min="1" 
+                                                       onchange="updateConsumptionQuantity(${item.orderDetailId}, ${item.orderComboItemId || 0}, this.value)" />
+                                                <button class="btn-action-item btn-pickup" style="background: #10b981; border-color: #10b981; flex: 1;" 
+                                                        onclick="confirmConsumptionQuantity(${item.orderDetailId}, ${item.orderComboItemId || 0}, '${(item.menuItemName || '').replace(/'/g, "\\'")}')">
+                                                    Xác nhận
+                                                </button>
+                                            </div>
+                                        ` : ''}
+                                        ${item.status && (item.status.toLowerCase().includes("ready") || item.status.toLowerCase().includes("sẵn sàng")) && item.billingType !== 1 ? `<button class="btn-action-item btn-pickup" onclick="handleServed(${item.orderDetailId}, ${item.orderComboItemId || 0}, ${item.quantity || 1})">Lấy món</button>` : ''}
                                     </div>
                                 </div>
                             </div>

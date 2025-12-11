@@ -555,7 +555,28 @@ public class PaymentService : IPaymentService
 
             if (confirmed.IsRemoved)
             {
-                // Món bị hủy: set cả Quantity và QuantityUsed về 0
+                // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+                // Phải gọi TRƯỚC khi set status = Removed để release có thể check status Pending/Cooking
+                if (detail.MenuItem != null)
+                {
+                    try
+                    {
+                        var inventoryService = _serviceProvider.GetRequiredService<IInventoryIngredientService>();
+                        var releaseResult = await inventoryService.ReleaseReservedBatchesForOrderDetailAsync(detail.OrderDetailId);
+                        if (!releaseResult.success)
+                        {
+                            // Log warning nhưng không fail việc hủy món
+                            Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {detail.OrderDetailId}: {releaseResult.message}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error nhưng không fail việc hủy món
+                        Console.WriteLine($"Error releasing reserved batches for order detail {detail.OrderDetailId}: {ex.Message}");
+                    }
+                }
+                
+                // Món bị hủy: set cả Quantity và QuantityUsed về 0 (SAU KHI đã release)
                 detail.Quantity = 0;
                 detail.QuantityUsed = 0;
                 detail.Status = "Removed";
@@ -2276,6 +2297,28 @@ public class PaymentService : IPaymentService
             throw new InvalidOperationException(validationReason);
         }
 
+        // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+        // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
+        // Phải gọi TRƯỚC khi set status = Removed để release có thể check status Pending/Cooking
+        if (orderDetail.MenuItem != null)
+        {
+            try
+            {
+                var inventoryService = _serviceProvider.GetRequiredService<IInventoryIngredientService>();
+                var releaseResult = await inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
+                if (!releaseResult.success)
+                {
+                    // Log warning nhưng không fail việc hủy món
+                    Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {orderDetailId}: {releaseResult.message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error nhưng không fail việc hủy món
+                Console.WriteLine($"Error releasing reserved batches for order detail {orderDetailId}: {ex.Message}");
+            }
+        }
+
         // Mark as removed
         orderDetail.Status = "Removed";
         orderDetail.Quantity = 0;
@@ -2323,11 +2366,6 @@ public class PaymentService : IPaymentService
         // Check kitchen status
         var status = orderDetail.Status ?? "Pending";
 
-        if (status == "Cooking")
-        {
-            return (false, "Món đang được chế biến, không thể hủy");
-        }
-
         if (status == "Done" || status == "Served")
         {
             return (false, "Món đã hoàn thành, không thể hủy");
@@ -2338,8 +2376,8 @@ public class PaymentService : IPaymentService
             return (false, "Món đã được hủy trước đó");
         }
 
-        // Can cancel if status is Pending or Confirmed (NotStarted)
-        if (status == "Pending" || status == "Confirmed")
+        // Can cancel if status is Pending, Confirmed, or Cooking
+        if (status == "Pending" || status == "Cooking")
         {
             return (true, "Có thể hủy món");
         }
@@ -2380,23 +2418,47 @@ public class PaymentService : IPaymentService
             }
         }
 
-        // Cập nhật trạng thái đơn hàng thành "Cancelled"
-        order.Status = "Cancelled";
-
+        // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
         // Hủy tất cả các món trong đơn (nếu chưa được chế biến)
         if (order.OrderDetails != null)
         {
+            var inventoryService = _serviceProvider.GetRequiredService<IInventoryIngredientService>();
+            
             foreach (var detail in order.OrderDetails)
             {
                 var status = (detail.Status ?? "").Trim().ToLower();
-                if (status == "pending" || status == "confirmed" || status == "đã gửi")
+                if (status == "pending" || status == "confirmed" || status == "đã gửi" || status == "cooking")
                 {
+                    // ✅ Giải phóng reserved quantity TRƯỚC KHI set status = Cancelled
+                    // Phải gọi TRƯỚC để release có thể check status Pending/Cooking
+                    if (detail.MenuItem != null)
+                    {
+                        try
+                        {
+                            var releaseResult = await inventoryService.ReleaseReservedBatchesForOrderDetailAsync(detail.OrderDetailId);
+                            if (!releaseResult.success)
+                            {
+                                // Log warning nhưng không fail việc hủy món
+                                Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {detail.OrderDetailId}: {releaseResult.message}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log error nhưng không fail việc hủy món
+                            Console.WriteLine($"Error releasing reserved batches for order detail {detail.OrderDetailId}: {ex.Message}");
+                        }
+                    }
+                    
+                    // Sau khi release, mới set status = Cancelled
                     detail.Status = "Cancelled";
                     detail.Quantity = 0;
                     detail.QuantityUsed = 0;
                 }
             }
         }
+
+        // Cập nhật trạng thái đơn hàng thành "Cancelled"
+        order.Status = "Cancelled";
 
         await _unitOfWork.Payments.UpdateAsync(order);
         await _unitOfWork.SaveChangesAsync();
