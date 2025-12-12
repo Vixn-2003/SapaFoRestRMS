@@ -1,0 +1,204 @@
+@model WebSapaForestForStaff.Models.Owner.RevenueViewModel
+@{
+    ViewData["Title"] = "Revenue Management";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .summary-card {
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .summary-label {
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+}
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">💰 Revenue Management</h2>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+        </div>
+    }
+    else if (Model.HasData)
+    {
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <form method="get" action="/OwnerRevenue/Index" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Từ ngày</label>
+                    <input type="date" class="form-control" name="startDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Đến ngày</label>
+                    <input type="date" class="form-control" name="endDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Chi nhánh</label>
+                    <select class="form-select" name="branch">
+                        <option value="ALL" selected>Tất cả</option>
+                        <option value="Sapa Forest Restaurant">Sapa Forest</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Phương thức</label>
+                    <select class="form-select" name="paymentMethod">
+                        <option value="ALL" selected="@(Model.SelectedPaymentMethod == "ALL")">Tất cả</option>
+                        <option value="Cash" selected="@(Model.SelectedPaymentMethod == "Cash")">Tiền mặt</option>
+                        <option value="QR" selected="@(Model.SelectedPaymentMethod == "QR")">QR Code</option>
+                        <option value="Combined" selected="@(Model.SelectedPaymentMethod == "Combined")">Kết hợp</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Lọc
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="summary-card bg-light">
+                    <div class="summary-label">Tổng Doanh Thu</div>
+                    <div class="summary-value text-primary">@Model.Summary.TotalRevenue.ToString("N0") đ</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card bg-light">
+                    <div class="summary-label">Tổng Đơn Hàng</div>
+                    <div class="summary-value text-success">@Model.Summary.TotalOrders</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card bg-light">
+                    <div class="summary-label">Trung Bình/Đơn</div>
+                    <div class="summary-value text-info">@Model.Summary.AveragePerOrder.ToString("N0") đ</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="summary-card bg-light">
+                    <div class="summary-label">Tiền Mặt / QR / Kết hợp</div>
+                    <div class="summary-value text-warning" style="font-size: 1rem;">
+                        @Model.Summary.CashRevenue.ToString("N0") / 
+                        @Model.Summary.QrRevenue.ToString("N0") / 
+                        @Model.Summary.CombinedRevenue.ToString("N0")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-area"></i> Xu Hướng Doanh Thu
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="revenueTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie"></i> Phương Thức Thanh Toán
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="paymentMethodChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Details Table -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-table"></i> Chi Tiết Giao Dịch
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Mã GD</th>
+                                        <th>Ngày</th>
+                                        <th>Khách Hàng</th>
+                                        <th>Phương Thức</th>
+                                        <th>Số Tiền</th>
+                                        <th>Trạng Thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var detail in Model.Details)
+                                    {
+                                        <tr>
+                                            <td>@detail.TransactionCode</td>
+                                            <td>@detail.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@detail.CustomerName</td>
+                                            <td>
+                                                <span class="badge bg-@(detail.PaymentMethod == "Cash" ? "success" : detail.PaymentMethod == "QR" ? "info" : "warning")">
+                                                    @detail.PaymentMethod
+                                                </span>
+                                            </td>
+                                            <td class="text-end">@detail.Amount.ToString("N0") đ</td>
+                                            <td>
+                                                <span class="badge bg-@(detail.Status == "Paid" ? "success" : "secondary")">
+                                                    @detail.Status
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        var revenueData = {
+            trendData: @Html.Raw(Json.Serialize(Model.TrendData)),
+            paymentBreakdown: @Html.Raw(Json.Serialize(Model.PaymentBreakdown)),
+            branchComparison: @Html.Raw(Json.Serialize(Model.BranchComparison))
+        };
+    </script>
+    <script src="~/js/owner-revenue-charts.js"></script>
+}
+

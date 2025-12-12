@@ -81,9 +81,6 @@ namespace BusinessAccessLayer.Services
             return ingredients;
         }
 
-        /// <summary>
-        /// Reserve batches for an order detail when Bếp phó duyệt (status changes to Cooking)
-        /// </summary>
         public async Task<(bool success, string message)> ReserveBatchesForOrderDetailAsync(int orderDetailId)
         {
             try
@@ -116,7 +113,6 @@ namespace BusinessAccessLayer.Services
                 {
                     var totalNeeded = recipe.QuantityNeeded * orderQuantity;
                     
-                    // Get available batches for this ingredient (FEFO - First Expiry First Out)
                     var availableBatches = await _unitOfWork.InventoryIngredient.GetAvailableBatchesByIngredientAsync(recipe.IngredientId);
                     
                     decimal remainingToReserve = totalNeeded;
@@ -183,10 +179,6 @@ namespace BusinessAccessLayer.Services
             }
         }
 
-        /// <summary>
-        /// Consume reserved batches when Nấu xong (status changes to Done)
-        /// Sử dụng Quantity của OrderDetail
-        /// </summary>
         public async Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailAsync(int orderDetailId)
         {
             // Get order detail with menu item and recipes
@@ -200,9 +192,6 @@ namespace BusinessAccessLayer.Services
             return await ConsumeReservedBatchesForOrderDetailWithQuantityAsync(orderDetailId, orderDetail.Quantity);
         }
 
-        /// <summary>
-        /// Consume reserved batches với số lượng cụ thể (dùng cho ConsumptionBased items với QuantityUsed)
-        /// </summary>
         public async Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailWithQuantityAsync(int orderDetailId, int quantityToConsume)
         {
             try
@@ -285,16 +274,6 @@ namespace BusinessAccessLayer.Services
                 return (false, $"Lỗi khi tiêu thụ nguyên liệu: {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// Release reserved batches when Hủy món (cancel order detail)
-        /// ✅ QUAN TRỌNG: Release số lượng đã reserve cho món này
-        /// Vì hệ thống không track batch nào reserve cho orderDetail nào,
-        /// nên release dựa trên số lượng cần thiết (recipe.QuantityNeeded * orderQuantity)
-        /// từ các batch có reserved > 0 (theo FEFO)
-        /// 
-        /// ⚠️ CHỈ RELEASE KHI STATUS LÀ Pending hoặc Cooking (món đã được reserve nguyên liệu)
-        /// </summary>
         public async Task<(bool success, string message)> ReleaseReservedBatchesForOrderDetailAsync(int orderDetailId)
         {
             try
@@ -417,10 +396,6 @@ namespace BusinessAccessLayer.Services
                 return (false, $"Lỗi khi giải phóng nguyên liệu: {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// Lấy danh sách nguyên liệu cần lấy từ lô hàng cho các món đang nấu, filter theo category
-        /// </summary>
         public async Task<List<IngredientPickupDTO>> GetIngredientPickupListAsync(string? categoryName = null)
         {
             var result = new List<IngredientPickupDTO>();
@@ -551,9 +526,6 @@ namespace BusinessAccessLayer.Services
                 .ToList();
         }
 
-        /// <summary>
-        /// Phát hiện và trả về danh sách nguyên liệu thiếu cho các món đang nấu
-        /// </summary>
         public async Task<List<IngredientShortageDTO>> GetIngredientShortageListAsync()
         {
             var result = new List<IngredientShortageDTO>();

@@ -1,0 +1,267 @@
+@{
+    ViewData["Title"] = "Xác thực PIN";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    var shiftId = ViewData["ShiftId"];
+    var toStaffId = ViewData["ToStaffId"];
+    var currentStaffName = ViewData["CurrentStaffName"];
+}
+
+<style>
+    .verify-pin-container {
+        max-width: 600px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .step-header {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border-radius: 18px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(245, 158, 11, 0.2);
+    }
+
+    .verify-card {
+        background: white;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        text-align: center;
+    }
+
+    .pin-input-group {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin: 32px 0;
+    }
+
+    .pin-input {
+        width: 60px;
+        height: 70px;
+        text-align: center;
+        font-size: 32px;
+        font-weight: bold;
+        border: 3px solid #d1d5db;
+        border-radius: 12px;
+        transition: all 0.2s;
+    }
+
+    .pin-input:focus {
+        border-color: #f59e0b;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+    }
+
+    .security-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        font-size: 40px;
+    }
+</style>
+
+<div class="verify-pin-container">
+    <!-- Step Header -->
+    <div class="step-header">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-shield-lock fs-1 me-3"></i>
+            <div>
+                <h3 class="mb-1">Xác thực danh tính</h3>
+                <p class="mb-0 opacity-90">Bước 3/4: Nhập mã PIN để xác nhận</p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar" role="progressbar" style="width: 75%; background-color: white;"></div>
+        </div>
+    </div>
+
+    <!-- Verify Card -->
+    <div class="verify-card">
+        <div class="security-icon">
+            <i class="bi bi-lock-fill"></i>
+        </div>
+
+        <h4 class="mb-2">Nhập mã PIN bảo mật</h4>
+        <p class="text-muted mb-4">
+            Xác thực danh tính của <strong>@currentStaffName</strong><br>
+            để hoàn tất bàn giao ca làm việc
+        </p>
+
+        <form id="pinVerifyForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="shiftId" value="@shiftId" />
+            <input type="hidden" id="toStaffId" value="@toStaffId" />
+
+            <!-- PIN Input -->
+            <div class="pin-input-group">
+                <input type="password" class="form-control pin-input" maxlength="1" id="pin1" oninput="moveToNext(this, 'pin2')" onkeydown="handleBackspace(event, this, null)">
+                <input type="password" class="form-control pin-input" maxlength="1" id="pin2" oninput="moveToNext(this, 'pin3')" onkeydown="handleBackspace(event, this, 'pin1')">
+                <input type="password" class="form-control pin-input" maxlength="1" id="pin3" oninput="moveToNext(this, 'pin4')" onkeydown="handleBackspace(event, this, 'pin2')">
+                <input type="password" class="form-control pin-input" maxlength="1" id="pin4" oninput="verifyPin()" onkeydown="handleBackspace(event, this, 'pin3')">
+            </div>
+
+            <div class="alert alert-warning mb-4">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <small>Vì lý do bảo mật, bạn cần nhập mã PIN cá nhân để xác nhận thao tác bàn giao ca.</small>
+            </div>
+
+            <!-- Error Message -->
+            <div class="alert alert-danger d-none" id="errorAlert">
+                <i class="bi bi-x-circle me-2"></i>
+                <span id="errorMessage">Mã PIN không chính xác</span>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-3">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary btn-lg flex-grow-1">
+                    <i class="bi bi-arrow-left me-2"></i>Quay lại
+                </a>
+                <button type="button" onclick="verifyPin()" class="btn btn-warning btn-lg flex-grow-1" id="verifyBtn" disabled>
+                    <i class="bi bi-shield-check me-2"></i>Xác thực
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function moveToNext(current, nextFieldId) {
+            if (current.value.length >= 1) {
+                const nextField = document.getElementById(nextFieldId);
+                if (nextField) {
+                    nextField.focus();
+                }
+            }
+            
+            // Check if all fields are filled
+            checkPinComplete();
+        }
+
+        function handleBackspace(event, current, prevFieldId) {
+            if (event.key === 'Backspace' && !current.value && prevFieldId) {
+                document.getElementById(prevFieldId).focus();
+            }
+        }
+
+        function checkPinComplete() {
+            const pin1 = document.getElementById('pin1').value;
+            const pin2 = document.getElementById('pin2').value;
+            const pin3 = document.getElementById('pin3').value;
+            const pin4 = document.getElementById('pin4').value;
+            
+            const verifyBtn = document.getElementById('verifyBtn');
+            if (pin1 && pin2 && pin3 && pin4) {
+                verifyBtn.disabled = false;
+            } else {
+                verifyBtn.disabled = true;
+            }
+        }
+
+        async function verifyPin() {
+            const pin1 = document.getElementById('pin1').value;
+            const pin2 = document.getElementById('pin2').value;
+            const pin3 = document.getElementById('pin3').value;
+            const pin4 = document.getElementById('pin4').value;
+            
+            if (!pin1 || !pin2 || !pin3 || !pin4) {
+                showToast('Vui lòng nhập đầy đủ mã PIN', 'error');
+                return;
+            }
+            
+            const pinCode = pin1 + pin2 + pin3 + pin4;
+            const shiftId = parseInt(document.getElementById('shiftId').value);
+            const toStaffId = parseInt(document.getElementById('toStaffId').value);
+            
+            const verifyBtn = document.getElementById('verifyBtn');
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xác thực...';
+            
+            try {
+                const response = await fetch('/shift-management/handover/verify-pin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({
+                        shiftId: shiftId,
+                        pinCode: pinCode
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('Xác thực thành công!', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/shift-management/handover/confirm?shiftId=${shiftId}&toStaffId=${toStaffId}`;
+                    }, 500);
+                } else {
+                    // Show error
+                    document.getElementById('errorAlert').classList.remove('d-none');
+                    document.getElementById('errorMessage').textContent = result.message || 'Mã PIN không chính xác';
+                    
+                    // Clear PIN inputs
+                    document.getElementById('pin1').value = '';
+                    document.getElementById('pin2').value = '';
+                    document.getElementById('pin3').value = '';
+                    document.getElementById('pin4').value = '';
+                    document.getElementById('pin1').focus();
+                    
+                    verifyBtn.disabled = true;
+                    verifyBtn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Xác thực';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Lỗi kết nối. Vui lòng thử lại.', 'error');
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Xác thực';
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+
+        // Auto-focus first PIN input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('pin1').focus();
+        });
+    </script>
+}
+

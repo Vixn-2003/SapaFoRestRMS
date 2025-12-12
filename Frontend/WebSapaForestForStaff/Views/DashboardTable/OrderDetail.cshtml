@@ -673,18 +673,32 @@
             </button>
             @if (userPositionId == 1)  // Waiter
             {
-                // ✅ Kiểm tra status: Nếu đã "Confirmed" thì hiển thị nút "Hoàn tác xác nhận"
-                @if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
+                // Điều kiện: chỉ hiển thị nút xác nhận khi đã có ít nhất 1 món đang nấu/đã xong/đang phục vụ
+                var hasCookingOrReadyItems =
+                    (Model?.OrderedItems ?? Enumerable.Empty<WebSapaForestForStaff.DTOs.OrderGuest.OrderedItemDto>())
+                        .Any(x => !string.IsNullOrWhiteSpace(x.Status) &&
+                                  (x.Status.Equals("Cooking", StringComparison.OrdinalIgnoreCase)
+                                  || x.Status.Equals("Ready", StringComparison.OrdinalIgnoreCase)
+                                  || x.Status.Equals("Served", StringComparison.OrdinalIgnoreCase)
+                                  || x.Status.Equals("Done", StringComparison.OrdinalIgnoreCase)));
+
+                if (!hasCookingOrReadyItems)
+                {
+                    <button class="btn-checkout flex-fill" disabled style="opacity: 0.6; cursor: not-allowed;"
+                            title="Cần ít nhất một món đang nấu/đã xong trước khi xác nhận với khách.">
+                        <i class="fa-solid fa-lock me-2"></i>Chưa thể xác nhận
+                    </button>
+                }
+                else if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("Confirmed", StringComparison.OrdinalIgnoreCase))
                 {
                     <button class="btn-checkout flex-fill" style="background-color: #ffc107; border-color: #ffc107;">
-                     Đơn đã được phục vụ xác nhận
+                        Đơn đã được phục vụ xác nhận
                     </button>
-
                 }
                 else
                 {
                     <button class="btn-checkout flex-fill" onclick="handleWaiterConfirmPayment()">
-                        Xác Nhận Thanh Toán <i class="fa-solid fa-check ms-2"></i>
+                        Xác nhận đơn với khách hàng  <i class="fa-solid fa-check ms-2"></i>
                     </button>
                 }
             }
@@ -910,7 +924,7 @@
                     <span class="fw-bold">${customerName}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted"><i class="fa-solid fa-utensils me-2"></i>Số lượng món đã gọi:</span>
+                    <span class="text-muted"><i class="fa-solid fa-utensils me-2"></i>Số lượng món, combo đã gọi:</span>
                     <span class="fw-bold text-primary">${totalQty} món</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
@@ -1059,8 +1073,8 @@
                     Sau khi xác nhận, hệ thống sẽ chuyển sang màn hình thanh toán để xử lý thanh toán.
                 </div>
             </div>`,
-            "💳 Thanh toán bàn",
-            "❌ Hủy"
+            " Thanh toán bàn",
+            " Hủy"
         );
 
         if (!confirmed) {

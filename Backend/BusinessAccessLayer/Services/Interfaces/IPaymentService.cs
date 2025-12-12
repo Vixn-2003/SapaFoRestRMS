@@ -33,7 +33,7 @@ public interface IPaymentService
     /// <summary>
     /// Xử lý thanh toán (xác nhận thanh toán)
     /// </summary>
-    Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, CancellationToken ct = default);
+    Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, int userId, CancellationToken ct = default);
     Task<OrderDto> ConfirmOrderAsync(CustomerConfirmRequestDto request, CancellationToken ct = default);
 
     Task<bool> UndoConfirmOrderAsync(int orderId, UndoConfirmRequestDto request, CancellationToken ct = default);

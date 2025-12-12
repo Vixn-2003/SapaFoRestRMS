@@ -1,0 +1,207 @@
+@model WebSapaForestForStaff.DTOs.ShiftManagement.ShiftDto
+
+@{
+    ViewData["Title"] = "Xác nhận kết ca";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+}
+
+<style>
+    .confirm-closing-container {
+        max-width: 700px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .step-header {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border-radius: 18px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(239, 68, 68, 0.2);
+    }
+
+    .confirm-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 16px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .summary-item:last-child {
+        border-bottom: none;
+        padding-top: 20px;
+        margin-top: 12px;
+        border-top: 3px solid #10b981;
+    }
+
+    .final-amount {
+        font-size: 32px;
+        font-weight: 800;
+        color: #10b981;
+    }
+</style>
+
+<div class="confirm-closing-container">
+    <!-- Step Header -->
+    <div class="step-header">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-check-circle fs-1 me-3"></i>
+            <div>
+                <h3 class="mb-1">Xác nhận kết ca</h3>
+                <p class="mb-0 opacity-90">Bước 4/4: Hoàn tất kết ca làm việc</p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar" role="progressbar" style="width: 100%; background-color: white;"></div>
+        </div>
+    </div>
+
+    <!-- Confirm Card -->
+    <div class="confirm-card">
+        <h5 class="mb-4"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Tóm tắt ca làm việc</h5>
+
+        <div class="summary-item">
+            <span class="text-muted">Thu ngân:</span>
+            <span class="fw-bold">@Model.StaffName</span>
+        </div>
+
+        <div class="summary-item">
+            <span class="text-muted">Ngày làm việc:</span>
+            <span class="fw-bold">@Model.Date.ToString("dd/MM/yyyy")</span>
+        </div>
+
+        <div class="summary-item">
+            <span class="text-muted">Giờ bắt đầu:</span>
+            <span class="fw-bold">@Model.StartTime?.ToString("HH:mm")</span>
+        </div>
+
+        <div class="summary-item">
+            <span class="text-muted">Giờ kết thúc:</span>
+            <span class="fw-bold">@DateTime.Now.ToString("HH:mm")</span>
+        </div>
+
+        <div class="summary-item">
+            <span class="text-muted">Số dư đầu ca:</span>
+            <span class="fw-bold text-success">@Model.OpeningBalance?.ToString("N0") ₫</span>
+        </div>
+
+        <div class="summary-item">
+            <span class="text-muted">Số dư cuối ca:</span>
+            <span class="fw-bold text-danger">@Model.ClosingBalance?.ToString("N0") ₫</span>
+        </div>
+
+        @if (Model.Difference != null && Model.Difference != 0)
+        {
+            <div class="summary-item">
+                <span class="text-muted">Chênh lệch:</span>
+                <span class="fw-bold @(Model.Difference > 0 ? "text-info" : "text-warning")">
+                    @(Model.Difference > 0 ? "+" : "")@Model.Difference?.ToString("N0") ₫
+                </span>
+            </div>
+        }
+
+        <div class="summary-item">
+            <span class="text-muted fs-5"><strong>Tổng doanh thu:</strong></span>
+            <span class="final-amount">@((Model.ClosingBalance - Model.OpeningBalance)?.ToString("N0")) ₫</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.Notes))
+        {
+            <div class="alert alert-secondary mt-3">
+                <strong><i class="bi bi-pencil me-2"></i>Ghi chú:</strong><br>
+                @Model.Notes
+            </div>
+        }
+
+        <div class="alert alert-success mt-4">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>Sẵn sàng kết ca</strong><br>
+            Sau khi xác nhận, ca làm việc sẽ được đóng và bạn sẽ chuyển sang màn hình bàn giao ca (nếu cần) hoặc về Dashboard.
+        </div>
+
+        <!-- Actions -->
+        <form asp-action="ConfirmClosing" method="post" id="confirmClosingForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="shiftId" value="@Model.ShiftId" />
+            
+            <div class="d-flex gap-3 mt-4">
+                <a asp-action="ClosingReview" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Quay lại
+                </a>
+                <button type="submit" class="btn btn-danger btn-lg flex-grow-1" id="confirmBtn">
+                    <i class="bi bi-check-circle me-2"></i>Xác nhận kết ca
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('confirmClosingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!confirm('Xác nhận kết ca làm việc? Hành động này không thể hoàn tác.')) {
+                return;
+            }
+            
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+            
+            this.submit();
+        });
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>
+            showToast('@TempData["SuccessMessage"]', 'success');
+            </text>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+            showToast('@TempData["ErrorMessage"]', 'error');
+            </text>
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+    </script>
+}
+

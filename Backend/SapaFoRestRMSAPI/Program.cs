@@ -21,7 +21,10 @@ using SapaFoRestRMSAPI.Services;
 using System.Text;
 using SapaFoRestRMSAPI.Hubs;
 using BusinessAccessLayer.Services.Inventory;
+using QuestPDF.Infrastructure;
 
+// ✅ FIX: Configure QuestPDF License (Community - Free for commercial use)
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -129,6 +132,7 @@ builder.Services.AddControllers();
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddAutoMapper(typeof(CounterStaffMappingProfile));
 
 
 // Add Repositories
@@ -234,6 +238,8 @@ builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 builder.Services.AddScoped<IAreaService, AreaService>();
 
+builder.Services.AddScoped<IManagerComboRepository, ManagerComboRepository>();
+builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
 //voucher
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
@@ -255,8 +261,13 @@ builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
 builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
 builder.Services.AddScoped<ISupplierManagerService, SupplierManagerService>();
+// capacityStatistic
+builder.Services.AddScoped<ICapacityStatisticsRepository, CapacityStatisticsRepository>();
+builder.Services.AddScoped<ICapacityStatisticsService, CapacityStatisticsService>();
 
-
+//
+builder.Services.Configure<MomoOptions>(builder.Configuration.GetSection("Momo"));
+builder.Services.AddSingleton<IMomoService, MomoService>();
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 //daytype
 builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
@@ -276,11 +287,28 @@ builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ICustomerVipService, CustomerVipService>();
 
 // AuditLog Service
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
+
+// Customer Management Service
+builder.Services.AddScoped<ICustomerManagementService, CustomerManagementService>();
+
+// Owner Dashboard Services
+builder.Services.AddScoped<IOwnerDashboardService, OwnerDashboardService>();
+builder.Services.AddScoped<IOwnerRevenueService, OwnerRevenueService>();
+builder.Services.AddScoped<IOwnerWarehouseAlertService, OwnerWarehouseAlertService>();
+
+// Counter Staff Dashboard Services
+builder.Services.AddScoped<ICounterStaffDashboardRepository, CounterStaffDashboardRepository>();
+builder.Services.AddScoped<ICounterStaffDashboardService, CounterStaffDashboardService>();
+builder.Services.AddScoped<ICounterStaffOrderRepository, CounterStaffOrderRepository>();
+builder.Services.AddScoped<ICounterStaffOrderService, CounterStaffOrderService>();
+builder.Services.AddScoped<ICounterTransactionRepository, CounterTransactionRepository>();
+builder.Services.AddScoped<ICounterTransactionService, CounterTransactionService>();
 
 // Receipt Service - Pass WebRootPath from IWebHostEnvironment
 builder.Services.AddScoped<IReceiptService>(sp =>

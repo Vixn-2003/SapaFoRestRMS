@@ -3,6 +3,8 @@ using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using static DataAccessLayer.Repositories.ReservationRepository;
 
@@ -14,6 +16,8 @@ namespace BusinessAccessLayer.Services
         private readonly IUserRepository _userRepository;
         private readonly ICustomerRepository _customerRepository; // thêm repo Customer
 
+        private const decimal DEPOSIT_PER_GUEST = 50000m;
+
         public ReservationService(
             IReservationRepository reservationRepository,
             IUserRepository userRepository,
@@ -24,25 +28,40 @@ namespace BusinessAccessLayer.Services
             _customerRepository = customerRepository;
         }
 
-        public async Task<Reservation> CreateReservationAsync(ReservationCreateDto dto)
+        public async Task<bool> HasExistingReservationAsync(string phone, DateTime date, string timeSlot)
         {
-            // Lấy user theo phone qua repo
+            var existingReservations = await _reservationRepository
+                .GetReservationsByPhoneAndDateAndSlotAsync(phone, date, timeSlot);
+
+            if (existingReservations == null)
+                return false;
+            //check PENDING hoặc CONFIRMED
+            return existingReservations.Any(r =>
+       r.Status == "Pending" ||
+       r.Status == "Confirmed"
+   );
+        }
+
+        public async Task<Reservation?> CreateReservationAsync(ReservationCreateDto dto)
+        {
+            // Lấy user theo phone
             var user = await _userRepository.GetByPhoneAsync(dto.Phone);
             if (user == null)
             {
+                // ✅ FIX: Set Status=0 (active) để customer có thể đăng nhập ngay sau khi đặt bàn
                 user = new User
                 {
                     FullName = dto.CustomerName,
                     Email = $"customer_{dto.Phone}@gmail.com",
-                    PasswordHash = "666666",
+                    PasswordHash = "666666", // TODO: hash thật
                     Phone = dto.Phone,
                     RoleId = 5,
-                    Status=1
+                    Status = 0 // 0 = Active, 1 = Inactive
                 };
                 user = await _userRepository.CreateAsync(user);
             }
 
-            // Lấy Customer của user nếu có
+            // Lấy Customer
             var customer = await _customerRepository.GetByUserIdAsync(user.UserId);
             if (customer == null)
             {
@@ -50,7 +69,6 @@ namespace BusinessAccessLayer.Services
                 customer = await _customerRepository.CreateAsync(customer);
             }
 
-            // Tự tính TimeSlot từ ReservationTime
             string GetTimeSlot(DateTime reservationTime)
             {
                 var hour = reservationTime.Hour;
@@ -58,38 +76,67 @@ namespace BusinessAccessLayer.Services
                 if (hour >= 10 && hour < 14) return "Ca trưa";
                 return "Ca tối";
             }
-            // --- KIỂM TRA TRÙNG ĐƠN ---
-            var timeSlot = GetTimeSlot(dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay);
-            var existingReservations = await _reservationRepository
-                .GetReservationsByPhoneAndDateAndSlotAsync(dto.Phone, dto.ReservationDate.Date, timeSlot);
 
-            if (existingReservations != null && existingReservations.Any())
+            var fullDateTime = dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay;
+            var timeSlot = GetTimeSlot(fullDateTime);
+
+            // Kiểm tra trùng đơn theo phone + ngày + ca
+            var existingReservations = await _reservationRepository
+    .GetReservationsByPhoneAndDateAndSlotAsync(dto.Phone, dto.ReservationDate.Date, timeSlot);
+
+            if (existingReservations != null &&
+                existingReservations.Any(r => r.Status == "Pending" || r.Status == "Confirmed"))
             {
                 return null;
             }
+
+
+            decimal depositAmount = dto.NumberOfGuests * DEPOSIT_PER_GUEST;
 
             var reservation = new Reservation
             {
                 CustomerNameReservation = dto.CustomerName,
                 CustomerId = customer.CustomerId,
-                ReservationDate = dto.ReservationDate.Date, // chỉ ngày
-                ReservationTime = dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay,
-                TimeSlot = GetTimeSlot(dto.ReservationDate.Date + dto.ReservationTime.TimeOfDay),
+                ReservationDate = dto.ReservationDate.Date,
+                ReservationTime = fullDateTime,
+                TimeSlot = timeSlot,
                 NumberOfGuests = dto.NumberOfGuests,
                 Notes = dto.Notes,
-                Status = "Pending"
+                Status = "Pending",
+                RequireDeposit = true,
+                DepositAmount = depositAmount,
+                TotalDepositPaid = 0,
+                DepositPaid = false
             };
 
             return await _reservationRepository.CreateAsync(reservation);
         }
+
+        public async Task AddDepositAsync(int reservationId, ReservationDeposit deposit)
+        {
+            var reservation = await _reservationRepository.GetByIdAsync(reservationId)
+                              ?? throw new Exception("Reservation not found");
+
+            reservation.ReservationDeposits.Add(deposit);
+            reservation.TotalDepositPaid = (reservation.TotalDepositPaid ?? 0) + deposit.Amount;
+            reservation.DepositPaid = reservation.TotalDepositPaid >= reservation.DepositAmount;
+
+            await _reservationRepository.UpdateAsync(reservation);
+        }
+
+        public async Task UpdateReservationDepositStatusAsync(Reservation reservation)
+        {
+            await _reservationRepository.UpdateAsync(reservation);
+        }
+
         public async Task<object> GetPendingAndConfirmedReservationsAsync(
-     string? status = null,
-     DateTime? date = null,
-     string? customerName = null,
-     string? phone = null,
-     string? timeSlot = null,
-     int page = 1,
-     int pageSize = 10)
+            string? status = null,
+            DateTime? date = null,
+            string? customerName = null,
+            string? phone = null,
+            string? timeSlot = null,
+            int page = 1,
+            int pageSize = 10)
         {
             var (reservations, totalCount) = await _reservationRepository
                 .GetPendingAndConfirmedReservationsAsync(status, date, customerName, phone, timeSlot, page, pageSize);
@@ -119,11 +166,11 @@ namespace BusinessAccessLayer.Services
 
             return result;
         }
+
         public async Task<object?> GetReservationDetailAsync(int reservationId)
         {
             return await _reservationRepository.GetReservationDetailAsync(reservationId);
         }
-
 
         public async Task<object> GetAllTablesGroupedByAreaAsync()
         {
@@ -145,6 +192,7 @@ namespace BusinessAccessLayer.Services
         {
             return await _reservationRepository.GetBookedTableIdsAsync(date, slot);
         }
+
         public async Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime date, string slot)
         {
             return await _reservationRepository.GetBookedTableDetailsAsync(date, slot);
@@ -220,8 +268,11 @@ namespace BusinessAccessLayer.Services
             var sorted = availableTables.OrderByDescending(t => t.Capacity).ToList();
             Backtrack(new List<TableDto>(), 0, 0);
 
-            return combos.OrderBy(c => c.Count).ThenBy(c => c.Sum(t => t.Capacity) - guests)
-                         .Take(maxSuggestions).ToList();
+            return combos
+                .OrderBy(c => c.Count)
+                .ThenBy(c => c.Sum(t => t.Capacity) - guests)
+                .Take(maxSuggestions)
+                .ToList();
         }
 
         public async Task<object> AssignTablesAsync(AssignTableDto dto)
@@ -229,16 +280,19 @@ namespace BusinessAccessLayer.Services
             if (dto.TableIds == null || !dto.TableIds.Any())
                 throw new Exception("Bạn phải chọn ít nhất 1 bàn trước khi xác nhận.");
 
-            if (dto.RequireDeposit && (!dto.DepositAmount.HasValue || dto.DepositAmount.Value <= 0))
-                throw new Exception("Bạn phải nhập số tiền đặt cọc hợp lệ.");
+            // ❌ BỎ validate yêu cầu đặt cọc
+            // if (dto.RequireDeposit && (!dto.DepositAmount.HasValue || dto.DepositAmount.Value <= 0))
+            //     throw new Exception("Bạn phải nhập số tiền đặt cọc hợp lệ.");
 
             var reservation = await _reservationRepository.GetReservationByIdAsync(dto.ReservationId);
             if (reservation == null)
                 throw new Exception("Reservation không tồn tại.");
 
             // Check conflict
-            var conflict = (await _reservationRepository.GetBookedTableIdsAsync(reservation.ReservationDate, reservation.TimeSlot))
-                           .Any(id => dto.TableIds.Contains(id) && !reservation.ReservationTables.Any(rt => rt.TableId == id));
+            var conflict = (await _reservationRepository
+                                .GetBookedTableIdsAsync(reservation.ReservationDate, reservation.TimeSlot))
+                           .Any(id => dto.TableIds.Contains(id)
+                                      && !reservation.ReservationTables.Any(rt => rt.TableId == id));
 
             if (conflict)
                 throw new Exception("Một hoặc nhiều bàn đã bị đặt trước cho slot này.");
@@ -255,9 +309,11 @@ namespace BusinessAccessLayer.Services
                 });
             }
 
-            reservation.RequireDeposit = dto.RequireDeposit;
-            reservation.DepositAmount = dto.RequireDeposit && dto.DepositAmount.HasValue ? dto.DepositAmount.Value : null;
-            reservation.DepositPaid = dto.ConfirmBooking && dto.RequireDeposit && dto.DepositAmount.HasValue;
+            // ❌ KHÔNG set lại RequireDeposit / DepositAmount / DepositPaid ở đây nữa
+            // reservation.RequireDeposit = dto.RequireDeposit;
+            // reservation.DepositAmount = dto.RequireDeposit && dto.DepositAmount.HasValue ? dto.DepositAmount.Value : null;
+            // reservation.DepositPaid = dto.ConfirmBooking && dto.RequireDeposit && dto.DepositAmount.HasValue;
+
             reservation.Status = dto.ConfirmBooking ? "Confirmed" : "Pending";
             reservation.StaffId = dto.StaffId;
 
@@ -267,6 +323,7 @@ namespace BusinessAccessLayer.Services
             {
                 reservation.ReservationId,
                 reservation.Status,
+                // vẫn trả về thông tin đặt cọc hiện tại nếu nó đã tồn tại
                 reservation.DepositAmount,
                 reservation.DepositPaid,
                 reservation.StaffId,
@@ -282,9 +339,7 @@ namespace BusinessAccessLayer.Services
 
             reservation.ReservationTables.Clear();
             reservation.Status = "Pending";
-            reservation.RequireDeposit = false;
-            reservation.DepositAmount = null;
-            reservation.DepositPaid = false;
+            
             reservation.StaffId = null;
 
             await _reservationRepository.SaveChangesAsync();
@@ -296,38 +351,7 @@ namespace BusinessAccessLayer.Services
                 TableIds = reservation.ReservationTables.Select(rt => rt.TableId).ToList()
             };
         }
-        //Hủy đơn đặt bàn
-        //public async Task<object> CancelReservationAsync(int reservationId, bool refund)
-        //{
-        //    var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
-        //    if (reservation == null)
-        //        throw new Exception("Không tìm thấy đơn đặt bàn.");
 
-        //    if (reservation.Status == "Cancelled")
-        //        throw new Exception("Đơn này đã được hủy trước đó.");
-
-        //    // Xử lý hoàn cọc (nếu có)
-        //    if (refund && reservation.DepositPaid && reservation.DepositAmount.HasValue)
-        //    {
-        //        // Tùy hệ thống: có thể tích hợp thêm logic hoàn tiền hoặc gửi email xác nhận ở đây
-        //        reservation.DepositPaid = false; // đánh dấu là đã hoàn cọc
-        //    }
-
-        //    // Cập nhật trạng thái và giải phóng bàn
-        //    reservation.Status = "Cancelled";
-        //    reservation.ReservationTables.Clear();
-
-        //    await _reservationRepository.SaveChangesAsync();
-
-        //    return new
-        //    {
-        //        reservation.ReservationId,
-        //        reservation.Status,
-        //        reservation.DepositAmount,
-        //        reservation.DepositPaid,
-        //        Refunded = refund
-        //    };
-        //}
         public async Task<object> CancelReservationAsync(int reservationId, bool refund)
         {
             var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
@@ -381,19 +405,19 @@ namespace BusinessAccessLayer.Services
             }).ToList();
         }
 
-        //  Cập nhật đặt bàn khi trạng thái là Pending
+        // Cập nhật đặt bàn khi trạng thái là Pending
         public async Task<object> UpdateReservationAsync(int reservationId, ReservationUpdateDto dto)
         {
-            //  1. Lấy thông tin đặt bàn
+            // 1. Lấy thông tin đặt bàn
             var reservation = await _reservationRepository.GetReservationByIdAsync(reservationId);
             if (reservation == null)
                 throw new Exception("Không tìm thấy đơn đặt bàn.");
 
-            //  2. Chỉ cho phép chỉnh sửa khi trạng thái là Pending
+            // 2. Chỉ cho phép chỉnh sửa khi trạng thái là Pending
             if (reservation.Status != "Pending")
                 throw new Exception("Chỉ có thể chỉnh sửa đơn ở trạng thái 'Pending'.");
 
-            //  3. Kiểm tra dữ liệu hợp lệ
+            // 3. Kiểm tra dữ liệu hợp lệ
             if (dto.NumberOfGuests <= 0)
                 throw new Exception("Số lượng khách phải lớn hơn 0.");
 
@@ -403,7 +427,7 @@ namespace BusinessAccessLayer.Services
             if (dto.ReservationTime == DateTime.MinValue)
                 throw new Exception("Vui lòng chọn giờ đặt bàn hợp lệ.");
 
-            //  4. Kiểm tra ngày & giờ đặt
+            // 4. Kiểm tra ngày & giờ đặt
             DateTime currentDate = DateTime.Now.Date;
             DateTime currentDateTime = DateTime.Now;
             DateTime reservationDate = dto.ReservationDate.Date;
@@ -416,13 +440,13 @@ namespace BusinessAccessLayer.Services
             if (reservationDate == currentDate && combinedTime <= currentDateTime)
                 throw new Exception("Thời gian đặt bàn hôm nay phải lớn hơn thời điểm hiện tại.");
 
-            //Cập nhật thông tin đặt bàn
+            // Cập nhật thông tin đặt bàn
             reservation.ReservationDate = reservationDate;
             reservation.ReservationTime = combinedTime;
             reservation.NumberOfGuests = dto.NumberOfGuests;
             reservation.Notes = dto.Notes;
 
-            //  Cập nhật lại TimeSlot theo giờ
+            // Cập nhật lại TimeSlot theo giờ
             string GetTimeSlot(DateTime time)
             {
                 int hour = time.Hour;
@@ -432,10 +456,10 @@ namespace BusinessAccessLayer.Services
             }
             reservation.TimeSlot = GetTimeSlot(reservation.ReservationTime);
 
-            // 7. Lưu thay đổi
+            // Lưu thay đổi
             await _reservationRepository.SaveChangesAsync();
 
-            // 8. Trả về dữ liệu cập nhật
+            // Trả về dữ liệu cập nhật
             return new
             {
                 reservation.ReservationId,
@@ -447,8 +471,6 @@ namespace BusinessAccessLayer.Services
                 reservation.Status
             };
         }
-
-
 
         // Hủy đặt bàn do khách hàng thực hiện
         public async Task<object> CancelReservationByCustomerAsync(int reservationId)
@@ -471,10 +493,10 @@ namespace BusinessAccessLayer.Services
                 reservation.Status
             };
         }
+
         public Task<int> GetPendingCountAsync()
         {
             return _reservationRepository.GetPendingCountAsync();
         }
-
     }
 }

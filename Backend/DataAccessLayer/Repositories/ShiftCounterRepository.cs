@@ -157,4 +157,23 @@ public class ShiftCounterRepository : IShiftCounterRepository
 
         return count;
     }
+
+    /// <summary>
+    /// Thêm record vào ShiftHistory
+    /// </summary>
+    public async Task AddHistoryAsync(ShiftHistory history, CancellationToken ct = default)
+    {
+        await _context.ShiftHistorys.AddAsync(history, ct);
+    }
+
+    /// <summary>
+    /// Lấy danh sách history của một shift
+    /// </summary>
+    public async Task<List<ShiftHistory>> GetShiftHistoriesAsync(int shiftId, CancellationToken ct = default)
+    {
+        return await _context.ShiftHistorys
+            .Where(h => h.ShiftId == shiftId)
+            .OrderByDescending(h => h.ActionAt)
+            .ToListAsync(ct);
+    }
 }

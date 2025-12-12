@@ -51,7 +51,15 @@
 
         document.getElementById('editFullName').value = fullName;
         document.getElementById('editPhone').value = phone === 'Chưa cập nhật' ? '' : phone;
-        document.getElementById('editAvatarUrl').value = currentAvatar;
+        const avatarFileInput = document.getElementById('editAvatarFile');
+        if (avatarFileInput) {
+            avatarFileInput.value = '';
+        }
+        // Keep current avatar url in hidden input for fallback
+        const existingAvatarInput = document.getElementById('currentAvatarUrl');
+        if (existingAvatarInput) {
+            existingAvatarInput.value = currentAvatar;
+        }
     }
 
     /**
@@ -392,19 +400,28 @@
 
         try {
             // Get form data
-            const formData = {
-                FullName: document.getElementById('editFullName').value.trim(),
-                Phone: document.getElementById('editPhone').value.trim() || null,
-                AvatarUrl: document.getElementById('editAvatarUrl').value.trim() || null
-            };
+            const formElement = document.getElementById('profileForm');
+            const formData = new FormData();
+            const token = formElement.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            formData.append('FullName', document.getElementById('editFullName').value.trim());
+            formData.append('Phone', document.getElementById('editPhone').value.trim());
+            if (token) {
+                formData.append('__RequestVerificationToken', token);
+            }
+
+            const avatarFile = document.getElementById('editAvatarFile')?.files?.[0];
+            if (avatarFile) {
+                formData.append('AvatarFile', avatarFile);
+            } else {
+                const currentAvatar = document.getElementById('currentAvatarUrl')?.value || '';
+                formData.append('AvatarUrl', currentAvatar);
+            }
 
             // Send POST request
             const response = await fetch('/UserProfile/UpdateProfile', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
+                body: formData
             });
 
             const result = await response.json();

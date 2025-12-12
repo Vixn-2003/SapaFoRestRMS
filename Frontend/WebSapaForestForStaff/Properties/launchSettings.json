@@ -15,8 +15,8 @@
       "launchBrowser": true,
 
 
-     // "applicationUrl": "http://192.168.1.129:5054",
-      "applicationUrl": "http://localhost:5054",
+      "applicationUrl": "http://192.168.1.47:5054",
+      //"applicationUrl": "http://localhost:5054",
 
       "launchUrl": "Auth/Login",
       "environmentVariables": {

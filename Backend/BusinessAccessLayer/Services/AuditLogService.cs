@@ -24,12 +24,18 @@ public class AuditLogService : IAuditLogService
         string? description = null, string? metadata = null, int? userId = null, 
         string? ipAddress = null, CancellationToken ct = default)
     {
+        // ✅ FIX: Truncate description to max 1000 characters to prevent database truncation error
+        const int maxDescriptionLength = 1000;
+        var truncatedDescription = description != null && description.Length > maxDescriptionLength
+            ? description.Substring(0, maxDescriptionLength - 3) + "..."
+            : description;
+
         var auditLog = new AuditLog
         {
             EventType = eventType,
             EntityType = entityType,
             EntityId = entityId,
-            Description = description,
+            Description = truncatedDescription,
             Metadata = metadata,
             UserId = userId,
             IpAddress = ipAddress,

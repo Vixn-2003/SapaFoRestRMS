@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace BusinessAccessLayer.DTOs.Users
 {
@@ -13,8 +14,10 @@ namespace BusinessAccessLayer.DTOs.Users
         public string? Phone { get; set; }
 
         [StringLength(500)]
-        [Url(ErrorMessage = "AvatarUrl phải là một đường dẫn hợp lệ")]
         public string? AvatarUrl { get; set; }
+
+        // Tùy chọn upload file ảnh đại diện (ưu tiên dùng Cloudinary)
+        public IFormFile? AvatarFile { get; set; }
     }
 }
 

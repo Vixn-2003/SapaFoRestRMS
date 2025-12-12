@@ -3,19 +3,30 @@
 @{
     var now = DateTime.Now;
 
-    // Giờ mở cửa và đóng cửa
     var startTime = new TimeSpan(8, 0, 0);
     var endTime = new TimeSpan(22, 0, 0);
 
-    // Làm tròn lên 30 phút gần nhất
     int roundedMinutes = (int)Math.Ceiling(now.Minute / 30.0) * 30;
     var defaultTime = new TimeSpan(now.Hour, roundedMinutes % 60, 0);
     if (roundedMinutes == 60)
         defaultTime = new TimeSpan(now.Hour + 1, 0, 0);
 }
 
-<form id="reservationForm" method="post" asp-controller="Reservation" asp-action="Confirm">
+<form id="reservationForm"
+      class="reservation-form"
+      method="post"
+      asp-controller="Reservation"
+      asp-action="Confirm">
     @Html.AntiForgeryToken()
+
+    <!-- HEADER FORM -->
+    <div id="reservationHeader" class="reservation-header">
+        <h5 class="reservation-title mb-0">Thông tin đặt bàn</h5>
+        <button type="button"
+                class="btn-close reservation-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"></button>
+    </div>
 
     <div class="mb-3">
         <label asp-for="CustomerName" class="form-label"></label>
@@ -81,7 +92,45 @@
     <button type="submit" class="btn btn-reservation w-100">Xác nhận đặt bàn</button>
 </form>
 
+<!-- Vùng hiển thị kết quả / thông tin tiền cọc / orderId nếu muốn dùng sau -->
+<div id="reservationResult" class="mt-3"></div>
+
 <style>
+    /* Form tổng thể (nếu muốn áp dụng nền, bo góc thì đặt vào đây) */
+    .reservation-form {
+        position: relative;
+    }
+
+    /* Header của form đặt bàn */
+    #reservationHeader.reservation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    /* Tiêu đề */
+    .reservation-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        /* nếu chữ hơi mờ có thể tăng màu: */
+        /* color: #222; */
+    }
+
+    /* Nút close */
+    .reservation-close {
+        padding: 0;
+        outline: none;
+        box-shadow: none;
+    }
+
+        .reservation-close:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
     .date-time-row {
         display: flex;
         gap: 1rem;
@@ -104,99 +153,6 @@
     select.input-validation-error,
     textarea.input-validation-error {
         border-color: #dc3545;
-        box-shadow: 0 0 0 0.2rem rgba(220,53,69,.25);
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, .25);
     }
 </style>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-
-    <script>
-        const form = document.getElementById('reservationForm');
-        const dateInput = document.getElementById('ReservationDate');
-        const timeSelect = document.getElementById('ReservationTime');
-        const errorSpan = document.getElementById('dateTimeValidation');
-
-        const startHour = 8;
-        const endHour = 22;
-
-        function parseLocalDate(dateStr) {
-            // dateStr dạng "yyyy-MM-dd" -> tạo Date theo giờ local (tránh lệch UTC)
-            const [year, month, day] = dateStr.split('-').map(Number);
-            return new Date(year, month - 1, day);
-        }
-
-        function filterTimeOptions() {
-            if (!dateInput.value) return;
-            const selectedDate = parseLocalDate(dateInput.value);
-            const now = new Date();
-
-            // reset hiển thị tất cả option
-            for (let option of timeSelect.options) {
-                option.hidden = false;
-            }
-
-            // Nếu là hôm nay
-            if (selectedDate.toDateString() === now.toDateString()) {
-                const currentHour = now.getHours();
-                const currentMinute = now.getMinutes();
-                let nextSlotHour = currentHour;
-                let nextSlotMinute = currentMinute <= 30 ? 30 : 0;
-
-                if (currentMinute > 30) nextSlotHour++;
-
-                // Nếu sau 22h => ẩn toàn bộ
-                if (currentHour >= endHour) {
-                    for (let option of timeSelect.options) {
-                        option.hidden = true;
-                    }
-                    timeSelect.value = "";
-                    errorSpan.textContent = "Đã quá giờ đặt bàn hôm nay, vui lòng chọn ngày khác.";
-                    return;
-                } else {
-                    errorSpan.textContent = "";
-                }
-
-                // Ẩn giờ đã qua
-                for (let option of timeSelect.options) {
-                    const [hour, minute] = option.value.split(':').map(Number);
-                    if (hour < nextSlotHour || (hour === nextSlotHour && minute < nextSlotMinute)) {
-                        option.hidden = true;
-                    }
-                }
-
-                // Chọn option đầu tiên hợp lệ
-                const firstVisible = Array.from(timeSelect.options).find(o => !o.hidden);
-                if (firstVisible) {
-                    timeSelect.value = firstVisible.value;
-                } else {
-                    timeSelect.value = "";
-                }
-            } else {
-                // Nếu chọn ngày khác hôm nay -> hiển thị full
-                errorSpan.textContent = "";
-                timeSelect.value = timeSelect.options[0].value;
-                for (let option of timeSelect.options) {
-                    option.hidden = false;
-                }
-            }
-        }
-
-        // Khi load trang (lọc cho hôm nay)
-        window.addEventListener('DOMContentLoaded', filterTimeOptions);
-        // Khi đổi ngày
-        dateInput.addEventListener('change', filterTimeOptions);
-
-        // Validation khi submit
-        form.addEventListener('submit', function (e) {
-            const date = dateInput.value;
-            const time = timeSelect.value;
-            errorSpan.textContent = '';
-
-            if (!date || !time) {
-                e.preventDefault();
-                errorSpan.textContent = 'Vui lòng chọn ngày và giờ đặt bàn hợp lệ';
-            }
-        });
-    </script>
-}

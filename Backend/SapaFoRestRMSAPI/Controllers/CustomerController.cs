@@ -119,6 +119,13 @@ namespace SapaFoRestRMSAPI.Controllers
             if (user == null || user.RoleId != 5)
                 return Unauthorized(new { message = "Tài khoản không hợp lệ" });
 
+            // ✅ FIX: Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = Inactive)
+            if (user.Status == 1)
+            {
+                _otpCache.Remove(dto.Phone);
+                return Unauthorized(new { message = "Tài khoản này đang không còn hoạt động trên hệ thống. Vui lòng liên hệ quản trị viên để được kích hoạt lại." });
+            }
+
             _otpCache.Remove(dto.Phone);
 
             // Issue JWT token for Customer

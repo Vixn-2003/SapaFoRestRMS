@@ -616,6 +616,38 @@
             font-size: 13px;
         }
     }
+        /* Edit Button */
+        .wh-edit-btn {
+            padding: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 4px;
+        }
+
+            .wh-edit-btn:hover {
+                background: #fef3c7;
+                transform: scale(1.1);
+            }
+
+            .wh-edit-btn svg {
+                width: 20px;
+                height: 20px;
+                color: #f59e0b;
+            }
+
+        /* Action Group */
+        .wh-action-group {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
 </style>
 </head>
 <body class="warehouse-unit-page">
@@ -776,6 +808,55 @@
         </div>
     </div>
 
+    <!-- Modal Chỉnh sửa Kho -->
+    <div id="editWarehouseModal" class="wh-modal-overlay" style="display: none;" onclick="closeEditWarehouseModal(event)">
+        <div class="wh-modal" onclick="event.stopPropagation()">
+            <div class="wh-modal-header warehouse-modal">
+                <h3 class="wh-modal-title">Chỉnh sửa Kho</h3>
+                <button class="wh-modal-close" onclick="closeEditWarehouseModal()">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="wh-modal-body">
+                <input type="hidden" id="editWarehouseId">
+                <input type="text" id="editWarehouseName" class="wh-input" placeholder="Nhập tên kho...">
+                <div class="wh-form-actions" style="margin-top: 16px;">
+                    <button class="wh-btn wh-btn-save" onclick="updateWarehouse()">Cập nhật</button>
+                    <button class="wh-btn wh-btn-cancel" onclick="closeEditWarehouseModal()">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chỉnh sửa Đơn vị -->
+    <div id="editUnitModal" class="wh-modal-overlay" style="display: none;" onclick="closeEditUnitModal(event)">
+        <div class="wh-modal" onclick="event.stopPropagation()">
+            <div class="wh-modal-header unit-modal">
+                <h3 class="wh-modal-title">Chỉnh sửa Đơn vị tính</h3>
+                <button class="wh-modal-close" onclick="closeEditUnitModal()">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="wh-modal-body">
+                <input type="hidden" id="editUnitId">
+                <input type="text" id="editUnitName" class="wh-input" placeholder="Tên đơn vị...">
+                <input type="text" id="editUnitAbbr" class="wh-input" placeholder="Tên viết tắt...">
+                <select id="editUnitType" class="wh-select">
+                    <option value="1">Số tự nhiên</option>
+                    <option value="2">Số thập phân</option>
+                </select>
+                <div class="wh-form-actions" style="margin-top: 16px;">
+                    <button class="wh-btn wh-btn-save unit-save" onclick="updateUnit()">Cập nhật</button>
+                    <button class="wh-btn wh-btn-cancel" onclick="closeEditUnitModal()">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ✅ Load dữ liệu từ server
         let warehouses = @Html.Raw(Json.Serialize(Model.Warehouses.Select(w => new
@@ -905,14 +986,21 @@
                         <td class="center">
                             <span class="wh-badge warehouse-badge">${w.batches ? w.batches.length : 0}</span>
                         </td>
-                        <td class="center">
-                            <button class="wh-view-btn warehouse-view" onclick="showWarehouseDetail(${w.id})">
-                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                            </button>
-                        </td>
+                                <td class="center">
+            <div class="wh-action-group">
+                <button class="wh-view-btn warehouse-view" onclick="showWarehouseDetail(${w.id})" title="Xem chi tiết">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                </button>
+                <button class="wh-edit-btn" onclick="showEditWarehouse(${w.id})" title="Chỉnh sửa">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </button>
+            </div>
+        </td>
                     </tr>
                 `).join('');
         }
@@ -1070,14 +1158,21 @@
                         <td class="center">
                             <span class="wh-badge unit-badge">${u.materials ? u.materials.length : 0}</span>
                         </td>
-                        <td class="center">
-                            <button class="wh-view-btn unit-view" onclick="showUnitDetail(${u.id})">
-                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                            </button>
-                        </td>
+                                <td class="center">
+            <div class="wh-action-group">
+                <button class="wh-view-btn unit-view" onclick="showUnitDetail(${u.id})" title="Xem chi tiết">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                </button>
+                <button class="wh-edit-btn" onclick="showEditUnit(${u.id})" title="Chỉnh sửa">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </button>
+            </div>
+        </td>
                     </tr>
                 `).join('');
         }
@@ -1124,11 +1219,143 @@
             }
         }
 
+        // =============== EDIT WAREHOUSE FUNCTIONS ===============
+        function showEditWarehouse(id) {
+            const warehouse = warehouses.find(w => w.id === id);
+            if (!warehouse) return;
+
+            document.getElementById('editWarehouseId').value = warehouse.id;
+            document.getElementById('editWarehouseName').value = warehouse.name;
+            document.getElementById('editWarehouseModal').style.display = 'flex';
+            document.getElementById('editWarehouseName').focus();
+        }
+
+        function closeEditWarehouseModal(event) {
+            if (!event || event.target.id === 'editWarehouseModal') {
+                document.getElementById('editWarehouseModal').style.display = 'none';
+            }
+        }
+
+        async function updateWarehouse() {
+            const id = parseInt(document.getElementById('editWarehouseId').value);
+            const name = document.getElementById('editWarehouseName').value.trim();
+
+            if (!name) {
+                alert('Vui lòng nhập tên kho');
+                return;
+            }
+
+            try {
+                const response = await fetch('/UnitInventory/UpdateWarehouse', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        warehouseId: id,
+                        name: name,
+                        isActive: true
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+
+                    // Cập nhật local array
+                    const warehouse = warehouses.find(w => w.id === id);
+                    if (warehouse) {
+                        warehouse.name = name;
+                    }
+
+                    closeEditWarehouseModal();
+                    renderWarehouses();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+        // =============== EDIT UNIT FUNCTIONS ===============
+        function showEditUnit(id) {
+            const unit = units.find(u => u.id === id);
+            if (!unit) return;
+
+            document.getElementById('editUnitId').value = unit.id;
+            document.getElementById('editUnitName').value = unit.name;
+            document.getElementById('editUnitAbbr').value = unit.abbreviation;
+            document.getElementById('editUnitType').value = unit.unitTypeEnum;
+            document.getElementById('editUnitModal').style.display = 'flex';
+            document.getElementById('editUnitName').focus();
+        }
+
+        function closeEditUnitModal(event) {
+            if (!event || event.target.id === 'editUnitModal') {
+                document.getElementById('editUnitModal').style.display = 'none';
+            }
+        }
+
+        async function updateUnit() {
+            const id = parseInt(document.getElementById('editUnitId').value);
+            const name = document.getElementById('editUnitName').value.trim();
+            const abbr = document.getElementById('editUnitAbbr').value.trim();
+            const type = parseInt(document.getElementById('editUnitType').value);
+
+            if (!name || !abbr) {
+                alert('Vui lòng nhập đầy đủ thông tin');
+                return;
+            }
+
+            try {
+                const response = await fetch('/UnitInventory/UpdateUnit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        unitId: id,
+                        unitName: name,
+                        unitType: type
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+
+                    // Cập nhật local array
+                    const unit = units.find(u => u.id === id);
+                    if (unit) {
+                        unit.name = name;
+                        unit.abbreviation = abbr;
+                        unit.unitTypeEnum = type;
+                        unit.inputType = type === 1 ? 'Số tự nhiên' : 'Số thập phân';
+                    }
+
+                    closeEditUnitModal();
+                    renderUnits();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi kết nối: ' + error.message);
+            }
+        }
+
+
         // Close modals on ESC key
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeWarehouseModal();
                 closeUnitModal();
+                closeEditWarehouseModal();
+                closeEditUnitModal();
             }
         });
     </script>

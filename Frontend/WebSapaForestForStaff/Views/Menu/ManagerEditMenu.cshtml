@@ -1191,6 +1191,10 @@
             if (timeCook && timeCook.trim() !== '') {
                 formData.append('ProductsMenu.TimeCook', timeCook);
             }
+            const batchSize = document.getElementById('batchSize').value;
+            if (batchSize && batchSize.trim() !== '') {
+                formData.append('ProductsMenu.BatchSize', batchSize);
+            }
 
             // Hình ảnh (có thể để trống nếu đã có ảnh cũ)
             const imageFile = document.getElementById('imageFile').files[0];

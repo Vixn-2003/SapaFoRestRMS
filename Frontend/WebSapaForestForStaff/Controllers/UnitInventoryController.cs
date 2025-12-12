@@ -77,23 +77,32 @@ namespace WebSapaForestForStaff.Controllers
             return View("~/Views/Inventory/UnitInventory.cshtml", viewModel);
         }
 
-        // ✅ API thêm Unit
+        // ============ ADD UNIT ============
         [HttpPost]
         public async Task<IActionResult> AddUnit([FromBody] AddUnitRequest request)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.UnitName))
+                {
+                    return Json(new { success = false, message = "Tên đơn vị không được để trống" });
+                }
+
                 var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(request),
+                    JsonSerializer.Serialize(new
+                    {
+                        unitName = request.UnitName,
+                        unitType = request.UnitType
+                    }),
                     System.Text.Encoding.UTF8,
                     "application/json"
                 );
 
                 var response = await _httpClient.PostAsync("api/Unit", jsonContent);
+                var content = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var content = await response.Content.ReadAsStringAsync();
                     var unit = JsonSerializer.Deserialize<UnitDTO>(content, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
@@ -106,12 +115,14 @@ namespace WebSapaForestForStaff.Controllers
                         unit = unit
                     });
                 }
-
-                return Json(new
+                else
                 {
-                    success = false,
-                    message = "Không thể thêm đơn vị"
-                });
+                    return Json(new
+                    {
+                        success = false,
+                        message = $"Lỗi từ API: {content}"
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -124,23 +135,32 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        // ✅ API thêm Warehouse
+        // ============ ADD WAREHOUSE ============
         [HttpPost]
         public async Task<IActionResult> AddWarehouse([FromBody] AddWarehouseRequest request)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.Name))
+                {
+                    return Json(new { success = false, message = "Tên kho không được để trống" });
+                }
+
                 var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(request),
+                    JsonSerializer.Serialize(new
+                    {
+                        name = request.Name,
+                        isActive = request.IsActive
+                    }),
                     System.Text.Encoding.UTF8,
                     "application/json"
                 );
 
                 var response = await _httpClient.PostAsync("api/Warehouse", jsonContent);
+                var content = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var content = await response.Content.ReadAsStringAsync();
                     var warehouse = JsonSerializer.Deserialize<WarehouseDTO>(content, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
@@ -153,12 +173,14 @@ namespace WebSapaForestForStaff.Controllers
                         warehouse = warehouse
                     });
                 }
-
-                return Json(new
+                else
                 {
-                    success = false,
-                    message = "Không thể thêm kho"
-                });
+                    return Json(new
+                    {
+                        success = false,
+                        message = $"Lỗi từ API: {content}"
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -170,9 +192,107 @@ namespace WebSapaForestForStaff.Controllers
                 });
             }
         }
+
+        // ============ UPDATE WAREHOUSE ============
+        [HttpPost]
+        public async Task<IActionResult> UpdateWarehouse([FromBody] UpdateWarehouseRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Name))
+                {
+                    return Json(new { success = false, message = "Tên kho không được để trống" });
+                }
+
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        warehouseId = request.WarehouseId,
+                        name = request.Name,
+                        isActive = request.IsActive
+                    }),
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await _httpClient.PutAsync($"api/Warehouse/{request.WarehouseId}", jsonContent);
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Cập nhật kho thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = $"Lỗi từ API: {content}"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật kho");
+                return Json(new { success = false, message = "Có lỗi xảy ra: " + ex.Message });
+            }
+        }
+
+        // ============ UPDATE UNIT ============
+        [HttpPost]
+        public async Task<IActionResult> UpdateUnit([FromBody] UpdateUnitRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.UnitName))
+                {
+                    return Json(new { success = false, message = "Tên đơn vị không được để trống" });
+                }
+
+                var jsonContent = new StringContent(
+                    JsonSerializer.Serialize(new
+                    {
+                        unitId = request.UnitId,
+                        unitName = request.UnitName,
+                        unitType = (int)request.UnitType
+                    }),
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await _httpClient.PutAsync($"api/Unit/{request.UnitId}", jsonContent);
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Cập nhật đơn vị tính thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = $"Lỗi từ API: {content}"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi cập nhật đơn vị tính");
+                return Json(new { success = false, message = "Có lỗi xảy ra: " + ex.Message });
+            }
+        }
     }
 
-    // DTO cho request
+    // ============ REQUEST MODELS ============
     public class AddUnitRequest
     {
         public string UnitName { get; set; }
@@ -185,7 +305,21 @@ namespace WebSapaForestForStaff.Controllers
         public bool IsActive { get; set; } = true;
     }
 
-    // ViewModel
+    public class UpdateWarehouseRequest
+    {
+        public int WarehouseId { get; set; }
+        public string Name { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    public class UpdateUnitRequest
+    {
+        public int UnitId { get; set; }
+        public string UnitName { get; set; }
+        public UnitType UnitType { get; set; }
+    }
+
+    // ============ VIEW MODEL ============
     public class UnitWarehouseViewModel
     {
         public List<UnitDTO> Units { get; set; }

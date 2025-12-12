@@ -47,6 +47,15 @@
         return true;
     }).ToList();
 
+    // Build payment breakdown from transactions (if available)
+    var paidTransactions = (Model.Transactions ?? new List<WebSapaForestForStaff.DTOs.Payment.TransactionDto>())
+        .Where(t =>
+            string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrEmpty(t.Status)) // fallback
+        .ToList();
+
     var receiptJson = JsonSerializer.Serialize(new
     {
         Model.OrderId,
@@ -66,6 +75,13 @@
         DepositPaid = Model.DepositPaid,
         DepositRefundAmount = Model.DepositRefundAmount,
         TotalAmount = Model.TotalAmount,
+        Transactions = paidTransactions.Select(t => new {
+            t.PaymentMethod,
+            t.Amount,
+            t.AmountReceived,
+            t.RefundAmount,
+            t.Status
+        }),
         Items = billableItems.Select(i => new
         {
             Name = !string.IsNullOrEmpty(i.ComboName) ? i.ComboName : i.MenuItemName,
@@ -364,37 +380,93 @@
                                         @totalBeforeDeposit.ToString("N0") ₫
                                     </td>
                                 </tr>
-                                @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
-                                {
-                                    <tr class="table-success">
-                                        <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
-                                            <span class="d-flex align-items-center gap-2">
-                                                <i class="bi bi-cash-coin text-primary fs-4"></i>
-                                                <span class="fs-5">Số tiền khách hàng phải trả</span>
-                                            </span>
-                                            <small class="text-muted d-block mt-1">
-                                                Tổng cộng thanh toán - Đặt cọc (@Model.DepositAmount.Value.ToString("N0") ₫)
-                                            </small>
-                                        </td>
-                                        <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
-                                            @Model.TotalAmount.ToString("N0") ₫
-                                        </td>
-                                    </tr>
+                                @{
+                                    // Build payment breakdown
+                                    var payments = paidTransactions.Any()
+                                        ? paidTransactions
+                                        : new List<WebSapaForestForStaff.DTOs.Payment.TransactionDto>();
+
+                                    // Fallback: nếu không có transactions, tạo 1 dòng từ PaymentMethod/TotalAmount
+                                    if (!payments.Any())
+                                    {
+                                        payments.Add(new WebSapaForestForStaff.DTOs.Payment.TransactionDto
+                                        {
+                                            PaymentMethod = string.IsNullOrWhiteSpace(Model.PaymentMethod) ? "Unknown" : Model.PaymentMethod,
+                                            Amount = Model.TotalAmount,
+                                            AmountReceived = Model.AmountReceived,
+                                            RefundAmount = Model.ChangeAmount,
+                                            Status = "Paid"
+                                        });
+                                    }
+
+                                    string RenderMethodLabel(string? method)
+                                    {
+                                        var m = method?.Trim() ?? "";
+                                        return m.ToLower() switch
+                                        {
+                                            "cash" => "Tiền mặt",
+                                            "qrbanktransfer" => "QR",
+                                            "vietqr" => "QR",
+                                            "qr" => "QR",
+                                            "card" => "Thẻ",
+                                            "ewallet" => "Ví điện tử",
+                                            "split" => "Chia hóa đơn",
+                                            _ => string.IsNullOrWhiteSpace(m) ? "Khác" : m
+                                        };
+                                    }
                                 }
-                                else
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                                            {
+                                                <text>Tổng cộng (@totalBeforeDeposit.ToString("N0") ₫) - Đã cọc (@Model.DepositAmount.Value.ToString("N0") ₫)</text>
+                                            }
+                                            else
+                                            {
+                                                <text>Tổng cộng thanh toán</text>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @Model.TotalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                                @if (payments.Any())
                                 {
-                                    <tr class="table-success">
-                                        <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
-                                            <span class="d-flex align-items-center gap-2">
-                                                <i class="bi bi-cash-coin text-primary fs-4"></i>
-                                                <span class="fs-5">Số tiền khách hàng phải trả</span>
-                                            </span>
-                                            <small class="text-muted d-block mt-1">
-                                                Tổng cộng thanh toán (không có đặt cọc)
-                                            </small>
-                                        </td>
-                                        <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
-                                            @Model.TotalAmount.ToString("N0") ₫
+                                    <tr class="table-light">
+                                        <td colspan="5" class="ps-3 pt-3">
+                                            <div class="text-muted small fw-semibold mb-2">
+                                                <i class="bi bi-credit-card me-1"></i>
+                                                Chi tiết thanh toán:
+                                            </div>
+                                            @foreach (var pay in payments)
+                                            {
+                                                <div class="d-flex justify-content-between align-items-center mb-2 ps-3">
+                                                    <span>
+                                                        <i class="bi bi-arrow-right-short text-primary"></i>
+                                                        @RenderMethodLabel(pay.PaymentMethod)
+                                                    </span>
+                                                    <span class="fw-bold">@pay.Amount.ToString("N0") ₫</span>
+                                                </div>
+                                                if (pay.PaymentMethod != null &&
+                                                    pay.PaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) &&
+                                                    pay.RefundAmount.HasValue &&
+                                                    pay.RefundAmount.Value > 0)
+                                                {
+                                                    <div class="d-flex justify-content-between align-items-center mb-2 ps-4 text-warning">
+                                                        <span class="small">
+                                                            <i class="bi bi-arrow-return-right"></i>
+                                                            Tiền thối lại
+                                                        </span>
+                                                        <span class="fw-bold small">+@pay.RefundAmount.Value.ToString("N0") ₫</span>
+                                                    </div>
+                                                }
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -415,8 +487,6 @@
                         <dt class="col-6 text-muted small">Mã đơn</dt>
                         <dd class="col-6 fw-semibold text-end">@(Model.OrderCode ?? $"#{Model.OrderId}")</dd>
 
-                        <dt class="col-6 text-muted small">Bàn</dt>
-                        <dd class="col-6 fw-semibold text-end">@tables</dd>
 
                         <dt class="col-6 text-muted small">Thu ngân xử lý</dt>
                         <dd class="col-6 fw-semibold text-end">@(Model.StaffName ?? Model.WaiterName ?? "—")</dd>
@@ -429,7 +499,7 @@
                     <button class="btn btn-outline-success btn-sm btn-print-receipt"
                             data-order-id="@Model.OrderId"
                             data-order-code="@(Model.OrderCode ?? $"#{Model.OrderId}")"
-                            data-tables="@tables"
+                            @* ✅ REMOVED: data-tables - không sử dụng trong receipt print *@
                             data-customer-name="@(Model.CustomerName ?? "Khách lẻ")"
                             data-customer-phone="@(Model.CustomerPhone ?? "—")"
                             data-created-at="@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"

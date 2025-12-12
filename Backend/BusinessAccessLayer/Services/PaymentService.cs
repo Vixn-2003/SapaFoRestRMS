@@ -39,10 +39,10 @@ public class PaymentService : IPaymentService
     private static readonly HashSet<string> PendingStatuses = new(StringComparer.OrdinalIgnoreCase)
     {
         "Pending",
-        "pending-payment",
+        OrderStatusConstants.PendingPayment,
         "WaitingForPayment",
         "Processing",
-        "Confirmed",  // Đơn đã được khách xác nhận, chờ thanh toán
+        OrderStatusConstants.Confirmed,  // Đơn đã được khách xác nhận, chờ thanh toán
         "Cooking",
         "Ready",
         "Late",
@@ -59,15 +59,9 @@ public class PaymentService : IPaymentService
     public async Task<OrderListResponseDto> GetOrdersAsync(DateOnly? date = default, string? statusFilter = null, string sortOrder = "desc", CancellationToken ct = default)
     {
         var selectedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        IEnumerable<Order> orders;
-        if (date.HasValue)
-        {
-            orders = await _unitOfWork.Payments.GetOrdersByDateAsync(selectedDate);
-        }
-        else
-        {
-            orders = await _unitOfWork.Payments.GetAllOrdersWithDetailsAsync();
-        }
+
+        // 🔄 Luôn lấy toàn bộ orders, sau đó filter theo ngày dựa trên PaidAt (nếu có) hoặc CreatedAt
+        var orders = await _unitOfWork.Payments.GetAllOrdersWithDetailsAsync();
         var orderDtos = new List<OrderDto>();
 
         foreach (var order in orders)
@@ -78,19 +72,41 @@ public class PaymentService : IPaymentService
             orderDtos.Add(orderDto);
         }
 
+        // ✅ Filter theo ngày: ưu tiên PaidAt, fallback CreatedAt cho đơn chưa thanh toán
+        if (date.HasValue)
+        {
+            orderDtos = orderDtos.Where(o =>
+                (o.PaidAt.HasValue && DateOnly.FromDateTime(o.PaidAt.Value) == selectedDate) ||
+                (!o.PaidAt.HasValue && o.CreatedAt.HasValue && DateOnly.FromDateTime(o.CreatedAt.Value) == selectedDate)
+            ).ToList();
+        }
+
+        // Tính lại tổng số sau khi filter theo ngày
         var pendingCount = orderDtos.Count(o => IsPendingStatus(o.Status));
         var processedCount = orderDtos.Count(o => IsProcessedStatus(o.Status));
 
         IEnumerable<OrderDto> filteredOrders = orderDtos;
         if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
-            if (statusFilter.Equals("pending", StringComparison.OrdinalIgnoreCase))
+            // ✅ Hỗ trợ cả "pending"/"processed" và "Confirmed"/"Paid"
+            var statusLower = statusFilter.ToLowerInvariant();
+            
+            if (statusLower == "pending" || statusLower == "confirmed" || statusLower == "pendingpayment")
             {
+                // Filter orders với status pending (bao gồm Confirmed, PendingPayment, etc.)
                 filteredOrders = orderDtos.Where(o => IsPendingStatus(o.Status));
             }
-            else if (statusFilter.Equals("processed", StringComparison.OrdinalIgnoreCase))
+            else if (statusLower == "processed" || statusLower == "paid" || statusLower == "completed" || statusLower == "success")
             {
+                // Filter orders với status processed (bao gồm Paid, Completed, Success)
                 filteredOrders = orderDtos.Where(o => IsProcessedStatus(o.Status));
+            }
+            else
+            {
+                // ✅ Filter theo status chính xác nếu không match với pending/processed
+                filteredOrders = orderDtos.Where(o => 
+                    !string.IsNullOrWhiteSpace(o.Status) && 
+                    o.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase));
             }
         }
 
@@ -110,18 +126,51 @@ public class PaymentService : IPaymentService
 
     public async Task<OrderDto?> GetOrderDetailAsync(int orderId, CancellationToken ct = default)
     {
+        // ✅ DEBUG: Log để trace
+        System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] Loading order {orderId}");
+        
         var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
 
         if (order == null)
         {
+            System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] Order {orderId} not found");
             return null;
         }
+
+        // ✅ DEBUG: Log order data trước khi map
+        System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] Order {orderId} - CustomerId: {order.CustomerId}, ReservationId: {order.ReservationId}, Customer: {order.Customer != null}, Customer.User: {order.Customer?.User != null}, Reservation.Customer: {order.Reservation?.Customer != null}, Reservation.Customer.User: {order.Reservation?.Customer?.User != null}");
 
         var orderDto = _mapper.Map<OrderDto>(order);
 
         // Tính toán các khoản tiền
         CalculateOrderAmounts(order, orderDto);
         PopulateOrderMetadata(order, orderDto);
+        
+        // ✅ DEBUG: Log orderDto sau khi populate
+        System.Diagnostics.Debug.WriteLine($"[GetOrderDetailAsync] OrderDto {orderId} - CustomerId: {orderDto.CustomerId}, CustomerName: {orderDto.CustomerName}, CustomerPhone: {orderDto.CustomerPhone}");
+        
+        // Lấy số tiền khách đưa và tiền thối lại từ transaction cuối cùng (nếu có)
+        if (order.Transactions != null && order.Transactions.Any())
+        {
+            var latestTransaction = order.Transactions
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefault();
+            
+            if (latestTransaction != null)
+            {
+                // Lấy số tiền khách đưa (cho thanh toán tiền mặt)
+                if (latestTransaction.AmountReceived.HasValue && latestTransaction.AmountReceived.Value > 0)
+                {
+                    orderDto.AmountReceived = latestTransaction.AmountReceived.Value;
+                }
+                
+                // Lấy tiền thối lại
+                if (latestTransaction.RefundAmount.HasValue && latestTransaction.RefundAmount.Value > 0)
+                {
+                    orderDto.ChangeAmount = latestTransaction.RefundAmount.Value;
+                }
+            }
+        }
         
         // Cập nhật lại Status của combo dựa trên trạng thái các món con trong combo (từ KDS)
         await UpdateComboStatusesFromKitchenAsync(orderDto, ct);
@@ -262,12 +311,73 @@ public class PaymentService : IPaymentService
         }
 
         // ✅ Làm tròn discount amount lên mệnh giá 1000
-        orderDto.DiscountAmount = RoundUpToThousand(discountAmount);
+        var roundedDiscountAmount = RoundUpToThousand(discountAmount);
+        orderDto.DiscountAmount = roundedDiscountAmount;
 
         // Tính lại tổng tiền sau ưu đãi và làm tròn
         var totalBeforeRounding = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
                                   (orderDto.ServiceFee ?? 0) - orderDto.DiscountAmount.Value;
         orderDto.TotalAmount = RoundUpToThousand(totalBeforeRounding);
+
+        // ✅ FIX: Lưu discount vào Payment record trong database
+        // Tìm Payment record của order (nếu có) hoặc tạo mới
+        var payment = order.Payments?.OrderByDescending(p => p.PaymentDate ?? DateTime.MinValue).FirstOrDefault();
+        
+        int? voucherId = null;
+        if (!string.IsNullOrWhiteSpace(request.VoucherCode))
+        {
+            var voucherService = _serviceProvider.GetService<IVoucherService>();
+            if (voucherService != null)
+            {
+                var vouchers = await voucherService.GetAllAsync();
+                var today = DateTime.Today;
+                var voucher = vouchers.FirstOrDefault(v =>
+                    string.Equals(v.Code, request.VoucherCode!.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    v.IsDelete != true &&
+                    string.Equals(v.Status, "Đang sử dụng", StringComparison.OrdinalIgnoreCase) &&
+                    (!v.StartDate.HasValue || v.StartDate.Value.Date <= today) &&
+                    (!v.EndDate.HasValue || v.EndDate.Value.Date >= today));
+                voucherId = voucher?.VoucherId;
+            }
+        }
+
+        if (payment == null)
+        {
+            // Tạo Payment record mới để lưu discount
+            payment = new Payment
+            {
+                OrderId = request.OrderId,
+                PaymentMethod = "Pending", // Tạm thời, sẽ cập nhật khi thanh toán
+                Subtotal = orderDto.Subtotal ?? 0,
+                DiscountAmount = roundedDiscountAmount,
+                Vatpercent = 10, // Default VAT
+                Vatamount = orderDto.VatAmount ?? 0,
+                FinalAmount = orderDto.TotalAmount ?? 0,
+                VoucherId = voucherId,
+                PaymentDate = null // Chưa thanh toán
+            };
+            // Thêm Payment vào order và save
+            if (order.Payments == null)
+            {
+                order.Payments = new List<Payment>();
+            }
+            order.Payments.Add(payment);
+        }
+        else
+        {
+            // Cập nhật Payment record hiện có
+            payment.DiscountAmount = roundedDiscountAmount;
+            payment.VoucherId = voucherId;
+            payment.Subtotal = orderDto.Subtotal ?? 0;
+            payment.Vatamount = orderDto.VatAmount ?? 0;
+            payment.FinalAmount = orderDto.TotalAmount ?? 0;
+        }
+
+        // Update order để trigger save Payment changes
+        await _unitOfWork.Payments.UpdateAsync(order);
+        
+        // Save changes để lưu discount vào database
+        await _unitOfWork.SaveChangesAsync();
 
         return orderDto;
     }
@@ -304,13 +414,10 @@ public class PaymentService : IPaymentService
 
         var savedTransaction = await _unitOfWork.Payments.SaveTransactionAsync(transaction);
 
-        // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION NGAY KHI BẮT ĐẦU THANH TOÁN
-        await ReleaseTablesAndCompleteReservationAsync(request.OrderId, null, ct);
-
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
 
-    public async Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, CancellationToken ct = default)
+    public async Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, int userId, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
 
@@ -410,8 +517,14 @@ public class PaymentService : IPaymentService
         order.Status = OrderStatusConstants.Paid;
         await _unitOfWork.Payments.UpdateAsync(order);
 
+        // 🔓 Giải phóng bàn và hoàn thành reservation
+        await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+
         // Save changes
         await _unitOfWork.SaveChangesAsync();
+
+        // ✅ Trigger post-payment actions (VIP update, LoyaltyPoints +1, etc.)
+        await TriggerPostPaymentActionsAsync(request.OrderId, savedTransaction.TransactionId, ct);
 
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
@@ -828,11 +941,49 @@ public class PaymentService : IPaymentService
             orderDto.TableNumber = string.Join(", ", tableNumbers);
         }
 
+        // ✅ FIX: Đảm bảo CustomerId được set (từ Order hoặc Reservation)
+        if (order.CustomerId.HasValue)
+        {
+            orderDto.CustomerId = order.CustomerId.Value;
+        }
+        else if (order.Reservation != null && order.Reservation.CustomerId > 0)
+        {
+            // Fallback: Lấy CustomerId từ Reservation nếu Order không có
+            // Reservation.CustomerId là int (không nullable), không phải int?
+            orderDto.CustomerId = order.Reservation.CustomerId;
+        }
+        
+        // ✅ FIX: Lấy customer info từ Customer.User hoặc Reservation.Customer.User
         if (order.Customer?.User != null)
         {
             orderDto.CustomerName = order.Customer.User.FullName;
             orderDto.CustomerPhone = order.Customer.User.Phone;
             orderDto.CustomerEmail = order.Customer.User.Email;
+        }
+        else if (order.Reservation?.Customer?.User != null)
+        {
+            // Fallback: Lấy từ Reservation nếu Customer.User không có
+            orderDto.CustomerName = order.Reservation.Customer.User.FullName;
+            orderDto.CustomerPhone = order.Reservation.Customer.User.Phone;
+            orderDto.CustomerEmail = order.Reservation.Customer.User.Email;
+            
+            // ✅ Đảm bảo CustomerId được set từ Reservation
+            // Reservation.CustomerId là int (không nullable), không phải int?
+            if (!orderDto.CustomerId.HasValue && order.Reservation.CustomerId > 0)
+            {
+                orderDto.CustomerId = order.Reservation.CustomerId;
+            }
+        }
+        else if (order.Reservation != null && !string.IsNullOrWhiteSpace(order.Reservation.CustomerNameReservation))
+        {
+            // Fallback: Lấy từ Reservation.CustomerNameReservation nếu không có User
+            orderDto.CustomerName = order.Reservation.CustomerNameReservation;
+        }
+        
+        // ✅ DEBUG: Log để trace customer info
+        if (orderDto.CustomerId.HasValue && string.IsNullOrWhiteSpace(orderDto.CustomerName))
+        {
+            System.Diagnostics.Debug.WriteLine($"[PopulateOrderMetadata] Order {order.OrderId} has CustomerId={orderDto.CustomerId} but CustomerName is null. Order.Customer={order.Customer != null}, Order.Customer.User={order.Customer?.User != null}, Reservation.Customer={order.Reservation?.Customer != null}, Reservation.Customer.User={order.Reservation?.Customer?.User != null}");
         }
 
         if (order.Reservation?.Staff != null)
@@ -884,7 +1035,7 @@ public class PaymentService : IPaymentService
 
         // Tính tổng tiền
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+      CalculateOrderAmounts(order, orderDto);
 
         // Use custom amount if provided, otherwise use total amount
         var totalAmount = customAmount ?? orderDto.TotalAmount ?? 0;
@@ -929,7 +1080,7 @@ public class PaymentService : IPaymentService
         }
 
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+       CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
         var depositRefundAmount = orderDto.DepositRefundAmount ?? 0;
 
@@ -986,8 +1137,13 @@ public class PaymentService : IPaymentService
                 // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION
                 await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
+                // Trigger post-payment actions (VIP update, LoyaltyPoints, etc.)
+                await TriggerPostPaymentActionsAsync(request.OrderId, savedTransaction.TransactionId, ct);
+
                 // Unlock order
                 await UnlockOrderAsync(request.OrderId, ct);
+
+                await _unitOfWork.SaveChangesAsync();
 
                 return _mapper.Map<TransactionDto>(savedTransaction);
             }
@@ -1069,8 +1225,29 @@ public class PaymentService : IPaymentService
             // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION
             await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
 
+            // Trigger post-payment actions (VIP update, LoyaltyPoints, etc.)
+            // Wrap trong try-catch để đảm bảo SaveChangesAsync luôn được gọi
+            try
+            {
+                await TriggerPostPaymentActionsAsync(request.OrderId, savedTransaction.TransactionId, ct);
+            }
+            catch (Exception postActionEx)
+            {
+                // Log lỗi nhưng không fail payment
+                await _auditLogService.LogEventAsync(
+                    eventType: "PostPaymentActionError",
+                    entityType: "Order",
+                    entityId: request.OrderId,
+                    description: $"Lỗi trong post-payment actions: {postActionEx.Message}",
+                    userId: userId,
+                    ct: ct);
+            }
+
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
+
+            // ✅ QUAN TRỌNG: Save changes để đảm bảo order status = Paid được lưu vào database
+            await _unitOfWork.SaveChangesAsync();
 
             return _mapper.Map<TransactionDto>(savedTransaction);
         }
@@ -1103,7 +1280,7 @@ public class PaymentService : IPaymentService
 
         // Calculate total amount
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+         CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
 
         // Validate tổng hai phần phải bằng totalAmount
@@ -1558,8 +1735,11 @@ public class PaymentService : IPaymentService
                 ct
             );
 
-            // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION KHI BẮT ĐẦU SPLIT BILL
-            await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+            // 🔓 GIẢI PHÓNG BÀN VÀ HOÀN THÀNH RESERVATION CHỈ KHI ĐÃ PAID TOÀN BỘ
+            if (allPaid)
+            {
+                await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+            }
 
             // Unlock order
             await UnlockOrderAsync(request.OrderId, ct);
@@ -1607,7 +1787,7 @@ public class PaymentService : IPaymentService
 
         // Calculate total amount
         var orderDto = _mapper.Map<OrderDto>(order);
-        CalculateOrderAmounts(order, orderDto);
+       CalculateOrderAmounts(order, orderDto);
         var totalAmount = orderDto.TotalAmount ?? 0;
 
         if (totalAmount <= 0)
@@ -1873,6 +2053,7 @@ public class PaymentService : IPaymentService
                 ct: ct
             );
         }
+
         catch (Exception ex)
         {
             // Log error but don't fail the payment - table release is secondary
@@ -1903,6 +2084,59 @@ public class PaymentService : IPaymentService
             var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(orderId);
             if (order != null && order.TotalAmount.HasValue)
             {
+                // Step 8.1.1: Re-evaluate VIP status for the customer after successful payment
+                try
+                {
+                    var vipService = _serviceProvider.GetService<ICustomerVipService>();
+                    if (vipService != null && order.CustomerId.HasValue)
+                    {
+                        await vipService.AutoUpdateVipWhenPaymentCompletedAsync(order.OrderId, ct);
+                    }
+                }
+                catch (Exception vipEx)
+                {
+                    await _auditLogService.LogEventAsync(
+                        eventType: "VipEvaluationError",
+                        entityType: "Customer",
+                        entityId: order.CustomerId ?? 0,
+                        description: $"Không thể cập nhật VIP sau thanh toán: {vipEx.Message}",
+                        userId: null,
+                        ct: ct);
+                }
+
+                // Step 8.1.2: Tăng LoyaltyPoints +1 cho Customer sau khi thanh toán thành công
+                try
+                {
+                    if (order.Customer != null)
+                    {
+                        // Tăng LoyaltyPoints +1 (nếu null thì set = 1)
+                        order.Customer.LoyaltyPoints = (order.Customer.LoyaltyPoints ?? 0) + 1;
+                        
+                        // Save changes để lưu LoyaltyPoints
+                        await _unitOfWork.SaveChangesAsync();
+                        
+                        // Log việc tăng điểm
+                        await _auditLogService.LogEventAsync(
+                            eventType: "LoyaltyPointsIncreased",
+                            entityType: "Customer",
+                            entityId: order.Customer.CustomerId,
+                            description: $"Tăng điểm tích lũy +1 sau thanh toán thành công. Điểm hiện tại: {order.Customer.LoyaltyPoints}",
+                            userId: null,
+                            ct: ct);
+                    }
+                }
+                catch (Exception loyaltyEx)
+                {
+                    // Log lỗi nhưng không fail payment
+                    await _auditLogService.LogEventAsync(
+                        eventType: "LoyaltyPointsError",
+                        entityType: "Customer",
+                        entityId: order.CustomerId ?? 0,
+                        description: $"Không thể tăng điểm tích lũy sau thanh toán: {loyaltyEx.Message}",
+                        userId: null,
+                        ct: ct);
+                }
+
                 // Step 8.2: Record revenue (placeholder - implement RevenueService if needed)
                 // await _revenueService.RecordAsync(orderId, order.TotalAmount.Value, transactionId, ct);
 
