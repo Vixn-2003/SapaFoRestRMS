@@ -314,7 +314,7 @@ namespace BusinessAccessLayer.Services
         /// <summary>
         /// Check VIP criteria based on spending statistics
         /// </summary>
-        public async Task<(bool MeetsCriteria, decimal AverageAmountPerPerson, string Reason)> CheckVipCriteriaAsync(
+        public virtual async Task<(bool MeetsCriteria, decimal AverageAmountPerPerson, string Reason)> CheckVipCriteriaAsync(
             int customerId, 
             CancellationToken ct = default)
         {
