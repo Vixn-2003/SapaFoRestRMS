@@ -1491,7 +1491,7 @@ namespace BusinessAccessLayer.Services
         }
 
         /// <summary>
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         public async Task<StatusUpdateResponse> RecallOrderDetailAsync(RecallOrderDetailRequest request)
         {
@@ -1583,7 +1583,6 @@ namespace BusinessAccessLayer.Services
         private static readonly HashSet<string> KitchenManagedOrderStatuses = new(StringComparer.OrdinalIgnoreCase)
         {
             "Pending",
-            "Processing",
             "Preparing",
             "Cooking",
             "Ready",

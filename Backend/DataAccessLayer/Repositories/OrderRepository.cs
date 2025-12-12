@@ -17,9 +17,7 @@ namespace DataAccessLayer.Repositories
             "Cooking",
             "Ready",
             "Late",
-            "Done",
-            "Processing",
-          
+            "Done"
         };
 
         public OrderRepository(SapaFoRestRmsContext context)
