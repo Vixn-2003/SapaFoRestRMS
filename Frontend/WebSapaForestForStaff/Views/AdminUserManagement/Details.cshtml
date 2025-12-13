@@ -1,0 +1,319 @@
+@model WebSapaForestForStaff.Models.UserManagement.UserDetailViewModel
+
+@{
+    ViewData["Title"] = "User Details";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+@if (Model?.UserDetails == null)
+{
+    <div class="alert alert-danger">
+        <h4>User not found</h4>
+        <p>The requested user could not be found.</p>
+        <a asp-action="Index" class="btn btn-primary">Back to User List</a>
+    </div>
+}
+else
+{
+    var user = Model.UserDetails;
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="page-title">User Details</h3>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a asp-action="Index">User Management</a></li>
+                    <li class="breadcrumb-item active">User Details</li>
+                </ul>
+            </div>
+            <div class="col-auto">
+                <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit User
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- User Information Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                    {
+                        <img src="@user.AvatarUrl" alt="Avatar" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px; font-size: 48px;">
+                            @{
+                                var lastWord = user.FullName?.Split(' ').LastOrDefault();
+                                var initial = !string.IsNullOrEmpty(lastWord) && lastWord.Length > 0 
+                                    ? lastWord.Substring(0, 1).ToUpper() 
+                                    : !string.IsNullOrEmpty(user.FullName) && user.FullName.Length > 0 
+                                        ? user.FullName.Substring(0, 1).ToUpper() 
+                                        : "?";
+                            }
+                            <span>@initial</span>
+                        </div>
+                    }
+                    <h4>@user.FullName</h4>
+                    <p class="text-muted">@user.Email</p>
+                    <div class="mb-3">
+                        @if (user.Status == 0)
+                        {
+                            <span class="badge badge-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">Inactive</span>
+                        }
+                        <span class="badge badge-info ml-2">@user.RoleName</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Card -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">User Information</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th width="30%">User ID</th>
+                                <td>@user.UserId</td>
+                            </tr>
+                            <tr>
+                                <th>Full Name</th>
+                                <td>@user.FullName</td>
+                            </tr>
+                            <tr>
+                                <th>Email</th>
+                                <td>@user.Email</td>
+                            </tr>
+                            <tr>
+                                <th>Phone</th>
+                                <td>@(user.Phone ?? "N/A")</td>
+                            </tr>
+                            <tr>
+                                <th>Role</th>
+                                <td>
+                                    <span class="badge badge-info">@user.RoleName</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td>
+                                    @if (user.Status == 0)
+                                    {
+                                        <span class="badge badge-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Inactive</span>
+                                    }
+                                </td>
+                            </tr>
+                            @if (user.CreatedAt.HasValue)
+                            {
+                                <tr>
+                                    <th>Created At</th>
+                                    <td>@user.CreatedAt.Value.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                            @if (user.ModifiedAt.HasValue)
+                            {
+                                <tr>
+                                    <th>Last Modified</th>
+                                    <td>@user.ModifiedAt.Value.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                            @if (user.LastLoginAt.HasValue)
+                            {
+                                <tr>
+                                    <th>Last Login</th>
+                                    <td>@user.LastLoginAt.Value.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(user.CreatedByName))
+                            {
+                                <tr>
+                                    <th>Created By</th>
+                                    <td>@user.CreatedByName</td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(user.ModifiedByName))
+                            {
+                                <tr>
+                                    <th>Modified By</th>
+                                    <td>@user.ModifiedByName</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (user.LoginHistory != null && user.LoginHistory.Any())
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Login History</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Login Time</th>
+                                        <th>IP Address</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var login in user.LoginHistory.Take(10))
+                                    {
+                                        <tr>
+                                            <td>@login.LoginTime.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                            <td>@(login.IpAddress ?? "N/A")</td>
+                                            <td>
+                                                @if (login.IsSuccessful)
+                                                {
+                                                    <span class="badge badge-success">Success</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge-danger">Failed</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (user.RecentActivities != null && user.RecentActivities.Any())
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Recent Activities</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Activity</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var activity in user.RecentActivities.Take(10))
+                                    {
+                                        <tr>
+                                            <td>@activity.ActivityTime.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                            <td>@activity.ActivityType</td>
+                                            <td>@activity.Description</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+            <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-primary">Edit User</a>
+            @if (user.Status == 0)
+            {
+                <button type="button" class="btn btn-warning" onclick="openDeactivateModal(@user.UserId, '@user.FullName')">
+                    <i class="fas fa-ban"></i> Deactivate
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-success" onclick="changeStatus(@user.UserId, 0)">
+                    <i class="fas fa-check"></i> Activate
+                </button>
+            }
+            <button type="button" class="btn btn-danger" onclick="openDeleteModal(@user.UserId, '@user.FullName')">
+                <i class="fas fa-trash"></i> Delete
+            </button>
+        </div>
+    </div>
+}
+
+<!-- Deactivate Modal -->
+<div class="modal fade" id="deactivateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Deactivate User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to deactivate this user?</p>
+                <p><strong>Name:</strong> <span id="deactivateUserName"></span></p>
+                <div class="form-group">
+                    <label for="deactivateReason">Reason (optional)</label>
+                    <textarea id="deactivateReason" class="form-control" rows="3" placeholder="Enter reason for deactivation..."></textarea>
+                </div>
+                <input type="hidden" id="deactivateUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitDeactivate()">Deactivate</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong>Warning: This action cannot be undone!</strong></p>
+                <p>Are you sure you want to permanently delete this user?</p>
+                <p><strong>Name:</strong> <span id="deleteUserName"></span></p>
+                <div class="form-group">
+                    <label for="deleteReason">Reason (optional)</label>
+                    <textarea id="deleteReason" class="form-control" rows="3" placeholder="Enter reason for deletion..."></textarea>
+                </div>
+                <input type="hidden" id="deleteUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitDelete()">Delete Permanently</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin-user-management.js"></script>
+}
+

@@ -1,0 +1,360 @@
+﻿@model WebSapaForestForStaff.Models.UserManagement.UserListViewModel
+
+@{
+    ViewData["Title"] = "Quản lý người dùng hệ thống ";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="row align-items-center">
+        <div class="col">
+            <h3 class="page-title">User Management</h3>
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
+                <li class="breadcrumb-item active">Quản lý người dùng hệ thống </li>
+            </ul>
+        </div>
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Add New User
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" id="filterForm" asp-action="Index">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Search</label>
+                        <input type="text" name="searchTerm" class="form-control" placeholder="Name, email, phone..." value="@ViewBag.SearchTerm">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select name="roleId" class="form-control">
+                            <option value="">All Roles</option>
+                            @if (Model.AvailableRoles != null)
+                            {
+                                @foreach (var role in Model.AvailableRoles)
+                                {
+                                    <option value="@role.RoleId" selected="@(ViewBag.RoleId != null && ViewBag.RoleId.ToString() == role.RoleId.ToString())">@role.RoleName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="status" class="form-control">
+                            <option value="">All Status</option>
+                            <option value="0" selected="@(ViewBag.Status != null && ViewBag.Status.ToString() == "0")">Active</option>
+                            <option value="1" selected="@(ViewBag.Status != null && ViewBag.Status.ToString() == "1")">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Page Size</label>
+                        <select name="pageSize" class="form-control">
+                            <option value="10" selected="@(ViewBag.PageSize == 10)">10 per page</option>
+                            <option value="25" selected="@(ViewBag.PageSize == 25)">25 per page</option>
+                            <option value="50" selected="@(ViewBag.PageSize == 50)">50 per page</option>
+                            <option value="100" selected="@(ViewBag.PageSize == 100)">100 per page</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Sort By</label>
+                        <select name="sortBy" class="form-control">
+                            <option value="FullName" selected="@(ViewBag.SortBy == "FullName")">Name</option>
+                            <option value="Email" selected="@(ViewBag.SortBy == "Email")">Email</option>
+                            <option value="RoleName" selected="@(ViewBag.SortBy == "RoleName")">Role</option>
+                            <option value="CreatedAt" selected="@(ViewBag.SortBy == "CreatedAt")">Created Date</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" name="sortOrder" value="@(ViewBag.SortOrder ?? "asc")" id="sortOrder" />
+        </form>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-center mb-0">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" />
+                        </th>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created Date</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model?.UserList != null && Model.UserList.Users != null && Model.UserList.Users.Any())
+                    {
+                        foreach (var user in Model.UserList.Users)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="user-checkbox" value="@user.UserId" />
+                                </td>
+                                <td>@user.UserId</td>
+                                <td>
+                                    <h2 class="table-avatar">
+                                        <a href="@Url.Action("Details", new { id = user.UserId })" class="avatar avatar-sm mr-2">
+                                            @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                                            {
+                                                <img class="avatar-img rounded-circle" src="@user.AvatarUrl" alt="User Image">
+                                            }
+                                            else
+                                            {
+                                                <div class="avatar-img rounded-circle  text-white d-flex align-items-center justify-content-center">
+                                                    @{
+                                                        var lastWord = user.FullName?.Split(' ').LastOrDefault();
+                                                        var initial = !string.IsNullOrEmpty(lastWord) && lastWord.Length > 0 
+                                                            ? lastWord.Substring(0, 1).ToUpper() 
+                                                            : !string.IsNullOrEmpty(user.FullName) && user.FullName.Length > 0 
+                                                                ? user.FullName.Substring(0, 1).ToUpper() 
+                                                                : "?";
+                                                    }
+                                                    <span>@initial</span>
+                                                </div>
+                                            }
+                                        </a>
+                                        <a href="@Url.Action("Details", new { id = user.UserId })">@user.FullName</a>
+                                    </h2>
+                                </td>
+                                <td>@user.Email</td>
+                                <td>@(user.Phone ?? "N/A")</td>
+                                <td>
+                                    <span class="badge badge-pill @(user.RoleId == 1 ? "badge-danger" : user.RoleId == 2 ? "badge-warning" : user.RoleId == 3 ? "badge-info" : "badge-secondary")">
+                                        @(user.RoleName ?? "Unknown")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (user.Status == 0)
+                                    {
+                                        <span class="badge badge-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Inactive</span>
+                                    }
+                                </td>
+                                <td>@(user.CreatedAt?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                                <td class="text-right">
+                                    <div class="actions">
+                                        <a href="@Url.Action("Details", new { id = user.UserId })" class="btn btn-sm bg-info-light">
+                                            <i class="far fa-eye"></i> View
+                                        </a>
+                                        <a href="@Url.Action("Edit", new { id = user.UserId })" class="btn btn-sm bg-warning-light">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        @if (user.Status == 0)
+                                        {
+                                            <button type="button" class="btn btn-sm bg-danger-light" onclick="openDeactivateModal(@user.UserId, '@user.FullName')">
+                                                <i class="fas fa-ban"></i> Deactivate
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-sm bg-success-light" onclick="changeStatus(@user.UserId, 0)">
+                                                <i class="fas fa-check"></i> Activate
+                                            </button>
+                                        }
+                                        <button type="button" class="btn btn-sm bg-danger-light" onclick="openDeleteModal(@user.UserId, '@user.FullName')">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center">
+                                <div class="py-4">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <h5>No users found</h5>
+                                    <p class="text-muted">Try adjusting your search criteria or create a new user.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model?.UserList != null && Model.UserList.Users != null && Model.UserList.Users.Any())
+        {
+            <!-- Pagination -->
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="dataTables_info">
+                        Showing @((Model.UserList.Page - 1) * Model.UserList.PageSize + 1) to @Math.Min(Model.UserList.Page * Model.UserList.PageSize, Model.UserList.TotalCount) of @Model.UserList.TotalCount entries
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="dataTables_paginate paging_simple_numbers float-right">
+                        <ul class="pagination">
+                            @if (Model.UserList.HasPreviousPage)
+                            {
+                                <li class="paginate_button page-item previous">
+                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page - 1, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">Previous</a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="paginate_button page-item previous disabled">
+                                    <a href="#" class="page-link">Previous</a>
+                                </li>
+                            }
+
+                            @for (int i = Math.Max(1, Model.UserList.Page - 2); i <= Math.Min(Model.UserList.TotalPages, Model.UserList.Page + 2); i++)
+                            {
+                                if (i == Model.UserList.Page)
+                                {
+                                    <li class="paginate_button page-item active">
+                                        <a href="#" class="page-link">@i</a>
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li class="paginate_button page-item">
+                                        <a href="@Url.Action("Index", new { page = i, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">@i</a>
+                                    </li>
+                                }
+                            }
+
+                            @if (Model.UserList.HasNextPage)
+                            {
+                                <li class="paginate_button page-item next">
+                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page + 1, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">Next</a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="paginate_button page-item next disabled">
+                                    <a href="#" class="page-link">Next</a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Deactivate Modal -->
+<div class="modal fade" id="deactivateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Deactivate User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to deactivate this user?</p>
+                <p><strong>Name:</strong> <span id="deactivateUserName"></span></p>
+                <div class="form-group">
+                    <label for="deactivateReason">Reason (optional)</label>
+                    <textarea id="deactivateReason" class="form-control" rows="3" placeholder="Enter reason for deactivation..."></textarea>
+                </div>
+                <input type="hidden" id="deactivateUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitDeactivate()">Deactivate</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong>Warning: This action cannot be undone!</strong></p>
+                <p>Are you sure you want to permanently delete this user?</p>
+                <p><strong>Name:</strong> <span id="deleteUserName"></span></p>
+                <div class="form-group">
+                    <label for="deleteReason">Reason (optional)</label>
+                    <textarea id="deleteReason" class="form-control" rows="3" placeholder="Enter reason for deletion..."></textarea>
+                </div>
+                <input type="hidden" id="deleteUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitDelete()">Delete Permanently</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin-user-management.js"></script>
+    <script>
+        // Initialize on page load
+        $(document).ready(function() {
+            initializeUserManagement();
+        });
+
+        // Show success/error messages from TempData
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>
+            toastr.success('@TempData["SuccessMessage"]');
+            </text>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+            toastr.error('@TempData["ErrorMessage"]');
+            </text>
+        }
+        @if (TempData["WarningMessage"] != null)
+        {
+            <text>
+            toastr.warning('@TempData["WarningMessage"]');
+            </text>
+        }
+    </script>
+}
+

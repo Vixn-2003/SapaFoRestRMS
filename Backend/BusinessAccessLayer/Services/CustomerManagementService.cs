@@ -57,6 +57,7 @@ namespace BusinessAccessLayer.Services
                 filter.MinSpending,
                 filter.MaxSpending,
                 filter.MinVisits,
+                filter.MaxVisits,
                 filter.SortBy,
                 filter.SortDirection,
                 ct);
@@ -88,6 +89,10 @@ namespace BusinessAccessLayer.Services
             if (filter.MinVisits.HasValue)
             {
                 customersWithStats = customersWithStats.Where(x => x.TotalVisits >= filter.MinVisits.Value);
+            }
+            if (filter.MaxVisits.HasValue)
+            {
+                customersWithStats = customersWithStats.Where(x => x.TotalVisits <= filter.MaxVisits.Value);
             }
 
             // Apply sorting
@@ -314,7 +319,7 @@ namespace BusinessAccessLayer.Services
         /// <summary>
         /// Check VIP criteria based on spending statistics
         /// </summary>
-        public async Task<(bool MeetsCriteria, decimal AverageAmountPerPerson, string Reason)> CheckVipCriteriaAsync(
+        public virtual async Task<(bool MeetsCriteria, decimal AverageAmountPerPerson, string Reason)> CheckVipCriteriaAsync(
             int customerId, 
             CancellationToken ct = default)
         {

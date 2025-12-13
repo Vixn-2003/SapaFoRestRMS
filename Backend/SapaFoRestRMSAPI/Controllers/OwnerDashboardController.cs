@@ -41,8 +41,12 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting owner dashboard data");
-                return StatusCode(500, new { message = "Đã xảy ra lỗi khi tải dữ liệu dashboard." });
+                _logger.LogError(ex, "Error getting owner dashboard data: {Message}\n{StackTrace}", ex.Message, ex.StackTrace);
+                return StatusCode(500, new { 
+                    message = "Đã xảy ra lỗi khi tải dữ liệu dashboard.",
+                    error = ex.Message,
+                    innerException = ex.InnerException?.Message
+                });
             }
         }
     }

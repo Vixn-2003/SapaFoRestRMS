@@ -299,12 +299,12 @@ public class UserServiceTests
             FullName = "Nguyễn Văn E",
             Email = "user5@example.com",
             Phone = "0777888999",
-            RoleId = 2, // Admin
+            RoleId = 3, // Manager (not restricted)
             Password = "Password123!",
             Status = 1
         };
 
-        var testRole = CreateTestRole(2, "Admin");
+        var testRole = CreateTestRole(3, "Manager");
 
         // Mock email không tồn tại
         _mockUserRepository
@@ -347,7 +347,7 @@ public class UserServiceTests
         result.Should().NotBeNull();
         result.Email.Should().Be(createRequest.Email);
         result.FullName.Should().Be(createRequest.FullName);
-        result.RoleName.Should().Be("Admin");
+        result.RoleName.Should().Be("Manager");
 
         // Verify AddAsync được gọi 1 lần
         _mockUserRepository.Verify(
@@ -615,6 +615,674 @@ public class UserServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await _userService.DeleteAsync(userId)
+        );
+    }
+
+    #endregion
+
+    #region Test 6: GetDetailsAsync_ReturnsUserDetails
+
+    [Fact]
+    public async Task GetDetailsAsync_ReturnsUserDetails_WhenUserExists()
+    {
+        // Arrange
+        var userId = 1;
+        var testUser = CreateTestUsers().First(u => u.UserId == userId);
+        testUser.CreatedBy = 10;
+        testUser.ModifiedBy = 10;
+        var testRole = CreateTestRole(2, "Admin");
+        
+        // Create a separate creator user (not in CreateTestUsers list)
+        var creatorUser = new User
+        {
+            UserId = 10,
+            FullName = "Creator User",
+            Email = "creator@example.com",
+            Phone = "0123456789",
+            PasswordHash = "hashed_password",
+            RoleId = 2,
+            Status = 0,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(testUser);
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(10))
+            .ReturnsAsync(creatorUser);
+
+        _mockRoleRepository
+            .Setup(repo => repo.GetByIdAsync(testUser.RoleId))
+            .ReturnsAsync(testRole);
+
+        // Act
+        var result = await _userService.GetDetailsAsync(userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.UserId.Should().Be(userId);
+        result.FullName.Should().Be(testUser.FullName);
+        result.Email.Should().Be(testUser.Email);
+        result.RoleName.Should().Be("Admin");
+        result.LoginHistory.Should().NotBeNull();
+        result.RecentActivities.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetDetailsAsync_ReturnsNull_WhenUserNotFound()
+    {
+        // Arrange
+        var userId = 999;
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync((User?)null);
+
+        // Act
+        var result = await _userService.GetDetailsAsync(userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetDetailsAsync_ReturnsNull_WhenUserIsDeleted()
+    {
+        // Arrange
+        var userId = 3; // User đã bị xóa
+        var deletedUser = CreateTestUsers().First(u => u.UserId == userId);
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(deletedUser);
+
+        // Act
+        var result = await _userService.GetDetailsAsync(userId);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    #endregion
+
+    #region Test 7: SearchAsync_ReturnsFilteredAndPaginatedUsers
+
+    [Fact]
+    public async Task SearchAsync_ReturnsFilteredUsers_BySearchTerm()
+    {
+        // Arrange
+        var testUsers = CreateTestUsers();
+        var request = new UserSearchRequest
+        {
+            SearchTerm = "Nguyễn",
+            Page = 1,
+            PageSize = 10
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetAllAsync())
+            .ReturnsAsync(testUsers);
+
+        var roleMap = new Dictionary<int, string>
+        {
+            { 2, "Admin" },
+            { 3, "Manager" },
+            { 5, "Customer" }
+        };
+
+        var filteredUsers = testUsers.Where(u => u.IsDeleted == false && u.FullName != null && u.FullName.Contains("Nguyễn")).ToList();
+        foreach (var user in filteredUsers)
+        {
+            var role = CreateTestRole(user.RoleId, roleMap[user.RoleId]);
+            _mockRoleRepository
+                .Setup(repo => repo.GetByIdAsync(user.RoleId))
+                .ReturnsAsync(role);
+        }
+
+        // Setup mapper to handle any user dynamically based on RoleId
+        _mockMapper
+            .Setup(m => m.Map<UserDto>(It.IsAny<User>()))
+            .Returns<User>(user => 
+            {
+                var roleName = roleMap.ContainsKey(user.RoleId) ? roleMap[user.RoleId] : "Unknown";
+                return MapUserToDto(user, roleName);
+            });
+
+        // Act
+        var result = await _userService.SearchAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Users.Should().NotBeEmpty();
+        result.Users.Should().OnlyContain(u => u.FullName.Contains("Nguyễn"));
+    }
+
+    [Fact]
+    public async Task SearchAsync_ReturnsFilteredUsers_ByRoleId()
+    {
+        // Arrange
+        var testUsers = CreateTestUsers();
+        var request = new UserSearchRequest
+        {
+            RoleId = 2, // Admin
+            Page = 1,
+            PageSize = 10
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetAllAsync())
+            .ReturnsAsync(testUsers);
+
+        var adminRole = CreateTestRole(2, "Admin");
+        _mockRoleRepository
+            .Setup(repo => repo.GetByIdAsync(2))
+            .ReturnsAsync(adminRole);
+
+        // Setup mapper to handle any user dynamically based on RoleId
+        _mockMapper
+            .Setup(m => m.Map<UserDto>(It.IsAny<User>()))
+            .Returns<User>(user => MapUserToDto(user, "Admin"));
+
+        // Act
+        var result = await _userService.SearchAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Users.Should().OnlyContain(u => u.RoleId == 2);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ReturnsPaginatedUsers_WithCorrectPagination()
+    {
+        // Arrange
+        var testUsers = CreateTestUsers();
+        var request = new UserSearchRequest
+        {
+            Page = 1,
+            PageSize = 2
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetAllAsync())
+            .ReturnsAsync(testUsers);
+
+        var roleMap = new Dictionary<int, string>
+        {
+            { 2, "Admin" },
+            { 3, "Manager" },
+            { 5, "Customer" }
+        };
+
+        // Mock roles for all active users (not just the first 2)
+        var activeUsers = testUsers.Where(u => u.IsDeleted == false).ToList();
+        foreach (var user in activeUsers)
+        {
+            var role = CreateTestRole(user.RoleId, roleMap[user.RoleId]);
+            _mockRoleRepository
+                .Setup(repo => repo.GetByIdAsync(user.RoleId))
+                .ReturnsAsync(role);
+        }
+
+        // Setup mapper to handle any user dynamically based on RoleId
+        _mockMapper
+            .Setup(m => m.Map<UserDto>(It.IsAny<User>()))
+            .Returns<User>(user => 
+            {
+                var roleName = roleMap.ContainsKey(user.RoleId) ? roleMap[user.RoleId] : "Unknown";
+                return MapUserToDto(user, roleName);
+            });
+
+        // Act
+        var result = await _userService.SearchAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(2);
+        result.Users.Should().HaveCountLessOrEqualTo(2);
+        result.TotalCount.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task SearchAsync_SortsUsers_ByFullNameAscending()
+    {
+        // Arrange
+        var testUsers = CreateTestUsers();
+        var request = new UserSearchRequest
+        {
+            SortBy = "FullName",
+            SortOrder = "asc",
+            Page = 1,
+            PageSize = 10
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetAllAsync())
+            .ReturnsAsync(testUsers);
+
+        var roleMap = new Dictionary<int, string>
+        {
+            { 2, "Admin" },
+            { 3, "Manager" },
+            { 5, "Customer" }
+        };
+
+        // Mock roles for all active users
+        var activeUsers = testUsers.Where(u => u.IsDeleted == false).ToList();
+        foreach (var user in activeUsers)
+        {
+            var role = CreateTestRole(user.RoleId, roleMap[user.RoleId]);
+            _mockRoleRepository
+                .Setup(repo => repo.GetByIdAsync(user.RoleId))
+                .ReturnsAsync(role);
+        }
+
+        // Setup mapper to handle any user dynamically based on RoleId
+        _mockMapper
+            .Setup(m => m.Map<UserDto>(It.IsAny<User>()))
+            .Returns<User>(user => 
+            {
+                var roleName = roleMap.ContainsKey(user.RoleId) ? roleMap[user.RoleId] : "Unknown";
+                return MapUserToDto(user, roleName);
+            });
+
+        // Act
+        var result = await _userService.SearchAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        if (result.Users.Count > 1)
+        {
+            result.Users.Should().BeInAscendingOrder(u => u.FullName);
+        }
+    }
+
+    #endregion
+
+    #region Test 8: CreateAsync_AdditionalTests
+
+    [Fact]
+    public async Task CreateAsync_ThrowsException_WhenRestrictedRoleId()
+    {
+        // Arrange
+        var createRequest = new UserCreateRequest
+        {
+            FullName = "Test User",
+            Email = "test@example.com",
+            Phone = "0123456789",
+            RoleId = 2, // Admin - restricted
+            Password = "Password123!",
+            Status = 1
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.IsEmailExistsAsync(createRequest.Email))
+            .ReturnsAsync(false);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _userService.CreateAsync(createRequest)
+        );
+
+        exception.Message.Should().Contain("Không được phép tạo tài khoản Admin");
+    }
+
+    [Fact]
+    public async Task CreateAsync_ThrowsException_WhenPasswordTooShort()
+    {
+        // Arrange
+        var createRequest = new UserCreateRequest
+        {
+            FullName = "Test User",
+            Email = "test@example.com",
+            Phone = "0123456789",
+            RoleId = 3, // Manager
+            Password = "12345", // Too short
+            Status = 1
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.IsEmailExistsAsync(createRequest.Email))
+            .ReturnsAsync(false);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _userService.CreateAsync(createRequest)
+        );
+
+        exception.Message.Should().Contain("ít nhất 6 ký tự");
+    }
+
+    [Fact]
+    public async Task CreateAsync_GeneratesPassword_WhenNoPasswordProvided()
+    {
+        // Arrange
+        var createRequest = new UserCreateRequest
+        {
+            FullName = "Test User",
+            Email = "test@example.com",
+            Phone = "0123456789",
+            RoleId = 3, // Manager
+            Password = null,
+            TemporaryPassword = null,
+            Status = 1
+        };
+
+        var testRole = CreateTestRole(3, "Manager");
+
+        _mockUserRepository
+            .Setup(repo => repo.IsEmailExistsAsync(createRequest.Email))
+            .ReturnsAsync(false);
+
+        _mockUserRepository
+            .Setup(repo => repo.AddAsync(It.IsAny<User>()))
+            .Returns(Task.CompletedTask);
+
+        _mockUnitOfWork
+            .Setup(uow => uow.SaveChangesAsync())
+            .ReturnsAsync(1);
+
+        _mockRoleRepository
+            .Setup(repo => repo.GetByIdAsync(createRequest.RoleId))
+            .ReturnsAsync(testRole);
+
+        _mockEmailService
+            .Setup(es => es.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        _mockMapper
+            .Setup(m => m.Map<UserDto>(It.IsAny<User>()))
+            .Returns<User>(user => MapUserToDto(user, "Manager"));
+
+        // Act
+        var result = await _userService.CreateAsync(createRequest);
+
+        // Assert
+        result.Should().NotBeNull();
+        _mockUserRepository.Verify(
+            repo => repo.AddAsync(It.Is<User>(u => !string.IsNullOrEmpty(u.PasswordHash))),
+            Times.Once
+        );
+    }
+
+    #endregion
+
+    #region Test 9: UpdateProfileAsync_UpdatesUserProfile
+
+    [Fact]
+    public async Task UpdateProfileAsync_UpdatesProfile_WhenUserExists()
+    {
+        // Arrange
+        var userId = 1;
+        var existingUser = CreateTestUsers().First(u => u.UserId == userId);
+        var updateRequest = new UserProfileUpdateRequest
+        {
+            FullName = "Updated Name",
+            Phone = "0999888777",
+            AvatarUrl = "https://example.com/avatar.jpg"
+        };
+
+        var testRole = CreateTestRole(2, "Admin");
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(existingUser);
+
+        _mockUserRepository
+            .Setup(repo => repo.UpdateAsync(It.IsAny<User>()))
+            .Returns(Task.CompletedTask);
+
+        _mockUnitOfWork
+            .Setup(uow => uow.SaveChangesAsync())
+            .ReturnsAsync(1);
+
+        _mockRoleRepository
+            .Setup(repo => repo.GetByIdAsync(existingUser.RoleId))
+            .ReturnsAsync(testRole);
+
+        _mockMapper
+            .Setup(m => m.Map<UserDto>(It.IsAny<User>()))
+            .Returns<User>(user => MapUserToDto(user, "Admin"));
+
+        // Act
+        var result = await _userService.UpdateProfileAsync(userId, updateRequest);
+
+        // Assert
+        result.Should().NotBeNull();
+        _mockUserRepository.Verify(
+            repo => repo.UpdateAsync(It.Is<User>(u =>
+                u.UserId == userId &&
+                u.FullName == updateRequest.FullName &&
+                u.Phone == updateRequest.Phone &&
+                u.AvatarUrl == updateRequest.AvatarUrl &&
+                u.ModifiedAt != null
+            )),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task UpdateProfileAsync_ThrowsException_WhenUserNotFound()
+    {
+        // Arrange
+        var userId = 999;
+        var updateRequest = new UserProfileUpdateRequest
+        {
+            FullName = "Updated Name",
+            Phone = "0999888777"
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _userService.UpdateProfileAsync(userId, updateRequest)
+        );
+    }
+
+    #endregion
+
+    #region Test 10: ChangeStatusAsync_UpdatesUserStatus
+
+    [Fact]
+    public async Task ChangeStatusAsync_UpdatesStatus_WhenUserExists()
+    {
+        // Arrange
+        var userId = 1;
+        var existingUser = CreateTestUsers().First(u => u.UserId == userId);
+        var newStatus = 1;
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(existingUser);
+
+        _mockUserRepository
+            .Setup(repo => repo.UpdateAsync(It.IsAny<User>()))
+            .Returns(Task.CompletedTask);
+
+        _mockUnitOfWork
+            .Setup(uow => uow.SaveChangesAsync())
+            .ReturnsAsync(1);
+
+        // Act
+        await _userService.ChangeStatusAsync(userId, newStatus);
+
+        // Assert
+        _mockUserRepository.Verify(
+            repo => repo.UpdateAsync(It.Is<User>(u =>
+                u.UserId == userId &&
+                u.Status == newStatus &&
+                u.ModifiedAt != null
+            )),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task ChangeStatusAsync_ThrowsException_WhenStatusInvalid()
+    {
+        // Arrange
+        var userId = 1;
+        var invalidStatus = 5; // Invalid status
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            async () => await _userService.ChangeStatusAsync(userId, invalidStatus)
+        );
+
+        exception.Message.Should().Contain("between 0 and 2");
+    }
+
+    [Fact]
+    public async Task ChangeStatusAsync_ThrowsException_WhenUserNotFound()
+    {
+        // Arrange
+        var userId = 999;
+        var status = 1;
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _userService.ChangeStatusAsync(userId, status)
+        );
+    }
+
+    #endregion
+
+    #region Test 11: ResetPasswordAsync_ResetsUserPassword
+
+    [Fact]
+    public async Task ResetPasswordAsync_ResetsPassword_WhenUserExists()
+    {
+        // Arrange
+        var userId = 1;
+        var existingUser = CreateTestUsers().First(u => u.UserId == userId);
+        var oldPasswordHash = existingUser.PasswordHash;
+        var request = new ResetUserPasswordRequest
+        {
+            NewPassword = "NewPassword123",
+            SendEmailNotification = true
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(existingUser);
+
+        _mockUserRepository
+            .Setup(repo => repo.UpdateAsync(It.IsAny<User>()))
+            .Returns(Task.CompletedTask);
+
+        _mockUnitOfWork
+            .Setup(uow => uow.SaveChangesAsync())
+            .ReturnsAsync(1);
+
+        _mockEmailService
+            .Setup(es => es.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _userService.ResetPasswordAsync(userId, request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().Be("NewPassword123");
+
+        _mockUserRepository.Verify(
+            repo => repo.UpdateAsync(It.Is<User>(u =>
+                u.UserId == userId &&
+                u.PasswordHash != oldPasswordHash &&
+                u.ModifiedAt != null
+            )),
+            Times.Once
+        );
+
+        _mockEmailService.Verify(
+            es => es.SendAsync(existingUser.Email, It.IsAny<string>(), It.IsAny<string>()),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_GeneratesPassword_WhenNoPasswordProvided()
+    {
+        // Arrange
+        var userId = 1;
+        var existingUser = CreateTestUsers().First(u => u.UserId == userId);
+        var request = new ResetUserPasswordRequest
+        {
+            NewPassword = null,
+            SendEmailNotification = false
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(existingUser);
+
+        _mockUserRepository
+            .Setup(repo => repo.UpdateAsync(It.IsAny<User>()))
+            .Returns(Task.CompletedTask);
+
+        _mockUnitOfWork
+            .Setup(uow => uow.SaveChangesAsync())
+            .ReturnsAsync(1);
+
+        // Act
+        var result = await _userService.ResetPasswordAsync(userId, request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_ThrowsException_WhenPasswordTooShort()
+    {
+        // Arrange
+        var userId = 1;
+        var existingUser = CreateTestUsers().First(u => u.UserId == userId);
+        var request = new ResetUserPasswordRequest
+        {
+            NewPassword = "12345", // Too short
+            SendEmailNotification = false
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(existingUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _userService.ResetPasswordAsync(userId, request)
+        );
+
+        exception.Message.Should().Contain("ít nhất 6 ký tự");
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_ThrowsException_WhenUserNotFound()
+    {
+        // Arrange
+        var userId = 999;
+        var request = new ResetUserPasswordRequest
+        {
+            NewPassword = "NewPassword123",
+            SendEmailNotification = false
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            async () => await _userService.ResetPasswordAsync(userId, request)
         );
     }
 

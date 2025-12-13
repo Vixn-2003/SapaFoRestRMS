@@ -1,7 +1,7 @@
 @model WebSapaForestForStaff.Models.Owner.OwnerDashboardViewModel
 @{
-    ViewData["Title"] = "Owner Dashboard";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Bảng điều khiển Chủ sở hữu";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
 }
 
 @section Styles {
@@ -41,7 +41,7 @@
 }
 
 <div class="container-fluid py-4">
-    <h2 class="mb-4">📊 Owner Dashboard</h2>
+    <h2 class="mb-4">📊 Bảng điều khiển Chủ sở hữu</h2>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {

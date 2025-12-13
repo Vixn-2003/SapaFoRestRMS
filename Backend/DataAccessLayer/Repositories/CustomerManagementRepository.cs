@@ -58,6 +58,7 @@ namespace DataAccessLayer.Repositories
             decimal? minSpending,
             decimal? maxSpending,
             int? minVisits,
+            int? maxVisits,
             string sortBy,
             string sortDirection,
             CancellationToken ct = default)

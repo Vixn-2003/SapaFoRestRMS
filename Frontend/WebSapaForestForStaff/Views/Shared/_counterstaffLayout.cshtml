@@ -110,6 +110,10 @@
 
             <!-- Menu chính -->
             <div class="top-menu">
+                <a href="/counter-staff/dashboard" 
+                   class="menu-item @(currentController == "CounterStaffDashboard" && currentAction == "Index" ? "active" : "")">
+                    <i class="fa-solid fa-chart-line me-1"></i>Tổng quan
+                </a>
                 <a href="/DashboardTable/ListOrder" 
                    class="menu-item @(currentController == "DashboardTable" && currentAction == "ListOrder" ? "active" : "")">
                     Đơn đặt bàn
