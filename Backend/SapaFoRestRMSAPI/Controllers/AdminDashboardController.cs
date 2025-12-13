@@ -13,7 +13,7 @@ namespace SapaFoRestRMSAPI.Controllers
     /// </summary>
     [ApiController]
     [Route("api/admin/dashboard")]
-    [Authorize(Roles = "Admin,Owner")]
+    [Authorize(Roles = "Admin")]
     public class AdminDashboardController : ControllerBase
     {
         private readonly IAdminDashboardService _dashboardService;

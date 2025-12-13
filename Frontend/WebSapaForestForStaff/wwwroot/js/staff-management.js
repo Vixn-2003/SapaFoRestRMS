@@ -49,14 +49,14 @@ function loadStaffList(page = 1) {
                 renderStaffTable(response.data);
                 updatePagination(response.page, response.pageSize, response.totalCount, response.totalPages);
             } else {
-                toastr.error(response.message || 'Failed to load staff list');
-                $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Failed to load data</td></tr>');
+                toastr.error(response.message || 'Không thể tải danh sách nhân viên');
+                $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Không thể tải dữ liệu</td></tr>');
             }
         },
         error: function (xhr, status, error) {
             console.error('Error loading staff list:', error);
-            toastr.error('An error occurred while loading staff list');
-            $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Error loading data</td></tr>');
+            toastr.error('Đã xảy ra lỗi khi tải danh sách nhân viên');
+            $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Lỗi khi tải dữ liệu</td></tr>');
         }
     });
 }
@@ -66,7 +66,7 @@ function loadStaffList(page = 1) {
  */
 function renderStaffTable(staffList) {
     if (!staffList || staffList.length === 0) {
-        $('#staffTableBody').html('<tr><td colspan="9" class="text-center">No staff found</td></tr>');
+        $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Không tìm thấy nhân viên nào</td></tr>');
         return;
     }
 
@@ -74,8 +74,8 @@ function renderStaffTable(staffList) {
     staffList.forEach(staff => {
         const avatar = staff.avatarUrl || '/images/default-avatar.png';
         const statusBadge = staff.status === 1 
-            ? '<span class="badge badge-success">Active</span>' 
-            : '<span class="badge badge-danger">Inactive</span>';
+            ? '<span class="badge badge-success">Đang hoạt động</span>' 
+            : '<span class="badge badge-danger">Ngừng hoạt động</span>';
 
         html += `
             <tr>
@@ -96,10 +96,10 @@ function renderStaffTable(staffList) {
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
                             <a class="dropdown-item" href="/StaffManagement/Edit/${staff.staffId}">
-                                <i class="fas fa-edit m-r-5"></i> Edit
+                                <i class="fas fa-edit m-r-5"></i> Chỉnh sửa
                             </a>
                             <a class="dropdown-item" href="#" onclick="openDeactivateModal(${staff.staffId}, '${staff.fullName}')">
-                                <i class="fas fa-ban m-r-5"></i> Deactivate
+                                <i class="fas fa-ban m-r-5"></i> Ngừng hoạt động
                             </a>
                         </div>
                     </div>
@@ -122,7 +122,7 @@ function updatePagination(page, size, totalCount, totalPagesCount) {
     // Update info text
     const start = (page - 1) * size + 1;
     const end = Math.min(page * size, totalCount);
-    $('#staffTableInfo').text(`Showing ${start} to ${end} of ${totalCount} entries`);
+    $('#staffTableInfo').text(`Hiển thị ${start} đến ${end} trong tổng số ${totalCount} bản ghi`);
 
     // Generate pagination buttons
     let paginationHtml = '';
@@ -130,11 +130,11 @@ function updatePagination(page, size, totalCount, totalPagesCount) {
     // Previous button
     if (page > 1) {
         paginationHtml += `<li class="paginate_button page-item previous">
-            <a href="#" class="page-link" onclick="loadStaffList(${page - 1}); return false;">Previous</a>
+            <a href="#" class="page-link" onclick="loadStaffList(${page - 1}); return false;">Trước</a>
         </li>`;
     } else {
         paginationHtml += `<li class="paginate_button page-item previous disabled">
-            <a href="#" class="page-link">Previous</a>
+            <a href="#" class="page-link">Trước</a>
         </li>`;
     }
 
@@ -157,11 +157,11 @@ function updatePagination(page, size, totalCount, totalPagesCount) {
     // Next button
     if (page < totalPages) {
         paginationHtml += `<li class="paginate_button page-item next">
-            <a href="#" class="page-link" onclick="loadStaffList(${page + 1}); return false;">Next</a>
+            <a href="#" class="page-link" onclick="loadStaffList(${page + 1}); return false;">Sau</a>
         </li>`;
     } else {
         paginationHtml += `<li class="paginate_button page-item next disabled">
-            <a href="#" class="page-link">Next</a>
+            <a href="#" class="page-link">Sau</a>
         </li>`;
     }
 
@@ -208,7 +208,7 @@ function submitDeactivate() {
 
     // Disable button to prevent double-click
     const $btn = $('#deactivateModal .btn-danger');
-    $btn.prop('disabled', true).text('Processing...');
+    $btn.prop('disabled', true).text('Đang xử lý...');
 
     $.ajax({
         url: '/StaffManagement/Deactivate',
@@ -217,19 +217,19 @@ function submitDeactivate() {
         data: JSON.stringify(dto),
         success: function (response) {
             if (response.success) {
-                toastr.success(response.message || 'Staff deactivated successfully');
+                toastr.success(response.message || 'Ngừng hoạt động nhân viên thành công');
                 $('#deactivateModal').modal('hide');
                 loadStaffList(currentPage); // Reload current page
             } else {
-                toastr.error(response.message || 'Failed to deactivate staff');
+                toastr.error(response.message || 'Không thể ngừng hoạt động nhân viên');
             }
         },
         error: function (xhr, status, error) {
             console.error('Error deactivating staff:', error);
-            toastr.error('An error occurred while deactivating staff');
+            toastr.error('Đã xảy ra lỗi khi ngừng hoạt động nhân viên');
         },
         complete: function () {
-            $btn.prop('disabled', false).text('Deactivate');
+            $btn.prop('disabled', false).text('Ngừng hoạt động');
         }
     });
 }

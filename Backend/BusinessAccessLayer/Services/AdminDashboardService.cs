@@ -23,60 +23,51 @@ namespace BusinessAccessLayer.Services
 
         public async Task<AdminDashboardDto> GetDashboardDataAsync(CancellationToken ct = default)
         {
-            // Lấy tất cả dữ liệu song song để tối ưu performance
-            var totalUsersTask = _dashboardRepository.GetTotalUsersAsync();
-            var activeUsersTask = _dashboardRepository.GetActiveUsersAsync();
-            var inactiveUsersTask = _dashboardRepository.GetInactiveUsersAsync();
-            var usersByRoleTask = _dashboardRepository.GetUsersByRoleAsync();
+            // Lấy dữ liệu tuần tự để tránh DbContext concurrency issues
+            // User Statistics
+            var totalUsers = await _dashboardRepository.GetTotalUsersAsync();
+            var activeUsers = await _dashboardRepository.GetActiveUsersAsync();
+            var inactiveUsers = await _dashboardRepository.GetInactiveUsersAsync();
+            var usersByRole = await _dashboardRepository.GetUsersByRoleAsync();
 
-            var todayReservationsTask = _dashboardRepository.GetTodayReservationsAsync();
-            var todayOrdersTask = _dashboardRepository.GetTodayOrdersAsync();
-            var completedPaymentsTask = _dashboardRepository.GetCompletedPaymentsTodayAsync();
-            var pendingPaymentsTask = _dashboardRepository.GetPendingPaymentsAsync();
+            // Reservations & Orders
+            var todayReservations = await _dashboardRepository.GetTodayReservationsAsync();
+            var todayOrders = await _dashboardRepository.GetTodayOrdersAsync();
+            var completedPayments = await _dashboardRepository.GetCompletedPaymentsTodayAsync();
+            var pendingPayments = await _dashboardRepository.GetPendingPaymentsAsync();
 
-            var todayRevenueTask = _dashboardRepository.GetTodayRevenueAsync();
-            var monthRevenueTask = _dashboardRepository.GetMonthRevenueAsync();
-            var revenueLast7DaysTask = _dashboardRepository.GetRevenueLast7DaysAsync();
-            var ordersLast7DaysTask = _dashboardRepository.GetOrdersLast7DaysAsync();
+            // Revenue Data
+            var todayRevenue = await _dashboardRepository.GetTodayRevenueAsync();
+            var monthRevenue = await _dashboardRepository.GetMonthRevenueAsync();
+            var revenueLast7Days = await _dashboardRepository.GetRevenueLast7DaysAsync();
+            var ordersLast7Days = await _dashboardRepository.GetOrdersLast7DaysAsync();
 
-            var lowStockTask = _dashboardRepository.GetLowStockCountAsync();
-            var expiredIngredientsTask = _dashboardRepository.GetExpiredIngredientsCountAsync();
-            var nearExpiryTask = _dashboardRepository.GetNearExpiryIngredientsCountAsync();
+            // Warehouse Alerts
+            var lowStock = await _dashboardRepository.GetLowStockCountAsync();
+            var expiredIngredients = await _dashboardRepository.GetExpiredIngredientsCountAsync();
+            var nearExpiry = await _dashboardRepository.GetNearExpiryIngredientsCountAsync();
 
-            var top5ActiveUsersTask = _dashboardRepository.GetTop5ActiveUsersAsync();
-            var top5CategoriesTask = _dashboardRepository.GetTop5BestSellingCategoriesAsync();
-            var recentLogsTask = _dashboardRepository.GetRecentSystemLogsAsync();
-
-            // Đợi tất cả tasks hoàn thành
-            await Task.WhenAll(
-                totalUsersTask, activeUsersTask, inactiveUsersTask, usersByRoleTask,
-                todayReservationsTask, todayOrdersTask, completedPaymentsTask, pendingPaymentsTask,
-                todayRevenueTask, monthRevenueTask, revenueLast7DaysTask, ordersLast7DaysTask,
-                lowStockTask, expiredIngredientsTask, nearExpiryTask,
-                top5ActiveUsersTask, top5CategoriesTask, recentLogsTask
-            );
+            // Top Lists
+            var top5ActiveUsers = await _dashboardRepository.GetTop5ActiveUsersAsync();
+            var top5Categories = await _dashboardRepository.GetTop5BestSellingCategoriesAsync();
+            var recentLogs = await _dashboardRepository.GetRecentSystemLogsAsync();
 
             // Build KPI Cards
-            var lowStock = await lowStockTask;
-            var expiredIngredients = await expiredIngredientsTask;
-            var nearExpiry = await nearExpiryTask;
-
             var kpiCards = new KpiCardsDto
             {
-                TotalUsers = await totalUsersTask,
-                ActiveUsers = await activeUsersTask,
-                InactiveUsers = await inactiveUsersTask,
-                TodayReservations = await todayReservationsTask,
-                TodayOrders = await todayOrdersTask,
-                CompletedPaymentsToday = await completedPaymentsTask,
-                PendingPayments = await pendingPaymentsTask,
-                TodayRevenue = await todayRevenueTask,
-                MonthRevenue = await monthRevenueTask,
+                TotalUsers = totalUsers,
+                ActiveUsers = activeUsers,
+                InactiveUsers = inactiveUsers,
+                TodayReservations = todayReservations,
+                TodayOrders = todayOrders,
+                CompletedPaymentsToday = completedPayments,
+                PendingPayments = pendingPayments,
+                TodayRevenue = todayRevenue,
+                MonthRevenue = monthRevenue,
                 TotalAlertsCount = lowStock + expiredIngredients + nearExpiry
             };
 
             // Build User Role Distribution
-            var usersByRole = await usersByRoleTask;
             var roleDistribution = new UserRoleDistributionDto
             {
                 RoleDistribution = usersByRole,
@@ -91,7 +82,6 @@ namespace BusinessAccessLayer.Services
             };
 
             // Build Revenue Chart Data
-            var revenueLast7Days = await revenueLast7DaysTask;
             var revenuePoints = revenueLast7Days.Select(r => new RevenuePointDto
             {
                 Date = r.Date,
@@ -100,7 +90,6 @@ namespace BusinessAccessLayer.Services
             }).ToList();
 
             // Build Orders Chart Data
-            var ordersLast7Days = await ordersLast7DaysTask;
             var orderPoints = ordersLast7Days.Select(o => new OrderPointDto
             {
                 Date = o.Date,
@@ -117,7 +106,6 @@ namespace BusinessAccessLayer.Services
             };
 
             // Build Top 5 Active Users
-            var top5ActiveUsers = await top5ActiveUsersTask;
             var topUsers = top5ActiveUsers.Select(u => new TopUserDto
             {
                 UserId = u.UserId,
@@ -127,7 +115,6 @@ namespace BusinessAccessLayer.Services
             }).ToList();
 
             // Build Top 5 Best Selling Categories
-            var top5Categories = await top5CategoriesTask;
             var topCategories = top5Categories.Select(c => new TopCategoryDto
             {
                 CategoryName = c.CategoryName,
@@ -136,7 +123,6 @@ namespace BusinessAccessLayer.Services
             }).ToList();
 
             // Build Recent Logs
-            var recentLogs = await recentLogsTask;
             var systemLogs = recentLogs.Select(l => new SystemLogDto
             {
                 Time = l.Time,

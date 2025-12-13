@@ -1,6 +1,7 @@
 using BusinessAccessLayer.DTOs.Owner;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -29,12 +30,19 @@ namespace BusinessAccessLayer.Services
             var yesterday = today.AddDays(-1);
             var lastMonth = startOfMonth.AddMonths(-1);
 
-            // Parallel execution cho performance
-            var kpiTask = GetKpiCardsAsync(today, startOfMonth, yesterday, lastMonth, ct);
-            var revenueTrendTask = GetRevenueTrendAsync(today.AddDays(-30), today, ct);
-            var topSellingTask = GetTopSellingItemsAsync(startOfMonth, today, ct);
-            var branchComparisonTask = GetBranchComparisonAsync(startOfMonth, today, ct);
-            var alertsTask = GetAlertsSummaryAsync(ct);
+            // Load all data first (materialize) to avoid DbContext threading issues
+            // Then process in parallel on in-memory data
+            var orders = (await _unitOfWork.Orders.GetAllAsync()).ToList();
+            var transactions = (await _unitOfWork.Payments.GetAllTransactionsAsync()).ToList();
+            var orderDetails = (await _unitOfWork.OrderDetails.GetAllAsync()).ToList();
+            var ingredients = (await _unitOfWork.InventoryIngredient.GetAllAsync()).ToList();
+
+            // Now process in parallel on in-memory data
+            var kpiTask = Task.Run(() => GetKpiCardsAsync(today, startOfMonth, yesterday, lastMonth, orders, transactions, ingredients));
+            var revenueTrendTask = Task.Run(() => GetRevenueTrendAsync(today.AddDays(-30), today, transactions));
+            var topSellingTask = Task.Run(() => GetTopSellingItemsAsync(startOfMonth, today, orders, orderDetails));
+            var branchComparisonTask = Task.Run(() => GetBranchComparisonAsync(startOfMonth, today, transactions));
+            var alertsTask = Task.Run(() => GetAlertsSummaryAsync(today, ingredients));
 
             await Task.WhenAll(kpiTask, revenueTrendTask, topSellingTask, branchComparisonTask, alertsTask);
 
@@ -48,31 +56,37 @@ namespace BusinessAccessLayer.Services
             };
         }
 
-        private async Task<KpiCardsDto> GetKpiCardsAsync(DateOnly today, DateOnly startOfMonth, DateOnly yesterday, DateOnly lastMonth, CancellationToken ct)
+        private KpiCardsDto GetKpiCardsAsync(DateOnly today, DateOnly startOfMonth, DateOnly yesterday, DateOnly lastMonth, 
+            List<Order> orders, 
+            List<Transaction> transactions,
+            List<Ingredient> ingredients)
         {
-            var orders = await _unitOfWork.Orders.GetAllAsync();
-            var transactions = await _unitOfWork.Payments.GetAllTransactionsAsync();
 
             // Today Revenue
             var todayRevenue = transactions
-                .Where(t => t.Status == "Paid" && DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == today)
+                .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == today)
                 .Sum(t => t.Amount);
 
             // Yesterday Revenue (for comparison)
             var yesterdayRevenue = transactions
-                .Where(t => t.Status == "Paid" && DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == yesterday)
+                .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == yesterday)
                 .Sum(t => t.Amount);
 
             // Monthly Revenue
             var monthlyRevenue = transactions
-                .Where(t => t.Status == "Paid" && DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) >= startOfMonth)
+                .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) >= startOfMonth)
                 .Sum(t => t.Amount);
 
             // Last Month Revenue (for comparison)
             var lastMonthRevenue = transactions
-                .Where(t => t.Status == "Paid" && 
-                       DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) >= lastMonth &&
-                       DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) < startOfMonth)
+                .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => {
+                    var date = DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt);
+                    return date >= lastMonth && date < startOfMonth;
+                })
                 .Sum(t => t.Amount);
 
             // Total Orders (this month)
@@ -93,7 +107,6 @@ namespace BusinessAccessLayer.Services
                 .Count();
 
             // Low Stock Alerts
-            var ingredients = await _unitOfWork.InventoryIngredient.GetAllAsync();
             var lowStockCount = ingredients.Count(i => 
                 i.ReorderLevel.HasValue && 
                 i.InventoryBatches.Sum(b => b.Available) < i.ReorderLevel.Value);
@@ -128,9 +141,9 @@ namespace BusinessAccessLayer.Services
             };
         }
 
-        private async Task<List<RevenueTrendDataDto>> GetRevenueTrendAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct)
+        private List<RevenueTrendDataDto> GetRevenueTrendAsync(DateOnly startDate, DateOnly endDate, 
+            List<Transaction> transactions)
         {
-            var transactions = await _unitOfWork.Payments.GetAllTransactionsAsync();
 
             var trendData = transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
@@ -148,10 +161,10 @@ namespace BusinessAccessLayer.Services
             return trendData;
         }
 
-        private async Task<List<TopSellingItemDto>> GetTopSellingItemsAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct)
+        private List<TopSellingItemDto> GetTopSellingItemsAsync(DateOnly startDate, DateOnly endDate,
+            List<Order> orders,
+            List<OrderDetail> orderDetails)
         {
-            var orders = await _unitOfWork.Orders.GetAllAsync();
-            var orderDetails = await _unitOfWork.OrderDetails.GetAllAsync();
 
             var paidOrderIds = orders
                 .Where(o => o.Status == "Paid" && 
@@ -162,8 +175,8 @@ namespace BusinessAccessLayer.Services
                 .ToHashSet();
 
             var topItems = orderDetails
-                .Where(od => paidOrderIds.Contains(od.OrderId) && od.MenuItemId.HasValue)
-                .GroupBy(od => new { od.MenuItemId, od.MenuItem.Name })
+                .Where(od => paidOrderIds.Contains(od.OrderId) && od.MenuItemId.HasValue && od.MenuItem != null)
+                .GroupBy(od => new { od.MenuItemId, od.MenuItem!.Name })
                 .Select(g => new TopSellingItemDto
                 {
                     ItemName = g.Key.Name,
@@ -177,11 +190,11 @@ namespace BusinessAccessLayer.Services
             return topItems;
         }
 
-        private async Task<List<BranchComparisonDto>> GetBranchComparisonAsync(DateOnly startDate, DateOnly endDate, CancellationToken ct)
+        private List<BranchComparisonDto> GetBranchComparisonAsync(DateOnly startDate, DateOnly endDate,
+            List<Transaction> transactions)
         {
             // Hiện tại chỉ có 1 branch, trả về data mẫu
             // TODO: Implement khi có multi-branch
-            var transactions = await _unitOfWork.Payments.GetAllTransactionsAsync();
 
             var totalRevenue = transactions
                 .Where(t => t.Status == "Paid" && 
@@ -210,10 +223,9 @@ namespace BusinessAccessLayer.Services
             };
         }
 
-        private async Task<AlertsSummaryDto> GetAlertsSummaryAsync(CancellationToken ct)
+        private AlertsSummaryDto GetAlertsSummaryAsync(DateOnly today,
+            List<Ingredient> ingredients)
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            var ingredients = await _unitOfWork.InventoryIngredient.GetAllAsync();
 
             // Low Stock Count
             var lowStockCount = ingredients.Count(i => 

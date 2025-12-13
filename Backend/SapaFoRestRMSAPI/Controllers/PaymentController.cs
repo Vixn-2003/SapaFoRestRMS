@@ -20,7 +20,7 @@ namespace SapaFoRestRMSAPI.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Owner,Manager,Staff")]
+[Authorize(Roles = "Staff")]
 public class PaymentController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
@@ -79,7 +79,7 @@ public class PaymentController : ControllerBase
                 return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {id}" });
             }
 
-            // ✅ DEBUG: Log để trace customer info
+            //  DEBUG: Log để trace customer info
             _logger.LogInformation("[GetOrderDetail] Order {OrderId} - CustomerId: {CustomerId}, CustomerName: {CustomerName}, CustomerPhone: {CustomerPhone}", 
                 id, order.CustomerId, order.CustomerName, order.CustomerPhone);
 
@@ -1021,7 +1021,7 @@ public class PaymentController : ControllerBase
                 receiptUrl = $"/receipts/{pdfFileName}";
             }
 
-            // ✅ Check if receipt URL is Cloudinary URL (starts with https://)
+            //  Check if receipt URL is Cloudinary URL (starts with https://)
             if (!string.IsNullOrEmpty(receiptUrl) && receiptUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInformation("Receipt PDF is stored on Cloudinary for order {OrderId}. Redirecting to: {CloudinaryUrl}", orderId, receiptUrl);
@@ -1029,7 +1029,7 @@ public class PaymentController : ControllerBase
                 return Redirect(receiptUrl);
             }
 
-            // ✅ Fallback to local file
+            //  Fallback to local file
             if (!System.IO.File.Exists(pdfPath))
             {
                 _logger.LogError("Receipt generation failed for order {OrderId}. File missing at {PdfPath}", orderId, pdfPath);

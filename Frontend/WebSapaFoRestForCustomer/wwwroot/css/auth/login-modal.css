@@ -1,22 +1,60 @@
 /* ==== LOGIN MODAL (OTP) ==== */
+/* Backdrop để tách biệt modal khỏi nền trang */
+.modal-backdrop.show {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 1 !important;
+    z-index: 1050;
+}
+
+/* Đảm bảo modal nằm trên cùng */
+#loginModal {
+    z-index: 1055;
+}
+
 #loginModal .modal-dialog {
     max-width: 420px;
+    z-index: 1056;
+    margin: 1.75rem auto;
 }
 
 #loginModal .modal-content {
     border-radius: 20px;
-    border: none;
+    border: 3px solid rgba(255, 255, 255, 0.3);
     overflow: hidden;
     background: radial-gradient(circle at top left, #4caf50 0, #1b5e20 50%, #0d2b12 100%);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 
+                0 0 0 1px rgba(255, 255, 255, 0.15),
+                0 0 120px rgba(76, 175, 80, 0.4);
     color: #fefefe;
+    position: relative;
+    z-index: 1057;
+    transform: scale(1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Hiệu ứng khi mở modal */
+#loginModal.show .modal-dialog {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* Header */
 #loginModal .modal-header {
     border-bottom: none;
     padding: 1.1rem 1.5rem 0.5rem;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent);
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.4), rgba(255, 255, 255, 0.15));
 }
 
 #loginModal .modal-title {
@@ -42,7 +80,7 @@
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), transparent);
 }
 
-/* Alert info ? tr�n c�ng */
+/* Alert info ? tr�n c�ng */
 #loginModal .alert-info {
     background: rgba(255, 255, 255, 0.12);
     color: #fefefe;
@@ -76,7 +114,7 @@
         box-shadow: 0 0 0 0.15rem rgba(255, 213, 79, 0.4);
     }
 
-/* Button ch�nh */
+/* Button ch�nh */
 #loginModal .btn-primary,
 #loginModal .btn-success {
     border-radius: 999px;
@@ -122,7 +160,7 @@
         text-decoration: underline;
     }
 
-/* Kho?ng c�ch gi?a 2 step */
+/* Kho?ng c�ch gi?a 2 step */
 #loginModal #loginVerifyOtpForm {
     margin-top: 0.4rem;
 }

@@ -39,6 +39,9 @@ builder.Services.AddHttpClient<IShiftManagementApiService, ShiftManagementApiSer
 builder.Services.AddHttpClient<ICustomerManagementApiService, CustomerManagementApiService>();
 builder.Services.AddHttpClient<IStaffManagementApiService, StaffManagementApiService>();
 
+// Manager Customer API Service
+builder.Services.AddHttpClient<ICustomerManagementApiService, CustomerManagementApiService>();
+
 // Owner Dashboard API Services
 builder.Services.AddHttpClient<IOwnerDashboardApiService, OwnerDashboardApiService>();
 builder.Services.AddHttpClient<IOwnerRevenueApiService, OwnerRevenueApiService>();

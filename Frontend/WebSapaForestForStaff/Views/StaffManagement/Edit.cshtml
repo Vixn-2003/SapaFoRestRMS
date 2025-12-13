@@ -1,19 +1,19 @@
 @model WebSapaForestForStaff.Models.StaffViewModels.StaffEditViewModel
 
 @{
-    ViewData["Title"] = "Edit Staff";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Chỉnh sửa nhân viên";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
 }
 
 <!-- Page Header -->
 <div class="page-header">
     <div class="row align-items-center">
         <div class="col">
-            <h3 class="page-title">Edit Staff</h3>
+            <h3 class="page-title">Chỉnh sửa nhân viên</h3>
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Staff Management</a></li>
-                <li class="breadcrumb-item active">Edit Staff</li>
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Quản lý Nhân viên</a></li>
+                <li class="breadcrumb-item active">Chỉnh sửa nhân viên</li>
             </ul>
         </div>
     </div>
@@ -24,7 +24,7 @@
     <div class="col-md-8 offset-md-2">
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title mb-0">Staff Information</h4>
+                <h4 class="card-title mb-0">Thông tin nhân viên</h4>
             </div>
             <div class="card-body">
                 <form asp-action="Edit" asp-route-id="@Model.StaffId" method="post">
@@ -43,7 +43,7 @@
                             <div class="form-group">
                                 <label asp-for="Email" class="control-label"></label>
                                 <input asp-for="Email" class="form-control" type="email" readonly />
-                                <small class="form-text text-muted">Email cannot be changed</small>
+                                <small class="form-text text-muted">Email không thể thay đổi</small>
                             </div>
                         </div>
                     </div>
@@ -60,7 +60,7 @@
                             <div class="form-group">
                                 <label asp-for="HireDate" class="control-label"></label>
                                 <input asp-for="HireDate" class="form-control" type="date" readonly />
-                                <small class="form-text text-muted">Hire date cannot be changed</small>
+                                <small class="form-text text-muted">Ngày vào làm không thể thay đổi</small>
                             </div>
                         </div>
                     </div>
@@ -77,7 +77,7 @@
                             <div class="form-group">
                                 <label asp-for="DepartmentName" class="control-label"></label>
                                 <input asp-for="DepartmentName" class="form-control" readonly />
-                                <small class="form-text text-muted">Department cannot be changed</small>
+                                <small class="form-text text-muted">Phòng ban không thể thay đổi</small>
                             </div>
                         </div>
                     </div>
@@ -87,8 +87,8 @@
                             <div class="form-group">
                                 <label asp-for="Status" class="control-label"></label>
                                 <select asp-for="Status" class="form-control">
-                                    <option value="1">Active</option>
-                                    <option value="0">Inactive</option>
+                                    <option value="1">Đang hoạt động</option>
+                                    <option value="0">Ngừng hoạt động</option>
                                 </select>
                                 <span asp-validation-for="Status" class="text-danger"></span>
                             </div>
@@ -104,7 +104,7 @@
                             }
                         </select>
                         <span asp-validation-for="SelectedPositionIds" class="text-danger"></span>
-                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple positions</small>
+                        <small class="form-text text-muted">Giữ Ctrl/Cmd để chọn nhiều chức vụ</small>
                     </div>
 
                     <div class="form-group">
@@ -114,8 +114,8 @@
                     </div>
 
                     <div class="form-group text-right">
-                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Update Staff</button>
+                        <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                        <button type="submit" class="btn btn-primary">Cập nhật nhân viên</button>
                     </div>
                 </form>
             </div>

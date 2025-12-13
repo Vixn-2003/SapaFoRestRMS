@@ -1,7 +1,7 @@
 @model WebSapaForestForStaff.ViewModels.CounterStaff.CounterStaffDashboardViewModel
 
 @{
-    ViewData["Title"] = "Counter Staff Dashboard";
+    ViewData["Title"] = "Bảng điều khiển Nhân viên quầy";
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
@@ -9,18 +9,18 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-1">Counter Staff Dashboard</h2>
-            <small class="text-muted">Overview realtime - @DateTime.Today.ToString("dd/MM/yyyy")</small>
+            <h2 class="mb-1">Bảng điều khiển Nhân viên quầy</h2>
+            <small class="text-muted">Tổng quan thời gian thực - @DateTime.Today.ToString("dd/MM/yyyy")</small>
         </div>
         <div class="d-flex gap-2">
             <a href="@Url.Action("Index", "CounterStaffOrder")" class="btn btn-outline-primary">
-                <i class="bi bi-list-ul me-1"></i>List Order
+                <i class="bi bi-list-ul me-1"></i>Danh sách đơn hàng
             </a>
             <a href="@Url.Action("Index", "CounterStaffTransaction")" class="btn btn-outline-info">
-                <i class="bi bi-receipt me-1"></i>Transaction History
+                <i class="bi bi-receipt me-1"></i>Lịch sử giao dịch
             </a>
             <a href="@Url.Action("Index", "ShiftManagement")" class="btn btn-outline-secondary">
-                <i class="bi bi-calendar3 me-1"></i>Shift Management
+                <i class="bi bi-calendar3 me-1"></i>Quản lý ca làm việc
             </a>
         </div>
     </div>
@@ -35,7 +35,7 @@
                             <i class="bi bi-calendar-check fs-4 text-primary"></i>
                         </div>
                         <div class="ms-3">
-                            <h6 class="text-muted mb-1">Reservations Today</h6>
+                            <h6 class="text-muted mb-1">Đặt bàn hôm nay</h6>
                             <h3 class="mb-0">@Model.Dashboard.TodayReservations</h3>
                         </div>
                     </div>
@@ -51,7 +51,7 @@
                             <i class="bi bi-cash-stack fs-4 text-success"></i>
                         </div>
                         <div class="ms-3">
-                            <h6 class="text-muted mb-1">Today Revenue</h6>
+                            <h6 class="text-muted mb-1">Doanh thu hôm nay</h6>
                             <h3 class="mb-0">@Model.Dashboard.TodayRevenue.ToString("N0") ₫</h3>
                         </div>
                     </div>
@@ -67,7 +67,7 @@
                             <i class="bi bi-cart fs-4 text-warning"></i>
                         </div>
                         <div class="ms-3">
-                            <h6 class="text-muted mb-1">Active Orders</h6>
+                            <h6 class="text-muted mb-1">Đơn hàng đang xử lý</h6>
                             <h3 class="mb-0">@Model.Dashboard.ActiveOrders</h3>
                         </div>
                     </div>
@@ -83,7 +83,7 @@
                             <i class="bi bi-clock-history fs-4 text-danger"></i>
                         </div>
                         <div class="ms-3">
-                            <h6 class="text-muted mb-1">Pending Payments</h6>
+                            <h6 class="text-muted mb-1">Thanh toán chờ xử lý</h6>
                             <h3 class="mb-0">@Model.Dashboard.PendingPayments</h3>
                         </div>
                     </div>
@@ -99,7 +99,7 @@
                             <i class="bi bi-table fs-4 text-info"></i>
                         </div>
                         <div class="ms-3">
-                            <h6 class="text-muted mb-1">Active Tables</h6>
+                            <h6 class="text-muted mb-1">Bàn đang sử dụng</h6>
                             <h3 class="mb-0">@Model.Dashboard.ActiveTables</h3>
                         </div>
                     </div>
@@ -115,7 +115,7 @@
                             <i class="bi bi-check-circle fs-4 text-secondary"></i>
                         </div>
                         <div class="ms-3">
-                            <h6 class="text-muted mb-1">Completed Transactions</h6>
+                            <h6 class="text-muted mb-1">Giao dịch hoàn thành</h6>
                             <h3 class="mb-0">@Model.Dashboard.CompletedTransactions</h3>
                         </div>
                     </div>
@@ -129,7 +129,7 @@
         <div class="col-xl-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Revenue Trend (Today)</h5>
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Xu hướng doanh thu (Hôm nay)</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="revenueChart" style="max-height: 300px;"></canvas>
@@ -140,7 +140,7 @@
         <div class="col-xl-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Order Count per Hour (Today)</h5>
+                    <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Số đơn hàng theo giờ (Hôm nay)</h5>
                 </div>
                 <div class="card-body">
                     <canvas id="orderChart" style="max-height: 300px;"></canvas>
@@ -164,7 +164,7 @@
             data: {
                 labels: revenueData.map(d => `${d.hour}:00`),
                 datasets: [{
-                    label: 'Revenue (₫)',
+                    label: 'Doanh thu (₫)',
                     data: revenueData.map(d => d.revenue),
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -208,7 +208,7 @@
             data: {
                 labels: orderData.map(d => `${d.hour}:00`),
                 datasets: [{
-                    label: 'Order Count',
+                    label: 'Số đơn hàng',
                     data: orderData.map(d => d.orderCount),
                     backgroundColor: 'rgba(255, 159, 64, 0.6)',
                     borderColor: 'rgb(255, 159, 64)',

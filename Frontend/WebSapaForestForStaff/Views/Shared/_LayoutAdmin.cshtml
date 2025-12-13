@@ -115,20 +115,46 @@
             <!-- Sidebar -->
             <nav class="sidebar sidebar-offcanvas" id="sidebar">
                 <ul class="nav">
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Admin" asp-action="Index">
-                            <i class="mdi mdi-grid-large menu-icon"></i>
-                            <span class="menu-title">Tổng quan</span>
-                        </a>
-                    </li>
-                    <li class="nav-item nav-category">Quản trị hệ thống</li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Users" asp-action="Index">
-                            <i class="menu-icon mdi mdi-account-multiple"></i>
-                            <span class="menu-title">Người dùng & Vai trò</span>
-                        </a>
-                    </li>
-                
+                    @if (User.IsInRole("Owner"))
+                    {
+                        <!-- Owner Dashboard -->
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="OwnerDashboard" asp-action="Index">
+                                <i class="mdi mdi-grid-large menu-icon"></i>
+                                <span class="menu-title">Tổng quan</span>
+                            </a>
+                        </li>
+                        <li class="nav-item nav-category">Quản lý Owner</li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="OwnerRevenue" asp-action="Index">
+                                <i class="menu-icon mdi mdi-cash-multiple"></i>
+                                <span class="menu-title">Quản lý Doanh thu</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="OwnerWarehouseAlert" asp-action="Index">
+                                <i class="menu-icon mdi mdi-alert-circle"></i>
+                                <span class="menu-title">Cảnh báo Kho hàng</span>
+                            </a>
+                        </li>
+                    }
+                    else if (User.IsInRole("Admin"))
+                    {
+                        <!-- Admin Dashboard -->
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Admin" asp-action="Index">
+                                <i class="mdi mdi-grid-large menu-icon"></i>
+                                <span class="menu-title">Tổng quan</span>
+                            </a>
+                        </li>
+                        <li class="nav-item nav-category">Quản trị hệ thống</li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Users" asp-action="Index">
+                                <i class="menu-icon mdi mdi-account-multiple"></i>
+                                <span class="menu-title">Người dùng & Vai trò</span>
+                            </a>
+                        </li>
+                    }
                 </ul>
             </nav>
             <!-- Content -->

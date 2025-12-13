@@ -41,7 +41,12 @@ namespace BusinessAccessLayer.DTOs.CustomerManagement
         public int? MinVisits { get; set; }
         
         /// <summary>
-        /// Sắp xếp theo field nào (e.g., "TotalSpending", "FullName", "LastVisit")
+        /// Filter theo số lần visit tối đa
+        /// </summary>
+        public int? MaxVisits { get; set; }
+        
+        /// <summary>
+        /// Sắp xếp theo field nào (e.g., "TotalSpending", "FullName", "LastVisit", "TotalVisits")
         /// </summary>
         public string SortBy { get; set; } = "TotalSpending";
         

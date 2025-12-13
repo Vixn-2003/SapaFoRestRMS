@@ -19,7 +19,7 @@ namespace SapaFoRestRMSAPI.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Manager,Admin")] // Only Manager and Admin can access
+    [Authorize(Roles = "Manager")] // Only Manager and Admin can access
     public class StaffManagementController : ControllerBase
     {
         private readonly IStaffManagementService _staffManagementService;

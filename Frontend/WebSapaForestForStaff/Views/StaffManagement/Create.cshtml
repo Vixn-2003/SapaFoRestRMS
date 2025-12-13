@@ -1,19 +1,19 @@
 @model WebSapaForestForStaff.Models.StaffViewModels.StaffCreateViewModel
 
 @{
-    ViewData["Title"] = "Create Staff";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Thêm nhân viên mới";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
 }
 
 <!-- Page Header -->
 <div class="page-header">
     <div class="row align-items-center">
         <div class="col">
-            <h3 class="page-title">Create New Staff</h3>
+            <h3 class="page-title">Thêm nhân viên mới</h3>
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">Staff Management</a></li>
-                <li class="breadcrumb-item active">Create Staff</li>
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Quản lý Nhân viên</a></li>
+                <li class="breadcrumb-item active">Thêm nhân viên mới</li>
             </ul>
         </div>
     </div>
@@ -24,7 +24,7 @@
     <div class="col-md-8 offset-md-2">
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title mb-0">Staff Information</h4>
+                <h4 class="card-title mb-0">Thông tin nhân viên</h4>
             </div>
             <div class="card-body">
                 <form asp-action="Create" method="post">
@@ -77,7 +77,7 @@
                                 <label asp-for="DepartmentId" class="control-label"></label>
                                 <input asp-for="DepartmentId" class="form-control" type="number" />
                                 <span asp-validation-for="DepartmentId" class="text-danger"></span>
-                                <small class="form-text text-muted">Enter Department ID (will be auto-assigned based on manager)</small>
+                                <small class="form-text text-muted">Nhập ID phòng ban (sẽ được tự động gán dựa trên quản lý)</small>
                             </div>
                         </div>
                     </div>
@@ -87,11 +87,11 @@
                             <div class="form-group">
                                 <label asp-for="RoleId" class="control-label"></label>
                                 <select asp-for="RoleId" class="form-control">
-                                    <option value="">-- Select Role --</option>
-                                    <option value="2">Waiter</option>
-                                    <option value="3">Chef</option>
-                                    <option value="4">Cashier</option>
-                                    <option value="5">Manager</option>
+                                    <option value="">-- Chọn vai trò --</option>
+                                    <option value="2">Phục vụ</option>
+                                    <option value="3">Đầu bếp</option>
+                                    <option value="4">Thu ngân</option>
+                                    <option value="5">Quản lý</option>
                                 </select>
                                 <span asp-validation-for="RoleId" class="text-danger"></span>
                             </div>
@@ -101,7 +101,7 @@
                                 <label asp-for="Password" class="control-label"></label>
                                 <input asp-for="Password" class="form-control" type="password" />
                                 <span asp-validation-for="Password" class="text-danger"></span>
-                                <small class="form-text text-muted">Leave blank to auto-generate</small>
+                                <small class="form-text text-muted">Để trống để tự động tạo mật khẩu</small>
                             </div>
                         </div>
                     </div>
@@ -115,7 +115,7 @@
                             }
                         </select>
                         <span asp-validation-for="SelectedPositionIds" class="text-danger"></span>
-                        <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple positions</small>
+                        <small class="form-text text-muted">Giữ Ctrl/Cmd để chọn nhiều chức vụ</small>
                     </div>
 
                     <div class="form-group">
@@ -125,8 +125,8 @@
                     </div>
 
                     <div class="form-group text-right">
-                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Create Staff</button>
+                        <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                        <button type="submit" class="btn btn-primary">Tạo nhân viên</button>
                     </div>
                 </form>
             </div>

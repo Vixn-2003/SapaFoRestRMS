@@ -52,7 +52,7 @@ namespace WebSapaForestForStaff.Controllers
 
                 if (User.IsInRole("Owner"))
                 {
-                    return RedirectToAction("Index", "Admin"); // Owner has admin privileges
+                    return RedirectToAction("Index", "OwnerDashboard"); 
                 }
                 if (User.IsInRole("Admin"))
                 {
@@ -78,7 +78,7 @@ namespace WebSapaForestForStaff.Controllers
                                 return RedirectToAction("ListOrder", "DashboardTable");
 
                             case 2: // Cashier
-                                return RedirectToAction("OrderSelection", "CashierPaymentFlow");
+                                return RedirectToAction("Index", "CounterStaffDashboard");
                             case 3: // Kitchen Staff
                                 return RedirectToAction("Index", "KitchenDisplay");
                             case 4: // Inventory Staff
@@ -99,7 +99,7 @@ namespace WebSapaForestForStaff.Controllers
                             }
                             if (positionIds.Contains(2))
                             {
-                                return RedirectToAction("OrderSelection", "CashierPaymentFlow");
+                                return RedirectToAction("Index", "CounterStaffDashboard");
                             }
                             if (positionIds.Contains(3))
                             {
@@ -210,7 +210,7 @@ namespace WebSapaForestForStaff.Controllers
                         // Id = 2 (Cashier) -> CashierFlow/OrderSelection
                         else if (positionIds.Contains(2))
                         {
-                            redirectUrl = returnUrl ?? Url.Action("OrderSelection", "CashierPaymentFlow");
+                            redirectUrl = returnUrl ?? Url.Action("Index", "CounterStaffDashboard");
                         }
                         // Id = 3 (Kitchen Staff) -> KischenDisplay
                         else if (positionIds.Contains(3))
@@ -233,7 +233,7 @@ namespace WebSapaForestForStaff.Controllers
                         // Các Role khác (Owner/Admin/Manager/Customer)
                         redirectUrl = authResponse.RoleId switch
                         {
-                            1 => returnUrl ?? Url.Action("Index", "Admin"),
+                            1 => returnUrl ?? Url.Action("Index", "OwnerDashboard"),
                             2 => returnUrl ?? Url.Action("Index", "Admin"),
                             3 => returnUrl ?? Url.Action("Index", "HomeManager"),
                             4 => returnUrl ?? Url.Action("Index", "TableManage"),

@@ -49,22 +49,71 @@ namespace WebSapaForestForStaff.Services.Api
                 queryParams.Add($"pageSize={filter.PageSize}");
 
                 var queryString = string.Join("&", queryParams);
-                var url = $"{GetApiBaseUrl()}/api/StaffManagement?{queryString}";
+                var url = $"{GetApiBaseUrl()}/StaffManagement?{queryString}";
 
                 var response = await client.GetAsync(url);
                 var content = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var apiResponse = JsonSerializer.Deserialize<ApiResponseWrapper<StaffListResponse>>(content, new JsonSerializerOptions
+                    try
+                    {
+                        // API returns: { success: true, data: [...], page: 1, pageSize: 20, totalCount: 100, totalPages: 5 }
+                        var apiResponse = JsonSerializer.Deserialize<StaffListApiResponse>(content, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        if (apiResponse != null && apiResponse.Success)
+                        {
+                            var staffListResponse = new StaffListResponse
+                            {
+                                Data = apiResponse.Data ?? new List<StaffListItemDto>(),
+                                Page = apiResponse.Page,
+                                PageSize = apiResponse.PageSize,
+                                TotalCount = apiResponse.TotalCount,
+                                TotalPages = apiResponse.TotalPages
+                            };
+                            return (true, staffListResponse, null);
+                        }
+                        else
+                        {
+                            // Try to parse error message from response
+                            try
+                            {
+                                var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, new JsonSerializerOptions
+                                {
+                                    PropertyNameCaseInsensitive = true
+                                });
+                                var errorMsg = errorResponse?.Message ?? errorResponse?.Error ?? "Không thể tải danh sách nhân viên";
+                                return (false, null, errorMsg);
+                            }
+                            catch
+                            {
+                                return (false, null, "Không thể tải danh sách nhân viên. Phản hồi không hợp lệ từ server.");
+                            }
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        return (false, null, $"Lỗi phân tích dữ liệu: {ex.Message}. Response: {content.Substring(0, Math.Min(200, content.Length))}");
+                    }
+                }
+
+                // Handle non-success status codes
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     });
-
-                    return (true, apiResponse?.Data, null);
+                    var errorMsg = errorResponse?.Message ?? errorResponse?.Error ?? $"Lỗi API: {response.StatusCode}";
+                    return (false, null, errorMsg);
                 }
-
-                return (false, null, $"API Error: {response.StatusCode}");
+                catch
+                {
+                    return (false, null, $"Lỗi API: {response.StatusCode} - {content.Substring(0, Math.Min(200, content.Length))}");
+                }
             }
             catch (Exception ex)
             {
@@ -80,7 +129,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/StaffManagement/{staffId}";
+                var url = $"{GetApiBaseUrl()}/StaffManagement/{staffId}";
 
                 var response = await client.GetAsync(url);
                 var content = await response.Content.ReadAsStringAsync();
@@ -116,7 +165,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/StaffManagement";
+                var url = $"{GetApiBaseUrl()}/StaffManagement";
 
                 var json = JsonSerializer.Serialize(dto);
                 var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
@@ -155,7 +204,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/StaffManagement/{staffId}";
+                var url = $"{GetApiBaseUrl()}/StaffManagement/{staffId}";
 
                 var json = JsonSerializer.Serialize(dto);
                 var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
@@ -194,7 +243,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/StaffManagement/{staffId}/deactivate";
+                var url = $"{GetApiBaseUrl()}/StaffManagement/{staffId}/deactivate";
 
                 var json = JsonSerializer.Serialize(dto);
                 var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
@@ -233,7 +282,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/StaffManagement/positions";
+                var url = $"{GetApiBaseUrl()}/StaffManagement/positions";
 
                 var response = await client.GetAsync(url);
                 var content = await response.Content.ReadAsStringAsync();
@@ -263,6 +312,16 @@ namespace WebSapaForestForStaff.Services.Api
             public T? Data { get; set; }
         }
 
+        private class StaffListApiResponse
+        {
+            public bool Success { get; set; }
+            public List<StaffListItemDto>? Data { get; set; }
+            public int Page { get; set; }
+            public int PageSize { get; set; }
+            public int TotalCount { get; set; }
+            public int TotalPages { get; set; }
+        }
+
         private class ApiSuccessResponse
         {
             public bool Success { get; set; }
@@ -273,6 +332,7 @@ namespace WebSapaForestForStaff.Services.Api
         {
             public bool Success { get; set; }
             public string? Message { get; set; }
+            public string? Error { get; set; }
         }
 
         private class ApiCreateResponse
