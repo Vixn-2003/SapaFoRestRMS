@@ -63,33 +63,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Tạo đơn kiểm kê mới
-        /// </summary>
-        //[HttpPost("Create")]
-        //public async Task<ActionResult> CreateAudit([FromForm] CreateAuditInventoryDTO request)
-        //{
-        //    try
-        //    {
-        //        var result = await _auditInventoryService.CreateAuditAsync(request);
 
-        //        if (result.Success)
-        //        {
-        //            return Ok(new { success = true, message = result.Message, data = result.Data });
-        //        }
-
-        //        return BadRequest(new { success = false, message = result.Message });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error creating audit");
-        //        return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi tạo đơn kiểm kê" });
-        //    }
-        //}
-
-        /// <summary>
-        /// Xác nhận đơn kiểm kê
-        /// </summary>
         [HttpPost("Confirm/{id}")]
         public async Task<ActionResult> ConfirmAudit(string id, [FromBody] ConfirmAuditInventoryDTO request)
         {
@@ -125,28 +99,5 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Xóa đơn kiểm kê
-        /// </summary>
-        //[HttpDelete("Delete/{id}")]
-        //public async Task<ActionResult> DeleteAudit(int id)
-        //{
-        //    try
-        //    {
-        //        var result = await _auditInventoryService.DeleteAuditAsync(id);
-
-        //        if (result.Success)
-        //        {
-        //            return Ok(new { success = true, message = result.Message });
-        //        }
-
-        //        return BadRequest(new { success = false, message = result.Message });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error deleting audit {AuditId}", id);
-        //        return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi xóa đơn kiểm kê" });
-        //    }
-        //}
     }
 }

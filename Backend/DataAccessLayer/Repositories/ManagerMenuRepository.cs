@@ -102,6 +102,7 @@ namespace DataAccessLayer.Repositories
             existingItem.IsAvailable = menuItem.IsAvailable;
             existingItem.CourseType = menuItem.CourseType;
             existingItem.Description = menuItem.Description;
+            existingItem.BatchSize = menuItem.BatchSize;
             if (!string.IsNullOrWhiteSpace(menuItem.ImageUrl))
             {
                 // TH1: Có ảnh mới → cập nhật
