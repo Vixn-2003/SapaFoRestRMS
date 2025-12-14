@@ -19,12 +19,12 @@ namespace BusinessAccessLayer.DTOs.Manager
         public string Description { get; set; }
         public string ImageUrl { get; set; } // URL cũ (nếu không đổi ảnh)
 
-        // ✅ 3 TRƯỜNG MỚI
+        //  3 TRƯỜNG MỚI
         public int? TimeCook { get; set; }
         public int BillingType { get; set; }
         public bool IsAds { get; set; }
 
-        // ✅ Recipes được gửi dưới dạng JSON string trong form
+        //  Recipes được gửi dưới dạng JSON string trong form
         public string RecipesJson { get; set; }
 
         // Property để parse recipes từ JSON

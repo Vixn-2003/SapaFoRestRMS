@@ -119,7 +119,7 @@ namespace SapaFoRestRMSAPI.Controllers
             if (user == null || user.RoleId != 5)
                 return Unauthorized(new { message = "Tài khoản không hợp lệ" });
 
-            // ✅ FIX: Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = Inactive)
+            //  FIX: Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = Inactive)
             if (user.Status == 1)
             {
                 _otpCache.Remove(dto.Phone);

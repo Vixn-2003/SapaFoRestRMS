@@ -46,7 +46,7 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(new { message = "Payroll created successfully" });
         }
 
-        // ✅ PUT: api/Payroll/{id}
+        //  PUT: api/Payroll/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] PayrollDTO dto)
         {

@@ -134,7 +134,7 @@ public class PaymentController : ControllerBase
             }
 
             await _paymentService.UndoConfirmOrderAsync(orderId, request, ct);
-            return Ok(new { message = "Order reverted successfully." });
+            return Ok(new { message = "Đã hoàn tác xác nhận thành công." });
         }
         catch (KeyNotFoundException ex)
         {
@@ -337,7 +337,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
             var transaction = await _paymentService.ProcessPaymentAsync(request, userId.Value,ct);
             return Ok(new { 
@@ -447,7 +447,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
             var transaction = await _paymentService.ProcessPaymentAsync(paymentRequest,userId.Value, ct);
             
@@ -491,7 +491,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             var transaction = await _paymentService.ProcessCashPaymentAsync(request, userId.Value, ct);
@@ -528,7 +528,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             var transactions = await _paymentService.ProcessCombinedPaymentAsync(request, userId.Value, ct);
@@ -592,7 +592,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             var transaction = await _paymentService.RetryPaymentAsync(request, userId.Value, ct);
@@ -604,7 +604,7 @@ public class PaymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Lỗi khi retry payment", error = ex.Message });
+            return StatusCode(500, new { message = "Lỗi khi thử lại thanh toán", error = ex.Message });
         }
     }
 
@@ -627,7 +627,7 @@ public class PaymentController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = "Lỗi khi sync payments", error = ex.Message });
+            return StatusCode(500, new { message = "Lỗi khi đồng bộ thanh toán", error = ex.Message });
         }
     }
 
@@ -643,7 +643,7 @@ public class PaymentController : ControllerBase
     {
         // Simplified payment system: No gateway callbacks needed
         // Cash and QR payments use manual confirmation only
-        return BadRequest(new { message = "Gateway callbacks not supported in simplified payment system. Use manual confirmation instead." });
+        return BadRequest(new { message = "Hệ thống thanh toán đơn giản không hỗ trợ gateway callbacks. Vui lòng sử dụng xác nhận thủ công." });
     }
 
     /// <summary>
@@ -663,11 +663,11 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             var success = await _paymentService.LockOrderAsync(request, userId.Value, ct);
-            return Ok(new { success, message = "Order locked successfully" });
+            return Ok(new { success, message = "Đã khóa đơn hàng thành công" });
         }
         catch (InvalidOperationException ex)
         {
@@ -689,7 +689,7 @@ public class PaymentController : ControllerBase
         try
         {
             var success = await _paymentService.UnlockOrderAsync(orderId, ct);
-            return Ok(new { success, message = "Order unlocked successfully" });
+            return Ok(new { success, message = "Đã mở khóa đơn hàng thành công" });
         }
         catch (Exception ex)
         {
@@ -732,7 +732,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             var transactions = await _paymentService.ProcessSplitBillAsync(request, userId.Value, ct);
@@ -869,7 +869,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             // Confirm payment in backend - updates order status to PAID
@@ -915,7 +915,7 @@ public class PaymentController : ControllerBase
             var userId = GetUserIdFromClaims();
             if (userId == null)
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             var success = await _paymentService.CancelPaymentAsync(request, userId.Value, ct);
@@ -972,7 +972,7 @@ public class PaymentController : ControllerBase
     public async Task<IActionResult> NotifyPaymentRevised([FromBody] PaymentNotifyRequestDto request, CancellationToken ct = default)
     {
         // Simplified payment system: No gateway callbacks needed
-        return BadRequest(new { message = "Gateway callbacks not supported. Use POST /api/payment/confirm for manual confirmation." });
+        return BadRequest(new { message = "Không hỗ trợ gateway callbacks. Vui lòng sử dụng POST /api/payment/confirm để xác nhận thủ công." });
     }
 
     /// <summary>

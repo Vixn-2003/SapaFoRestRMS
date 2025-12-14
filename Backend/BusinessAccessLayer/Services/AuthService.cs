@@ -1,4 +1,4 @@
-﻿using BusinessAccessLayer.DTOs.Auth;
+using BusinessAccessLayer.DTOs.Auth;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
@@ -40,11 +40,11 @@ namespace BusinessAccessLayer.Services
             if (user == null || !VerifyPassword(request.Password, user.PasswordHash))
                 throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
 
-            // ✅ Tài khoản đã bị xóa khỏi hệ thống
+            //  Tài khoản đã bị xóa khỏi hệ thống
             if (user.IsDeleted == true)
                 throw new UnauthorizedAccessException("Người dùng đã bị xóa khỏi hệ thống");
 
-            // ✅ Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = DeActive)
+            //  Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = DeActive)
             if (user.Status == 1)
                 throw new UnauthorizedAccessException("Tài khoản này đang không còn hoạt động trên hệ thống");
 
@@ -61,7 +61,7 @@ namespace BusinessAccessLayer.Services
 
                 if (staff == null || staff.Positions == null || staff.Positions.Count == 0)
                 {
-                    throw new UnauthorizedAccessException("Staff account has no assigned position. Please contact administrator.");
+                    throw new UnauthorizedAccessException("Tài khoản nhân viên chưa được phân công vị trí. Vui lòng liên hệ quản trị viên.");
                 }
 
                 // Get position names & ids
@@ -88,15 +88,15 @@ namespace BusinessAccessLayer.Services
         {
             var principal = ValidateJwt(refreshToken, requireRefreshClaim: true);
             if (principal == null)
-                throw new UnauthorizedAccessException("Invalid refresh token");
+                throw new UnauthorizedAccessException("Refresh token không hợp lệ");
 
             var userIdClaim = principal.FindFirst("userId")?.Value ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
-                throw new UnauthorizedAccessException("Invalid refresh token payload");
+                throw new UnauthorizedAccessException("Payload của refresh token không hợp lệ");
 
             var user = _userRepository.GetByIdAsync(userId).GetAwaiter().GetResult();
             if (user == null)
-                throw new UnauthorizedAccessException("User not found");
+                throw new UnauthorizedAccessException("Không tìm thấy người dùng");
 
             if (user.IsDeleted == true)
                 throw new UnauthorizedAccessException("Người dùng đã bị xóa khỏi hệ thống");

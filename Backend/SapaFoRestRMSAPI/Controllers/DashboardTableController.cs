@@ -151,7 +151,7 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 await _dashboardTableService.SaveOrderChangesAsync(request);
 
-                // ✅ Broadcast đơn mới đến màn hình bếp nếu có món mới được thêm
+                //  Broadcast đơn mới đến màn hình bếp nếu có món mới được thêm
                 var hasNewItems = request.Items.Any(item => item.Action == "Add");
                 if (hasNewItems)
                 {

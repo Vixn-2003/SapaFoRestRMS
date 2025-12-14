@@ -35,7 +35,7 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        // ✅ THÊM METHOD MỚI
+        //  THÊM METHOD MỚI
         public async Task<Supplier?> GetByCodeAsync(string code)
         {
             return await _context.Suppliers
@@ -43,28 +43,28 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        // ✅ THÊM METHOD MỚI
+        //  THÊM METHOD MỚI
         public async Task<bool> CheckCodeExistsAsync(string code)
         {
             return await _context.Suppliers
                 .AnyAsync(s => s.CodeSupplier == code && s.IsActive == true);
         }
 
-        // ✅ IMPLEMENT METHOD
+        //  IMPLEMENT METHOD
         public async Task AddAsync(Supplier entity)
         {
             entity.IsActive = true;
             await _context.Suppliers.AddAsync(entity);
         }
 
-        // ✅ IMPLEMENT METHOD
+        //  IMPLEMENT METHOD
         public async Task UpdateAsync(Supplier entity)
         {
             _context.Suppliers.Update(entity);
             await Task.CompletedTask;
         }
 
-        // ✅ IMPLEMENT METHOD (Soft Delete)
+        //  IMPLEMENT METHOD (Soft Delete)
         public async Task DeleteAsync(int id)
         {
             var supplier = await GetByIdAsync(id);
@@ -75,7 +75,7 @@ namespace DataAccessLayer.Repositories
             }
         }
 
-        // ✅ IMPLEMENT METHOD
+        //  IMPLEMENT METHOD
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

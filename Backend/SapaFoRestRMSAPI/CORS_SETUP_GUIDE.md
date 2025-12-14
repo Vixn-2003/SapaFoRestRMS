@@ -54,7 +54,7 @@ Mở file `appsettings.Development.json` và thêm IP của bạn vào mảng `A
       "http://localhost:5180",
       "https://localhost:7096",
       
-      // ✅ THÊM IP CỦA BẠN Ở ĐÂY
+      //  THÊM IP CỦA BẠN Ở ĐÂY
       "http://192.168.1.10:5123",    // 👈 Thay 192.168.1.10 bằng IP của bạn
       "https://192.168.1.10:5123",
       "http://192.168.1.10:5054",
@@ -65,9 +65,9 @@ Mở file `appsettings.Development.json` và thêm IP của bạn vào mảng `A
 ```
 
 **Lưu ý:**
-- ✅ Thay `192.168.1.10` bằng IP thực của bạn
-- ✅ Giữ nguyên các port: `5123`, `5054`, `5180`, `7096`
-- ✅ Thêm cả HTTP và HTTPS để đảm bảo hoạt động trong mọi trường hợp
+-  Thay `192.168.1.10` bằng IP thực của bạn
+-  Giữ nguyên các port: `5123`, `5054`, `5180`, `7096`
+-  Thêm cả HTTP và HTTPS để đảm bảo hoạt động trong mọi trường hợp
 
 ---
 
@@ -91,10 +91,10 @@ Khi backend khởi động, bạn sẽ thấy danh sách CORS origins được l
 
 ```
 🔒 CORS Allowed Origins:
-   ✅ http://localhost:5054
-   ✅ http://localhost:5123
-   ✅ http://192.168.1.10:5123  ← IP của bạn
-   ✅ https://192.168.1.10:5123
+    http://localhost:5054
+    http://localhost:5123
+    http://192.168.1.10:5123  ← IP của bạn
+    https://192.168.1.10:5123
    ...
 ```
 
@@ -156,10 +156,10 @@ File `appsettings.Development.json` **KHÔNG ĐƯỢC commit lên Git** vì ch�
 
 ## 🎯 Best Practices
 
-1. ✅ **Không commit IP cá nhân** lên Git
-2. ✅ **Sử dụng template file** để team member dễ setup
-3. ✅ **Log CORS origins** trong console để dễ debug
-4. ✅ **Restart backend** sau mỗi lần thay đổi CORS
+1.  **Không commit IP cá nhân** lên Git
+2.  **Sử dụng template file** để team member dễ setup
+3.  **Log CORS origins** trong console để dễ debug
+4.  **Restart backend** sau mỗi lần thay đổi CORS
 
 ---
 

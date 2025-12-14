@@ -23,7 +23,7 @@ using SapaFoRestRMSAPI.Hubs;
 using BusinessAccessLayer.Services.Inventory;
 using QuestPDF.Infrastructure;
 
-// ✅ FIX: Configure QuestPDF License (Community - Free for commercial use)
+//  FIX: Configure QuestPDF License (Community - Free for commercial use)
 QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -350,11 +350,11 @@ builder.Services.AddSignalR();
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
 builder.Services.AddSignalR();
 
-// ✅ Đảm bảo hỗ trợ multipart form data
+//  Đảm bảo hỗ trợ multipart form data
 builder.Services.AddControllers()
     .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
 
-// ✅ Cấu hình kích thước file upload (nếu cần)
+//  Cấu hình kích thước file upload (nếu cần)
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 52428800; // 50MB
@@ -398,7 +398,7 @@ builder.Services
     });
 
 // ================================
-// ✅ CORS CONFIGURATION (Centralized)
+//  CORS CONFIGURATION (Centralized)
 // ================================
 // Đọc danh sách origins từ appsettings.json
 // Mỗi dev chỉ cần chỉnh sửa appsettings.Development.json với IP của mình
@@ -416,7 +416,7 @@ builder.Services.AddCors(options =>
         Console.WriteLine("🔒 CORS Allowed Origins:");
         foreach (var origin in allowedOrigins)
         {
-            Console.WriteLine($"   ✅ {origin}");
+            Console.WriteLine($"    {origin}");
         }
 
         policy.WithOrigins(allowedOrigins)
