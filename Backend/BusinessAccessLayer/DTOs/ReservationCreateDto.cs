@@ -29,6 +29,11 @@ namespace BusinessAccessLayer.DTOs
 
         [Required(ErrorMessage = "OTP là bắt buộc.")]
         public string? OtpCode { get; set; }
+
+        /// <summary>
+        /// MOMO hoặc PAYOS (default PAYOS)
+        /// </summary>
+        public string PaymentMethod { get; set; } = "PAYOS";
     }
 
 }

@@ -48,7 +48,7 @@
             } catch { }
 
             // Nếu IPN trả về message = "payment success, reservation created"
-            if (res.ok && obj && obj.message === "payment success, reservation created") {
+            if (res.ok && obj && obj.message === "reservation created") {
 
                 // Lấy lại dữ liệu test trong textarea
                 const ipnData = JSON.parse(jsonText);

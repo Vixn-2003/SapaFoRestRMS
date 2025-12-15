@@ -47,6 +47,16 @@ namespace DataAccessLayer.Repositories
         .Take(pageSize)
         .ToListAsync();
 }
+        public async Task<bool> IsDuplicateTableNumberAsync(string tableNumber, int areaId, int? excludeTableId = null)
+        {
+            var query = _context.Tables
+                .Where(t => t.TableNumber == tableNumber && t.AreaId == areaId);
+
+            if (excludeTableId.HasValue)
+                query = query.Where(t => t.TableId != excludeTableId.Value);
+
+            return await query.AnyAsync();
+        }
 
 
         public async Task<int> GetCountAsync(string? search, int? capacity, int? areaId)

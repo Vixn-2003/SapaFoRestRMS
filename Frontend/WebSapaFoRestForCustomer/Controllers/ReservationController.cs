@@ -94,7 +94,8 @@ namespace WebSapaFoRestForCustomer.Controllers
                 ReservationTime = model.ReservationTime,
                 NumberOfGuests = model.NumberOfGuests,
                 Notes = model.Notes,
-                OtpCode = model.OtpCode
+                OtpCode = model.OtpCode,
+                PaymentMethod = model.PaymentMethod
             };
 
             var jsonContent = JsonConvert.SerializeObject(dto);
@@ -132,5 +133,26 @@ namespace WebSapaFoRestForCustomer.Controllers
             // Chuyển về Home/Index
             return RedirectToAction("Index", "Home");
         }
+        [HttpGet]
+        public IActionResult PaymentResultPayOS(
+    string code,
+    string status,
+    long orderCode,
+    string? id,
+    bool? cancel)
+        {
+            // PayOS thường: code=00, status=PAID, orderCode=...
+            if (code == "00" && string.Equals(status, "PAID", StringComparison.OrdinalIgnoreCase) && cancel != true)
+            {
+                TempData["ReservationSuccess"] = "Thanh toán thành công! Đặt bàn đã được ghi nhận.";
+            }
+            else
+            {
+                TempData["ReservationError"] = $"Thanh toán chưa thành công. code={code}, status={status}";
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
     }
 }

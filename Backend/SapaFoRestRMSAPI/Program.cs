@@ -262,6 +262,9 @@ builder.Services.AddScoped<ICapacityStatisticsService, CapacityStatisticsService
 //
 builder.Services.Configure<MomoOptions>(builder.Configuration.GetSection("Momo"));
 builder.Services.AddSingleton<IMomoService, MomoService>();
+
+//payos
+builder.Services.AddHttpClient<IPayosService, PayosService>();
 builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
 //daytype
 builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
