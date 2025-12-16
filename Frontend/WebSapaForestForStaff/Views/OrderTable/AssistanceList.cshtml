@@ -2,7 +2,8 @@
 
 @{
     ViewData["Title"] = "Yêu cầu Hỗ trợ";
-    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    // Dùng layout waiter (sidebar trái cố định)
+    Layout = "~/Views/Shared/_waiterLayout.cshtml";
 
     // Lấy giá trị filter
     int? currentAreaId = ViewData["CurrentAreaId"] as int?;
