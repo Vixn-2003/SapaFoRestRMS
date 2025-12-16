@@ -106,7 +106,15 @@ public class PaymentController : ControllerBase
             }
 
             request.OrderId = orderId;
-            var result = await _paymentService.ConfirmOrderAsync(request, ct);
+
+            // Lấy userId từ claims
+            var userId = GetUserIdFromClaims();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(new { message = "Không thể xác định người dùng" });
+            }
+
+            var result = await _paymentService.ConfirmOrderAsync(request, userId.Value, ct);
             return Ok(result);
         }
         catch (KeyNotFoundException ex)

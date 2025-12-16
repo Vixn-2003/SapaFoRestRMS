@@ -529,7 +529,7 @@ public class PaymentService : IPaymentService
         return _mapper.Map<TransactionDto>(savedTransaction);
     }
 
-    public async Task<OrderDto> ConfirmOrderAsync(CustomerConfirmRequestDto request, CancellationToken ct = default)
+    public async Task<OrderDto> ConfirmOrderAsync(CustomerConfirmRequestDto request, int userId, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Payments.GetOrderWithItemsAsync(request.OrderId);
         if (order == null)
@@ -672,14 +672,37 @@ public class PaymentService : IPaymentService
             }
         }
 
-        // Sau khi khách xác nhận, chuyển trạng thái đơn sang "Confirmed" (đã xác nhận, chờ thanh toán)
-        order.Status = OrderStatusConstants.Confirmed;
-
-        await _unitOfWork.SaveChangesAsync();
-
+        // Tính toán tổng tiền trước khi lưu
         var orderDto = _mapper.Map<OrderDto>(order);
         CalculateOrderAmounts(order, orderDto);
         PopulateOrderMetadata(order, orderDto);
+
+        // Sau khi khách xác nhận, chuyển trạng thái đơn sang "Confirmed" (đã xác nhận, chờ thanh toán)
+        order.Status = OrderStatusConstants.Confirmed;
+        order.ConfirmedAt = DateTime.UtcNow;
+
+        // Lưu staffId của người thực hiện xác nhận
+        var staffId = await ResolveStaffIdAsync(userId, ct);
+        order.ConfirmedByStaffId = staffId;
+
+        // Lưu TotalAmount sau khi đã tính toán
+        order.TotalAmount = orderDto.TotalAmount;
+
+        await _unitOfWork.SaveChangesAsync();
+
+        // Ghi lại lịch sử xác nhận đơn hàng
+        var history = new OrderHistory
+        {
+            OrderId = request.OrderId,
+            Action = "Order Confirmation",
+            Reason = $"Confirmed by staff. Total amount: {orderDto.TotalAmount:N0} VND",
+            StaffId = staffId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await _unitOfWork.Payments.AddOrderHistoryAsync(history);
+        await _unitOfWork.SaveChangesAsync();
+
         return orderDto;
     }
 
@@ -1739,6 +1762,9 @@ public class PaymentService : IPaymentService
             if (allPaid)
             {
                 await ReleaseTablesAndCompleteReservationAsync(request.OrderId, userId, ct);
+
+                // ✅ TRIGGER POST-PAYMENT ACTIONS: VIP update, LoyaltyPoints +1, Inventory deduction
+                await TriggerPostPaymentActionsAsync(request.OrderId, savedParent.TransactionId, ct);
             }
 
             // Unlock order
