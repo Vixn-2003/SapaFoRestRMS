@@ -1,6 +1,8 @@
-namespace WebSapaFoRestForCustomer.DTOs
+using System;
+
+namespace BusinessAccessLayer.DTOs.CustomerProfile
 {
-    public class CustomerProfile
+    public class CustomerProfileDto
     {
         public int CustomerId { get; set; }
         public string? FullName { get; set; }
@@ -10,8 +12,5 @@ namespace WebSapaFoRestForCustomer.DTOs
         public decimal? LoyaltyPoints { get; set; }
         public string? VipLevel { get; set; }
         public DateTime? CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
     }
 }
-
-

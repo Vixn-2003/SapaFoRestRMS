@@ -258,5 +258,92 @@ namespace WebSapaFoRestForCustomer.Services
         //        return null;
         //    }
         //}
+
+
+        /// <summary>
+        /// Get customer profile
+        /// </summary>
+        public async Task<CustomerProfile?> GetCustomerProfileAsync()
+        {
+            try
+            {
+                var client = GetAuthenticatedClient();
+                var response = await client.GetAsync("api/customer-management/profile");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<CustomerProfile>>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    return apiResponse?.Success == true ? apiResponse.Data : null;
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Update customer profile
+        /// </summary>
+        public async Task<CustomerProfile?> UpdateCustomerProfileAsync(CustomerProfileUpdate request)
+        {
+            try
+            {
+                var client = GetAuthenticatedClient();
+
+                // Create form data for file upload
+                var formData = new MultipartFormDataContent();
+
+                // Add basic fields
+                formData.Add(new StringContent(request.FullName), "FullName");
+                if (!string.IsNullOrEmpty(request.Email))
+                    formData.Add(new StringContent(request.Email), "Email");
+                if (!string.IsNullOrEmpty(request.Phone))
+                    formData.Add(new StringContent(request.Phone), "Phone");
+                if (!string.IsNullOrEmpty(request.AvatarUrl))
+                    formData.Add(new StringContent(request.AvatarUrl), "AvatarUrl");
+
+                // Add file if provided
+                if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+                {
+                    var fileContent = new StreamContent(request.AvatarFile.OpenReadStream());
+                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(request.AvatarFile.ContentType);
+                    formData.Add(fileContent, "AvatarFile", request.AvatarFile.FileName);
+                }
+
+                var response = await client.PutAsync("api/customer-management/profile", formData);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<CustomerProfile>>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    return apiResponse?.Success == true ? apiResponse.Data : null;
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // Generic API response wrapper
+        public class ApiResponse<T>
+        {
+            public bool Success { get; set; }
+            public string? Message { get; set; }
+            public T? Data { get; set; }
+            public List<string>? Errors { get; set; }
+        }
     }
 }

@@ -1,8 +1,11 @@
 using AutoMapper;
 using BusinessAccessLayer.Common.Pagination;
 using BusinessAccessLayer.DTOs.CustomerManagement;
+using BusinessAccessLayer.DTOs.CustomerProfile;
+using BusinessAccessLayer.DTOs.Customers;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -370,8 +373,94 @@ namespace BusinessAccessLayer.Services
             var configValue = _configuration["CustomerManagement:AveragePeopleCount"];
             if (int.TryParse(configValue, out var count) && count > 0)
                 return count;
-            
+
             return DEFAULT_AVG_PEOPLE_COUNT;
+        }
+
+        /// <summary>
+        /// Get customer profile information
+        /// </summary>
+        public async Task<CustomerProfileDto?> GetCustomerProfileAsync(int customerId, CancellationToken ct = default)
+        {
+            var customer = await _unitOfWork.CustomerManagement.GetCustomerByIdAsync(customerId, ct);
+            if (customer == null || customer.User == null)
+                return null;
+
+            // Map from User entity since profile data is stored there
+            var profileDto = new CustomerProfileDto
+            {
+                CustomerId = customer.CustomerId,
+                FullName = customer.User.FullName,
+                Email = customer.User.Email,
+                Phone = customer.User.Phone,
+                AvatarUrl = customer.User.AvatarUrl,
+                LoyaltyPoints = customer.LoyaltyPoints,
+                VipLevel = customer.IsVip ? "VIP" : "Regular",
+                CreatedAt = customer.User.CreatedAt
+            };
+
+            return profileDto;
+        }
+
+        /// <summary>
+        /// Update customer profile information
+        /// </summary>
+        public async Task<CustomerProfileDto?> UpdateCustomerProfileAsync(int customerId, CustomerProfileUpdateRequest request, CancellationToken ct = default)
+        {
+            var customer = await _unitOfWork.CustomerManagement.GetCustomerByIdAsync(customerId, ct);
+            if (customer == null || customer.User == null)
+                return null;
+
+            // Update User entity (where profile data is stored)
+            var user = customer.User;
+            user.FullName = request.FullName;
+            user.Email = request.Email;
+            user.Phone = request.Phone;
+            user.ModifiedAt = DateTime.UtcNow;
+
+            // Handle avatar upload if provided
+            if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+            {
+                try
+                {
+                    // TODO: Implement file upload to Cloudinary or local storage
+                    // For now, just store the filename
+                    var fileName = $"{Guid.NewGuid()}_{request.AvatarFile.FileName}";
+                    user.AvatarUrl = $"/uploads/avatars/{fileName}";
+
+                    // TODO: Actually save the file to storage
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the update
+                    await _auditLogService.LogEventAsync(
+                        eventType: "AvatarUploadError",
+                        entityType: "Customer",
+                        entityId: customerId,
+                        description: $"Failed to upload avatar: {ex.Message}",
+                        userId: null,
+                        ct: ct);
+                }
+            }
+            else if (!string.IsNullOrEmpty(request.AvatarUrl))
+            {
+                user.AvatarUrl = request.AvatarUrl;
+            }
+
+            // Update customer entity (including User data)
+            await _unitOfWork.CustomerManagement.UpdateCustomerAsync(customer, ct);
+
+            // Log the profile update
+            await _auditLogService.LogEventAsync(
+                eventType: "CustomerProfileUpdated",
+                entityType: "Customer",
+                entityId: customerId,
+                description: $"Customer profile updated: {request.FullName}",
+                userId: null, // TODO: Get current user ID
+                ct: ct);
+
+            // Return updated profile
+            return await GetCustomerProfileAsync(customerId, ct);
         }
     }
 }

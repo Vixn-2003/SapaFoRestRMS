@@ -1,0 +1,301 @@
+@model WebSapaFoRestForCustomer.DTOs.CustomerProfile
+
+@{
+    ViewData["Title"] = "Thông tin cá nhân";
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-wrapper me-3">
+                            <img src="@(Model.AvatarUrl ?? "/images/default-avatar.png")"
+                                 alt="Avatar"
+                                 class="rounded-circle avatar-img"
+                                 style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #e9ecef;">
+                        </div>
+                        <div>
+                            <h2 class="mb-1">@Model.FullName</h2>
+                            <p class="text-muted mb-1">@Model.Email</p>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-@(Model.VipLevel == "VIP" ? "warning" : "secondary")">
+                                    <i class="bi bi-star-fill me-1"></i>@Model.VipLevel
+                                </span>
+                                <span class="badge bg-info">
+                                    <i class="bi bi-coin me-1"></i>@Model.LoyaltyPoints?.ToString("N0") điểm tích lũy
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-gear me-2"></i>Chỉnh sửa thông tin
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm" enctype="multipart/form-data">
+                        <div class="row">
+                            <!-- Avatar Upload -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Ảnh đại diện</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-preview">
+                                        <img id="avatarPreview"
+                                             src="@(Model.AvatarUrl ?? "/images/default-avatar.png")"
+                                             alt="Avatar Preview"
+                                             class="rounded-circle"
+                                             style="width: 100px; height: 100px; object-fit: cover; border: 2px solid #dee2e6;">
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <input type="file" class="form-control" id="avatarFile" name="AvatarFile" accept="image/*">
+                                        <div class="form-text">
+                                            Chọn ảnh JPG, PNG hoặc GIF. Kích thước tối đa 2MB.
+                                        </div>
+                                        <input type="hidden" id="avatarUrl" name="AvatarUrl" value="@Model.AvatarUrl">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Full Name -->
+                            <div class="col-md-6 mb-3">
+                                <label for="fullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="fullName" name="FullName"
+                                       value="@Model.FullName" required maxlength="100">
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="Email"
+                                       value="@Model.Email" maxlength="100">
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <!-- Phone -->
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">Số điện thoại</label>
+                                <input type="tel" class="form-control" id="phone" name="Phone"
+                                       value="@Model.Phone" maxlength="20">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary" id="saveBtn">
+                                <i class="bi bi-check-circle me-2"></i>Lưu thay đổi
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Đặt lại
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with stats -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Thống kê
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="fs-2 fw-bold text-primary">@Model.LoyaltyPoints?.ToString("N0")</div>
+                            <div class="text-muted small">Điểm tích lũy</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fs-2 fw-bold text-warning">@Model.VipLevel</div>
+                            <div class="text-muted small">Hạng thành viên</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="small text-muted">
+                        <p><strong>Ngày tham gia:</strong> @Model.CreatedAt?.ToString("dd/MM/yyyy")</p>
+                        <p><strong>Cập nhật cuối:</strong> @Model.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Thông tin
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <small>
+                            <strong>Mẹo:</strong> Giữ thông tin cá nhân luôn cập nhật để nhận được ưu đãi tốt nhất từ nhà hàng!
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let originalData = @Html.Raw(Json.Serialize(Model));
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeForm();
+            setupAvatarPreview();
+        });
+
+        function initializeForm() {
+            const form = document.getElementById('profileForm');
+            form.addEventListener('submit', handleFormSubmit);
+        }
+
+        function setupAvatarPreview() {
+            const avatarFile = document.getElementById('avatarFile');
+            const avatarPreview = document.getElementById('avatarPreview');
+
+            avatarFile.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        avatarPreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+
+            try {
+                // Disable button and show loading
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang lưu...';
+
+                // Clear previous errors
+                clearFormErrors();
+
+                // Collect form data
+                const formData = new FormData(document.getElementById('profileForm'));
+
+                // Send request
+                const response = await fetch('/CustomerProfile/UpdateProfile', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update original data for reset functionality
+                    originalData = result.data;
+
+                    // Show success message
+                    showToast(result.message, 'success');
+
+                    // Update avatar URL if changed
+                    if (result.data.avatarUrl) {
+                        document.getElementById('avatarUrl').value = result.data.avatarUrl;
+                    }
+                } else {
+                    // Show validation errors
+                    if (result.errors && result.errors.length > 0) {
+                        showFieldErrors(result.errors);
+                    } else {
+                        showToast(result.message, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showToast('Đã xảy ra lỗi khi cập nhật thông tin.', 'error');
+            } finally {
+                // Re-enable button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        }
+
+        function clearFormErrors() {
+            // Remove all error styling
+            document.querySelectorAll('.is-invalid').forEach(el => {
+                el.classList.remove('is-invalid');
+            });
+
+            // Clear error messages
+            document.querySelectorAll('.invalid-feedback').forEach(el => {
+                el.textContent = '';
+            });
+        }
+
+        function showFieldErrors(errors) {
+            errors.forEach(error => {
+                // Try to find field by name pattern
+                const fieldName = error.split(' ')[0].toLowerCase();
+                let field = null;
+
+                // Map common error messages to field names
+                if (error.toLowerCase().includes('họ tên') || error.toLowerCase().includes('fullname')) {
+                    field = document.getElementById('fullName');
+                } else if (error.toLowerCase().includes('email')) {
+                    field = document.getElementById('email');
+                } else if (error.toLowerCase().includes('điện thoại') || error.toLowerCase().includes('phone')) {
+                    field = document.getElementById('phone');
+                }
+
+                if (field) {
+                    field.classList.add('is-invalid');
+                    const feedback = field.parentNode.querySelector('.invalid-feedback');
+                    if (feedback) {
+                        feedback.textContent = error;
+                    }
+                }
+            });
+        }
+
+        function resetForm() {
+            // Reset to original data
+            document.getElementById('fullName').value = originalData.fullName || '';
+            document.getElementById('email').value = originalData.email || '';
+            document.getElementById('phone').value = originalData.phone || '';
+
+            // Reset avatar
+            document.getElementById('avatarFile').value = '';
+            document.getElementById('avatarPreview').src = originalData.avatarUrl || '/images/default-avatar.png';
+            document.getElementById('avatarUrl').value = originalData.avatarUrl || '';
+
+            // Clear errors
+            clearFormErrors();
+
+            showToast('Đã đặt lại form về trạng thái ban đầu.', 'info');
+        }
+
+        function showToast(message, type = 'success') {
+            // Use existing toast system if available, otherwise create simple alert
+            if (typeof showToast === 'function' && window.showToast !== showToast) {
+                window.showToast(message, type);
+            } else {
+                alert(message);
+            }
+        }
+    </script>
+}
