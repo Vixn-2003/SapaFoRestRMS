@@ -400,53 +400,72 @@
 
                         // Có field success => JSON chuẩn
                         if (result && typeof result.success !== "undefined") {
-                            if (result.success) {
-                                // Ghép thông tin để show
-                                let msg = result.message || "Đặt bàn thành công!";
-                                let extra = "";
+                                if (result.success) {
+        let msg = result.message || "Đặt bàn thành công!";
+        let extra = "";
 
-                                if (result.requiredDeposit) {
-                                    const formatted = Number(result.requiredDeposit).toLocaleString('vi-VN');
-                                    extra += `<br/>Tiền cọc: <strong>${formatted} đ</strong>`;
-                                }
+        if (result.requiredDeposit) {
+            const formatted = Number(result.requiredDeposit).toLocaleString('vi-VN');
+            extra += `<br/>Tiền cọc: <strong>${formatted} đ</strong>`;
+        }
 
-                                if (result.timeSlot) {
-                                    extra += `<br/>Ca: <strong>${result.timeSlot}</strong>`;
-                                }
+        if (result.timeSlot) {
+            extra += `<br/>Ca: <strong>${result.timeSlot}</strong>`;
+        }
 
-                                if (result.orderId) {
-                                    extra += `<br/>Mã đơn (orderId): <code>${result.orderId}</code>`;
-                                    console.log("orderId để test IPN:", result.orderId);
-                                }
+        // ✅ hiển thị cổng thanh toán: PAYOS / MOMO
+        if (result.paymentMethod) {
+            let gatewayLabel = result.paymentMethod;
+            if (gatewayLabel === "PAYOS") gatewayLabel = "PayOS";
+            if (gatewayLabel === "MOMO") gatewayLabel = "MoMo";
+            extra += `<br/>Cổng thanh toán: <strong>${gatewayLabel}</strong>`;
+        }
 
-                                toastr.success(msg + extra);
+        if (result.orderId) {
+            extra += `<br/>Mã đơn (orderId): <code>${result.orderId}</code>`;
+            console.log("orderId để test IPN:", result.orderId);
+        }
+
+        toastr.success(msg + extra);
 
                                 // ✅ NÚT THANH TOÁN NẰM TRONG FORM
-                                if (result.payUrl) {
-                                    // Tìm form và thêm nút vào cuối form (trước khi đóng </form>)
-                                    const $form = $('#reservationForm');
+                                        if (result.payUrl) {
+            const $form = $('#reservationForm');
 
-                                    // Xóa nút cũ nếu có
-                                    $form.find('#btnPayDeposit').remove();
+            // Xóa nút cũ nếu có
+            $form.find('#btnPayDeposit').remove();
 
-                                    // Tạo nút mới và thêm vào cuối form
-                                    const $btn = $('<button type="button" id="btnPayDeposit" class="btn btn-success w-100 mt-3"><i class="bi bi-credit-card me-2"></i>Thanh toán tiền đặt cọc</button>');
+            // ✅ chọn text nút theo cổng thanh toán
+            let btnText = 'Thanh toán tiền đặt cọc';
+            let iconClass = 'bi-credit-card';
 
-                                    // Thêm nút vào trước nút submit
-                                    $form.find('button[type="submit"]').before($btn);
+            if (result.paymentMethod === 'MOMO') {
+                btnText = 'Thanh toán qua MoMo';
+                iconClass = 'bi-wallet2';
+            } else if (result.paymentMethod === 'PAYOS') {
+                btnText = 'Thanh toán qua PayOS';
+                iconClass = 'bi-credit-card';
+            }
 
-                                    // Ẩn nút submit gốc
-                                    $form.find('button[type="submit"]').hide();
+            const $btn = $(`
+                <button type="button" id="btnPayDeposit" class="btn btn-success w-100 mt-3">
+                    <i class="bi ${iconClass} me-2"></i>${btnText}
+                </button>`);
 
-                                    // Gán sự kiện click
-                                    $btn.off('click').on('click', function () {
-                                        window.open(result.payUrl, '_blank');
-                                    });
+            // Thêm nút vào trước nút submit
+            $form.find('button[type="submit"]').before($btn);
 
-                                } else {
-                                    // Không có payUrl (dev mode/fake payment) → đóng modal
-                                    $('#reservationModal').modal('hide');
-                                }
+            // Ẩn nút submit gốc
+            $form.find('button[type="submit"]').hide();
+
+            $btn.off('click').on('click', function () {
+                window.open(result.payUrl, '_blank');
+            });
+
+        } else {
+            $('#reservationModal').modal('hide');
+        }
+
                             } else {
                                 // ✅ chỗ này sẽ hiển thị lỗi validate (tên trống, sđt trống, v.v.)
                                 toastr.error(result.message || 'Đặt bàn thất bại!');
