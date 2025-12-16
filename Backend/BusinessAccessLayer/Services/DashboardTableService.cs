@@ -715,7 +715,7 @@ namespace BusinessAccessLayer.Services
             }
             else
             {
-                // Không cho phép chỉnh sửa/thêm món nếu order đã xác nhận thanh toán hoặc đang chờ thanh toán
+                // Không cho phép chỉnh sửa/thêm món nếu order đã xác nhận/thanh toán (nhưng vẫn cho phép với trạng thái Completed do bếp hoàn tất)
                 var lockedStatuses = new[]
                 {
                     OrderStatusConstants.Confirmed,
@@ -723,7 +723,6 @@ namespace BusinessAccessLayer.Services
                     "WaitingForPayment",
                     "Processing",
                     OrderStatusConstants.Paid,
-                    "Completed",
                     "Success"
                 };
 

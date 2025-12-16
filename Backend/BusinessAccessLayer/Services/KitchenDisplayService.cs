@@ -158,8 +158,26 @@ namespace BusinessAccessLayer.Services
                     }
                 }
 
-                // ✅ THÊM: Filter by status nếu có
-                if (!string.IsNullOrWhiteSpace(statusFilter))
+                // ✅ SỬA: Chỉ ẩn đơn đã Completed khi đang xem chế độ "Tất cả"
+                // - Nếu statusFilter trống hoặc = "all" => coi như đang ở tab TẤT CẢ => ẩn đơn đã Completed
+                // - Nếu đang filter theo trạng thái cụ thể (Ready/Done/...) => vẫn cho phép hiển thị đơn Completed
+                var normalizedOrderStatus = (order.Status ?? string.Empty).Trim();
+                var isCompletedOrder =
+                    string.Equals(normalizedOrderStatus, "Completed", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(normalizedOrderStatus, "Hoàn thành", StringComparison.OrdinalIgnoreCase);
+
+                var isAllFilter = string.IsNullOrWhiteSpace(statusFilter) ||
+                                  string.Equals(statusFilter?.Trim(), "all", StringComparison.OrdinalIgnoreCase);
+
+                if (isCompletedOrder && isAllFilter)
+                {
+                    // Đơn đã được bếp phó xác nhận hoàn thành, không hiển thị trong màn hình "Tất cả"
+                    continue;
+                }
+
+                // ✅ THÊM: Filter by status nếu có (nhưng KHÔNG lọc items của đơn Completed,
+                // để đơn hoàn thành vẫn hiển thị đầy đủ ở tab Ready/Done)
+                if (!string.IsNullOrWhiteSpace(statusFilter) && !isCompletedOrder)
                 {
                     items = items.Where(i => i.Status == statusFilter).ToList();
                 }
@@ -170,14 +188,6 @@ namespace BusinessAccessLayer.Services
                 // ✅ SỬA: Chỉ bỏ qua order nếu không có items nào (kể cả Done)
                 if (!items.Any())
                 {
-                    continue;
-                }
-
-                // ✅ SỬA: Chỉ ẩn đơn nếu Order.Status = "Completed" (bếp phó đã xác nhận)
-                // Không ẩn khi tất cả món Ready/Done, để bếp phó có thể xác nhận bằng button
-                if (order.Status == "Completed" || order.Status == "Hoàn thành")
-                {
-                    // Đơn đã được bếp phó xác nhận hoàn thành, không hiển thị trong màn hình "Tất cả"
                     continue;
                 }
 
@@ -797,12 +807,13 @@ namespace BusinessAccessLayer.Services
                     return new StatusUpdateResponse
                     {
                         Success = false,
-                        Message = "Chưa phải tất cả món đều sẵn sàng hoặc hoàn thành"
+                        Message = \"Chưa phải tất cả món đều sẵn sàng hoặc hoàn thành\"
                     };
                 }
 
-                // Update order status
-                order.Status = "Completed";
+                // ✅ Giữ lại logic cũ: sau khi bếp phó ấn \"Sẵn sàng\", chuyển trạng thái đơn sang \"Completed\"
+                // để thể hiện đơn đã được hoàn tất ở phía bếp.
+                order.Status = \"Completed\";
 
                 await _unitOfWork.Orders.UpdateAsync(order);
                 await _unitOfWork.SaveChangesAsync();
@@ -810,7 +821,7 @@ namespace BusinessAccessLayer.Services
                 return new StatusUpdateResponse
                 {
                     Success = true,
-                    Message = "Order completed successfully"
+                    Message = \"Order completed successfully\"
                 };
             }
             catch (Exception ex)
@@ -1491,7 +1502,7 @@ namespace BusinessAccessLayer.Services
         }
 
         /// <summary>
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         public async Task<StatusUpdateResponse> RecallOrderDetailAsync(RecallOrderDetailRequest request)
         {
@@ -1583,7 +1594,6 @@ namespace BusinessAccessLayer.Services
         private static readonly HashSet<string> KitchenManagedOrderStatuses = new(StringComparer.OrdinalIgnoreCase)
         {
             "Pending",
-            "Processing",
             "Preparing",
             "Cooking",
             "Ready",

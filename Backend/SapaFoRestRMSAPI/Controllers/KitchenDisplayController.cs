@@ -310,7 +310,7 @@ namespace SapaFoRestRMSAPI.Controllers
 
         /// <summary>
         /// POST: api/KitchenDisplay/recall-order-detail
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         [HttpPost("recall-order-detail")]
         public async Task<IActionResult> RecallOrderDetail([FromBody] RecallOrderDetailRequest request)

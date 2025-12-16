@@ -65,7 +65,7 @@ namespace BusinessAccessLayer.Services
         Task<List<KitchenOrderCardDto>> GetRecentlyFulfilledOrdersAsync(int minutesAgo = 10);
 
         /// <summary>
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         Task<StatusUpdateResponse> RecallOrderDetailAsync(RecallOrderDetailRequest request);
 
