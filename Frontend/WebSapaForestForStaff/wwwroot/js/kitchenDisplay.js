@@ -445,7 +445,7 @@ function createOrderCard(order) {
 
     return `
         <div class="order-card ${hasUrgentPendingItems ? 'has-urgent' : ''}" data-order-id="${order.orderId}">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                     <h4 class="mb-0"># ${order.orderNumber} - Bàn ${order.tableNumber || 'N/A'}</h4>
                     <small class="text-muted">
@@ -463,7 +463,7 @@ function createOrderCard(order) {
                     </div>
                     <div class="mt-1">
                         <small class="text-muted">
-                            <i class="mdi mdi-clock-outline"></i> Đã chờ: ${order.waitingMinutes}p
+                            <i class="mdi mdi-clock-outline"></i> Đã chờ
                         </small>
                     </div>
                 </div>
@@ -645,7 +645,7 @@ async function completeOrder(orderId) {
             await Promise.all(promises);
         }
 
-        // Đánh dấu đơn là Completed (bếp phó xác nhận)
+        // Xác nhận toàn bộ đơn đã sẵn sàng (không còn chuyển trạng thái đơn sang Completed)
         const response = await fetch(`${API_BASE}/KitchenDisplay/complete-order`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -661,10 +661,10 @@ async function completeOrder(orderId) {
 
         const result = await response.json();
         if (!result.success) {
-            throw new Error(result.message || 'Không thể đánh dấu đơn hoàn thành');
+            throw new Error(result.message || 'Không thể xác nhận đơn sẵn sàng');
         }
 
-        showSuccess('Đã xác nhận đơn hoàn thành! Đơn sẽ bị ẩn khỏi màn hình "Tất cả".');
+        showSuccess('Đã xác nhận toàn bộ món trong đơn đều sẵn sàng/hoàn thành.');
         reloadCurrentView();
         
         // Tự động reload đơn vừa sẵn sàng nếu đang hiển thị
@@ -1025,7 +1025,7 @@ function createTableGroupCard(group) {
         
         return `
             <div class="order-card ${hasUrgentPendingItems ? 'has-urgent' : ''}" data-order-id="${order.orderId}" style="margin-bottom: 15px;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
                         <h4 class="mb-0"># ${order.orderNumber} - Bàn ${order.tableNumber || 'N/A'}</h4>
                         <small class="text-muted">
@@ -1588,9 +1588,6 @@ function createModalIfNotExists() {
                         <span class="order-modal-time" id="modalOrderTime">00:00</span>
                     </div>
                     <div class="order-modal-header-right">
-                        <button class="btn-rush" id="btnRush" onclick="toggleRush()">
-                            <i class="mdi mdi-clock-fast"></i> CẦN LÀM NGAY
-                        </button>
                         <button class="btn-print" onclick="printOrder()">
                             <i class="mdi mdi-printer"></i> IN
                         </button>
@@ -1648,12 +1645,6 @@ async function openOrderModal(orderId) {
         const orderTime = new Date(order.createdAt);
         document.getElementById('modalOrderTime').textContent =
             `${String(orderTime.getHours()).padStart(2, '0')}:${String(orderTime.getMinutes()).padStart(2, '0')}`;
-
-        const hasUrgent = order.items && order.items.some(item => item.isUrgent);
-        const rushBtn = document.getElementById('btnRush');
-        if (rushBtn) {
-            rushBtn.classList.toggle('active', hasUrgent);
-        }
 
         renderModalItems(order.items || []);
 
@@ -1896,37 +1887,7 @@ function selectAllItems() {
     renderModalItems(currentModalOrder.items);
 }
 
-// Toggle RUSH
-async function toggleRush() {
-    if (!currentModalOrder) return;
-
-    const rushBtn = document.getElementById('btnRush');
-    const isUrgent = rushBtn.classList.contains('active');
-    const newUrgentStatus = !isUrgent;
-
-    const promises = currentModalOrder.items.map(item =>
-        markAsUrgent(item.orderDetailId, newUrgentStatus)
-    );
-
-    try {
-        await Promise.all(promises);
-        rushBtn.classList.toggle('active');
-        showSuccess(newUrgentStatus ? 'Đã đánh dấu cần làm ngay' : 'Đã bỏ đánh dấu cần làm ngay');
-        reloadCurrentView();
-    } catch (error) {
-        showError('Không thể cập nhật trạng thái cần làm ngay');
-    }
-}
-
-// Mark as urgent
-async function markAsUrgent(orderDetailId, isUrgent) {
-    const response = await fetch(`${API_BASE}/KitchenDisplay/mark-as-urgent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderDetailId, isUrgent })
-    });
-    return await response.json();
-}
+// (Removed rush/urgent control from KDS modal; waiter flow still retains its own logic)
 
 // Fire selected items
 async function fireSelectedItems() {
@@ -2710,52 +2671,95 @@ function showConfirmPopup(message, title = 'Xác nhận') {
     });
 }
 
-// Toast notifications
-function showSuccess(message) {
-    if (typeof toastr !== 'undefined') {
-        const toast = toastr.success(message, '', {
-            closeButton: true,
-            progressBar: true,
-            timeOut: 5000,
-            extendedTimeOut: 2000,
-            positionClass: 'toast-top-right',
-            escapeHtml: false
-        });
+// Toast notifications (force hide after ~5s, no hover extension)
+const KDS_TOAST_TIMEOUT = 5000;
+const KDS_TOAST_EXT_TIMEOUT = 0;
+const KDS_TOAST_CLEAR_BUFFER = 300;
+const KDS_TOAST_HIDE_DURATION = 200;
 
-        // Đảm bảo toast được clear sau 5s ngay cả khi cấu hình global bị override
+function showSuccess(message) {
+    if (typeof toastr === 'undefined') {
+        console.log('SUCCESS:', message);
+        return;
+    }
+
+    // Clear any existing toasts first
+    toastr.clear();
+
+    const toast = toastr.success(message, '', {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-right',
+        timeOut: KDS_TOAST_TIMEOUT,
+        extendedTimeOut: KDS_TOAST_EXT_TIMEOUT,
+        showDuration: KDS_TOAST_HIDE_DURATION,
+        hideDuration: KDS_TOAST_HIDE_DURATION,
+        newestOnTop: true,
+        preventDuplicates: true,
+        escapeHtml: false,
+        tapToDismiss: true
+    });
+
+    if (toast && toast[0]) {
+        toast[0].dataset.toastTime = Date.now();
+        // Hard clear after timeout + buffer even if hover happens
         setTimeout(() => {
-            try {
-                if (toast) {
-                    toastr.clear(toast);
-                }
-            } catch (e) { /* ignore */ }
-        }, 5000);
+            try { toastr.clear(toast); } catch (e) { /* ignore */ }
+        }, KDS_TOAST_TIMEOUT + KDS_TOAST_CLEAR_BUFFER);
     }
 }
 
 function showError(message) {
-    if (typeof toastr !== 'undefined') {
-        const toast = toastr.error(message, '', {
-            closeButton: true,
-            progressBar: true,
-            timeOut: 5000,
-            extendedTimeOut: 2000,
-            positionClass: 'toast-top-right',
-            escapeHtml: false
-        });
-
-        setTimeout(() => {
-            try {
-                if (toast) {
-                    toastr.clear(toast);
-                }
-            } catch (e) { /* ignore */ }
-        }, 5000);
-    } else {
+    if (typeof toastr === 'undefined') {
         console.error('ERROR:', message);
+        return;
+    }
+
+    // Clear any existing toasts first
+    toastr.clear();
+
+    const toast = toastr.error(message, '', {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-right',
+        timeOut: KDS_TOAST_TIMEOUT,
+        extendedTimeOut: KDS_TOAST_EXT_TIMEOUT,
+        showDuration: KDS_TOAST_HIDE_DURATION,
+        hideDuration: KDS_TOAST_HIDE_DURATION,
+        newestOnTop: true,
+        preventDuplicates: true,
+        escapeHtml: false,
+        tapToDismiss: true
+    });
+
+    if (toast && toast[0]) {
+        toast[0].dataset.toastTime = Date.now();
+        setTimeout(() => {
+            try { toastr.clear(toast); } catch (e) { /* ignore */ }
+        }, KDS_TOAST_TIMEOUT + KDS_TOAST_CLEAR_BUFFER);
     }
 }
+// Cleanup stuck toasts every 10 seconds
+setInterval(() => {
+    const container = document.getElementById('toast-container');
+    if (container) {
+        const toasts = container.querySelectorAll('.toast');
+        toasts.forEach(toast => {
+            // Check if toast has been there for more than 10 seconds
+            const ageMs = Date.now() - (parseInt(toast.dataset.toastTime) || 0);
+            if (ageMs > 10000) {
+                toast.remove();
+            }
+        });
 
+        // Remove container if empty
+        if (container.children.length === 0) {
+            container.remove();
+        }
+    }
+}, 10000);
+
+// (Removed: toastr override; we stamp dataset time directly in showSuccess/showError)
 // ===========================
 // RECENTLY FULFILLED ORDERS
 // ===========================

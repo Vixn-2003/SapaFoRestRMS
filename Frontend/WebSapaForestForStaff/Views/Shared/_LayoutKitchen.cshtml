@@ -26,23 +26,24 @@
     <link rel="stylesheet" type="text/css" href="~/assets/js/select.dataTables.min.css">
     <link rel="stylesheet" href="~/assets/css/style.css">
     <link rel="shortcut icon" href="~/assets/images/favicon.png" />
-    
+
     <!-- Toastr CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
-    
+
     <!-- jQuery + Toastr JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    
-    <!-- Toastr config -->
+
+    <!-- Toastr config - MINIMAL -->
     <script>
+        // Minimal toastr config - let individual functions control their own options
         toastr.options = {
-            "closeButton": true,
-            "progressBar": true,
-            "positionClass": "toast-top-right",
-            "timeOut": "5000",
-            "extendedTimeOut": "2000",
-            "escapeHtml": false
+            closeButton: false,
+            progressBar: false,
+            positionClass: "toast-top-right",
+            timeOut: 0, // Will be overridden by individual calls
+            extendedTimeOut: 0,
+            escapeHtml: false
         };
     </script>
 
