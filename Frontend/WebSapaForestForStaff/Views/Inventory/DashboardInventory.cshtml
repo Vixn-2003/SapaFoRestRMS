@@ -623,6 +623,30 @@
     .wd-w-2 {
         width: 8px;
     }
+    /* Giới hạn chiều cao Top mặt hàng */
+    #wd-top-items-list {
+        max-height: 380px; /* Khoảng 6 items x 63px/item */
+        overflow-y: auto;
+    }
+
+        /* Styling cho scrollbar */
+        #wd-top-items-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #wd-top-items-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        #wd-top-items-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+            #wd-top-items-list::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
 </style>
 
 @* --- HTML STRUCTURE --- *@

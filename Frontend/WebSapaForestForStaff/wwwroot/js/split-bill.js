@@ -160,8 +160,8 @@
                                            min="0"
                                            step="1000"
                                            placeholder="Nhập số tiền..."
-                                           onchange="updateSplitPart(${index}, 'amountReceived', parseFloat(this.value) || null)"
-                                           oninput="updateSplitPart(${index}, 'amountReceived', parseFloat(this.value) || null)">
+                                           onchange="updateAmountReceivedChange(${index}, this)"
+                                           oninput="updateAmountReceivedInput(${index}, this)">
                                     <span class="input-group-text">₫</span>
                                 </div>
                             </div>
@@ -204,14 +204,35 @@
         }
     }
 
-    window.updateSplitPart = function (index, field, value) {
+    window.updateSplitPart = function (index, field, value, shouldRender = true) {
         if (splitParts[index]) {
             splitParts[index][field] = value;
-            // Only re-render if not updating amount (amount updates handled separately)
-            if (field !== 'amount') {
+            // Only re-render if explicitly requested and not updating amount/amountReceived during input
+            if (shouldRender && field !== 'amount' && field !== 'amountReceived') {
                 renderSplitParts();
             }
             validateSplitTotal();
+        }
+    };
+    
+    // Update amountReceived on input (real-time validation, no re-render)
+    window.updateAmountReceivedInput = function (index, inputElement) {
+        if (splitParts[index] && inputElement) {
+            const newAmount = parseFloat(inputElement.value) || null;
+            splitParts[index].amountReceived = newAmount;
+            // Only validate, don't re-render to avoid losing focus
+            validateSplitTotal();
+        }
+    };
+    
+    // Update amountReceived on change (with re-render)
+    window.updateAmountReceivedChange = function (index, inputElement) {
+        if (splitParts[index] && inputElement) {
+            const newAmount = parseFloat(inputElement.value) || null;
+            splitParts[index].amountReceived = newAmount;
+            validateSplitTotal();
+            // Re-render to update UI (after user finishes editing)
+            renderSplitParts();
         }
     };
 
@@ -315,54 +336,42 @@
         }
     }
 
-    window.confirmSplitBill = async function () {
+    window.confirmSplitBill = function () {
         const notes = document.getElementById('splitNotes').value;
         const confirmBtn = document.getElementById('confirmSplitBillBtn');
-        const originalText = confirmBtn.innerHTML;
-        confirmBtn.disabled = true;
-        confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
-
+        
         try {
-            const response = await fetch(`${getApiBaseUrl()}/payment/split-bill`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${getToken()}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    orderId: currentOrderId,
-                    parts: splitParts.map(p => ({
-                        paymentMethod: p.paymentMethod,
-                        amount: p.amount,
-                        amountReceived: p.amountReceived,
-                        notes: p.notes
-                    })),
-                    notes: notes
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Chia hóa đơn thất bại');
+            // Validate từng phần: với tiền mặt cần nhập số tiền khách đưa >= số tiền phải trả
+            const invalidCash = splitParts.find(p => p.paymentMethod === 'Cash' && (!p.amountReceived || p.amountReceived < p.amount));
+            if (invalidCash) {
+                showToast(`Phần ${invalidCash.partNumber}: Vui lòng nhập số tiền khách đưa và phải lớn hơn hoặc bằng số tiền cần thu.`, 'error');
+                return;
             }
 
-            const transactions = await response.json();
-            showToast(`✅ Đã chia hóa đơn thành ${transactions.length} phần thanh toán!`, 'success');
+            // Disable button
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...';
 
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('splitBillModal'));
-            modal.hide();
+            // Prepare data for form submission
+            const partsData = splitParts.map(p => ({
+                paymentMethod: p.paymentMethod,
+                amount: p.amount,
+                amountReceived: p.amountReceived,
+                notes: p.notes
+            }));
 
-            // Reload page
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
+            // Fill form and submit
+            document.getElementById('splitBillOrderId').value = currentOrderId;
+            document.getElementById('splitBillPartsJson').value = JSON.stringify(partsData);
+            document.getElementById('splitBillNotes').value = notes || '';
+            
+            // Submit form
+            document.getElementById('splitBillForm').submit();
         } catch (error) {
             console.error('Error processing split bill:', error);
             showToast(error.message || 'Lỗi khi chia hóa đơn. Vui lòng thử lại.', 'error');
-        } finally {
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = originalText;
+            confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn';
         }
     };
 
@@ -373,6 +382,8 @@
         calculateEqualSplit,
         renderCustomSplit,
         updateSplitPart,
+        updateAmountReceivedInput,
+        updateAmountReceivedChange,
         addSplitPart,
         increaseParts,
         decreaseParts,

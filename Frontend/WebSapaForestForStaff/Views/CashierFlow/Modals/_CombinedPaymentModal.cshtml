@@ -87,16 +87,7 @@
                                     <label for="qrAmount" class="form-label">
                                         <strong>Số tiền thanh toán bằng QR</strong>
                                     </label>
-                                    <div class="input-group">
-                                        <input type="number"
-                                               class="form-control"
-                                               id="qrAmount"
-                                               min="0"
-                                               step="1000"
-                                               placeholder="Tự động tính..."
-                                               readonly>
-                                        <span class="input-group-text">₫</span>
-                                    </div>
+                                  
                                     <small class="text-muted">Số tiền còn lại sẽ thanh toán bằng QR</small>
                                 </div>
 
@@ -109,11 +100,61 @@
                                     </button>
                                 </div>
 
-                                <div id="qrCodeDisplay" class="mt-3 text-center d-none">
-                                    <img id="combinedQrImage" src="" class="img-fluid border rounded p-3 bg-white" style="max-width:250px;" alt="VietQR Code">
-                                    <p class="mt-2 mb-0">
-                                        <small class="text-muted">Mã đơn: <span id="combinedQrOrderCode">-</span></small>
-                                    </p>
+                                <!-- Loading state -->
+                                <div id="combinedQrLoading" class="mt-3 text-center py-4 d-none">
+                                    <div class="spinner-border text-success" role="status">
+                                        <span class="visually-hidden">Đang tải...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">Đang tạo mã QR...</p>
+                                </div>
+
+                                <!-- QR Content -->
+                                <div id="combinedQrContent" class="mt-3 d-none">
+                                    <div class="text-center mb-3">
+                                        <p class="text-muted mb-2 small">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Quét mã QR bằng ứng dụng ngân hàng để chuyển khoản
+                                        </p>
+                                    </div>
+
+                                    <div class="text-center mb-3">
+                                        <img id="combinedQrImage"
+                                             src="@Url.Content("~/img/qr_code_payment.png")"
+                                             alt="VietQR Code"
+                                             class="img-fluid border rounded p-3 bg-white shadow-sm"
+                                             style="max-width: 300px; max-height: 300px;">
+                                    </div>
+
+                                    <div class="card border-success mb-0">
+                                        <div class="card-body">
+                                            <div class="row g-2">
+                                                <div class="col-12">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted small">
+                                                            <i class="bi bi-receipt me-1"></i><strong>Số tiền:</strong>
+                                                        </span>
+                                                        <span class="fw-bold text-success" id="combinedQrAmount">0 ₫</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted small">
+                                                            <i class="bi bi-tag me-1"></i><strong>Nội dung:</strong>
+                                                        </span>
+                                                        <span class="badge bg-primary" id="combinedQrDescription">RMS#ORD000000</span>
+                                                    </div>
+                                                </div>
+                                                <div class="col-12">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted small">
+                                                            <i class="bi bi-hash me-1"></i><strong>Mã giao dịch:</strong>
+                                                        </span>
+                                                        <span class="text-muted small" id="combinedQrTransactionCode">-</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

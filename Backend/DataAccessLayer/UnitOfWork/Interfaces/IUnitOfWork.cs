@@ -38,6 +38,10 @@ namespace DataAccessLayer.UnitOfWork.Interfaces
 
         IShiftCounterRepository ShiftCounters { get; }
         IReservationRepository Reservations { get; }
+        
+        ICustomerManagementRepository CustomerManagement { get; }
+        
+        IStaffManagementRepository StaffManagement { get; }
 
         Task<IDbContextTransaction> BeginTransactionAsync();
 

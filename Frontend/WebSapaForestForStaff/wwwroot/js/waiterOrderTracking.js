@@ -151,9 +151,175 @@ function showToast(message, type = 'success') {
     }
 }
 
+// ===== POPUP HELPERS (thay cho alert/confirm) =====
+function ensureWaiterPopupStyles() {
+    if (document.getElementById('waiter-popup-styles')) {
+        return;
+    }
+    const style = document.createElement('style');
+    style.id = 'waiter-popup-styles';
+    style.textContent = `
+        .waiter-popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10550;
+            padding: 16px;
+        }
+        .waiter-popup {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+            max-width: 420px;
+            width: 100%;
+            overflow: hidden;
+            animation: waiterPopupIn 0.2s ease;
+        }
+        .waiter-popup-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .waiter-popup-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+        .waiter-popup-body {
+            padding: 12px 16px 4px;
+            color: #444;
+            line-height: 1.5;
+        }
+        .waiter-popup-footer {
+            padding: 14px 16px 16px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .waiter-popup-btn {
+            border: none;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .waiter-popup-btn-cancel { background: #f1f1f1; color: #333; }
+        .waiter-popup-btn-cancel:hover { background: #e6e6e6; }
+        .waiter-popup-btn-confirm { background: #0d6efd; color: #fff; }
+        .waiter-popup-btn-confirm.warning { background: #f59e0b; color: #fff; }
+        .waiter-popup-btn-confirm.error { background: #dc3545; color: #fff; }
+        .waiter-popup-btn-confirm:hover { opacity: 0.92; }
+        .waiter-popup-badge {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+            color: #fff;
+        }
+        .waiter-popup-badge.info { background: #0d6efd; }
+        .waiter-popup-badge.success { background: #22c55e; }
+        .waiter-popup-badge.warning { background: #f59e0b; }
+        .waiter-popup-badge.error { background: #dc3545; }
+        @keyframes waiterPopupIn {
+            from { transform: translateY(8px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function showWaiterMessagePopup(message, { title = 'Thông báo', type = 'info', confirmText = 'Đóng' } = {}) {
+    ensureWaiterPopupStyles();
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'waiter-popup-overlay';
+        overlay.innerHTML = `
+            <div class="waiter-popup">
+                <div class="waiter-popup-header">
+                    <div class="waiter-popup-badge ${type}">${type === 'error' ? '!' : (type === 'warning' ? '!' : 'i')}</div>
+                    <h5 class="waiter-popup-title">${title}</h5>
+                </div>
+                <div class="waiter-popup-body">${message}</div>
+                <div class="waiter-popup-footer">
+                    <button class="waiter-popup-btn waiter-popup-btn-confirm ${type}">${confirmText}</button>
+                </div>
+            </div>
+        `;
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(true);
+            }, 120);
+        };
+
+        overlay.querySelector('.waiter-popup-btn-confirm').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                close();
+            }
+        });
+
+        document.body.appendChild(overlay);
+    });
+}
+
+function showWaiterConfirmPopup(message, { title = 'Xác nhận', confirmText = 'Đồng ý', cancelText = 'Hủy', type = 'warning' } = {}) {
+    ensureWaiterPopupStyles();
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'waiter-popup-overlay';
+        overlay.innerHTML = `
+            <div class="waiter-popup">
+                <div class="waiter-popup-header">
+                    <div class="waiter-popup-badge ${type}">${type === 'warning' ? '!' : '?'}</div>
+                    <h5 class="waiter-popup-title">${title}</h5>
+                </div>
+                <div class="waiter-popup-body">${message}</div>
+                <div class="waiter-popup-footer">
+                    <button class="waiter-popup-btn waiter-popup-btn-cancel">${cancelText}</button>
+                    <button class="waiter-popup-btn waiter-popup-btn-confirm ${type}">${confirmText}</button>
+                </div>
+            </div>
+        `;
+
+        const close = (result) => {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                resolve(result);
+            }, 120);
+        };
+
+        overlay.querySelector('.waiter-popup-btn-confirm').addEventListener('click', () => close(true));
+        overlay.querySelector('.waiter-popup-btn-cancel').addEventListener('click', () => close(false));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                close(false);
+            }
+        });
+
+        document.body.appendChild(overlay);
+    });
+}
+
 // Cancel Item
-function cancelItem(orderDetailId, orderComboItemId) {
-    if (!confirm('Bạn có chắc chắn muốn hủy món này? Món chưa được nấu, sẽ không tính tiền.')) {
+async function cancelItem(orderDetailId, orderComboItemId) {
+    const confirmed = await showWaiterConfirmPopup(
+        'Bạn có chắc chắn muốn hủy món này? Món đang chờ hoặc đang nấu sẽ không tính tiền sau khi hủy.',
+        { title: 'Xác nhận hủy món' }
+    );
+    if (!confirmed) {
         return;
     }
     document.getElementById('cancelOrderDetailId').value = orderDetailId;
@@ -172,7 +338,7 @@ async function submitCancelRequest() {
     const finalReason = reason === 'Khác' ? reasonOther : reason;
 
     if (!finalReason) {
-        alert('Vui lòng chọn hoặc nhập lý do hủy');
+        await showWaiterMessagePopup('Vui lòng chọn hoặc nhập lý do hủy', { title: 'Thiếu lý do', type: 'warning' });
         return;
     }
 
@@ -192,14 +358,14 @@ async function submitCancelRequest() {
 
         const result = await response.json();
         if (result.success) {
-            alert('Đã hủy món thành công');
+            await showWaiterMessagePopup('Đã hủy món thành công', { title: 'Thành công', type: 'success' });
             bootstrap.Modal.getInstance(document.getElementById('cancelModal')).hide();
             location.reload();
         } else {
-            alert('Lỗi: ' + result.message);
+            await showWaiterMessagePopup('Lỗi: ' + result.message, { title: 'Không thể hủy món', type: 'error' });
         }
     } catch (error) {
-        alert('Lỗi kết nối: ' + error.message);
+        await showWaiterMessagePopup('Lỗi kết nối: ' + error.message, { title: 'Không thể hủy món', type: 'error' });
     }
 }
 
@@ -308,6 +474,186 @@ async function submitPickupRequest() {
             alert('Lỗi: ' + result.message);
         }
     } catch (error) {
+        alert('Lỗi kết nối: ' + error.message);
+    }
+}
+
+// Update consumption quantity (inline edit)
+async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quantity) {
+    if (!quantity || quantity <= 0) {
+        alert('Số lượng phải lớn hơn 0');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/WaiterOrderTracking/update-quantity`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                orderDetailId: orderDetailId,
+                orderComboItemId: orderComboItemId && orderComboItemId > 0 ? orderComboItemId : null,
+                quantity: parseInt(quantity)
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            // Toast notification (if showToast exists, otherwise use alert)
+            if (typeof showToast === 'function') {
+                showToast('Đã cập nhật số lượng thành công', 'success');
+            } else {
+                console.log('Đã cập nhật số lượng thành công');
+            }
+        } else {
+            alert('Lỗi: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error updating quantity:', error);
+        alert('Lỗi kết nối: ' + error.message);
+    }
+}
+
+// Confirm consumption quantity (mark as done)
+async function confirmConsumptionQuantity(orderDetailId, orderComboItemId, menuItemName) {
+    // Get quantity from input field
+    const quantityInput = document.getElementById(`quantity_${orderDetailId}_${orderComboItemId || 0}`);
+    const quantity = quantityInput ? parseInt(quantityInput.value) : 1;
+    
+    if (!quantity || quantity <= 0) {
+        alert('Số lượng phải lớn hơn 0');
+        return;
+    }
+    
+    if (!confirm(`Xác nhận đã lấy ${quantity} ${menuItemName} và hoàn thành?`)) {
+        return;
+    }
+    
+    try {
+        // ✅ QUAN TRỌNG: Cập nhật số lượng trước (nếu chưa được cập nhật)
+        // Đảm bảo Quantity và QuantityUsed được cập nhật trước khi xác nhận
+        const updateResponse = await fetch(`${API_BASE}/WaiterOrderTracking/update-quantity`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                orderDetailId: orderDetailId,
+                orderComboItemId: orderComboItemId && orderComboItemId > 0 ? orderComboItemId : null,
+                quantity: quantity
+            })
+        });
+
+        const updateResult = await updateResponse.json();
+        if (!updateResult.success) {
+            console.warn('Warning: Không thể cập nhật số lượng:', updateResult.message);
+            // Vẫn tiếp tục xác nhận
+        }
+
+        // Sau đó xác nhận và chuyển sang Done
+        const response = await fetch(`${API_BASE}/WaiterOrderTracking/confirm-consumption-quantity`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                orderDetailId: orderDetailId,
+                orderComboItemId: orderComboItemId && orderComboItemId > 0 ? orderComboItemId : null,
+                quantity: quantity
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            // Toast notification (if showToast exists, otherwise use alert)
+            if (typeof showToast === 'function') {
+                showToast('Đã xác nhận số lượng thành công', 'success');
+            } else {
+                alert('Đã xác nhận số lượng thành công');
+            }
+            
+            // Reload trang để cập nhật UI (hiển thị x3 thay vì x1)
+            const currentFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'all';
+            sessionStorage.setItem('waiterOrderFilter', currentFilter);
+            location.reload();
+        } else {
+            alert('Lỗi: ' + (result.message || 'Không thể xác nhận số lượng'));
+        }
+    } catch (error) {
+        console.error('Error confirming consumption quantity:', error);
+        alert('Lỗi kết nối: ' + error.message);
+    }
+}
+
+// Submit confirm consumption quantity
+async function submitConfirmConsumptionQuantity() {
+    console.log('submitConfirmConsumptionQuantity called');
+    
+    const orderDetailId = parseInt(document.getElementById('confirmConsumptionOrderDetailId').value);
+    const orderComboItemId = document.getElementById('confirmConsumptionOrderComboItemId').value;
+    const quantity = parseInt(document.getElementById('confirmConsumptionQuantity').value);
+    
+    console.log('Form values:', { orderDetailId, orderComboItemId, quantity });
+    
+    if (!quantity || quantity <= 0) {
+        alert('Số lượng phải lớn hơn 0');
+        return;
+    }
+    
+    if (!orderDetailId || isNaN(orderDetailId)) {
+        alert('Lỗi: Không tìm thấy ID món ăn');
+        return;
+    }
+    
+    try {
+        const requestBody = {
+            orderDetailId: orderDetailId,
+            orderComboItemId: orderComboItemId && orderComboItemId > 0 ? parseInt(orderComboItemId) : null,
+            quantity: quantity
+        };
+        
+        console.log('Sending request to:', `${API_BASE}/WaiterOrderTracking/confirm-consumption-quantity`);
+        console.log('Request body:', requestBody);
+        
+        const response = await fetch(`${API_BASE}/WaiterOrderTracking/confirm-consumption-quantity`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Response error:', errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('Response result:', result);
+        
+        if (result.success) {
+            // Close modal
+            const modalElement = document.getElementById('confirmConsumptionQuantityModal');
+            if (modalElement) {
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+            
+            // Reload trang để cập nhật UI
+            const currentFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'all';
+            sessionStorage.setItem('waiterOrderFilter', currentFilter);
+            location.reload();
+        } else {
+            alert('Lỗi: ' + (result.message || 'Không thể xác nhận số lượng'));
+        }
+    } catch (error) {
+        console.error('Error submitting confirm consumption quantity:', error);
         alert('Lỗi kết nối: ' + error.message);
     }
 }

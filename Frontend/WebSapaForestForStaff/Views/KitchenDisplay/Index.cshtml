@@ -11,6 +11,28 @@
             padding: 20px;
         }
 
+        /* SignalR Connection Status Banner */
+        .signalr-status-banner {
+            background: #ff9800;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        @@keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
         .kds-header {
             background: white;
             padding: 15px 20px;
@@ -770,87 +792,75 @@
         }
 
         .order-modal-footer {
-            padding: 15px 10px;
+            padding: 15px 20px;
             border-top: 2px solid #e0e0e0;
             display: flex;
-            gap: 6px;
+            gap: 12px;
             justify-content: center;
             flex-wrap: nowrap;
-            overflow-x: auto;
-            min-width: 0;
-            flex-shrink: 0;
+            align-items: center;
         }
 
         .btn-modal {
-            padding: 10px 12px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 15px;
             transition: all 0.2s;
-            flex: 1 1 0;
-            min-width: 0;
+            flex: 1;
+            min-width: 120px;
+            max-width: 200px;
             white-space: nowrap;
             text-align: center;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
-        /* Đặt min-width cụ thể cho từng nút để text hiển thị đầy đủ */
+        /* Nút Hủy - màu xám */
         .btn-modal-cancel {
-            flex: 0 0 auto;
-            min-width: 70px;
             background: #9e9e9e;
             color: white;
         }
 
         .btn-modal-cancel:hover {
             background: #757575;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
+        /* Nút Chọn tất cả - màu xám */
         .btn-modal-select-all {
-            flex: 0 0 auto;
-            min-width: 100px;
             background: #9e9e9e;
             color: white;
         }
 
         .btn-modal-select-all:hover {
             background: #757575;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
+        /* Nút Bắt đầu nấu - màu xanh nổi bật */
         .btn-modal-fire {
-            flex: 0 0 auto;
-            min-width: 115px;
-            background: #64b5f6;
+            background: #2196f3;
             color: white;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
         }
 
         .btn-modal-fire:hover {
-            background: #42a5f5;
+            background: #1976d2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
         }
         
         .btn-modal-unfulfill {
-            flex: 0 0 auto;
-            min-width: 125px;
             background: #64b5f6;
             color: white;
         }
 
         .btn-modal-unfulfill:hover {
             background: #42a5f5;
-        }
-        
-        .btn-modal-fulfill {
-            flex: 0 0 auto;
-            min-width: 110px;
-            background: #1976d2;
-            color: white;
-        }
-
-        .btn-modal-fulfill:hover {
-            background: #1565c0;
         }
 
         .btn-modal:disabled {
@@ -969,6 +979,19 @@
 
 <div class="kds-container">
     <!-- Header -->
+    <!-- SignalR Connection Status Banner -->
+    <div class="signalr-status-banner" id="signalrStatusBanner" style="display: none;">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+                <i class="mdi mdi-wifi-off" style="font-size: 20px; margin-right: 10px;"></i>
+                <span><strong>Mất kết nối real-time</strong> - Hệ thống đang tự động làm mới mỗi 15 giây</span>
+            </div>
+            <button class="btn btn-sm btn-outline-light" onclick="retrySignalRConnection()">
+                <i class="mdi mdi-refresh"></i> Thử lại
+            </button>
+        </div>
+    </div>
+
     <div class="kds-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -992,8 +1015,11 @@
         <div class="shortage-alert-header">
             <div class="d-flex align-items-center">
                 <i class="mdi mdi-alert-circle" style="font-size: 24px; color: #dc3545; margin-right: 10px;"></i>
-                <h5 class="mb-0" style="color: #dc3545; font-weight: bold;">Cảnh báo: Thiếu nguyên liệu</h5>
-                <span class="badge bg-danger ms-2" id="shortageCount">0</span>
+                <div>
+                    <h5 class="mb-0" style="color: #dc3545; font-weight: bold;">Tổng quan nguyên liệu thiếu</h5>
+                    <small style="color: #856404; font-size: 12px;">Theo dõi và kiểm soát nguyên liệu thiếu cho tất cả món</small>
+                </div>
+                <span class="badge bg-danger ms-3" id="shortageCount" style="font-size: 16px; padding: 6px 12px;">0</span>
             </div>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleShortagePanel()">
                 <i class="mdi mdi-chevron-up" id="shortageToggleIcon"></i>

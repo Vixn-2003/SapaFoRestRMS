@@ -1,0 +1,129 @@
+@model WebSapaForestForStaff.Models.StaffViewModels.StaffEditViewModel
+
+@{
+    ViewData["Title"] = "Chỉnh sửa nhân viên";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="row align-items-center">
+        <div class="col">
+            <h3 class="page-title">Chỉnh sửa nhân viên</h3>
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Quản lý Nhân viên</a></li>
+                <li class="breadcrumb-item active">Chỉnh sửa nhân viên</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Form -->
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Thông tin nhân viên</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" asp-route-id="@Model.StaffId" method="post">
+                    <input type="hidden" asp-for="StaffId" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="FullName" class="control-label"></label>
+                                <input asp-for="FullName" class="form-control" />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Email" class="control-label"></label>
+                                <input asp-for="Email" class="form-control" type="email" readonly />
+                                <small class="form-text text-muted">Email không thể thay đổi</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Phone" class="control-label"></label>
+                                <input asp-for="Phone" class="form-control" />
+                                <span asp-validation-for="Phone" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="HireDate" class="control-label"></label>
+                                <input asp-for="HireDate" class="form-control" type="date" readonly />
+                                <small class="form-text text-muted">Ngày vào làm không thể thay đổi</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="BaseSalary" class="control-label"></label>
+                                <input asp-for="BaseSalary" class="form-control" type="number" step="0.01" />
+                                <span asp-validation-for="BaseSalary" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="DepartmentName" class="control-label"></label>
+                                <input asp-for="DepartmentName" class="form-control" readonly />
+                                <small class="form-text text-muted">Phòng ban không thể thay đổi</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Status" class="control-label"></label>
+                                <select asp-for="Status" class="form-control">
+                                    <option value="1">Đang hoạt động</option>
+                                    <option value="0">Ngừng hoạt động</option>
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="SelectedPositionIds" class="control-label"></label>
+                        <select asp-for="SelectedPositionIds" class="form-control" multiple size="5">
+                            @foreach (var position in Model.AvailablePositions)
+                            {
+                                <option value="@position.PositionId">@position.PositionName</option>
+                            }
+                        </select>
+                        <span asp-validation-for="SelectedPositionIds" class="text-danger"></span>
+                        <small class="form-text text-muted">Giữ Ctrl/Cmd để chọn nhiều chức vụ</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="AvatarUrl" class="control-label"></label>
+                        <input asp-for="AvatarUrl" class="form-control" />
+                        <span asp-validation-for="AvatarUrl" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group text-right">
+                        <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                        <button type="submit" class="btn btn-primary">Cập nhật nhân viên</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+
