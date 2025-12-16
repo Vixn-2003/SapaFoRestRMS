@@ -28,6 +28,7 @@
     <ProjectReference Include="..\BusinessAccessLayer\BusinessAccessLayer.csproj" />
     <ProjectReference Include="..\DataAccessLayer\DataAccessLayer.csproj" />
     <ProjectReference Include="..\DomainAccessLayer\DomainAccessLayer.csproj" />
+    <ProjectReference Include="..\SapaFoRestRMSAPI\SapaFoRestRMSAPI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

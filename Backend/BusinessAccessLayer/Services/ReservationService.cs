@@ -16,7 +16,7 @@ namespace BusinessAccessLayer.Services
         private readonly IUserRepository _userRepository;
         private readonly ICustomerRepository _customerRepository; // thêm repo Customer
 
-        private const decimal DEPOSIT_PER_GUEST = 50000m;
+        private const decimal DEPOSIT_PER_GUEST = 1000m;
 
         public ReservationService(
             IReservationRepository reservationRepository,
@@ -287,6 +287,14 @@ namespace BusinessAccessLayer.Services
             var reservation = await _reservationRepository.GetReservationByIdAsync(dto.ReservationId);
             if (reservation == null)
                 throw new Exception("Reservation không tồn tại.");
+
+            //  CHẶN gán bàn nếu đã Confirmed hoặc Cancelled (bắt buộc Reset trước)
+            if (reservation.Status == "Cancelled" || reservation.Status == "Confirmed")
+                throw new Exception("Đơn đang ở trạng thái 'Cancelled' hoặc 'Confirmed' nên không thể gán bàn. Vui lòng Reset đơn về 'Pending' trước khi gán lại.");
+
+            //  (khuyến nghị) Chỉ cho phép gán bàn khi Pending
+            if (reservation.Status != "Pending")
+                throw new Exception("Chỉ có thể gán bàn khi đơn ở trạng thái 'Pending'. Vui lòng Reset trước khi gán lại.");
 
             // Check conflict
             var conflict = (await _reservationRepository

@@ -148,43 +148,67 @@
 
 <h2>🌿 Xếp bàn</h2>
 
-<div class="card p-3 mb-3" style="display:flex; flex-direction:row; gap:20px; flex-wrap:nowrap; align-items:flex-start;">
-    <div style="flex:1; min-width:250px;">
-        <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
-        <strong>SĐT:</strong> @reservation.CustomerPhone <br />
-        <strong>Ngày:</strong> @reservation.ReservationDate.ToString("dd/MM/yyyy") <br />
-        <strong>Ca:</strong> @reservation.TimeSlot <br />
-        <strong>Giờ đến :</strong> @reservation.ReservationTime.ToString("HH:mm") <br />
-        <strong>Số khách:</strong> @reservation.NumberOfGuests <br />
-        <strong>Lưu ý của khách hàng - Notes :</strong> @(string.IsNullOrWhiteSpace(@reservation.Notes) ? "Không có lưu ý gì" : @reservation.Notes) <br />
-        <strong>Bàn lần xử lý trước:</strong>
-        @(
-                reservation.Tables != null && reservation.Tables.Any()
-                ? string.Join(", ", reservation.Tables.Select(t => t.TableNumber))
-                : "Không có bàn nào được đặt ở lần xử lý trước đó"
-                )
-    </div>
+<div class="top-fixed-panel">
+    <div class="card p-3 mb-3">
 
-    <a href="@Url.Action("EditReservation", "ReservationStaff", new { id = reservation.ReservationId })"
-       class="btn btn-sm btn-warning">
-        ✏️ Sửa
-    </a>
+        <div style="display:flex; flex-direction:row; gap:20px; flex-wrap:nowrap; align-items:flex-start;">
 
-    <div style="flex:1; min-width:250px;">
-        <h5>📊 Thống kê khu vực</h5>
-        @foreach (var area in areas)
-        {
-            var tablesInArea = area.Tables;
-            var freeTables = tablesInArea.Where(t => !bookedTableIds.Contains(t.TableId)).ToList();
-            var remainingCapacity = freeTables.Sum(t => t.Capacity);
-
-            <div class="mb-2 p-2 border rounded area-summary" style="background:#f0fdf4; cursor:pointer;"
-                 data-area-id="@area.AreaId">
-                <strong>@area.AreaName</strong> -
-                Số bàn trống: <strong>@freeTables.Count</strong> -
-                Sức chứa còn lại: <strong>@remainingCapacity</strong> chỗ
+            <!-- Cột trái: thông tin khách -->
+            <div style="flex:1; min-width:250px;">
+                <strong>Tên khách hàng:</strong> @reservation.CustomerName <br />
+                <strong>SĐT:</strong> @reservation.CustomerPhone <br />
+                <strong>Ngày:</strong> @reservation.ReservationDate.ToString("dd/MM/yyyy") <br />
+                <strong>Ca:</strong> @reservation.TimeSlot <br />
+                <strong>Giờ đến :</strong> @reservation.ReservationTime.ToString("HH:mm") <br />
+                <strong>Số khách:</strong> @reservation.NumberOfGuests <br />
+                <strong>Lưu ý:</strong> @(string.IsNullOrWhiteSpace(@reservation.Notes) ? "Không có lưu ý gì" : @reservation.Notes) <br />
+                <strong>Bàn hiện tại:</strong>
+                @(reservation.Tables != null && reservation.Tables.Any()
+                                ? string.Join(", ", reservation.Tables.Select(t => t.TableNumber))
+                                : "Không có bàn nào được đặt ở lần xử lý trước đó")
             </div>
-        }
+
+            <!-- Cột giữa: Sửa + selectedSummary -->
+            <div style="flex:1; min-width:280px;">
+                <div class="d-flex justify-content-center mb-2">
+                    <a href="@Url.Action("EditReservation", "ReservationStaff", new { id = reservation.ReservationId })"
+                       class="btn btn-sm btn-warning">
+                        ✏️ Sửa
+                    </a>
+                </div>
+
+                <div id="selectedSummary" class="alert mb-0" style="display:none;">
+                    <div class="d-flex flex-column gap-1">
+                        <div><strong>Khu vực:</strong> <span id="sumAreas">-</span></div>
+                        <div><strong>Bàn đã chọn:</strong> <span id="sumTables">-</span></div>
+                        <div><strong>Tổng sức chứa:</strong> <span id="sumCapacity">0</span></div>
+                        <div><strong>Số khách:</strong> <span id="sumGuests">@reservation.NumberOfGuests</span></div>
+                        <div><strong>So sánh:</strong> <span id="sumCompare">-</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải: thống kê khu vực -->
+            <div style="flex:1; min-width:250px;">
+                <h5>📊 Thống kê khu vực</h5>
+                @foreach (var area in areas)
+                {
+                    var tablesInArea = area.Tables;
+                    var freeTables = tablesInArea.Where(t => !bookedTableIds.Contains(t.TableId)).ToList();
+                    var remainingCapacity = freeTables.Sum(t => t.Capacity);
+
+                    <div class="mb-2 p-2 border rounded area-summary" style="background:#f0fdf4; cursor:pointer;"
+                         data-area-id="@area.AreaId">
+                        <strong>@area.AreaName</strong> -
+                        Số bàn trống: <strong>@freeTables.Count</strong> -
+                        Sức chứa còn lại: <strong>@remainingCapacity</strong> chỗ
+                    </div>
+                }
+            </div>
+
+        </div>
+
+
     </div>
 </div>
 
@@ -223,6 +247,7 @@
         </select>
     </div>
 
+
     @foreach (var area in areas)
     {
         <div class="mb-3 area-block" data-area-id="@area.AreaId">
@@ -244,7 +269,11 @@
                     string filterType = isBooked ? "booked" :
                     isSuggested ? "suggested" : "available";
 
-                    <label class="@labelClass table-item" data-type="@filterType">
+                    <label class="@labelClass table-item" data-type="@filterType" data-area-id="@area.AreaId"
+                           data-area-name="@area.AreaName"
+                           data-table-id="@table.TableId"
+                           data-table-name="@table.TableName"
+                           data-capacity="@table.Capacity">
                         <input type="checkbox" name="TableIds" value="@table.TableId" @(isBooked ? "disabled" : "") />
                         @table.TableName (@table.Capacity chỗ)
                         @if (isBooked)
@@ -660,4 +689,84 @@
             });
         });
     });
+        const guestCount = Number("@reservation.NumberOfGuests");
+
+    function updateSelectedSummary() {
+        const summaryEl = document.getElementById("selectedSummary");
+        const sumAreasEl = document.getElementById("sumAreas");
+        const sumTablesEl = document.getElementById("sumTables");
+        const sumCapacityEl = document.getElementById("sumCapacity");
+        const sumCompareEl = document.getElementById("sumCompare");
+
+        const selected = [];
+
+        document.querySelectorAll("label.table-item input[type='checkbox'][name='TableIds']:checked")
+            .forEach(cb => {
+                const label = cb.closest("label.table-item");
+                if (!label) return;
+
+                selected.push({
+                    areaId: label.dataset.areaId,
+                    areaName: label.dataset.areaName,
+                    tableId: label.dataset.tableId,
+                    tableName: label.dataset.tableName,
+                    capacity: Number(label.dataset.capacity || 0)
+                });
+            });
+
+        if (selected.length === 0) {
+            summaryEl.style.display = "none";
+            sumAreasEl.textContent = "-";
+            sumTablesEl.textContent = "-";
+            sumCapacityEl.textContent = "0";
+            sumCompareEl.textContent = "-";
+            return;
+        }
+
+        summaryEl.style.display = "block";
+
+        // Gom theo khu vực
+        const areaMap = new Map(); // areaId -> { name, tables:[], cap }
+        selected.forEach(x => {
+            if (!areaMap.has(x.areaId)) {
+                areaMap.set(x.areaId, { name: x.areaName, tables: [], cap: 0 });
+            }
+            const a = areaMap.get(x.areaId);
+            a.tables.push(x.tableName);
+            a.cap += x.capacity;
+        });
+
+        const areaNames = [...areaMap.values()].map(a => a.name);
+        const tableList = selected.map(x => `${x.tableName} (${x.capacity})`);
+        const totalCap = selected.reduce((s, x) => s + x.capacity, 0);
+
+        sumAreasEl.textContent = areaNames.join(", ");
+        sumTablesEl.textContent = tableList.join(", ");
+        sumCapacityEl.textContent = totalCap.toLocaleString("vi-VN");
+
+        // So sánh với số khách
+        if (totalCap < guestCount) {
+            const thiếu = guestCount - totalCap;
+            sumCompareEl.textContent = `Thiếu ${thiếu} chỗ`;
+            summaryEl.classList.remove("alert-success", "alert-warning");
+            summaryEl.classList.add("alert-danger");
+        } else if (totalCap === guestCount) {
+            sumCompareEl.textContent = "Vừa đủ chỗ";
+            summaryEl.classList.remove("alert-danger", "alert-warning");
+            summaryEl.classList.add("alert-success");
+        } else {
+            const dư = totalCap - guestCount;
+            sumCompareEl.textContent = `Dư ${dư} chỗ`;
+            summaryEl.classList.remove("alert-danger", "alert-success");
+            summaryEl.classList.add("alert-warning");
+        }
+    }
+
+    // Lắng nghe tick/untick
+    document.querySelectorAll("label.table-item input[type='checkbox'][name='TableIds']")
+        .forEach(cb => cb.addEventListener("change", updateSelectedSummary));
+
+    // gọi 1 lần để sync nếu có dữ liệu sẵn
+    updateSelectedSummary();
+
 </script>
