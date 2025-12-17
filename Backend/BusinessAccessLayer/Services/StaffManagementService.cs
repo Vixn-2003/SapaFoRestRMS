@@ -102,7 +102,7 @@ namespace BusinessAccessLayer.Services
                 Positions = string.Join(", ", s.Positions.Select(p => p.PositionName)),
                 BaseSalary = s.SalaryBase,
                 Status = s.Status,
-                StatusText = s.Status == 1 ? "Active" : "Inactive",
+                StatusText = s.Status == 0 ? "Active" : "Inactive", // 0 = Active, 1 = Inactive
                 HireDate = s.HireDate,
                 DepartmentName = s.Department?.Name,
                 DepartmentId = s.DepartmentId
@@ -138,7 +138,7 @@ namespace BusinessAccessLayer.Services
                 HireDate = staff.HireDate,
                 BaseSalary = staff.SalaryBase,
                 Status = staff.Status,
-                StatusText = staff.Status == 1 ? "Active" : "Inactive",
+                StatusText = staff.Status == 0 ? "Active" : "Inactive", // 0 = Active, 1 = Inactive
                 DepartmentId = staff.DepartmentId,
                 DepartmentName = staff.Department?.Name,
                 RoleId = staff.User.RoleId,
@@ -186,7 +186,7 @@ namespace BusinessAccessLayer.Services
                 PasswordHash = passwordHash,
                 RoleId = dto.RoleId,
                 AvatarUrl = dto.AvatarUrl,
-                Status = 1, // Active
+                Status = 0, // Active (0 = Active, 1 = Inactive)
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = createdBy,
                 IsDeleted = false
@@ -199,22 +199,24 @@ namespace BusinessAccessLayer.Services
                 DepartmentId = dto.DepartmentId,
                 HireDate = dto.HireDate,
                 SalaryBase = dto.BaseSalary,
-                Status = 1 // Active
+                Status = 0 // Active (0 = Active, 1 = Inactive)
             };
 
-            // Add positions
-            var positions = await _unitOfWork.Positions.GetByIdsAsync(dto.PositionIds);
-            if (positions.Count != dto.PositionIds.Count)
+            // Validate position exists
+            var position = await _unitOfWork.Positions.GetByIdAsync(dto.PositionId);
+            if (position == null)
             {
-                return (false, null, "One or more positions are invalid.");
+                return (false, null, "Invalid position selected.");
             }
-
-            staff.Positions = positions;
 
             // Save to database
             try
             {
+                // Save user and staff first
                 var createdStaff = await _unitOfWork.StaffManagement.CreateStaffAsync(staff, ct);
+
+                // Then add position relationship (includes SaveChanges internally)
+                await _unitOfWork.StaffManagement.AddStaffPositionAsync(createdStaff.StaffId, dto.PositionId, ct);
 
                 // Log to AuditLog
                 var metadata = JsonSerializer.Serialize(new
@@ -224,7 +226,7 @@ namespace BusinessAccessLayer.Services
                     FullName = dto.FullName,
                     Email = dto.Email,
                     DepartmentId = dto.DepartmentId,
-                    PositionIds = dto.PositionIds,
+                    PositionId = dto.PositionId,
                     BaseSalary = dto.BaseSalary,
                     CreatedBy = createdBy
                 });
@@ -271,14 +273,14 @@ namespace BusinessAccessLayer.Services
                 Phone = existingStaff.User.Phone,
                 BaseSalary = existingStaff.SalaryBase,
                 Status = existingStaff.Status,
-                Positions = existingStaff.Positions.Select(p => p.PositionId).ToList()
+                PositionId = existingStaff.Positions.FirstOrDefault()?.PositionId
             };
 
-            // Get positions
-            var positions = await _unitOfWork.Positions.GetByIdsAsync(dto.PositionIds);
-            if (positions.Count != dto.PositionIds.Count)
+            // Validate position exists
+            var position = await _unitOfWork.Positions.GetByIdAsync(dto.PositionId);
+            if (position == null)
             {
-                return (false, "One or more positions are invalid.");
+                return (false, "Invalid position selected.");
             }
 
             // Update staff entity
@@ -289,7 +291,6 @@ namespace BusinessAccessLayer.Services
             existingStaff.User.ModifiedBy = modifiedBy;
             existingStaff.SalaryBase = dto.BaseSalary;
             existingStaff.Status = dto.Status;
-            existingStaff.Positions = positions;
 
             // Save changes
             try
@@ -299,6 +300,9 @@ namespace BusinessAccessLayer.Services
                 {
                     return (false, "Failed to update staff.");
                 }
+
+                // Update position relationship (includes SaveChanges internally)
+                await _unitOfWork.StaffManagement.AddStaffPositionAsync(existingStaff.StaffId, dto.PositionId, ct);
 
                 // Log to AuditLog
                 var metadata = JsonSerializer.Serialize(new
@@ -311,7 +315,7 @@ namespace BusinessAccessLayer.Services
                         dto.Phone,
                         dto.BaseSalary,
                         dto.Status,
-                        dto.PositionIds
+                        dto.PositionId
                     },
                     ModifiedBy = modifiedBy
                 });

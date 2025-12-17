@@ -23,25 +23,27 @@
 <div class="row">
     <div class="col-md-8 offset-md-2">
         <div class="card">
-            <div class="card-header">
-                <h4 class="card-title mb-0">Thông tin nhân viên</h4>
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0"><i class="fas fa-user-plus"></i> Thông tin nhân viên</h4>
             </div>
             <div class="card-body">
-                <form asp-action="Create" method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <form asp-action="Create" method="post" id="createStaffForm">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
+                    <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-id-card"></i> Thông tin cá nhân</h5>
+                    
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="FullName" class="control-label"></label>
-                                <input asp-for="FullName" class="form-control" />
+                                <label asp-for="FullName" class="control-label required"></label>
+                                <input asp-for="FullName" class="form-control" autocomplete="off" placeholder="Nguyễn Văn A" />
                                 <span asp-validation-for="FullName" class="text-danger"></span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="Email" class="control-label"></label>
-                                <input asp-for="Email" class="form-control" type="email" />
+                                <label asp-for="Email" class="control-label required"></label>
+                                <input asp-for="Email" class="form-control" type="email" autocomplete="email" placeholder="email@example.com" />
                                 <span asp-validation-for="Email" class="text-danger"></span>
                             </div>
                         </div>
@@ -51,82 +53,117 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label asp-for="Phone" class="control-label"></label>
-                                <input asp-for="Phone" class="form-control" />
+                                <input asp-for="Phone" class="form-control" type="tel" autocomplete="tel" placeholder="0123456789" />
                                 <span asp-validation-for="Phone" class="text-danger"></span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label asp-for="HireDate" class="control-label"></label>
+                                <label asp-for="HireDate" class="control-label required"></label>
                                 <input asp-for="HireDate" class="form-control" type="date" />
                                 <span asp-validation-for="HireDate" class="text-danger"></span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label asp-for="BaseSalary" class="control-label"></label>
-                                <input asp-for="BaseSalary" class="form-control" type="number" step="0.01" />
-                                <span asp-validation-for="BaseSalary" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label asp-for="DepartmentId" class="control-label"></label>
-                                <input asp-for="DepartmentId" class="form-control" type="number" />
-                                <span asp-validation-for="DepartmentId" class="text-danger"></span>
-                                <small class="form-text text-muted">Nhập ID phòng ban (sẽ được tự động gán dựa trên quản lý)</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label asp-for="RoleId" class="control-label"></label>
-                                <select asp-for="RoleId" class="form-control">
-                                    <option value="">-- Chọn vai trò --</option>
-                                    <option value="2">Phục vụ</option>
-                                    <option value="3">Đầu bếp</option>
-                                    <option value="4">Thu ngân</option>
-                                    <option value="5">Quản lý</option>
-                                </select>
-                                <span asp-validation-for="RoleId" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label asp-for="Password" class="control-label"></label>
-                                <input asp-for="Password" class="form-control" type="password" />
-                                <span asp-validation-for="Password" class="text-danger"></span>
-                                <small class="form-text text-muted">Để trống để tự động tạo mật khẩu</small>
-                            </div>
-                        </div>
-                    </div>
+                    <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-briefcase"></i> Chức vụ & Lương</h5>
 
                     <div class="form-group">
-                        <label asp-for="SelectedPositionIds" class="control-label"></label>
-                        <select asp-for="SelectedPositionIds" class="form-control" multiple size="5">
-                            @foreach (var position in Model.AvailablePositions)
+                        <label asp-for="PositionId" class="control-label required">
+                            <i class="fas fa-briefcase"></i> Chức vụ
+                        </label>
+                        <select asp-for="PositionId" class="form-control form-control-lg" id="positionSelect">
+                            <option value="">-- Chọn chức vụ --</option>
+                            @if (Model.AvailablePositions != null && Model.AvailablePositions.Any())
                             {
-                                <option value="@position.PositionId">@position.PositionName</option>
+                                @foreach (var position in Model.AvailablePositions)
+                                {
+                                    <option value="@position.PositionId" 
+                                            data-salary="@position.BaseSalary">
+                                        @position.PositionName - @position.BaseSalary.ToString("N0") VND
+                                    </option>
+                                }
                             }
                         </select>
-                        <span asp-validation-for="SelectedPositionIds" class="text-danger"></span>
-                        <small class="form-text text-muted">Giữ Ctrl/Cmd để chọn nhiều chức vụ</small>
+                        <span asp-validation-for="PositionId" class="text-danger"></span>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Chọn chức vụ cho nhân viên. Lương cơ bản sẽ được tự động điền theo chức vụ.
+                        </small>
                     </div>
 
                     <div class="form-group">
-                        <label asp-for="AvatarUrl" class="control-label"></label>
-                        <input asp-for="AvatarUrl" class="form-control" />
-                        <span asp-validation-for="AvatarUrl" class="text-danger"></span>
+                        <label class="control-label">
+                            <i class="fas fa-calculator"></i> Lương cơ bản 
+                            <span class="badge badge-info">Tự động điền</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="text" id="displaySalary" class="form-control form-control-lg" readonly value="0 VND" 
+                                   style="background-color: #e3f2fd; font-weight: bold; font-size: 1.2rem; color: #1976d2;">
+                            <div class="input-group-append">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="fas fa-coins"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <input type="hidden" asp-for="BaseSalary" id="hiddenBaseSalary" value="0" />
+                        <small class="form-text text-info">
+                            <i class="fas fa-lightbulb"></i> Lương được tự động điền từ chức vụ được chọn
+                        </small>
                     </div>
 
-                    <div class="form-group text-right">
-                        <a asp-action="Index" class="btn btn-secondary">Hủy</a>
-                        <button type="submit" class="btn btn-primary">Tạo nhân viên</button>
+                    <!-- Hidden fields -->
+                    <input type="hidden" asp-for="RoleId" value="4" />
+                    <input type="hidden" asp-for="DepartmentId" value="1" />
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> <strong>Vai trò:</strong> Staff (Nhân viên) - Tự động gán cho tất cả nhân viên mới
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-key"></i> Bảo mật</h5>
+
+                    <div class="form-group">
+                        <label asp-for="Password" class="control-label"></label>
+                        <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" placeholder="Để trống để tự động tạo" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-lock"></i> Để trống để hệ thống tự động tạo mật khẩu ngẫu nhiên và gửi email cho nhân viên
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label">
+                            <i class="fas fa-image"></i> Ảnh đại diện
+                        </label>
+                        <div class="border rounded p-3" style="background-color: #f8f9fa;">
+                            <!-- Image Preview -->
+                            <div class="text-center mb-3" id="avatarPreviewContainer" style="display: none;">
+                                <img id="avatarPreview" src="" alt="Avatar Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px; object-fit: cover;">
+                                <button type="button" class="btn btn-sm btn-danger d-block mx-auto mt-2" id="removeAvatarBtn">
+                                    <i class="fas fa-trash"></i> Xóa ảnh
+                                </button>
+                            </div>
+                            
+                            <!-- Upload Button -->
+                            <button type="button" class="btn btn-primary btn-block" id="uploadAvatarBtn">
+                                <i class="fas fa-cloud-upload-alt"></i> Upload ảnh từ máy tính
+                            </button>
+                            
+                            <!-- Hidden input to store Cloudinary URL -->
+                            <input type="hidden" asp-for="AvatarUrl" id="avatarUrlInput" />
+                            <span asp-validation-for="AvatarUrl" class="text-danger"></span>
+                        </div>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Click vào nút để upload ảnh. Hỗ trợ JPG, PNG, GIF (tối đa 5MB)
+                        </small>
+                    </div>
+
+                    <div class="form-group text-right mt-4 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-times"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg" id="btnSubmit">
+                            <i class="fas fa-save"></i> Tạo nhân viên
+                        </button>
                     </div>
                 </form>
             </div>
@@ -136,5 +173,154 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <!-- Cloudinary Upload Widget -->
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // ========== CLOUDINARY UPLOAD WIDGET ==========
+            const CLOUDINARY_CLOUD_NAME = 'dqn7os3pr'; // Replace with your cloud name
+            const CLOUDINARY_UPLOAD_PRESET = 'ml_default'; // Replace with your upload preset
+            
+            let cloudinaryWidget = cloudinary.createUploadWidget({
+                cloudName: CLOUDINARY_CLOUD_NAME,
+                uploadPreset: CLOUDINARY_UPLOAD_PRESET,
+                sources: ['local', 'url', 'camera'],
+                multiple: false,
+                maxFileSize: 5000000, // 5MB
+                clientAllowedFormats: ['jpg', 'png', 'gif', 'jpeg', 'webp'],
+                maxImageWidth: 2000,
+                maxImageHeight: 2000,
+                cropping: true,
+                croppingAspectRatio: 1, // Square crop
+                croppingShowDimensions: true,
+                folder: 'staff_avatars', // Cloudinary folder
+                resourceType: 'image',
+                language: 'vi',
+                text: {
+                    vi: {
+                        or: 'Hoặc',
+                        back: 'Quay lại',
+                        close: 'Đóng',
+                        no_results: 'Không có kết quả',
+                        search_placeholder: 'Tìm kiếm...',
+                        menu: {
+                            files: 'Tệp của tôi',
+                            web: 'Địa chỉ web',
+                            camera: 'Camera'
+                        },
+                        local: {
+                            browse: 'Chọn tệp',
+                            dd_title_single: 'Kéo thả ảnh vào đây',
+                            dd_title_multi: 'Kéo thả ảnh vào đây',
+                            drop_title_single: 'Thả để upload',
+                            drop_title_multiple: 'Thả để upload'
+                        }
+                    }
+                }
+            }, (error, result) => {
+                if (!error && result && result.event === 'success') {
+                    const imageUrl = result.info.secure_url;
+                    
+                    // Set avatar URL
+                    $('#avatarUrlInput').val(imageUrl);
+                    
+                    // Show preview
+                    $('#avatarPreview').attr('src', imageUrl);
+                    $('#avatarPreviewContainer').show();
+                    
+                    toastr.success('Upload ảnh thành công!');
+                }
+                
+                if (error) {
+                    console.error('Cloudinary upload error:', error);
+                    toastr.error('Lỗi khi upload ảnh. Vui lòng thử lại!');
+                }
+            });
+            
+            // Open upload widget
+            $('#uploadAvatarBtn').on('click', function() {
+                cloudinaryWidget.open();
+            });
+            
+            // Remove avatar
+            $('#removeAvatarBtn').on('click', function() {
+                $('#avatarUrlInput').val('');
+                $('#avatarPreview').attr('src', '');
+                $('#avatarPreviewContainer').hide();
+                toastr.info('Đã xóa ảnh đại diện');
+            });
+            
+            // ========== SALARY CALCULATION ==========
+            function updateSalary() {
+                const selectedOption = $('#positionSelect option:selected');
+                const salary = parseFloat(selectedOption.data('salary')) || 0;
+                
+                if (salary > 0) {
+                    $('#displaySalary').val(salary.toLocaleString('vi-VN') + ' VND');
+                    $('#hiddenBaseSalary').val(salary);
+                    $('#displaySalary').css('color', '#1976d2');
+                    $('#positionSelect').removeClass('is-invalid');
+                } else {
+                    $('#displaySalary').val('0 VND');
+                    $('#hiddenBaseSalary').val(0);
+                    $('#displaySalary').css('color', '#999');
+                }
+            }
+            
+            // Listen to position select changes
+            $('#positionSelect').on('change', function() {
+                updateSalary();
+            });
+            
+            // ========== FORM VALIDATION ==========
+            $('#createStaffForm').on('submit', function(e) {
+                const positionId = parseInt($('#positionSelect').val());
+                
+                if (!positionId || positionId <= 0) {
+                    e.preventDefault();
+                    toastr.error('Vui lòng chọn chức vụ!');
+                    $('#positionSelect').addClass('is-invalid');
+                    return false;
+                }
+                
+                const baseSalary = parseFloat($('#hiddenBaseSalary').val());
+                if (baseSalary <= 0) {
+                    e.preventDefault();
+                    toastr.error('Lương cơ bản phải lớn hơn 0!');
+                    return false;
+                }
+                
+                // Disable submit button to prevent double submission
+                $('#btnSubmit').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
+            });
+        });
+    </script>
+    
+    <style>
+        .required::after {
+            content: " *";
+            color: red;
+        }
+        #positionSelect {
+            font-size: 1.1rem;
+        }
+        #positionSelect option {
+            padding: 10px;
+        }
+        #avatarPreview {
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        #uploadAvatarBtn {
+            font-size: 1rem;
+            padding: 12px;
+        }
+        #uploadAvatarBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+            transition: all 0.3s ease;
+        }
+    </style>
 }
-

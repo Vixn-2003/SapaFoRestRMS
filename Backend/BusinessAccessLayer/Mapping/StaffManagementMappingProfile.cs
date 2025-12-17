@@ -21,7 +21,7 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User != null ? src.User.AvatarUrl : null))
                 .ForMember(dest => dest.Positions, opt => opt.MapFrom(src => string.Join(", ", src.Positions.Select(p => p.PositionName))))
                 .ForMember(dest => dest.BaseSalary, opt => opt.MapFrom(src => src.SalaryBase))
-                .ForMember(dest => dest.StatusText, opt => opt.MapFrom(src => src.Status == 1 ? "Active" : "Inactive"))
+                .ForMember(dest => dest.StatusText, opt => opt.MapFrom(src => src.Status == 0 ? "Active" : "Inactive")) // 0 = Active, 1 = Inactive
                 .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null));
 
             // Staff -> StaffDetailDto
@@ -31,7 +31,7 @@ namespace BusinessAccessLayer.Mapping
                 .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.User.Phone))
                 .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User.AvatarUrl))
                 .ForMember(dest => dest.BaseSalary, opt => opt.MapFrom(src => src.SalaryBase))
-                .ForMember(dest => dest.StatusText, opt => opt.MapFrom(src => src.Status == 1 ? "Active" : "Inactive"))
+                .ForMember(dest => dest.StatusText, opt => opt.MapFrom(src => src.Status == 0 ? "Active" : "Inactive")) // 0 = Active, 1 = Inactive
                 .ForMember(dest => dest.DepartmentName, opt => opt.MapFrom(src => src.Department != null ? src.Department.Name : null))
                 .ForMember(dest => dest.RoleId, opt => opt.MapFrom(src => src.User.RoleId))
                 .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.User.Role != null ? src.User.Role.RoleName : "Unknown"))
@@ -53,7 +53,7 @@ namespace BusinessAccessLayer.Mapping
             // StaffCreateDto -> Staff (not used directly, but good to have)
             CreateMap<StaffCreateDto, Staff>()
                 .ForMember(dest => dest.SalaryBase, opt => opt.MapFrom(src => src.BaseSalary))
-                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => 1)) // Default to Active
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => 0)) // Default to Active (0 = Active, 1 = Inactive)
                 .ForMember(dest => dest.User, opt => opt.Ignore()) // Set manually
                 .ForMember(dest => dest.Positions, opt => opt.Ignore()); // Set manually
 

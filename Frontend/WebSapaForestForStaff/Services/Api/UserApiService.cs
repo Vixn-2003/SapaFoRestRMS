@@ -144,18 +144,29 @@ namespace WebSapaForestForStaff.Services.Api
         {
             try
             {
+                var normalizedRequest = new UserSearchRequest
+                {
+                    SearchTerm = request.SearchTerm,
+                    RoleId = request.RoleId,
+                    Status = request.Status ?? 0,
+                    Page = request.Page > 0 ? request.Page : 1,
+                    PageSize = request.PageSize > 0 ? request.PageSize : 10,
+                    SortBy = string.IsNullOrWhiteSpace(request.SortBy) ? "FullName" : request.SortBy!,
+                    SortOrder = string.IsNullOrWhiteSpace(request.SortOrder) ? "asc" : request.SortOrder!
+                };
+
                 var queryParams = new List<string>();
 
-                if (!string.IsNullOrEmpty(request.SearchTerm))
-                    queryParams.Add($"searchTerm={Uri.EscapeDataString(request.SearchTerm)}");
-                if (request.RoleId.HasValue)
-                    queryParams.Add($"roleId={request.RoleId.Value}");
-                if (request.Status.HasValue)
-                    queryParams.Add($"status={request.Status.Value}");
-                queryParams.Add($"page={request.Page}");
-                queryParams.Add($"pageSize={request.PageSize}");
-                queryParams.Add($"sortBy={request.SortBy}");
-                queryParams.Add($"sortOrder={request.SortOrder}");
+                if (!string.IsNullOrEmpty(normalizedRequest.SearchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(normalizedRequest.SearchTerm)}");
+                if (normalizedRequest.RoleId.HasValue)
+                    queryParams.Add($"roleId={normalizedRequest.RoleId.Value}");
+                if (normalizedRequest.Status.HasValue)
+                    queryParams.Add($"status={normalizedRequest.Status.Value}");
+                queryParams.Add($"page={normalizedRequest.Page}");
+                queryParams.Add($"pageSize={normalizedRequest.PageSize}");
+                queryParams.Add($"sortBy={normalizedRequest.SortBy}");
+                queryParams.Add($"sortOrder={normalizedRequest.SortOrder}");
 
                 var queryString = string.Join("&", queryParams);
                 var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/users/search?{queryString}"));

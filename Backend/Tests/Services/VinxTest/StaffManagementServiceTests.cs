@@ -434,26 +434,22 @@ public class StaffManagementServiceTests
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
             DepartmentId = 1,
             RoleId = 4,
-            PositionIds = new List<int> { 1, 2 },
+            PositionId = 1, // Single position only
             Password = "Password123!"
         };
 
-        var positions = new List<Position>
-        {
-            CreateTestPosition(1, "Waiter"),
-            CreateTestPosition(2, "Cashier")
-        };
+        var position = CreateTestPosition(1, "Waiter");
 
         var createdStaff = CreateTestStaff(1, 1, dto.FullName, dto.Email, dto.Phone, dto.DepartmentId, dto.BaseSalary);
-        createdStaff.Positions = positions;
+        createdStaff.Positions = new List<Position> { position };
 
         _mockStaffManagementRepository
             .Setup(repo => repo.EmailExistsAsync(dto.Email, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         _mockPositionRepository
-            .Setup(repo => repo.GetByIdsAsync(dto.PositionIds, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(positions);
+            .Setup(repo => repo.GetByIdAsync(dto.PositionId))
+            .ReturnsAsync(position);
 
         _mockStaffManagementRepository
             .Setup(repo => repo.CreateStaffAsync(It.IsAny<Staff>(), It.IsAny<CancellationToken>()))
@@ -510,11 +506,11 @@ public class StaffManagementServiceTests
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
             DepartmentId = 1,
             RoleId = 4,
-            PositionIds = new List<int> { 1 },
+            PositionId = 1, // Single position only
             Password = null // No password provided
         };
 
-        var positions = new List<Position> { CreateTestPosition(1, "Waiter") };
+        var position = CreateTestPosition(1, "Waiter");
         var createdStaff = CreateTestStaff(1, 1, dto.FullName, dto.Email);
 
         _mockStaffManagementRepository
@@ -522,8 +518,8 @@ public class StaffManagementServiceTests
             .ReturnsAsync(false);
 
         _mockPositionRepository
-            .Setup(repo => repo.GetByIdsAsync(dto.PositionIds, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(positions);
+            .Setup(repo => repo.GetByIdAsync(dto.PositionId))
+            .ReturnsAsync(position);
 
         _mockStaffManagementRepository
             .Setup(repo => repo.CreateStaffAsync(It.IsAny<Staff>(), It.IsAny<CancellationToken>()))
@@ -561,7 +557,7 @@ public class StaffManagementServiceTests
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
             DepartmentId = 1,
             RoleId = 4,
-            PositionIds = new List<int> { 1 }
+            PositionId = 1 // Single position only
         };
 
         _mockStaffManagementRepository
@@ -593,18 +589,16 @@ public class StaffManagementServiceTests
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
             DepartmentId = 1,
             RoleId = 4,
-            PositionIds = new List<int> { 1, 999 } // 999 doesn't exist
+            PositionId = 999 // Invalid position ID (doesn't exist)
         };
-
-        var positions = new List<Position> { CreateTestPosition(1, "Waiter") }; // Only 1 position returned
 
         _mockStaffManagementRepository
             .Setup(repo => repo.EmailExistsAsync(dto.Email, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         _mockPositionRepository
-            .Setup(repo => repo.GetByIdsAsync(dto.PositionIds, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(positions);
+            .Setup(repo => repo.GetByIdAsync(dto.PositionId))
+            .ReturnsAsync((Position?)null); // Position not found
 
         // Act
         var result = await _staffManagementService.CreateStaffAsync(dto, createdBy: 10);
@@ -637,23 +631,19 @@ public class StaffManagementServiceTests
             Phone = "0987654321",
             BaseSalary = 7000000,
             Status = 1,
-            PositionIds = new List<int> { 1, 2 },
+            PositionId = 2, // Single position only (changed from Waiter to Cashier)
             AvatarUrl = "https://example.com/avatar.jpg"
         };
 
-        var newPositions = new List<Position>
-        {
-            CreateTestPosition(1, "Waiter"),
-            CreateTestPosition(2, "Cashier")
-        };
+        var newPosition = CreateTestPosition(2, "Cashier");
 
         _mockStaffManagementRepository
             .Setup(repo => repo.GetStaffByIdAsync(staffId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingStaff);
 
         _mockPositionRepository
-            .Setup(repo => repo.GetByIdsAsync(dto.PositionIds, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(newPositions);
+            .Setup(repo => repo.GetByIdAsync(dto.PositionId))
+            .ReturnsAsync(newPosition);
 
         _mockStaffManagementRepository
             .Setup(repo => repo.UpdateStaffAsync(It.IsAny<Staff>(), It.IsAny<CancellationToken>()))
@@ -706,7 +696,7 @@ public class StaffManagementServiceTests
             FullName = "Nguyễn Văn Mới",
             BaseSalary = 7000000,
             Status = 1,
-            PositionIds = new List<int> { 1 }
+            PositionId = 1 // Single position only
         };
 
         _mockStaffManagementRepository
@@ -738,18 +728,16 @@ public class StaffManagementServiceTests
             FullName = "Nguyễn Văn Mới",
             BaseSalary = 7000000,
             Status = 1,
-            PositionIds = new List<int> { 1, 999 } // 999 doesn't exist
+            PositionId = 999 // Invalid position ID (doesn't exist)
         };
-
-        var positions = new List<Position> { CreateTestPosition(1, "Waiter") }; // Only 1 position returned
 
         _mockStaffManagementRepository
             .Setup(repo => repo.GetStaffByIdAsync(staffId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingStaff);
 
         _mockPositionRepository
-            .Setup(repo => repo.GetByIdsAsync(dto.PositionIds, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(positions);
+            .Setup(repo => repo.GetByIdAsync(dto.PositionId))
+            .ReturnsAsync((Position?)null); // Position not found
 
         // Act
         var result = await _staffManagementService.UpdateStaffAsync(dto, modifiedBy: 10);

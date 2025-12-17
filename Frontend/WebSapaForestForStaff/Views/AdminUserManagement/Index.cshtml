@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Quản lý người dùng hệ thống ";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+    var search = Model?.SearchRequest ?? new WebSapaForestForStaff.DTOs.UserManagement.UserSearchRequest();
 }
 
 <!-- Page Header -->
@@ -36,7 +37,7 @@
         var customerCount = Safe(counts?.Customer);
     }
     <div class="col-md-2">
-        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = (int?)null, status = ViewBag.Status ?? 0, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = (int?)null, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body py-3">
                     <div class="text-muted small">Tổng</div>
@@ -46,7 +47,7 @@
         </a>
     </div>
     <div class="col-md-2">
-        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 1, status = ViewBag.Status ?? 0, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 1, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body py-3">
                     <div class="text-muted small">Owner</div>
@@ -56,7 +57,7 @@
         </a>
     </div>
     <div class="col-md-2">
-        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 2, status = ViewBag.Status ?? 0, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 2, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body py-3">
                     <div class="text-muted small">Admin</div>
@@ -66,7 +67,7 @@
         </a>
     </div>
     <div class="col-md-2">
-        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 3, status = ViewBag.Status ?? 0, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 3, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body py-3">
                     <div class="text-muted small">Manager</div>
@@ -76,7 +77,7 @@
         </a>
     </div>
     <div class="col-md-2">
-        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 4, status = ViewBag.Status ?? 0, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 4, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body py-3">
                     <div class="text-muted small">Staff</div>
@@ -86,7 +87,7 @@
         </a>
     </div>
     <div class="col-md-2">
-        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 5, status = ViewBag.Status ?? 0, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 5, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body py-3">
                     <div class="text-muted small">Customer</div>
@@ -105,7 +106,7 @@
                 <div class="col-md-3">
                     <div class="form-group">
                         <label class="fw-semibold">Tìm kiếm</label>
-                        <input type="text" name="searchTerm" class="form-control form-control-sm" placeholder="Tên, email, số điện thoại..." value="@ViewBag.SearchTerm">
+                        <input type="text" name="searchTerm" class="form-control form-control-sm" placeholder="Tên, email, số điện thoại..." value="@search.SearchTerm">
                     </div>
                 </div>
                 <div class="col-md-2">
@@ -117,7 +118,7 @@
                             {
                                 @foreach (var role in Model.AvailableRoles)
                                 {
-                                    <option value="@role.RoleId" selected="@(ViewBag.RoleId != null && ViewBag.RoleId.ToString() == role.RoleId.ToString())">@role.RoleName</option>
+                                    <option value="@role.RoleId" selected="@(search.RoleId != null && search.RoleId.ToString() == role.RoleId.ToString())">@role.RoleName</option>
                                 }
                             }
                         </select>
@@ -128,8 +129,8 @@
                         <label class="fw-semibold">Trạng thái</label>
                         <select name="status" class="form-select form-select-sm">
                             <option value="">Tất cả</option>
-                            <option value="0" selected="@(ViewBag.Status != null && ViewBag.Status.ToString() == "0")">Hoạt động</option>
-                            <option value="1" selected="@(ViewBag.Status != null && ViewBag.Status.ToString() == "1")">Ngừng hoạt động</option>
+                            <option value="0" selected="@(search.Status != null && search.Status.ToString() == "0")">Hoạt động</option>
+                            <option value="1" selected="@(search.Status != null && search.Status.ToString() == "1")">Ngừng hoạt động</option>
                         </select>
                     </div>
                 </div>
@@ -137,10 +138,10 @@
                     <div class="form-group">
                         <label class="fw-semibold">Số dòng</label>
                         <select name="pageSize" class="form-select form-select-sm">
-                            <option value="10" selected="@(ViewBag.PageSize == 10)">10 / trang</option>
-                            <option value="25" selected="@(ViewBag.PageSize == 25)">25 / trang</option>
-                            <option value="50" selected="@(ViewBag.PageSize == 50)">50 / trang</option>
-                            <option value="100" selected="@(ViewBag.PageSize == 100)">100 / trang</option>
+                            <option value="10" selected="@(search.PageSize == 10)">10 / trang</option>
+                            <option value="25" selected="@(search.PageSize == 25)">25 / trang</option>
+                            <option value="50" selected="@(search.PageSize == 50)">50 / trang</option>
+                            <option value="100" selected="@(search.PageSize == 100)">100 / trang</option>
                         </select>
                     </div>
                 </div>
@@ -148,10 +149,10 @@
                     <div class="form-group">
                         <label class="fw-semibold">Sắp xếp theo</label>
                         <select name="sortBy" class="form-select form-select-sm">
-                            <option value="FullName" selected="@(ViewBag.SortBy == "FullName")">Tên</option>
-                            <option value="Email" selected="@(ViewBag.SortBy == "Email")">Email</option>
-                            <option value="RoleName" selected="@(ViewBag.SortBy == "RoleName")">Vai trò</option>
-                            <option value="CreatedAt" selected="@(ViewBag.SortBy == "CreatedAt")">Ngày tạo</option>
+                            <option value="FullName" selected="@(search.SortBy == "FullName")">Tên</option>
+                            <option value="Email" selected="@(search.SortBy == "Email")">Email</option>
+                            <option value="RoleName" selected="@(search.SortBy == "RoleName")">Vai trò</option>
+                            <option value="CreatedAt" selected="@(search.SortBy == "CreatedAt")">Ngày tạo</option>
                         </select>
                     </div>
                 </div>
@@ -163,7 +164,7 @@
                     </div>
                 </div>
             </div>
-            <input type="hidden" name="sortOrder" value="@(ViewBag.SortOrder ?? "asc")" id="sortOrder" />
+            <input type="hidden" name="sortOrder" value="@(search.SortOrder ?? "asc")" id="sortOrder" />
         </form>
     </div>
 </div>
@@ -304,7 +305,7 @@
                             @if (Model.UserList.HasPreviousPage)
                             {
                                 <li class="paginate_button page-item previous">
-                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page - 1, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">Trước</a>
+                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page - 1, searchTerm = search.SearchTerm, roleId = search.RoleId, status = search.Status, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })" class="page-link">Trước</a>
                                 </li>
                             }
                             else
@@ -325,7 +326,7 @@
                                 else
                                 {
                                     <li class="paginate_button page-item">
-                                        <a href="@Url.Action("Index", new { page = i, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">@i</a>
+                                    <a href="@Url.Action("Index", new { page = i, searchTerm = search.SearchTerm, roleId = search.RoleId, status = search.Status, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })" class="page-link">@i</a>
                                     </li>
                                 }
                             }
@@ -333,7 +334,7 @@
                             @if (Model.UserList.HasNextPage)
                             {
                                 <li class="paginate_button page-item next">
-                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page + 1, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">Tiếp</a>
+                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page + 1, searchTerm = search.SearchTerm, roleId = search.RoleId, status = search.Status, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })" class="page-link">Tiếp</a>
                                 </li>
                             }
                             else
@@ -400,6 +401,27 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-danger" onclick="submitDelete()">Xóa vĩnh viễn</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Xác nhận</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="confirm-message mb-0">Bạn chắc chắn muốn thực hiện hành động này?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary btn-confirm">Xác nhận</button>
             </div>
         </div>
     </div>

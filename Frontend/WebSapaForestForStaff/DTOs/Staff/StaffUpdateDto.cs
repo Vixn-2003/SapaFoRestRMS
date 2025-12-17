@@ -25,9 +25,9 @@ namespace WebSapaForestForStaff.DTOs.Staff
         [Required]
         public int Status { get; set; }
 
-        [Required(ErrorMessage = "At least one position is required")]
-        [MinLength(1)]
-        public List<int> PositionIds { get; set; } = new();
+        [Required(ErrorMessage = "Position is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "A valid position must be selected")]
+        public int PositionId { get; set; }
 
         public string? AvatarUrl { get; set; }
     }
