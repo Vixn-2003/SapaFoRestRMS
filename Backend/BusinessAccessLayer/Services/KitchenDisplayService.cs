@@ -158,26 +158,21 @@ namespace BusinessAccessLayer.Services
                     }
                 }
 
-                // ✅ SỬA: Chỉ ẩn đơn đã Completed khi đang xem chế độ "Tất cả"
-                // - Nếu statusFilter trống hoặc = "all" => coi như đang ở tab TẤT CẢ => ẩn đơn đã Completed
-                // - Nếu đang filter theo trạng thái cụ thể (Ready/Done/...) => vẫn cho phép hiển thị đơn Completed
+                // ✅ ẨN HOÀN TOÀN các đơn đã Completed khỏi khu vực đơn đang xử lý trong bếp
+                // Đơn Completed chỉ hiển thị ở panel "Đơn vừa hoàn thành" bên trái (nếu bật), không hiển thị ở các filter trạng thái
                 var normalizedOrderStatus = (order.Status ?? string.Empty).Trim();
                 var isCompletedOrder =
                     string.Equals(normalizedOrderStatus, "Completed", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(normalizedOrderStatus, "Hoàn thành", StringComparison.OrdinalIgnoreCase);
 
-                var isAllFilter = string.IsNullOrWhiteSpace(statusFilter) ||
-                                  string.Equals(statusFilter?.Trim(), "all", StringComparison.OrdinalIgnoreCase);
-
-                if (isCompletedOrder && isAllFilter)
+                if (isCompletedOrder)
                 {
-                    // Đơn đã được bếp phó xác nhận hoàn thành, không hiển thị trong màn hình "Tất cả"
+                    // Đơn đã hoàn thành – không hiển thị trong khu vực đơn đang có trong bếp
                     continue;
                 }
 
-                // ✅ THÊM: Filter by status nếu có (nhưng KHÔNG lọc items của đơn Completed,
-                // để đơn hoàn thành vẫn hiển thị đầy đủ ở tab Ready/Done)
-                if (!string.IsNullOrWhiteSpace(statusFilter) && !isCompletedOrder)
+                // ✅ Filter by status nếu có
+                if (!string.IsNullOrWhiteSpace(statusFilter))
                 {
                     items = items.Where(i => i.Status == statusFilter).ToList();
                 }
@@ -769,7 +764,8 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                //  SỬA: Kiểm tra tất cả món đều Ready hoặc Done (bao gồm cả OrderComboItems)
+                // ✅ SỬA: Kiểm tra tất cả món còn "đang phục vụ" đều Ready hoặc Done (bao gồm cả OrderComboItems)
+                // Bỏ qua các món đã hủy / trả (Cancelled / Returned)
                 var allItemsReadyOrDone = true;
                 
                 foreach (var od in order.OrderDetails)
@@ -780,6 +776,15 @@ namespace BusinessAccessLayer.Services
                         foreach (var oci in od.OrderComboItems)
                         {
                             var status = (oci.Status ?? "Pending").Trim();
+
+                            // Bỏ qua món con đã hủy / trả
+                            var statusLower = status.ToLowerInvariant();
+                            if (statusLower.Contains("cancelled") || statusLower.Contains("hủy") ||
+                                statusLower.Contains("returned") || statusLower.Contains("trả"))
+                            {
+                                continue;
+                            }
+
                             if (status != "Ready" && status != "Sẵn sàng" && 
                                 status != "Done" && status != "Hoàn thành" && status != "Xong")
                             {
@@ -793,6 +798,15 @@ namespace BusinessAccessLayer.Services
                     else if (od.MenuItemId.HasValue)
                     {
                         var status = (od.Status ?? "Pending").Trim();
+
+                        // Bỏ qua món đã hủy / trả
+                        var statusLower = status.ToLowerInvariant();
+                        if (statusLower.Contains("cancelled") || statusLower.Contains("hủy") ||
+                            statusLower.Contains("returned") || statusLower.Contains("trả"))
+                        {
+                            continue;
+                        }
+
                         if (status != "Ready" && status != "Sẵn sàng" && 
                             status != "Done" && status != "Hoàn thành" && status != "Xong")
                         {
@@ -811,7 +825,7 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // ✅ Giữ lại logic cũ: sau khi bếp phó ấn \"Sẵn sàng\", chuyển trạng thái đơn sang \"Completed\"
+                // ✅ Giữ lại logic cũ: sau khi bếp phó ấn "Sẵn sàng", chuyển trạng thái đơn sang "Completed"
                 // để thể hiện đơn đã được hoàn tất ở phía bếp.
                 order.Status = "Completed";
 
@@ -1435,7 +1449,7 @@ namespace BusinessAccessLayer.Services
         /// </summary>
         public async Task<List<KitchenOrderCardDto>> GetRecentlyFulfilledOrdersAsync(int minutesAgo = 10)
         {
-            // Lấy các orders có ít nhất một item Done
+            // Lấy các orders có ít nhất một item đã hoàn tất phục vụ (Ready hoặc Done)
             // Không filter theo thời gian vì không có CompletedAt field
             // Chỉ lấy các order đang active hoặc completed (không lấy orders quá cũ đã thanh toán)
             var orders = await _unitOfWork.Orders.GetRecentlyFulfilledOrdersAsync(minutesAgo);
@@ -1445,24 +1459,27 @@ namespace BusinessAccessLayer.Services
 
             foreach (var order in orders)
             {
-                // Lấy tất cả items Done trong order này
+                // Lấy tất cả items đã hoàn tất trong order này (Ready hoặc Done)
                 var doneItems = order.OrderDetails
-                    .Where(od => od.Status == "Done")
+                    .Where(od =>
+                        string.Equals(NormalizeStatus(od.Status ?? string.Empty), "Done", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(NormalizeStatus(od.Status ?? string.Empty), "Ready", StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
+                // Nếu không có món Ready/Done (chỉ toàn Cancelled) thì bỏ qua
                 if (!doneItems.Any()) continue;
 
-                // Chỉ hiển thị order nếu TẤT CẢ các món đều hoàn thành
-                var allItemsDone = order.OrderDetails.All(od =>
-                {
-                    var status = (od.Status ?? string.Empty).Trim();
-                    var normalizedStatus = NormalizeStatus(status);
-                    return normalizedStatus == "Done";
-                });
+                // Bắt buộc trạng thái đơn phải là Completed / Hoàn thành
+                var orderStatus = (order.Status ?? string.Empty).Trim();
+                var orderStatusLower = orderStatus.ToLowerInvariant();
+                var isCompletedOrder =
+                    orderStatusLower == "completed" ||
+                    orderStatusLower == "hoàn thành" ||
+                    orderStatusLower.Contains("completed") ||
+                    orderStatusLower.Contains("hoàn thành");
 
-                if (!allItemsDone)
+                if (!isCompletedOrder)
                 {
-                    // Nếu còn món chưa hoàn thành, bỏ qua order này
                     continue;
                 }
 
