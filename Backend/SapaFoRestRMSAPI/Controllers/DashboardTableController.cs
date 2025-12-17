@@ -2,6 +2,7 @@
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -12,6 +13,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = "Position:Waiter")]
     public class DashboardTableController : ControllerBase
     {
         private readonly IDashboardTableService _dashboardTableService;

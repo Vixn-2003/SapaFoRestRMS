@@ -62,7 +62,21 @@ namespace WebSapaFoRestForCustomer.Controllers
                 }
 
                 var errorContent = await response.Content.ReadAsStringAsync();
-                ModelState.AddModelError(string.Empty, "Không thể gửi mã OTP. Vui lòng thử lại.");
+                var errorMessage = "Không thể gửi mã OTP. Vui lòng thử lại.";
+                try
+                {
+                    var errorObj = JsonConvert.DeserializeObject<dynamic>(errorContent);
+                    if (errorObj?.message != null)
+                    {
+                        errorMessage = errorObj.message.ToString();
+                    }
+                }
+                catch
+                {
+                    // ignore parse errors, keep default message
+                }
+
+                ModelState.AddModelError(string.Empty, errorMessage);
                 return View("Login", model);
             }
             catch (Exception ex)
