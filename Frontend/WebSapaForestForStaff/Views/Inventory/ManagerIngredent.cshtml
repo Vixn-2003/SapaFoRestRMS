@@ -145,7 +145,7 @@
     }
 
     .btn-success {
-        background-color: #10b981;
+        background-color: #3b82f6;
         color: white;
     }
 
@@ -2466,8 +2466,23 @@
             </div>
         }
         <div class="card">
-            <h1 class="header-title">Quản lý mặt hàng</h1>
-            <p class="header-subtitle">Quản lý thông tin mặt hàng</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 class="header-title">Quản lý mặt hàng</h1>
+                    <p class="header-subtitle">Quản lý thông tin mặt hàng</p>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <select class="form-select" id="ingredientReportPeriod" style="width: 150px;">
+                        <option value="today">Hôm nay</option>
+                        <option value="7days">7 ngày qua</option>
+                        <option value="30days">30 ngày qua</option>
+                    </select>
+                    <button id="exportIngredientReportBtn" class="btn btn-success" style="white-space: nowrap;">
+                        </i> Xuất báo cáo
+                    </button>
+                </div>
+            </div>
         </div>
         
         <!-- ===== FILTER SHORTCUTS ===== -->
@@ -3262,6 +3277,30 @@
 
         const numValue = parseFloat(value);
 
+        // ✅ THÊM: KIỂM TRA SỐ ÂM
+        if (numValue < 0) {
+            showWarningMessage('Số lượng không được nhỏ hơn 0!');
+            input.value = 0;
+            updateAuditPreview();
+            return false;
+        }
+
+        if (numValue < 0) {
+            showWarningMessage('Số lượng không được nhỏ hơn 0!');
+            input.value = 0;
+            updateAuditPreview();
+            return false;
+        }
+
+        // ✅ THÊM: KIỂM TRA HỦY VƯỢT QUÁ SỐ LƯỢNG HIỆN CÓ
+        const auditType = document.querySelector('input[name="auditType"]:checked').value;
+        if (auditType === 'remove' && numValue > currentAuditBatch.quantity) {
+            showWarningMessage(`Số lượng hủy không được lớn hơn số lượng hiện tại (${formatNumber(currentAuditBatch.quantity)} ${currentAuditBatch.unit})!`);
+            input.value = currentAuditBatch.quantity; // Tự động set về số lượng tối đa
+            updateAuditPreview();
+            return false;
+        }
+
         // UnitType: 1 = Integer (số nguyên), 2 = Decimal (thập phân)
         if (currentAuditBatch.unitType === 1) {
             // Kiểm tra có phải số nguyên không
@@ -3649,14 +3688,35 @@
         }
     }
 
-    // Helper: Parse số format VN về JavaScript number
     function parseVietnameseNumber(text) {
         if (!text) return 0;
-        // "1.234,56" -> "1234.56" -> 1234.56
-        const cleaned = text.toString().trim()
-            .replace(/\./g, '')  // Xóa dấu chấm (hàng nghìn)
-            .replace(',', '.');  // Thay dấu phẩy thành dấu chấm (thập phân)
-        return parseFloat(cleaned) || 0;
+
+        const str = text.toString().trim();
+
+        if (str.includes('.') && str.includes(',')) {
+            const cleaned = str
+                .replace(/\./g, '')  
+                .replace(',', '.');  
+            return parseFloat(cleaned) || 0;
+        }
+
+        if (str.includes(',') && !str.includes('.')) {
+            const cleaned = str.replace(',', '.'); 
+            return parseFloat(cleaned) || 0;
+        }
+
+        if (str.includes('.')) {
+            const parts = str.split('.');
+
+            if (parts.length === 2 && parts[1].length === 3) {
+
+                return parseFloat(str.replace(/\./g, '')) || 0;
+            }
+
+            return parseFloat(str) || 0;
+        }
+
+        return parseFloat(str) || 0;
     }
 
     function formatNumber(value) {
@@ -4729,6 +4789,27 @@ function closeAlert() {
         const reason = document.getElementById('auditReason').value.trim();
         const newExpiryDate = document.getElementById('auditNewExpiryDate').value; // ✅ LẤY NGÀY MỚI
 
+
+        if (auditType === 'remove' && quantity > currentAuditBatch.quantity) {
+            showToast(`Số lượng hủy (${formatNumber(quantity)}) không được lớn hơn số lượng hiện tại (${formatNumber(currentAuditBatch.quantity)})!`, 'error');
+            document.getElementById('auditQuantity').focus();
+            return;
+        }
+
+        if (auditType !== 'removeAll' && auditType !== 'noChange') {
+            if (quantity < 0) {
+                showToast('Số lượng không được nhỏ hơn 0!', 'warning');
+                document.getElementById('auditQuantity').focus();
+                return;
+            }
+
+            if (quantity <= 0) {
+                showToast('Vui lòng nhập số lượng hợp lệ', 'warning');
+                document.getElementById('auditQuantity').focus();
+                return;
+            }
+        }
+
         // Validate số lượng (trừ trường hợp removeAll)
         if (auditType !== 'removeAll' && auditType !== 'noChange' && quantity <= 0) {
             showToast('Vui lòng nhập số lượng hợp lệ', 'warning');
@@ -5397,5 +5478,61 @@ function closeAlert() {
             }, 2000);
         }
     }
+
+    // ===== XUẤT BÁO CÁO PDF MẶT HÀNG =====
+    document.getElementById('exportIngredientReportBtn')?.addEventListener('click', async function () {
+        const period = document.getElementById('ingredientReportPeriod').value;
+        const btn = this;
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo báo cáo...';
+
+            const response = await fetch('/api/Ingredient/ExportReport', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ period: period })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Không thể tạo báo cáo');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Tạo tên file với timestamp
+            const timestamp = new Date().getTime();
+            const periodText = period === 'today' ? 'HomNay' :
+                period === '7days' ? '7Ngay' : '30Ngay';
+            a.download = `BaoCaoMatHang_${periodText}_${timestamp}.pdf`;
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            // Hiển thị thông báo thành công
+            btn.innerHTML = 'Tải thành công!';
+            showToast('Tải báo cáo thành công!', 'success');
+
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-file-pdf"></i> Xuất báo cáo PDF';
+                btn.disabled = false;
+            }, 2000);
+
+        } catch (error) {
+            console.error('Lỗi xuất báo cáo:', error);
+            showToast('Không thể tạo báo cáo: ' + error.message, 'error');
+
+            btn.innerHTML = '<i class="fas fa-file-pdf"></i> Xuất báo cáo PDF';
+            btn.disabled = false;
+        }
+    });
 
 </script>

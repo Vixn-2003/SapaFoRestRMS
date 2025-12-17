@@ -3553,10 +3553,8 @@
                 console.log('ImportList JSON:', importListJson);
 
                 try {
-                    // ✅ 5. HIỂN THỊ LOADING
                     showLoading();
 
-                    // ✅ 6. GỬI REQUEST
                     const response = await fetch('/ImportInventory/SubmitImport', {
                         method: 'POST',
                         body: formData
@@ -3564,14 +3562,18 @@
 
                     console.log('Response status:', response.status);
 
-                    // ✅ 7. XỬ LÝ KẾT QUẢ
                     if (response.ok) {
                         const result = await response.json();
-                        console.log('✅ Success result:', result);
+                        console.log('Success result:', result);
                         showToast('success', 'Thành công!', result.message || 'Yêu cầu xác nhận đơn nhập hàng đã được tạo thành công!');
                         hideLoading();
 
-                        // ✅ 8. RESET FORM SAU KHI THÀNH CÔNG
+                        const newOrderCode = result.purchaseOrderId || result.orderId || importCode;
+
+                        setTimeout(() => {
+                            window.location.href = `/DetailImport/Detail/${newOrderCode}`;
+                        }, 1000);
+
                         ipImportList = [];
                         ipSelectedSupplier = null;
                         ipRenderImportTable();

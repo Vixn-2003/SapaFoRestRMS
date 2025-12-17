@@ -47,6 +47,11 @@ builder.Services.AddHttpClient<ICustomerManagementApiService, CustomerManagement
 builder.Services.AddHttpClient<IOwnerDashboardApiService, OwnerDashboardApiService>();
 builder.Services.AddHttpClient<IOwnerRevenueApiService, OwnerRevenueApiService>();
 builder.Services.AddHttpClient<IOwnerWarehouseAlertApiService, OwnerWarehouseAlertApiService>();
+builder.Services.AddScoped<ExportReportService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+
+builder.Services.AddScoped<IngredientReportService>();
+
 
 // Counter Staff Dashboard API Services
 builder.Services.AddHttpClient<ICounterStaffDashboardApiService, CounterStaffDashboardApiService>();

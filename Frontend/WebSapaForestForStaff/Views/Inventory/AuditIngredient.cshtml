@@ -5,25 +5,36 @@
 }
 
 <style>
-    /* Scoped CSS - prefix với .audit-list để tránh conflict */
+    /* ========================================
+       MINIMALIST AUDIT INVENTORY STYLESHEET
+       Tập trung vào nội dung, giảm màu mè
+       ======================================== */
+
+    /* === RESET & BASE === */
     .audit-list-container {
         min-height: 100vh;
-        background-color: #f9fafb;
+        background-color: #fafafa;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #333;
     }
 
+    /* === HEADER === */
     .audit-list-header {
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        padding: 1rem;
-        margin-bottom: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e8e8e8;
     }
 
     .audit-list-title-section {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #f5f5f5;
     }
 
     .audit-list-title-left {
@@ -32,29 +43,17 @@
         gap: 1rem;
     }
 
-    .audit-list-icon {
-        width: 48px;
-        height: 48px;
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.5rem;
-    }
-
     .audit-list-title h1 {
-        font-size: 2rem;
+        font-size: 1.75rem;
         font-weight: 700;
-        color: #1f2937;
+        color: #1a1a1a;
         margin: 0;
     }
 
     .audit-list-subtitle {
         font-size: 0.875rem;
-        color: #6b7280;
-        margin: 0;
+        color: #666;
+        margin: 0.25rem 0 0 0;
     }
 
     .audit-list-stats {
@@ -62,21 +61,75 @@
     }
 
     .audit-list-stats-label {
-        font-size: 0.875rem;
-        color: #6b7280;
+        font-size: 0.75rem;
+        color: #999;
         margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .audit-list-stats-value {
         font-size: 2rem;
         font-weight: 700;
-        color: #9333ea;
+        color: #1a1a1a;
     }
 
+    /* === TABS === */
+    .audit-tabs-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #e8e8e8;
+    }
+
+    .audit-tab {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-tab:hover {
+            color: #1a1a1a;
+            background: #fafafa;
+        }
+
+        .audit-tab.active {
+            color: #1a1a1a;
+            border-bottom-color: #1a1a1a;
+            background: transparent;
+        }
+
+    .audit-tab-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 0.5rem;
+        background: #f0f0f0;
+        color: #666;
+        border-radius: 11px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-left: 0.5rem;
+    }
+
+    .audit-tab.active .audit-tab-badge {
+        background: #1a1a1a;
+        color: white;
+    }
+
+    /* === FILTERS === */
     .audit-filter-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
+        gap: 1rem;
     }
 
     .audit-form-group {
@@ -85,27 +138,28 @@
     }
 
     .audit-form-label {
-        font-size: 0.875rem;
+        font-size: 0.8rem;
         font-weight: 600;
-        color: #374151;
+        color: #333;
         margin-bottom: 0.5rem;
     }
 
     .audit-form-input,
     .audit-form-select {
-        padding: 0.75rem 1rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
+        padding: 0.65rem 0.85rem;
+        border: 1px solid #ddd;
+        border-radius: 6px;
         font-size: 0.875rem;
         transition: all 0.2s;
+        background: white;
     }
 
-    .audit-form-input:focus,
-    .audit-form-select:focus {
-        outline: none;
-        border-color: #9333ea;
-        box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
-    }
+        .audit-form-input:focus,
+        .audit-form-select:focus {
+            outline: none;
+            border-color: #666;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
 
     .audit-search-wrapper {
         position: relative;
@@ -113,43 +167,23 @@
 
     .audit-search-icon {
         position: absolute;
-        left: 1rem;
+        left: 0.85rem;
         top: 50%;
         transform: translateY(-50%);
-        color: #9ca3af;
+        color: #999;
     }
 
     .audit-form-input.with-icon {
-        padding-left: 3rem;
+        padding-left: 2.5rem;
     }
 
-    .audit-btn-filter {
-        padding: 0.75rem 1.5rem;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        width: 100%;
-        justify-content: center;
-    }
-
-    .audit-btn-filter:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
-    }
-
+    /* === TABLE === */
     .audit-table-container {
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         overflow: hidden;
+        border: 1px solid #e8e8e8;
     }
 
     .audit-table {
@@ -157,142 +191,151 @@
         border-collapse: collapse;
     }
 
-    .audit-table thead {
-            background: #3d3d3d;
-    }
+        .audit-table thead {
+            background: #000000;
+            border-bottom: 2px solid #e8e8e8;
+        }
 
-    .audit-table th {
-        padding: 1rem 1.5rem;
-        text-align: left;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: white;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
+        .audit-table th {
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-    .audit-table th.text-center {
-        text-align: center;
-    }
+            .audit-table th.text-center {
+                text-align: center;
+            }
 
-    .audit-table tbody tr {
-        border-bottom: 1px solid #f3f4f6;
-        transition: background-color 0.15s;
-    }
+        .audit-table tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.15s;
+        }
 
-    .audit-table tbody tr:hover {
-        background-color: #faf5ff;
-    }
+            .audit-table tbody tr:hover {
+                background-color: #fafafa;
+            }
 
-    .audit-table tbody tr.hidden {
-        display: none;
-    }
+            .audit-table tbody tr.hidden {
+                display: none;
+            }
 
-    .audit-table td {
-        padding: 1rem 1.5rem;
-        font-size: 0.875rem;
-        color: #374151;
-    }
+        .audit-table td {
+            padding: 1rem 1.25rem;
+            font-size: 0.875rem;
+            color: #333;
+        }
 
     .audit-code {
         font-weight: 600;
-        color: #9333ea;
+        color: #1a1a1a;
     }
 
     .audit-batch-code {
         font-weight: 500;
-        color: #3b82f6;
+        color: #666;
     }
 
     .audit-ingredient-name {
         font-weight: 600;
-        color: #1f2937;
+        color: #1a1a1a;
     }
 
     .audit-ingredient-code {
         font-size: 0.75rem;
-        color: #6b7280;
+        color: #999;
     }
 
     .audit-adjustment {
         font-weight: 700;
-        font-size: 1.125rem;
+        font-size: 1rem;
     }
 
-    .audit-adjustment.positive {
-        color: #10b981;
-    }
+        .audit-adjustment.positive {
+            color: #059669;
+        }
 
-    .audit-adjustment.negative {
-        color: #ef4444;
-    }
+        .audit-adjustment.negative {
+            color: #dc2626;
+        }
 
     .audit-creator-name {
         font-weight: 500;
-        color: #1f2937;
+        color: #1a1a1a;
     }
 
     .audit-creator-position {
         font-size: 0.75rem;
-        color: #6b7280;
+        color: #999;
     }
 
+    /* === STATUS BADGES - MINIMAL === */
     .audit-status-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
     }
 
     .audit-status-processing {
-        background-color: #fef3c7;
-        color: #92400e;
-        border: 1px solid #fbbf24;
+        background-color: #fff8e1;
+        color: #f57c00;
+        border: 1px solid #ffe0b2;
     }
 
     .audit-status-completed {
-        background-color: #d1fae5;
-        color: #065f46;
-        border: 1px solid #10b981;
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
     }
 
+    .audit-status-cancelled {
+        background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
+    }
+
+    /* === BUTTONS === */
     .audit-btn-view {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.35rem;
         padding: 0.5rem 1rem;
-        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        background: #3b82f6;
         color: white;
         border: none;
-        border-radius: 8px;
-        font-size: 0.875rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
     }
 
-    .audit-btn-view:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
-    }
+        .audit-btn-view:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
 
+    /* === PAGINATION === */
     .audit-pagination {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1.5rem;
-        background-color: #f9fafb;
-        border-top: 1px solid #e5e7eb;
+        padding: 1.25rem 1.5rem;
+        background-color: #fafafa;
+        border-top: 1px solid #e8e8e8;
     }
 
     .audit-pagination-info {
         font-size: 0.875rem;
-        color: #6b7280;
+        color: #666;
     }
 
     .audit-pagination-controls {
@@ -302,56 +345,54 @@
     }
 
     .audit-pagination-btn {
-        padding: 0.5rem 1rem;
-        border: 2px solid #e5e7eb;
+        padding: 0.5rem 0.85rem;
+        border: 1px solid #ddd;
         background: white;
-        border-radius: 8px;
+        border-radius: 6px;
         font-size: 0.875rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
         text-decoration: none;
-        color: #374151;
+        color: #333;
     }
 
-    .audit-pagination-btn:hover:not(.disabled) {
-        border-color: #9333ea;
-        color: #9333ea;
-    }
+        .audit-pagination-btn:hover:not(.disabled) {
+            border-color: #1a1a1a;
+            color: #1a1a1a;
+        }
 
-    .audit-pagination-btn.active {
-            background: #3378ea;
-        color: white;
-            border-color: #3378ea;
-    }
+        .audit-pagination-btn.active {
+            background: #1a1a1a;
+            color: white;
+            border-color: #1a1a1a;
+        }
 
-    .audit-pagination-btn.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+        .audit-pagination-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
 
-    /* Modal Styles */
+    /* === MODAL === */
     .audit-modal-overlay {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.5);
         display: none;
         align-items: center;
         justify-content: center;
         z-index: 9999;
         padding: 2rem;
-        backdrop-filter: blur(4px);
-        transition: all 0.3s ease;
+        backdrop-filter: blur(2px);
     }
 
         .audit-modal-overlay.active {
             display: flex;
         }
 
-        /* Khi image viewer mở, đẩy modal sang trái */
         .audit-modal-overlay.with-image-viewer {
             justify-content: flex-start;
             padding-left: 2rem;
@@ -359,26 +400,24 @@
 
     .audit-modal-content {
         background: white;
-        border-radius: 16px;
+        border-radius: 8px;
         max-width: 1200px;
         width: 100%;
         max-height: 90vh;
         overflow-y: auto;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        animation: slideUp 0.3s ease-out;
-        transition: all 0.3s ease;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        animation: modalSlideIn 0.3s ease-out;
     }
 
-    /* Thu nhỏ modal khi image viewer mở */
     .audit-modal-overlay.with-image-viewer .audit-modal-content {
         max-width: 48%;
         width: 48%;
     }
 
     .audit-modal-header {
-        background: #3d3d3d;
-        padding: 2rem;
-        border-radius: 16px 16px 0 0;
+        background: #1a1a1a;
+        padding: 1.75rem 2rem;
+        border-radius: 8px 8px 0 0;
         position: sticky;
         top: 0;
         z-index: 1000;
@@ -394,22 +433,22 @@
         color: white;
     }
 
-    .audit-modal-title h2 {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
+        .audit-modal-title h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
 
-    .audit-modal-title p {
-        font-size: 0.875rem;
-        color: rgba(255, 255, 255, 0.9);
-    }
+        .audit-modal-title p {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
 
     .audit-modal-close {
-        background: rgba(255, 255, 255, 0.2);
-        border: 2px solid rgba(255, 255, 255, 0.4);
-        width: 40px;
-        height: 40px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         color: white;
         cursor: pointer;
@@ -420,30 +459,33 @@
         font-size: 1.5rem;
     }
 
-    .audit-modal-close:hover {
-        background: rgba(239, 68, 68, 0.9);
-        transform: rotate(90deg);
-    }
+        .audit-modal-close:hover {
+            background: #dc2626;
+            transform: rotate(90deg);
+        }
 
     .audit-modal-body {
         padding: 2rem;
     }
 
+    /* === INFO SECTIONS - MINIMAL === */
     .audit-info-section {
         padding: 1.5rem;
-        border-radius: 12px;
+        border-radius: 8px;
         margin-bottom: 1.5rem;
-        border-left: 4px solid;
+        border: 1px solid #e8e8e8;
+        background: #fafafa;
     }
 
-    .audit-info-section h3 {
-        font-size: 1.125rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
+        .audit-info-section h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #1a1a1a;
+        }
 
     .audit-info-grid {
         display: grid;
@@ -453,235 +495,162 @@
 
     .audit-info-item label {
         display: block;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         font-weight: 600;
         margin-bottom: 0.25rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .audit-info-item value {
         display: block;
         font-size: 1rem;
+        color: #1a1a1a;
+        font-weight: 500;
     }
 
+    /* Colored sections - subtle */
     .audit-section-purple {
-        background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
-        border-left-color: #9333ea;
-    }
-
-    .audit-section-purple h3 {
-        color: #7e22ce;
-    }
-
-    .audit-section-purple label {
-        color: #7e22ce;
-    }
-
-    .audit-section-purple value {
-        color: #581c87;
-        font-weight: 600;
+        background: #fafafa;
+        border-left: 3px solid #9333ea;
     }
 
     .audit-section-blue {
-        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-        border-left-color: #3b82f6;
-    }
-
-    .audit-section-blue h3 {
-        color: #1e40af;
-    }
-
-    .audit-section-blue label {
-        color: #1e40af;
-    }
-
-    .audit-section-blue value {
-        color: #1e3a8a;
-        font-weight: 600;
+        background: #fafafa;
+        border-left: 3px solid #3b82f6;
     }
 
     .audit-section-indigo {
-        background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-        border-left-color: #6366f1;
-    }
-
-    .audit-section-indigo h3 {
-        color: #4338ca;
-    }
-
-    .audit-section-indigo label {
-        color: #4338ca;
-    }
-
-    .audit-section-indigo value {
-        color: #3730a3;
-        font-weight: 600;
+        background: #fafafa;
+        border-left: 3px solid #6366f1;
     }
 
     .audit-section-green {
-        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-        border-left-color: #10b981;
+        background: #fafafa;
+        border-left: 3px solid #10b981;
     }
 
-    .audit-section-green h3 {
-        color: #047857;
+    .audit-section-red {
+        background: #fafafa;
+        border-left: 3px solid #ef4444;
     }
 
-    .audit-section-green label {
-        color: #047857;
-    }
-
-    .audit-section-green value {
-        color: #065f46;
-        font-weight: 600;
-    }
-
+    /* === QUANTITY CARDS === */
     .audit-quantity-cards {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
+        gap: 1rem;
         margin-bottom: 1.5rem;
     }
 
     .audit-quantity-card {
         background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
+        padding: 1.25rem;
+        border-radius: 8px;
         text-align: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e8e8e8;
     }
 
-    .audit-quantity-card label {
-        display: block;
-        font-size: 0.875rem;
-        color: #6b7280;
-        margin-bottom: 0.5rem;
-    }
+        .audit-quantity-card label {
+            display: block;
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-    .audit-quantity-card value {
-        display: block;
-        font-size: 2rem;
-        font-weight: 700;
-    }
+        .audit-quantity-card value {
+            display: block;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
 
     .audit-reason-box {
-        background: #fef3c7;
-        border: 2px solid #fbbf24;
-        border-radius: 12px;
-        padding: 1.5rem;
+        background: #fff8e1;
+        border: 1px solid #ffe0b2;
+        border-radius: 8px;
+        padding: 1.25rem;
     }
 
-    .audit-reason-box label {
-        display: block;
-        font-size: 0.875rem;
+        .audit-reason-box label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #f57c00;
+            margin-bottom: 0.5rem;
+        }
+
+        .audit-reason-box value {
+            display: block;
+            color: #333;
+            line-height: 1.6;
+        }
+
+    /* === INGREDIENT STATUS === */
+    .audit-ingredient-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
         font-weight: 600;
-        color: #92400e;
-        margin-bottom: 0.5rem;
     }
 
-    .audit-reason-box value {
-        display: block;
-        color: #78350f;
-        line-height: 1.6;
+    .audit-ingredient-status-expired {
+        background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
     }
 
-    .audit-image-container {
-        background: #f9fafb;
-        padding: 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
+    .audit-ingredient-status-expiring {
+        background-color: #fff8e1;
+        color: #f57c00;
+        border: 1px solid #ffe0b2;
     }
 
-    .audit-image-container h3 {
-        font-size: 1.125rem;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 1rem;
+    .audit-ingredient-status-normal {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
     }
 
-    .audit-image-container img {
-        width: 100%;
-        max-width: 800px;
-        margin: 0 auto;
-        display: block;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    }
-
+    /* === MODAL FOOTER === */
     .audit-modal-footer {
-        background: #f9fafb;
+        background: #fafafa;
         padding: 1.5rem 2rem;
-        border-radius: 0 0 16px 16px;
+        border-radius: 0 0 8px 8px;
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        border-top: 1px solid #e8e8e8;
     }
 
     .audit-btn-close {
-        padding: 0.75rem 2rem;
-        background: #6b7280;
-        color: white;
+        padding: 0.65rem 1.5rem;
+        background: #e0e0e0;
+        color: #333;
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         font-size: 0.875rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
     }
 
-    .audit-btn-close:hover {
-        background: #4b5563;
-    }
-
-    @@keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
+        .audit-btn-close:hover {
+            background: #bdbdbd;
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .audit-ingredient-status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-
-    .audit-ingredient-status-expired {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #ef4444;
-    }
-
-    .audit-ingredient-status-expiring {
-        background-color: #fed7aa;
-        color: #9a3412;
-        border: 1px solid #f97316;
-    }
-
-    .audit-ingredient-status-normal {
-        background-color: #d1fae5;
-        color: #065f46;
-        border: 1px solid #10b981;
-    }
-
-    .audit-no-data {
-        text-align: center;
-        padding: 3rem;
-        color: #6b7280;
-    }
 
     .audit-btn-confirm {
-        padding: 0.75rem 2rem;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        padding: 0.65rem 1.5rem;
+        background: #10b981;
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         font-size: 0.875rem;
         font-weight: 600;
         cursor: pointer;
@@ -692,35 +661,23 @@
     }
 
         .audit-btn-confirm:hover:not(:disabled) {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
         }
 
         .audit-btn-confirm:disabled {
-            background: #d1d5db;
+            background: #bdbdbd;
             cursor: not-allowed;
             transform: none;
         }
 
-    .audit-modal-footer {
-        background: #f9fafb;
-        padding: 1.5rem 2rem;
-        border-radius: 0 0 16px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    /* Button Từ chối */
     .audit-btn-reject {
-        padding: 0.75rem 2rem;
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        padding: 0.65rem 1.5rem;
+        background: #ef4444;
         color: white;
         border: none;
-        border-radius: 8px;
-        font-size: 0.875rem;
+        border-radius: 6px;
         font-size: 0.875rem;
         font-weight: 600;
         cursor: pointer;
@@ -731,562 +688,482 @@
     }
 
         .audit-btn-reject:hover:not(:disabled) {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
         }
 
         .audit-btn-reject:disabled {
-            background: #d1d5db;
+            background: #bdbdbd;
             cursor: not-allowed;
             transform: none;
         }
 
-    /* Image Viewer - Side by side with modal */
-.audit-image-viewer {
-    position: fixed;
-    top: 50%;
-    right: 2rem;
-    transform: translateY(-50%) translateX(150%);
-    width: 48%;
-    max-height: 90vh;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    z-index: 10000;
-    transition: transform 0.3s ease-in-out, opacity 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    opacity: 0;
-}
+    .audit-btn-view-image {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        background: #1a1a1a;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
 
-.audit-image-viewer.active {
-    transform: translateY(-50%) translateX(0);
-    opacity: 1;
-}
+        .audit-btn-view-image:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
 
-.audit-image-viewer-header {
-        background: #3d3d3d;
-    padding: 1.5rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 16px 16px 0 0;
-    flex-shrink: 0;
-}
+    .audit-no-image-text {
+        color: #999;
+        font-style: italic;
+    }
 
-.audit-image-viewer-title {
-    color: white;
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin: 0;
-}
+    /* === IMAGE VIEWER === */
+    .audit-image-viewer {
+        position: fixed;
+        top: 50%;
+        right: 2rem;
+        transform: translateY(-50%) translateX(150%);
+        width: 48%;
+        max-height: 90vh;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        transition: transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+    }
 
-.audit-image-viewer-close {
-    background: rgba(255, 255, 255, 0.2);
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    color: white;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    font-size: 1.5rem;
-}
+        .audit-image-viewer.active {
+            transform: translateY(-50%) translateX(0);
+            opacity: 1;
+        }
 
-.audit-image-viewer-close:hover {
-    background: rgba(239, 68, 68, 0.9);
-    transform: rotate(90deg);
-}
+    .audit-image-viewer-header {
+        background: #1a1a1a;
+        padding: 1.25rem 1.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 8px 8px 0 0;
+        flex-shrink: 0;
+    }
 
-.audit-image-viewer-body {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    background: #1f2937;
-    overflow: hidden;
-    border-radius: 0 0 16px 16px;
-}
+    .audit-image-viewer-title {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+    }
 
-.audit-image-viewer-body img {
-    max-width: 100%;
-    max-height: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 8px;
-}
+    .audit-image-viewer-close {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        font-size: 1.5rem;
+    }
 
-.audit-btn-view-image {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-        background: #059669;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
+        .audit-image-viewer-close:hover {
+            background: #dc2626;
+            transform: rotate(90deg);
+        }
 
-.audit-btn-view-image:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.audit-no-image-text {
-    color: #9ca3af;
-    font-style: italic;
-}
-
-
-@@media (max-width: 1400px) {
-    .audit-modal-overlay.with-image-viewer {
+    .audit-image-viewer-body {
+        flex: 1;
+        display: flex;
+        align-items: center;
         justify-content: center;
         padding: 2rem;
+        background: #f5f5f5;
+        overflow: hidden;
+        border-radius: 0 0 8px 8px;
     }
-    
-    .audit-modal-overlay.with-image-viewer .audit-modal-content {
-        max-width: 1200px;
+
+        .audit-image-viewer-body img {
+            max-width: 100%;
+            max-height: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+    /* === CONFIRM MODAL === */
+    .confirm-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 100%;
-        opacity: 0.3;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        backdrop-filter: blur(2px);
+    }
+
+        .confirm-modal-overlay.active {
+            display: flex;
+        }
+
+    .confirm-modal-content {
+        background: white;
+        border-radius: 8px;
+        max-width: 480px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+
+    .confirm-modal-header {
+        padding: 2rem 2rem 1rem 2rem;
+        text-align: center;
+    }
+
+    .confirm-modal-icon {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 1rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+    }
+
+        .confirm-modal-icon.warning {
+            background: #fff8e1;
+            border: 2px solid #ffe0b2;
+        }
+
+        .confirm-modal-icon.danger {
+            background: #ffebee;
+            border: 2px solid #ffcdd2;
+        }
+
+        .confirm-modal-icon.success {
+            background: #e8f5e9;
+            border: 2px solid #c8e6c9;
+        }
+
+    .confirm-modal-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+
+    .confirm-modal-body {
+        padding: 0 2rem 2rem 2rem;
+    }
+
+    .confirm-modal-message {
+        text-align: center;
+        color: #666;
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+
+    .confirm-modal-warning-text {
+        background: #fff8e1;
+        border: 1px solid #ffe0b2;
+        border-radius: 6px;
+        padding: 0.85rem;
+        margin-top: 1rem;
+        color: #f57c00;
+        font-weight: 600;
+        text-align: center;
+        font-size: 0.85rem;
+    }
+
+    .confirm-modal-footer {
+        padding: 1.25rem 2rem;
+        background: #fafafa;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        border-top: 1px solid #e8e8e8;
+    }
+
+    .confirm-modal-btn {
+        padding: 0.65rem 1.75rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 110px;
+        justify-content: center;
+    }
+
+    .confirm-modal-btn-cancel {
+        background: #e0e0e0;
+        color: #333;
+    }
+
+        .confirm-modal-btn-cancel:hover {
+            background: #bdbdbd;
+            transform: translateY(-1px);
+        }
+
+    .confirm-modal-btn-confirm {
+        background: #10b981;
+        color: white;
+    }
+
+        .confirm-modal-btn-confirm:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+    .confirm-modal-btn-reject {
+        background: #ef4444;
+        color: white;
+    }
+
+        .confirm-modal-btn-reject:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+    /* === TOAST NOTIFICATIONS === */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
         pointer-events: none;
     }
-    
-    .audit-image-viewer {
-        width: 90%;
-        max-width: 800px;
-        right: 50%;
-        transform: translateY(-50%) translateX(50%) scale(0.9);
+
+    .toast {
+        background: white;
+        padding: 14px 18px;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 300px;
+        max-width: 420px;
+        animation: slideInRight 0.3s ease-out;
+        pointer-events: auto;
+        border-left: 3px solid;
     }
-    
-    .audit-image-viewer.active {
-        transform: translateY(-50%) translateX(50%) scale(1);
+
+        .toast.toast-success {
+            border-left-color: #10b981;
+        }
+
+        .toast.toast-error {
+            border-left-color: #ef4444;
+        }
+
+        .toast.toast-warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast.toast-info {
+            border-left-color: #3b82f6;
+        }
+
+        .toast.slide-out {
+            animation: slideOutRight 0.3s ease-out forwards;
+        }
+
+    .toast-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
     }
-}
 
-/* Confirmation Modal */
-.confirm-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    display: none;
+    .toast.toast-success .toast-icon {
+        background: #10b981;
+        color: white;
+    }
+
+    .toast.toast-error .toast-icon {
+        background: #ef4444;
+        color: white;
+    }
+
+    .toast.toast-warning .toast-icon {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .toast.toast-info .toast-icon {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .toast-content {
+        flex: 1;
+    }
+
+    .toast-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-bottom: 3px;
+        color: #1a1a1a;
+    }
+
+    .toast-message {
+        font-size: 0.85rem;
+        line-height: 1.4;
+        color: #666;
+    }
+
+    .toast-close {
+        background: transparent;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        font-size: 18px;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+
+        .toast-close:hover {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+    /* === NO DATA === */
+    .audit-no-data {
+        text-align: center;
+        padding: 3rem;
+        color: red;
+    }
+
+    /* === REPORT SECTION === */
+.audit-report-section {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    backdrop-filter: blur(4px);
-    animation: fadeIn 0.2s ease;
-}
-
-.confirm-modal-overlay.active {
-    display: flex;
-}
-
-.confirm-modal-content {
-    background: white;
-    border-radius: 16px;
-    max-width: 500px;
-    width: 90%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-    animation: modalSlideIn 0.3s ease-out;
-    overflow: hidden;
-}
-
-.confirm-modal-header {
-    padding: 2rem 2rem 1rem 2rem;
-    text-align: center;
-}
-
-.confirm-modal-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 1rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-}
-
-.confirm-modal-icon.warning {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border: 3px solid #fbbf24;
-}
-
-.confirm-modal-icon.danger {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border: 3px solid #ef4444;
-}
-
-.confirm-modal-icon.success {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-    border: 3px solid #10b981;
-}
-
-.confirm-modal-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
-}
-
-.confirm-modal-body {
-    padding: 0 2rem 2rem 2rem;
-}
-
-.confirm-modal-message {
-    text-align: center;
-    color: #6b7280;
-    line-height: 1.6;
-    font-size: 1rem;
-}
-
-.confirm-modal-warning-text {
-    background: #fef3c7;
-    border: 2px solid #fbbf24;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
-    color: #92400e;
-    font-weight: 600;
-    text-align: center;
-    font-size: 0.875rem;
-}
-
-.confirm-modal-footer {
-    padding: 1.5rem 2rem;
-    background: #f9fafb;
-    display: flex;
     gap: 1rem;
-    justify-content: center;
+    flex-wrap: wrap;
 }
 
-.confirm-modal-btn {
-    padding: 0.75rem 2rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: inline-flex;
+.audit-report-filters {
+    display: flex;
     align-items: center;
     gap: 0.5rem;
-    min-width: 120px;
-    justify-content: center;
+    flex-wrap: wrap;
 }
 
-.confirm-modal-btn-cancel {
-    background: #e5e7eb;
-    color: #374151;
+.audit-report-filter-btn {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
 }
 
-.confirm-modal-btn-cancel:hover {
-    background: #d1d5db;
-    transform: translateY(-2px);
+.audit-report-filter-btn:hover {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+    background: #fafafa;
 }
 
-.confirm-modal-btn-confirm {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.audit-report-filter-btn.active {
+    background: #1a1a1a;
     color: white;
+    border-color: #1a1a1a;
 }
 
-.confirm-modal-btn-confirm:hover {
+.audit-btn-export-report {
+    padding: 0.6rem 1.5rem;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    white-space: nowrap;
+}
+
+.audit-btn-export-report:hover {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
-.confirm-modal-btn-reject {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
+.audit-btn-export-report:active {
+    transform: translateY(0);
 }
 
-.confirm-modal-btn-reject:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-@@keyframes fadeIn {
-    from {
-        opacity: 0;
+/* Responsive cho mobile */
+@@media (max-width: 768px) {
+    .audit-list-title-section {
+        flex-direction: column;
+        align-items: flex-start;
     }
-    to {
-        opacity: 1;
+    
+    .audit-report-section {
+        width: 100%;
+        justify-content: space-between;
     }
-}
-
-@@keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-50px) scale(0.9);
+    
+    .audit-report-filters {
+        width: 100%;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+    
+    .audit-btn-export-report {
+        width: 100%;
+        margin-top: 0.5rem;
     }
 }
 
-    /* Tab Styles */
-    .audit-tabs-container {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 2rem;
-        border-bottom: 2px solid #e5e7eb;
-    }
 
-    .audit-tab {
-        padding: 1rem 2rem;
-        background: transparent;
-        border: none;
-        border-bottom: 3px solid transparent;
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #6b7280;
-        cursor: pointer;
-        transition: all 0.2s;
-        position: relative;
-    }
-
-        .audit-tab:hover {
-            color: #9333ea;
-            background: #faf5ff;
-        }
-
-        .audit-tab.active {
-            color: #9333ea;
-            border-bottom-color: #9333ea;
-            background: #faf5ff;
-        }
-
-    .audit-tab-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 24px;
-        height: 24px;
-        padding: 0 0.5rem;
-        background: #e5e7eb;
-        color: #374151;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        margin-left: 0.5rem;
-    }
-
-    .audit-tab.active .audit-tab-badge {
-        background: #9333ea;
-        color: white;
-    }
-
-    .audit-section-red {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        border-left-color: #ef4444;
-    }
-
-        .audit-section-red h3 {
-            color: #991b1b;
-        }
-
-        .audit-section-red label {
-            color: #991b1b;
-        }
-
-        .audit-section-red value {
-            color: #7f1d1d;
-            font-weight: 600;
-        }
-
-
-    .audit-status-cancelled {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #ef4444;
-    }
-
-    /* Toast Notification System */
-.toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    pointer-events: none;
-}
-
-.toast {
-    background: white;
-    padding: 16px 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 320px;
-    max-width: 450px;
-    animation: slideInRight 0.3s ease-out;
-    pointer-events: auto;
-    border-left: 4px solid;
-}
-
-.toast.toast-success {
-    border-left-color: #10b981;
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-}
-
-.toast.toast-error {
-    border-left-color: #ef4444;
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-}
-
-.toast.toast-warning {
-    border-left-color: #f59e0b;
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-}
-
-.toast.toast-info {
-    border-left-color: #3b82f6;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-}
-
-.toast.slide-out {
-    animation: slideOutRight 0.3s ease-out forwards;
-}
-
-@@keyframes slideInRight {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@@keyframes slideOutRight {
-    to {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-}
-
-.toast-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-}
-
-.toast.toast-success .toast-icon {
-    background: #10b981;
-    color: white;
-}
-
-.toast.toast-error .toast-icon {
-    background: #ef4444;
-    color: white;
-}
-
-.toast.toast-warning .toast-icon {
-    background: #f59e0b;
-    color: white;
-}
-
-.toast.toast-info .toast-icon {
-    background: #3b82f6;
-    color: white;
-}
-
-.toast-content {
-    flex: 1;
-}
-
-.toast-title {
-    font-weight: 700;
-    font-size: 15px;
-    margin-bottom: 4px;
-}
-
-.toast.toast-success .toast-title {
-    color: #065f46;
-}
-
-.toast.toast-error .toast-title {
-    color: #991b1b;
-}
-
-.toast.toast-warning .toast-title {
-    color: #92400e;
-}
-
-.toast.toast-info .toast-title {
-    color: #1e40af;
-}
-
-.toast-message {
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.toast.toast-success .toast-message {
-    color: #047857;
-}
-
-.toast.toast-error .toast-message {
-    color: #7f1d1d;
-}
-
-.toast.toast-warning .toast-message {
-    color: #78350f;
-}
-
-.toast.toast-info .toast-message {
-    color: #1e3a8a;
-}
-
-.toast-close {
-    background: transparent;
-    border: none;
-    color: #6b7280;
-    cursor: pointer;
-    font-size: 20px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.toast-close:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: #374151;
-}
 </style>
 <div class="toast-container" id="toastContainer"></div>
 <div class="audit-list-container">
     <div class="audit-list-header">
+        <!-- TIÊU ĐỀ -->
         <!-- TIÊU ĐỀ -->
         <div class="audit-list-title-section">
             <div class="audit-list-title-left">
@@ -1295,9 +1172,82 @@
                     <p class="audit-list-subtitle">Quản lý các đơn kiểm kê mặt hàng</p>
                 </div>
             </div>
-            <div class="audit-list-stats">
-                <div class="audit-list-stats-label">Tổng số đơn</div>
-                <div class="audit-list-stats-value" id="totalAuditsCount">@Model.TotalItems</div>
+
+            <!-- ✅ THÊM PHẦN BÁO CÁO -->
+            <div class="audit-report-section">
+                <div class="audit-report-filters">
+                    <div class="audit-form-group" style="min-width: 200px;">
+                        <select id="reportPeriodSelect" class="audit-form-select" onchange="handleReportPeriodChange(this.value)">
+                            <option value="0"> Hôm nay</option>
+                            <option value="3"> 3 ngày qua</option>
+                            <option value="7" selected> 7 ngày qua</option>
+                            <option value="7" selected> 7 ngày qua</option>
+                            <option value="30"> 30 ngày qua</option>
+                            <option value="custom"> Tùy chọn ngày</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="audit-btn-export-report" onclick="exportReport()">
+                    Xuất báo cáo
+                </button>
+            </div>
+
+            <!-- ✅ MODAL CHỌN NGÀY TÙY CHỈNH -->
+            <div id="customDateModal" class="confirm-modal-overlay">
+                <div class="confirm-modal-content" style="max-width: 400px;">
+                    <div class="confirm-modal-header">
+                        <h3 class="confirm-modal-title">Chọn khoảng thời gian</h3>
+                    </div>
+                    <div class="confirm-modal-body">
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Từ ngày:</label>
+                                <input type="date" id="customDateFrom" class="audit-form-input" style="width: 100%;" />
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Đến ngày:</label>
+                                <input type="date" id="customDateTo" class="audit-form-input" style="width: 100%;" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="confirm-modal-footer">
+                        <button class="confirm-modal-btn confirm-modal-btn-cancel" onclick="closeCustomDatePicker()">
+                            Hủy
+                        </button>
+                        <button class="confirm-modal-btn confirm-modal-btn-confirm" onclick="applyCustomDate()">
+                            Áp dụng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ✅ THÊM MODAL CHỌN NGÀY TÙY CHỈNH -->
+        <div id="customDateModal" class="confirm-modal-overlay">
+            <div class="confirm-modal-content" style="max-width: 400px;">
+                <div class="confirm-modal-header">
+                    <h3 class="confirm-modal-title">Chọn khoảng thời gian</h3>
+                </div>
+                <div class="confirm-modal-body">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Từ ngày:</label>
+                            <input type="date" id="customDateFrom" class="audit-form-input" style="width: 100%;" />
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Đến ngày:</label>
+                            <input type="date" id="customDateTo" class="audit-form-input" style="width: 100%;" />
+                        </div>
+                    </div>
+                </div>
+                <div class="confirm-modal-footer">
+                    <button class="confirm-modal-btn confirm-modal-btn-cancel" onclick="closeCustomDatePicker()">
+                        Hủy
+                    </button>
+                    <button class="confirm-modal-btn confirm-modal-btn-confirm" onclick="applyCustomDate()">
+                        Áp dụng
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1308,8 +1258,12 @@
                 <span class="audit-tab-badge" id="processingCount">0</span>
             </button>
             <button class="audit-tab" data-tab="completed" onclick="switchTab('completed')">
-                Đã xử lý
+                Đã xác nhận
                 <span class="audit-tab-badge" id="completedCount">0</span>
+            </button>
+            <button class="audit-tab" data-tab="cancelled" onclick="switchTab('cancelled')">
+                Đã từ chối
+                <span class="audit-tab-badge" id="cancelledCount">0</span>
             </button>
             <button class="audit-tab active" data-tab="all" onclick="switchTab('all')">
                 Tất cả
@@ -1322,7 +1276,6 @@
             <div class="audit-form-group" style="grid-column: span 2;">
                 <label class="audit-form-label">Tìm kiếm</label>
                 <div class="audit-search-wrapper">
-                    <span class="audit-search-icon">&#128269;</span>
                     <input type="text"
                            id="searchInput"
                            placeholder="Mã đơn, tên mặt hàng, mã lô..."
@@ -1364,11 +1317,11 @@
                     <th>Mã đơn</th>
                     <th>Mã lô</th>
                     <th>mặt hàng</th>
-                    <th class="text-center">Điều chỉnh</th>
+                    <th>Điều chỉnh</th>
                     <th>Người tạo</th>
                     <th>Thời gian</th>
-                    <th class="text-center">Trạng thái</th>
-                    <th class="text-center">Thao tác</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody id="auditTableBody">
@@ -1437,19 +1390,25 @@
                                 @if (audit.AuditStatus == "processing")
                                 {
                                     <span class="audit-status-badge audit-status-processing">
-                                        &#128337; Đang xử lý
+                                         Đang xử lý
                                     </span>
                                 }
-                                else
+                                else if (audit.AuditStatus == "completed")
                                 {
                                     <span class="audit-status-badge audit-status-completed">
-                                        &#9989; Đã xử lý
+                                        Đã xác nhận
+                                    </span>
+                                }
+                                else if (audit.AuditStatus == "cancelled")
+                                {
+                                    <span class="audit-status-badge audit-status-cancelled">
+                                         Đã từ chối
                                     </span>
                                 }
                             </td>
                             <td class="text-center">
                                 <button class="audit-btn-view" onclick="showAuditDetail(this.closest('tr'))">
-                                    &#128065; Xem
+                                     Xem
                                 </button>
                             </td>
                         </tr>
@@ -1589,14 +1548,16 @@
 
         // Đếm số lượng đơn theo trạng thái
         function updateTabCounts() {
-            const processingCount = allRows.filter(row => row.dataset.auditStatus === 'processing').length;
-            const completedCount = allRows.filter(row => row.dataset.auditStatus === 'completed').length;
-            const allCount = allRows.length;
+    const processingCount = allRows.filter(row => row.dataset.auditStatus === 'processing').length;
+    const completedCount = allRows.filter(row => row.dataset.auditStatus === 'completed').length;
+    const cancelledCount = allRows.filter(row => row.dataset.auditStatus === 'cancelled').length;
+    const allCount = allRows.length;
 
-            document.getElementById('processingCount').textContent = processingCount;
-            document.getElementById('completedCount').textContent = completedCount;
-            document.getElementById('allCount').textContent = allCount;
-        }
+    document.getElementById('processingCount').textContent = processingCount;
+    document.getElementById('completedCount').textContent = completedCount;
+    document.getElementById('cancelledCount').textContent = cancelledCount;
+    document.getElementById('allCount').textContent = allCount;
+}
 
         // Chuyển tab
         function switchTab(tab) {
@@ -1850,7 +1811,7 @@
         const confirmerSection = (audit.auditStatus === 'completed' || audit.auditStatus === 'cancelled') ? `
         <div class="audit-info-section ${audit.auditStatus === 'completed' ? 'audit-section-green' : 'audit-section-red'}">
             <h3>
-                ${audit.auditStatus === 'completed' ? 'Người xác nhận' : 'Người từ chối'}
+                ${audit.auditStatus === 'completed' ? '✅ Người xác nhận' : '❌ Người từ chối'}
             </h3>
             <div class="audit-info-grid">
                 <div class="audit-info-item">
@@ -1898,7 +1859,7 @@
                 </label>
             </div>
 
-            <!-- Thông tin người xác nhận (ẩn mặc định) -->
+            <!-- Thông tin người xác nhận -->
             <div id="confirmerInfoSection" style="display: none; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 2px solid #10b981;">
                 <h4 style="color: #047857; margin-bottom: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
                     &#128100; Thông tin người xử lý
@@ -1936,21 +1897,21 @@
                         Đóng
                     </button>
                     <button class="audit-btn-reject" onclick="rejectAudit('${audit.auditId}')" disabled id="rejectBtn">
-                         Từ chối
+                        ❌ Từ chối
                     </button>
                     <button class="audit-btn-confirm" onclick="confirmAudit('${audit.auditId}')" disabled id="confirmBtn">
-                         Xác nhận
+                        ✅ Xác nhận
                     </button>
                 </div>
             </div>
         </div>
     ` : `
         <div class="audit-modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
-            <!-- Checkbox đã xác nhận (disabled) -->
-            <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #d1fae5; border-radius: 8px; border: 2px solid #10b981;">
+            <!-- Checkbox đã xử lý -->
+            <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: ${audit.auditStatus === 'completed' ? '#d1fae5' : '#ffebee'}; border-radius: 8px; border: 2px solid ${audit.auditStatus === 'completed' ? '#10b981' : '#ef4444'};">
                 <input type="checkbox" checked disabled style="width: 20px; height: 20px;" />
-                <label style="font-weight: 600; color: #047857;">
-                     Đơn kiểm kê đã được xác nhận
+                <label style="font-weight: 600; color: ${audit.auditStatus === 'completed' ? '#047857' : '#991b1b'};">
+                    ${audit.auditStatus === 'completed' ? 'Đơn kiểm kê đã được xác nhận' : 'Đơn kiểm kê đã bị từ chối'}
                 </label>
             </div>
 
@@ -1959,9 +1920,11 @@
                 <button class="audit-btn-close" onclick="closeAuditModal()">
                     Đóng
                 </button>
-                <button class="audit-btn-confirm" onclick="printAudit('${audit.auditId}')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
-                    In đơn kiểm kê
-                </button>
+                ${audit.auditStatus === 'completed' ? `
+                    <button class="audit-btn-confirm" onclick="printAudit('${audit.auditId}')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        In đơn kiểm kê
+                    </button>
+                ` : ''}
             </div>
         </div>
     `;
@@ -2455,5 +2418,246 @@
         const modal = document.getElementById('confirmModal');
         modal.classList.remove('active');
     }
+
+    async function generateReport(data) {
+        try {
+            const requestBody = {
+                dateFrom: reportPeriod.dateFrom.toISOString(),
+                dateTo: reportPeriod.dateTo.toISOString(),
+                status: currentTab === 'all' ? null : currentTab,
+                reporterName: currentUser.fullName,
+                reporterPosition: currentUser.position
+            };
+
+            const response = await fetch('/AuditInventory/ExportReportPdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Không thể tạo báo cáo PDF');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BaoCaoKiemKe_${formatDateForInput(reportPeriod.dateFrom)}_${formatDateForInput(reportPeriod.dateTo)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            console.error('Error generating report:', error);
+            throw error;
+        }
+    }
+
+    let reportPeriod = {
+        dateFrom: new Date(),
+        dateTo: new Date(),
+        selectedDays: 7 // Mặc định 7 ngày
+    };
+
+    // ✅ XỬ LÝ KHI THAY ĐỔI SELECT
+    function handleReportPeriodChange(value) {
+        if (value === 'custom') {
+            openCustomDatePicker();
+        } else {
+            const days = parseInt(value);
+            selectReportPeriod(days);
+        }
+    }
+
+    // ✅ CHỌN KỲ BÁO CÁO
+    function selectReportPeriod(days) {
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
+        let fromDate = new Date();
+        fromDate.setHours(0, 0, 0, 0);
+
+        if (days > 0) {
+            fromDate.setDate(today.getDate() - days);
+        }
+
+        reportPeriod = {
+            dateFrom: fromDate,
+            dateTo: today,
+            selectedDays: days
+        };
+
+        console.log('Selected period:', reportPeriod);
+    }
+
+    // ✅ MỞ MODAL CHỌN NGÀY TÙY CHỈNH
+    function openCustomDatePicker() {
+        // Set default dates
+        const today = new Date();
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+
+        document.getElementById('customDateFrom').value = formatDateForInput(sevenDaysAgo);
+        document.getElementById('customDateTo').value = formatDateForInput(today);
+
+        // Show modal
+        document.getElementById('customDateModal').classList.add('active');
+    }
+
+    // ✅ ĐÓNG MODAL CHỌN NGÀY
+    function closeCustomDatePicker() {
+        document.getElementById('customDateModal').classList.remove('active');
+
+        // Reset select về giá trị trước đó
+        const select = document.getElementById('reportPeriodSelect');
+        select.value = reportPeriod.selectedDays === 'custom' ? '7' : reportPeriod.selectedDays.toString();
+    }
+
+    // ✅ ÁP DỤNG NGÀY TÙY CHỈNH
+    function applyCustomDate() {
+        const fromInput = document.getElementById('customDateFrom').value;
+        const toInput = document.getElementById('customDateTo').value;
+
+        if (!fromInput || !toInput) {
+            showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn đầy đủ từ ngày và đến ngày');
+            return;
+        }
+
+        const fromDate = new Date(fromInput);
+        const toDate = new Date(toInput);
+
+        fromDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+
+        if (fromDate > toDate) {
+            showToast('error', 'Ngày không hợp lệ', 'Từ ngày phải nhỏ hơn hoặc bằng đến ngày');
+            return;
+        }
+
+        reportPeriod = {
+            dateFrom: fromDate,
+            dateTo: toDate,
+            selectedDays: 'custom'
+        };
+
+        document.getElementById('customDateModal').classList.remove('active');
+
+    }
+
+    // ✅ XUẤT BÁO CÁO
+    async function exportReport() {
+        try {
+            // Kiểm tra đã chọn kỳ báo cáo chưa
+            if (!reportPeriod || !reportPeriod.dateFrom || !reportPeriod.dateTo) {
+                showToast('warning', 'Chưa chọn kỳ báo cáo', 'Vui lòng chọn khoảng thời gian báo cáo');
+                return;
+            }
+
+            // Show loading
+            const exportBtn = document.querySelector('.audit-btn-export-report');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '⏳ Đang tạo báo cáo...';
+
+            // Prepare request data
+            const requestData = {
+                dateFrom: reportPeriod.dateFrom.toISOString(),
+                dateTo: reportPeriod.dateTo.toISOString(),
+                status: currentTab === 'all' ? null : currentTab,
+                reporterName: currentUser.fullName,
+                reporterPosition: currentUser.position
+            };
+
+            console.log('Exporting report with data:', requestData);
+
+            // Call API
+            const response = await fetch('/AuditInventory/ExportReportPdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = 'Không thể tạo báo cáo';
+
+                try {
+                    const error = JSON.parse(errorText);
+                    errorMessage = error.message || errorMessage;
+                } catch (e) {
+                    console.error('Error parsing response:', errorText);
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            // Download PDF
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BaoCaoKiemKe_${formatDateForFilename(reportPeriod.dateFrom)}_${formatDateForFilename(reportPeriod.dateTo)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showToast('success', 'Xuất báo cáo thành công', 'File PDF đã được tải về');
+
+            // Reset button
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = originalText;
+
+        } catch (error) {
+            console.error('Error exporting report:', error);
+            showToast('error', 'Lỗi xuất báo cáo', error.message || 'Không thể tạo báo cáo PDF');
+
+            // Reset button
+            const exportBtn = document.querySelector('.audit-btn-export-report');
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = 'Xuất báo cáo';
+        }
+    }
+
+    // ✅ HELPER: FORMAT DATE CHO INPUT (YYYY-MM-DD)
+    function formatDateForInput(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // ✅ HELPER: FORMAT DATE CHO FILENAME (YYYYMMDD)
+    function formatDateForFilename(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    }
+
+    // ✅ HELPER: FORMAT DATE CHO HIỂN THỊ (DD/MM/YYYY)
+    function formatDate(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
+    // ✅ KHỞI TẠO MẶC ĐỊNH KHI LOAD TRANG
+    document.addEventListener('DOMContentLoaded', function () {
+        // Khởi tạo mặc định cho báo cáo (7 ngày qua)
+        selectReportPeriod(7);
+    });
 
 </script>
