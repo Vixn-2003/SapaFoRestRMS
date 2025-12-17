@@ -358,7 +358,7 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             try
             {
-                // ✅ 1. VALIDATE INPUT CƠ BẢN
+                //  1. VALIDATE INPUT CƠ BẢN
                 if (string.IsNullOrWhiteSpace(model.PurchaseOrderId))
                     return BadRequest(new { success = false, message = "Thiếu mã lô (PO)" });
 
@@ -379,7 +379,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     string.IsNullOrWhiteSpace(model.CreatorPhone))
                     return BadRequest(new { success = false, message = "Thông tin người tạo đơn không đầy đủ" });
 
-                // ✅ 2. XỬ LÝ FILE ẢNH
+                //  2. XỬ LÝ FILE ẢNH
                 string? imagePath = null;
                 if (model.ImageFile is { Length: > 0 })
                 {
@@ -390,15 +390,15 @@ namespace SapaFoRestRMSAPI.Controllers
 
                 if (resultCheck == null)
                 {
-                    // ✅ 3. TẠO AUDIT ID (theo format tùy chọn)
+                    //  3. TẠO AUDIT ID (theo format tùy chọn)
 
                     string auditId = await GenerateAuditId();
 
 
-                    // ✅ 4. TẠO ĐỐI TƯỢNG
+                    //  4. TẠO ĐỐI TƯỢNG
                     var auditRecord = new AuditInventory
                     {
-                        AuditId = auditId,  // ✅ GÁN AuditId đã tạo
+                        AuditId = auditId,  //  GÁN AuditId đã tạo
                         BatchId = model.BatchId,
                         PurchaseOrderId = model.PurchaseOrderId.Trim(),
                         IngredientCode = model.IngredientCode.Trim(),
@@ -430,7 +430,7 @@ namespace SapaFoRestRMSAPI.Controllers
                         ConfirmerPhone = null
                     };
 
-                    // ✅ 5. LƯU VÀO DATABASE
+                    //  5. LƯU VÀO DATABASE
                     var result = await _auditService.CreateAuditAsync(auditRecord);
 
                     if (!result)
@@ -442,14 +442,14 @@ namespace SapaFoRestRMSAPI.Controllers
                         });
                     }
 
-                    // ✅ 6. TRẢ VỀ KẾT QUẢ
+                    //  6. TRẢ VỀ KẾT QUẢ
                     return Ok(new
                     {
                         success = true,
                         message = "Tạo đơn kiểm kê thành công!",
                         data = new
                         {
-                            AuditId = auditRecord.AuditId,  // ✅ Trả về AuditId dạng string
+                            AuditId = auditRecord.AuditId,  //  Trả về AuditId dạng string
                             PurchaseOrderId = auditRecord.PurchaseOrderId,
                             IngredientCode = auditRecord.IngredientCode,
                             ingredientName = auditRecord.ingredientName,

@@ -1,7 +1,7 @@
 @model WebSapaForestForStaff.Models.UserManagement.UserEditViewModel
 
 @{
-    ViewData["Title"] = "Edit User";
+    ViewData["Title"] = "Chỉnh sửa người dùng";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
 }
 
@@ -9,11 +9,11 @@
 <div class="page-header">
     <div class="row align-items-center">
         <div class="col">
-            <h3 class="page-title">Edit User</h3>
+            <h3 class="page-title">Chỉnh sửa người dùng</h3>
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">User Management</a></li>
-                <li class="breadcrumb-item active">Edit User</li>
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Quản lý người dùng</a></li>
+                <li class="breadcrumb-item active">Chỉnh sửa</li>
             </ul>
         </div>
     </div>
@@ -24,10 +24,10 @@
     <div class="col-md-8 offset-md-2">
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title mb-0">User Information</h4>
+                <h4 class="card-title mb-0">Thông tin người dùng</h4>
             </div>
             <div class="card-body">
-                <form asp-action="Edit" method="post">
+                <form asp-action="Edit" method="post" onsubmit="return confirm('Bạn có chắc muốn lưu thay đổi cho người dùng này?');">
                     <input type="hidden" asp-for="UserId" />
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
@@ -43,7 +43,7 @@
                             <div class="form-group">
                                 <label asp-for="Email" class="control-label"></label>
                                 <input asp-for="Email" class="form-control" type="email" readonly />
-                                <small class="form-text text-muted">Email cannot be changed</small>
+                                <small class="form-text text-muted">Email không thể thay đổi</small>
                                 <span asp-validation-for="Email" class="text-danger"></span>
                             </div>
                         </div>
@@ -61,7 +61,7 @@
                             <div class="form-group">
                                 <label asp-for="RoleId" class="control-label"></label>
                                 <select asp-for="RoleId" class="form-control">
-                                    <option value="">-- Select Role --</option>
+                                <option value="">-- Chọn vai trò --</option>
                                     @if (Model.AvailableRoles != null)
                                     {
                                         @foreach (var role in Model.AvailableRoles)
@@ -80,8 +80,8 @@
                             <div class="form-group">
                                 <label asp-for="Status" class="control-label"></label>
                                 <select asp-for="Status" class="form-control">
-                                    <option value="0">Active</option>
-                                    <option value="1">Inactive</option>
+                                    <option value="0">Hoạt động</option>
+                                    <option value="1">Ngừng hoạt động</option>
                                 </select>
                                 <span asp-validation-for="Status" class="text-danger"></span>
                             </div>
@@ -102,8 +102,8 @@
                     </div>
 
                     <div class="form-group text-right">
-                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Update User</button>
+                        <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                        <button type="submit" class="btn btn-primary">Cập nhật</button>
                     </div>
                 </form>
             </div>

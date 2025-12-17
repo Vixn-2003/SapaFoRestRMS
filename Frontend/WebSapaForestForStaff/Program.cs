@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
 using WebSapaForestForStaff.Controllers;
 using WebSapaForestForStaff.Hubs;
 using WebSapaForestForStaff.Services;
@@ -82,6 +83,40 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Manager", p => p.RequireRole("Manager", "Admin", "Owner"));
     options.AddPolicy("Staff", p => p.RequireRole("Staff", "Manager", "Admin", "Owner"));
     options.AddPolicy("Customer", p => p.RequireRole("Customer"));
+
+    bool HasManagementRole(ClaimsPrincipal user) =>
+        user.IsInRole("Owner") || user.IsInRole("Admin") || user.IsInRole("Manager");
+
+    bool HasPositionClaim(ClaimsPrincipal user, int positionId)
+    {
+        var positionValue = positionId.ToString();
+        var hasSingle = user.Claims.Any(c =>
+            string.Equals(c.Type, "PositionId", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(c.Value, positionValue, StringComparison.OrdinalIgnoreCase));
+
+        var hasFromList = user.Claims.Any(c =>
+            string.Equals(c.Type, "PositionIds", StringComparison.OrdinalIgnoreCase) &&
+            c.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Any(v => string.Equals(v.Trim(), positionValue, StringComparison.OrdinalIgnoreCase)));
+
+        return hasSingle || hasFromList;
+    }
+
+    options.AddPolicy("Position:Waiter", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 1))));
+
+    options.AddPolicy("Position:Cashier", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 2))));
+
+    options.AddPolicy("Position:Kitchen", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 3))));
+
+    options.AddPolicy("Position:Inventory", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 4))));
 });
 
 builder.Services.AddSignalR();

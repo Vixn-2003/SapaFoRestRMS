@@ -28,8 +28,10 @@ namespace WebSapaFoRestForCustomer.Services
             var client = new HttpClient();
             client.BaseAddress = new Uri(GetApiBaseUrl());
 
-            // Get token from claims
-            var token = _httpContextAccessor.HttpContext?.User?.FindFirst("Token")?.Value;
+            // Get token from session first (refreshed token is stored in Session), then fallback to claims
+            var token =
+                _httpContextAccessor.HttpContext?.Session.GetString("Token")
+                ?? _httpContextAccessor.HttpContext?.User?.FindFirst("Token")?.Value;
             if (!string.IsNullOrEmpty(token))
             {
                 client.DefaultRequestHeaders.Authorization = 
@@ -127,136 +129,164 @@ namespace WebSapaFoRestForCustomer.Services
             }
         }
 
-        //Customer Profile Methods
-        //public async Task<CustomerProfile?> GetCustomerProfileAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/api/Customer/profile"));
+        /// <summary>
+        /// Get customer profile
+        /// </summary>
+        public async Task<CustomerProfile?> GetCustomerProfileAsync()
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync("api/Customer/profile"));
 
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    return JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
-        //public async Task<bool> UpdateCustomerProfileAsync(CustomerProfileUpdate profile)
-        //{
-        //    try
-        //    {
-        //        var json = JsonSerializer.Serialize(profile);
-        //        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        /// <summary>
+        /// Update customer profile
+        /// </summary>
+        public async Task<CustomerProfile?> UpdateCustomerProfileAsync(CustomerProfileUpdate request)
+        {
+            try
+            {
+                // Create form data for file upload
+                using var formData = new MultipartFormDataContent();
 
-        //        var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/api/Customer/profile", content));
-        //        return response.IsSuccessStatusCode;
-        //    }
-        //    catch
-        //    {
-        //        return false;
-        //    }
-        //}
+                // Add basic fields
+                formData.Add(new StringContent(request.FullName), "FullName");
+                if (!string.IsNullOrEmpty(request.Email))
+                    formData.Add(new StringContent(request.Email), "Email");
+                if (!string.IsNullOrEmpty(request.Phone))
+                    formData.Add(new StringContent(request.Phone), "Phone");
+                if (!string.IsNullOrEmpty(request.AvatarUrl))
+                    formData.Add(new StringContent(request.AvatarUrl), "AvatarUrl");
 
-        //Customer Orders Methods
-        //public async Task<List<CustomerOrder>?> GetCustomerOrdersAsync(string? status = null)
-        //{
-        //    try
-        //    {
-        //        var url = $"{GetApiBaseUrl()}/api/Customer/orders";
-        //        if (!string.IsNullOrEmpty(status))
-        //        {
-        //            url += $"?status={Uri.EscapeDataString(status)}";
-        //        }
+                // Add file if provided
+                if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+                {
+                    var fileContent = new StreamContent(request.AvatarFile.OpenReadStream());
+                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(request.AvatarFile.ContentType);
+                    formData.Add(fileContent, "AvatarFile", request.AvatarFile.FileName);
+                }
 
-        //        var response = await SendWithAutoRefreshAsync(c => c.GetAsync(url));
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync("api/Customer/profile", formData));
 
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<CustomerOrder>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    // Backend returns updated profile as JSON
+                    var updated = JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    return updated;
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
 
-        //Menu and Restaurant Info Methods
-        //public async Task<List<MenuItemDto>?> GetMenuItemsAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/MenuItems");
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<MenuItemDto>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
+        // ====================== CHANGE EMAIL/PHONE (OTP) ======================
+        public async Task<bool> SendChangeEmailOtpAsync(string newEmail)
+        {
+            try
+            {
+                var payload = new { Email = newEmail };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        //public async Task<List<ComboDto>?> GetCombosAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Combos");
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<ComboDto>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-email/send-otp", content));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
 
-        //public async Task<List<EventDto>?> GetEventsAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Events");
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<EventDto>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
+        public async Task<(bool Success, string? Message)> VerifyChangeEmailOtpAsync(string newEmail, string code)
+        {
+            try
+            {
+                var payload = new { Email = newEmail, Code = code };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-email/verify", content));
+                var body = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode) return (true, null);
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    if (doc.RootElement.TryGetProperty("message", out var msg)) return (false, msg.GetString());
+                }
+                catch { }
+
+                return (false, "Xác thực OTP email thất bại.");
+            }
+            catch { return (false, "Xác thực OTP email thất bại."); }
+        }
+
+        public async Task<bool> SendChangePhoneOtpAsync(string newPhone)
+        {
+            try
+            {
+                var payload = new { Phone = newPhone };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-phone/send-otp", content));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<(bool Success, string? Message)> VerifyChangePhoneOtpAsync(string newPhone, string code)
+        {
+            try
+            {
+                var payload = new { Phone = newPhone, Code = code };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-phone/verify", content));
+                var body = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode) return (true, null);
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    if (doc.RootElement.TryGetProperty("message", out var msg)) return (false, msg.GetString());
+                }
+                catch { }
+
+                return (false, "Xác thực OTP số điện thoại thất bại.");
+            }
+            catch { return (false, "Xác thực OTP số điện thoại thất bại."); }
+        }
+
+        // Generic API response wrapper
+        public class ApiResponse<T>
+        {
+            public bool Success { get; set; }
+            public string? Message { get; set; }
+            public T? Data { get; set; }
+            public List<string>? Errors { get; set; }
+        }
     }
 }

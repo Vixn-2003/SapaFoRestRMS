@@ -25,6 +25,7 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
     private readonly Mock<IAuditLogService> _mockAuditLogService;
     private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<IMapper> _mockMapper;
+    private readonly Mock<ICloudinaryService> _mockCloudinaryService;
     private readonly Mock<IConfigurationSection> _mockVipThresholdSection;
     private readonly Mock<IConfigurationSection> _mockAvgPeopleCountSection;
 
@@ -35,6 +36,7 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
         _mockAuditLogService = new Mock<IAuditLogService>();
         _mockConfiguration = new Mock<IConfiguration>();
         _mockMapper = new Mock<IMapper>();
+        _mockCloudinaryService = new Mock<ICloudinaryService>();
         _mockVipThresholdSection = new Mock<IConfigurationSection>();
         _mockAvgPeopleCountSection = new Mock<IConfigurationSection>();
 
@@ -76,7 +78,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act
@@ -144,7 +147,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act
@@ -243,7 +247,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act
@@ -324,7 +329,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act
@@ -450,7 +456,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act
@@ -546,7 +553,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act
@@ -624,7 +632,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act
@@ -714,7 +723,8 @@ public class CustomerManagementService_UpdateVipStatusAsync_Tests
             _mockUnitOfWork.Object,
             _mockMapper.Object,
             _mockAuditLogService.Object,
-            _mockConfiguration.Object
+            _mockConfiguration.Object,
+            _mockCloudinaryService.Object
         );
 
         // Act

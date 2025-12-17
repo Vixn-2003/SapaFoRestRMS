@@ -1,10 +1,12 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using WebSapaForestForStaff.DTOs.Inventory;
 using WebSapaForestForStaff.DTOs;
 
+[Authorize(Policy = "Position:Inventory")]
 public class DashboardInventoryController : Controller
 {
     private readonly HttpClient _httpClient;

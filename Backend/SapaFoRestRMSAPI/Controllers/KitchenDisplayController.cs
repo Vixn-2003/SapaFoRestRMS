@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.DTOs.Kitchen;
@@ -8,6 +9,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = "Position:Kitchen")]
     public class KitchenDisplayController : ControllerBase
     {
         private readonly IKitchenDisplayService _kitchenService;

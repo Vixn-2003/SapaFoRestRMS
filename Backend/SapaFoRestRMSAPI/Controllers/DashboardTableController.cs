@@ -2,6 +2,7 @@
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -12,6 +13,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = "Position:Waiter")]
     public class DashboardTableController : ControllerBase
     {
         private readonly IDashboardTableService _dashboardTableService;
@@ -151,7 +153,7 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 await _dashboardTableService.SaveOrderChangesAsync(request);
 
-                // ✅ Broadcast đơn mới đến màn hình bếp nếu có món mới được thêm
+                //  Broadcast đơn mới đến màn hình bếp nếu có món mới được thêm
                 var hasNewItems = request.Items.Any(item => item.Action == "Add");
                 if (hasNewItems)
                 {

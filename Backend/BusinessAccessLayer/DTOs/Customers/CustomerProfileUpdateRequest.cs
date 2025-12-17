@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
 
-namespace WebSapaFoRestForCustomer.DTOs
+namespace BusinessAccessLayer.DTOs.Customers
 {
-    public class CustomerProfileUpdate
+    public class CustomerProfileUpdateRequest
     {
         [Required(ErrorMessage = "Họ tên là bắt buộc")]
         [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự")]
@@ -24,5 +24,3 @@ namespace WebSapaFoRestForCustomer.DTOs
         public IFormFile? AvatarFile { get; set; }
     }
 }
-
-

@@ -46,5 +46,10 @@ namespace DataAccessLayer.Repositories.Interfaces
         /// Get customer with all related orders and payments
         /// </summary>
         Task<Customer?> GetCustomerWithOrdersAsync(int customerId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Update customer profile information
+        /// </summary>
+        Task UpdateCustomerAsync(Customer customer, CancellationToken ct = default);
     }
 }

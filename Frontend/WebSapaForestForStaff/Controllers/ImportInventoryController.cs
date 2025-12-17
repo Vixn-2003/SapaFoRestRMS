@@ -22,7 +22,7 @@ namespace WebSapaForestForStaff.Controllers
 
         public async Task<IActionResult> Index()
         {
-            // ✅ KHỞI TẠO CÁC DANH SÁCH RỖNG MẶC ĐỊNH
+            //  KHỞI TẠO CÁC DANH SÁCH RỖNG MẶC ĐỊNH
             var supplierList = new List<SupplierDTO>();
             var purchaseList = new List<PurchaseOrderDTO>();
             var ingredientList = new List<InventoryIngredientDTO>();
@@ -31,7 +31,7 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
-                // ✅ GỌI API VÀ XỬ LÝ TỪNG ENDPOINT RIÊNG BIỆT
+                //  GỌI API VÀ XỬ LÝ TỪNG ENDPOINT RIÊNG BIỆT
 
                 // 1. Ingredients
                 try
@@ -116,7 +116,7 @@ namespace WebSapaForestForStaff.Controllers
                     Console.WriteLine($"Error loading units: {ex.Message}");
                 }
 
-                // ✅ MAP UNIT VÀO INGREDIENT (CHỈ NẾU CẢ 2 LIST ĐỀU CÓ DỮ LIỆU)
+                //  MAP UNIT VÀO INGREDIENT (CHỈ NẾU CẢ 2 LIST ĐỀU CÓ DỮ LIỆU)
                 if (ingredientList.Any() && unitList.Any())
                 {
                     foreach (var ingredient in ingredientList)
@@ -133,7 +133,7 @@ namespace WebSapaForestForStaff.Controllers
                     }
                 }
 
-                // ✅ TẠO DANH SÁCH NHÀ CUNG CẤP GẦN ĐÂY (AN TOÀN VỚI NULL)
+                //  TẠO DANH SÁCH NHÀ CUNG CẤP GẦN ĐÂY (AN TOÀN VỚI NULL)
                 var recentSuppliers = new List<SupplierDTO>();
                 if (purchaseList.Any() && supplierList.Any())
                 {
@@ -148,7 +148,7 @@ namespace WebSapaForestForStaff.Controllers
                         .ToList();
                 }
 
-                // ✅ TẠO DANH SÁCH NGUYÊN LIỆU KHẨN CẤP (AN TOÀN VỚI NULL)
+                //  TẠO DANH SÁCH NGUYÊN LIỆU KHẨN CẤP (AN TOÀN VỚI NULL)
                 var urgentIngredients = new List<InventoryIngredientDTO>();
                 if (ingredientList.Any())
                 {
@@ -166,7 +166,7 @@ namespace WebSapaForestForStaff.Controllers
                         .ToList();
                 }
 
-                // ✅ TẠO MODEL VỚI TẤT CẢ DANH SÁCH (RỖNG HOẶC CÓ DỮ LIỆU)
+                //  TẠO MODEL VỚI TẤT CẢ DANH SÁCH (RỖNG HOẶC CÓ DỮ LIỆU)
                 var importIngredient = new ImportIngredient
                 {
                     SupplierDTOs = supplierList,
@@ -178,7 +178,7 @@ namespace WebSapaForestForStaff.Controllers
                     UrgentIngredientDTOs = urgentIngredients
                 };
 
-                // ✅ THÊM THÔNG BÁO NẾU CÓ DANH SÁCH RỖNG
+                //  THÊM THÔNG BÁO NẾU CÓ DANH SÁCH RỖNG
                 if (!supplierList.Any())
                 {
                     TempData["WarningMessage"] = "Không có nhà cung cấp nào trong hệ thống";
@@ -200,7 +200,7 @@ namespace WebSapaForestForStaff.Controllers
             }
             catch (Exception ex)
             {
-                // ✅ XỬ LÝ LỖI TỔNG THỂ - VẪN TRẢ VỀ VIEW VỚI DANH SÁCH RỖNG
+                //  XỬ LÝ LỖI TỔNG THỂ - VẪN TRẢ VỀ VIEW VỚI DANH SÁCH RỖNG
                 Console.WriteLine($"Error in Index: {ex.Message}");
 
                 var importIngredient = new ImportIngredient
@@ -227,7 +227,7 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
-                // ✅ 1. VALIDATE VÀ PARSE DỮ LIỆU
+                //  1. VALIDATE VÀ PARSE DỮ LIỆU
                 Console.WriteLine($"ImportList raw: {model.ImportList}");
 
                 List<ImportItemModel>? importItems = null;
@@ -260,7 +260,7 @@ namespace WebSapaForestForStaff.Controllers
                 if (model.ProofFile == null || model.ProofFile.Length == 0)
                     return BadRequest("Thiếu hình ảnh minh chứng.");
 
-                // ✅ 2. TẠO MULTIPART FORM DATA ĐỂ GỬI SANG API BACKEND
+                //  2. TẠO MULTIPART FORM DATA ĐỂ GỬI SANG API BACKEND
                 var formData = new MultipartFormDataContent();
 
                 // Thêm các field thông tin cơ bản
@@ -269,7 +269,7 @@ namespace WebSapaForestForStaff.Controllers
                 formData.Add(new StringContent(model.SupplierId.ToString()), "SupplierId");
                 formData.Add(new StringContent(model.CreatorId.ToString()), "CreatorId");
 
-                // ✅ Thêm danh sách items dưới dạng JSON string
+                //  Thêm danh sách items dưới dạng JSON string
                 var itemsJson = JsonConvert.SerializeObject(importItems.Select(item => new
                 {
                     IngredientId = item.IngredientId,
@@ -285,7 +285,7 @@ namespace WebSapaForestForStaff.Controllers
 
                 formData.Add(new StringContent(itemsJson, Encoding.UTF8, "application/json"), "Items");
 
-                // ✅ Thêm FILE ẢNH
+                //  Thêm FILE ẢNH
                 if (model.ProofFile != null && model.ProofFile.Length > 0)
                 {
                     var fileStream = model.ProofFile.OpenReadStream();
@@ -296,7 +296,7 @@ namespace WebSapaForestForStaff.Controllers
 
                 Console.WriteLine("Sending data to API Backend...");
 
-                // ✅ 3. GỬI SANG API BACKEND
+                //  3. GỬI SANG API BACKEND
                 var response = await _httpClient.PostAsync("api/ImportIngredient/Create", formData);
 
                 Console.WriteLine($"API Response Status: {response.StatusCode}");

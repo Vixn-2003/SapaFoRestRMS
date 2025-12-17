@@ -43,7 +43,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while logging in" });
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi đăng nhập" });
             }
         }
 
@@ -55,7 +55,7 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             if (string.IsNullOrWhiteSpace(req.RefreshToken))
             {
-                return BadRequest(new { message = "Refresh token is required" });
+                return BadRequest(new { message = "Refresh token là bắt buộc" });
             }
             try
             {
@@ -68,7 +68,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception)
             {
-                return StatusCode(500, new { message = "An error occurred while refreshing token" });
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi làm mới token" });
             }
         }
 
@@ -97,7 +97,7 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 var managerUserId = int.Parse(User.FindFirst("userId")!.Value);
                 await _userManagementService.SendStaffVerificationCodeAsync(request, managerUserId, ct);
-                return Ok(new { message = "Verification code sent" });
+                return Ok(new { message = "Đã gửi mã xác nhận" });
             }
             catch (InvalidOperationException ex)
             {
@@ -135,7 +135,7 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             // For JWT-based auth, logout is handled client-side by discarding the token.
             // This endpoint exists to standardize the flow and can be extended to support revocation.
-            return Ok(new { message = "Logged out" });
+            return Ok(new { message = "Đã đăng xuất" });
         }
 
         public class RequestOtpDto { public string Phone { get; set; } = string.Empty; }
@@ -145,11 +145,11 @@ namespace SapaFoRestRMSAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> RequestOtp([FromBody] RequestOtpDto dto, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(dto.Phone)) return BadRequest(new { message = "Phone is required" });
+            if (string.IsNullOrWhiteSpace(dto.Phone)) return BadRequest(new { message = "Số điện thoại là bắt buộc" });
             try
             {
                 await _phoneAuthService.RequestOtpAsync(dto.Phone, ct);
-                return Ok(new { message = "OTP sent" });
+                return Ok(new { message = "Đã gửi OTP" });
             }
             catch (KeyNotFoundException ex)
             {
@@ -167,7 +167,7 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             if (string.IsNullOrWhiteSpace(dto.Phone) || string.IsNullOrWhiteSpace(dto.Code))
             {
-                return BadRequest(new { message = "Phone and code are required" });
+                return BadRequest(new { message = "Số điện thoại và mã xác nhận là bắt buộc" });
             }
             try
             {

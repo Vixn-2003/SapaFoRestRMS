@@ -97,21 +97,21 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             try
             {
-                // ✅ BƯỚC 1: Validate dữ liệu
+                //  BƯỚC 1: Validate dữ liệu
                 if (string.IsNullOrWhiteSpace(Name))
                     return BadRequest(new { success = false, message = "Tên món ăn không được để trống" });
 
                 if (!Enum.IsDefined(typeof(ItemBillingType), BillingType))
                     return BadRequest(new { success = false, message = "BillingType không hợp lệ" });
 
-                // ✅ BƯỚC 2: Kiểm tra trùng tên món ăn
+                //  BƯỚC 2: Kiểm tra trùng tên món ăn
                 var existingMenu = await _managerMenuService.GetMenuByName(Name.Trim());
                 if (existingMenu != null)
                 {
                     return BadRequest(new { success = false, message = $"Món ăn '{Name}' đã tồn tại trong hệ thống!" });
                 }
 
-                // ✅ BƯỚC 3: Upload ảnh nếu có
+                //  BƯỚC 3: Upload ảnh nếu có
                 string imageUrl = "";
                 if (imageFile != null && imageFile.Length > 0)
                 {
@@ -119,7 +119,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     imageUrl = await _cloudinaryService.UploadImageAsync(imageFile, "menu_items");
                 }
 
-                // ✅ BƯỚC 4: Tạo DTO cho menu mới
+                //  BƯỚC 4: Tạo DTO cho menu mới
                 var managerMenuDTO = new ManagerMenuDTO
                 {
                     // KHÔNG CẦN MenuItemId - Database sẽ tự động tạo
@@ -136,15 +136,15 @@ namespace SapaFoRestRMSAPI.Controllers
                     IsAds = IsAds
                 };
 
-                // ✅ BƯỚC 5: Tạo menu mới trong database
+                //  BƯỚC 5: Tạo menu mới trong database
                 var createdMenuId = await _managerMenuService.CreateManagerMenu(managerMenuDTO);
 
                 if (createdMenuId <= 0)
                     return StatusCode(500, new { success = false, message = "Không thể tạo món ăn mới" });
 
-                Console.WriteLine($"✅ Created menu with ID: {createdMenuId}");
+                Console.WriteLine($" Created menu with ID: {createdMenuId}");
 
-                // ✅ BƯỚC 6: Xử lý recipes
+                //  BƯỚC 6: Xử lý recipes
                 if (!string.IsNullOrWhiteSpace(RecipesJson))
                 {
                     var recipesList = JsonConvert.DeserializeObject<List<RecipeItemRequest>>(RecipesJson);
@@ -155,13 +155,13 @@ namespace SapaFoRestRMSAPI.Controllers
                         {
                             await _managerMenuService.AddRecipe(new RecipeDTO
                             {
-                                MenuItemId = createdMenuId, // ✅ Dùng ID vừa tạo
+                                MenuItemId = createdMenuId, //  Dùng ID vừa tạo
                                 IngredientId = recipe.IngredientId,
                                 QuantityNeeded = recipe.Quantity
                             });
                         }
 
-                        Console.WriteLine($"✅ Added {recipesList.Count} recipes to menu {createdMenuId}");
+                        Console.WriteLine($" Added {recipesList.Count} recipes to menu {createdMenuId}");
                     }
                 }
 

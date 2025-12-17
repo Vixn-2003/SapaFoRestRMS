@@ -17,14 +17,23 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
 using SapaFoRestRMSAPI.Services;
 using System.Text;
 using SapaFoRestRMSAPI.Hubs;
 using BusinessAccessLayer.Services.Inventory;
 using QuestPDF.Infrastructure;
 
-// ✅ FIX: Configure QuestPDF License (Community - Free for commercial use)
+using OfficeOpenXml;
+
+//  FIX: Configure QuestPDF License (Community - Free for commercial use)
 QuestPDF.Settings.License = LicenseType.Community;
+
+// FIX: Configure EPPlus license (required from EPPlus 8+)
+// Choose the appropriate license type for your usage:
+// - Commercial: ExcelPackage.License.SetCommercial("YOUR_LICENSE_KEY");
+// - Non-commercial: SetNonCommercialPersonal/SetNonCommercialOrganization
+ExcelPackage.License.SetNonCommercialOrganization("SapaFoRestRMS");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -353,11 +362,11 @@ builder.Services.AddSignalR();
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
 builder.Services.AddSignalR();
 
-// ✅ Đảm bảo hỗ trợ multipart form data
+//  Đảm bảo hỗ trợ multipart form data
 builder.Services.AddControllers()
     .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
 
-// ✅ Cấu hình kích thước file upload (nếu cần)
+//  Cấu hình kích thước file upload (nếu cần)
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = 52428800; // 50MB
@@ -374,6 +383,41 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(Roles.Owner, p => p.RequireRole(Roles.Owner));
     options.AddPolicy("AdminOrManager", p => p.RequireRole(Roles.Admin, Roles.Manager));
     options.AddPolicy("StaffOrManager", p => p.RequireRole(Roles.Staff, Roles.Manager));
+
+    // Position-based policies for Staff (Owner/Admin/Manager always pass)
+    bool HasManagementRole(ClaimsPrincipal user) =>
+        user.IsInRole(Roles.Owner) || user.IsInRole(Roles.Admin) || user.IsInRole(Roles.Manager);
+
+    bool HasPositionClaim(ClaimsPrincipal user, int positionId)
+    {
+        var positionValue = positionId.ToString();
+        var hasSingle = user.Claims.Any(c =>
+            string.Equals(c.Type, "positionId", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(c.Value, positionValue, StringComparison.OrdinalIgnoreCase));
+
+        var hasFromList = user.Claims.Any(c =>
+            string.Equals(c.Type, "positionIds", StringComparison.OrdinalIgnoreCase) &&
+            c.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Any(v => string.Equals(v.Trim(), positionValue, StringComparison.OrdinalIgnoreCase)));
+
+        return hasSingle || hasFromList;
+    }
+
+    options.AddPolicy("Position:Waiter", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 1))));
+
+    options.AddPolicy("Position:Cashier", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 2))));
+
+    options.AddPolicy("Position:Kitchen", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 3))));
+
+    options.AddPolicy("Position:Inventory", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 4))));
 });
 
 // JWT Authentication
@@ -401,7 +445,7 @@ builder.Services
     });
 
 // ================================
-// ✅ CORS CONFIGURATION (Centralized)
+//  CORS CONFIGURATION (Centralized)
 // ================================
 // Đọc danh sách origins từ appsettings.json
 // Mỗi dev chỉ cần chỉnh sửa appsettings.Development.json với IP của mình
@@ -419,7 +463,7 @@ builder.Services.AddCors(options =>
         Console.WriteLine("🔒 CORS Allowed Origins:");
         foreach (var origin in allowedOrigins)
         {
-            Console.WriteLine($"   ✅ {origin}");
+            Console.WriteLine($"    {origin}");
         }
 
         policy.WithOrigins(allowedOrigins)

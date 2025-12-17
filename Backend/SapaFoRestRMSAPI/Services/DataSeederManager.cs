@@ -43,7 +43,7 @@
 //            try
 //            {
 //                await action();
-//                Console.WriteLine($"✅ {stepName} completed");
+//                Console.WriteLine($" {stepName} completed");
 //            }
 //            catch (Exception ex)
 //            {
