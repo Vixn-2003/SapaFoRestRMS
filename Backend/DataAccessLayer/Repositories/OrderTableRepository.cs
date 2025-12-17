@@ -97,7 +97,7 @@ namespace DataAccessLayer.Repositories
         {
             // Dùng FindAsync là nhanh nhất để lấy theo Khóa chính
             return await _context.Tables
-                    .Include(t => t.Area) // <-- THÊM DÒNG NÀY
+                    .Include(t => t.Area) 
                     .FirstOrDefaultAsync(t => t.TableId == tableId);
         }
 

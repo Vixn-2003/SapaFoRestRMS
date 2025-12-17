@@ -295,13 +295,25 @@ $(document).ready(function () {
         $(this).toggleClass('d-none');
     });
 
-    // Khi blur khỏi input, ẩn input và hiện lại icon
+    // Khi blur khỏi input ghi chú, lưu dữ liệu
     $(document).on('blur', '.cart-item-notes-input', function () {
         const itemId = $(this).data('item-id');
+        const newNotes = $(this).val(); 
         const $icon = $(`.cart-item-notes-icon[data-item-id='${itemId}']`);
 
-        $(this).addClass('d-none'); // ẩn input
-        $icon.removeClass('d-none'); // hiện icon
+        // 1. Cập nhật biến cart
+        const itemToUpdate = cart.find(i => i.id === itemId);
+        if (itemToUpdate) {
+            itemToUpdate.notes = newNotes; // Gán ghi chú mới
+        } else {
+            console.error("Không tìm thấy món để cập nhật ghi chú.");
+        }
+
+        // 2. Lưu giỏ hàng vào localStorage
+        saveCart();
+
+        $(this).addClass('d-none'); // Ẩn input
+        $icon.removeClass('d-none'); // Hiện icon
     });
 
     // === 4. SỰ KIỆN "GỌI MÓN" ===

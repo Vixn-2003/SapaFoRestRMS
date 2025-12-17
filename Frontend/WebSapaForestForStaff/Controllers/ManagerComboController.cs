@@ -1,34 +1,80 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json; // Dùng cho ReadFromJsonAsync
 using WebSapaForestForStaff.DTOs.ManagementCombo;
 
 namespace WebSapaForestForStaff.Controllers
 {
     public class ManagerComboController : Controller
     {
-
         private readonly HttpClient _httpClient;
 
         public ManagerComboController(IHttpClientFactory httpClientFactory)
         {
-            _httpClient = httpClientFactory.CreateClient(); // Dùng DI chuẩn
+            _httpClient = httpClientFactory.CreateClient();
             _httpClient.BaseAddress = new Uri("https://localhost:7096/api/");
         }
-        // GET: ComboController
+
+        // ==========================================================
+        // 1. HÀM HỖ TRỢ (HELPERS)
+        // ==========================================================
+
+        // Helper: Load dữ liệu menu và top món (Dùng cho trang Edit)
+        // Mục đích: Để khi load form hoặc khi validate lỗi, danh sách món ăn không bị mất
+        private async Task LoadComboAuxData()
+        {
+            try
+            {
+                // A. Lấy tất cả menu (để hiện trong modal chọn món)
+                var allMenuResponse = await _httpClient.GetAsync("ManagerCombo/AllMenu?pageSize=100");
+                if (allMenuResponse.IsSuccessStatusCode)
+                {
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var result = await allMenuResponse.Content.ReadFromJsonAsync<PagedResult<MenuItemDto>>(options);
+                    ViewBag.AllDishes = result ?? new PagedResult<MenuItemDto>();
+                }
+                else
+                {
+                    ViewBag.AllDishes = new PagedResult<MenuItemDto>();
+                }
+
+                // B. Lấy Top món (Gợi ý)
+                var topResponse = await _httpClient.GetAsync("ManagerCombo/Top_Item_new");
+                if (topResponse.IsSuccessStatusCode)
+                {
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    var topMenu = await topResponse.Content.ReadFromJsonAsync<List<MenuItemDto>>(options);
+                    ViewBag.TopDishes = topMenu ?? new List<MenuItemDto>();
+                }
+                else
+                {
+                    ViewBag.TopDishes = new List<MenuItemDto>();
+                }
+            }
+            catch
+            {
+                // Tránh crash trang nếu API phụ trợ lỗi
+                ViewBag.AllDishes = new PagedResult<MenuItemDto>();
+                ViewBag.TopDishes = new List<MenuItemDto>();
+            }
+        }
+
+
+        // GET: Combo list
         public async Task<IActionResult> Index(
-     string search = null,
-     bool? isAvailable = null,
-     int pageIndex = 1,
-     int pageSize = 5,
-     string period = "week"  // thêm param chọn thời gian thống kê
- )
+            string search = null,
+            bool? isAvailable = null,
+            int pageIndex = 1,
+            int pageSize = 5,
+            string period = "week")
         {
             var result = new PagedResult<ComboDisplayDto>(new List<ComboDisplayDto>(), 0, pageIndex, pageSize);
 
             try
             {
-                // 1. Lấy danh sách combo theo filter + phân trang (giữ nguyên)
+                // 1. Lấy danh sách combo phân trang
                 var query = new List<string>();
                 if (!string.IsNullOrEmpty(search)) query.Add($"search={Uri.EscapeDataString(search)}");
                 if (isAvailable.HasValue) query.Add($"isAvailable={isAvailable.Value}");
@@ -36,69 +82,46 @@ namespace WebSapaForestForStaff.Controllers
                 query.Add($"pageSize={pageSize}");
 
                 var url = "ManagerCombo/GetListCombo?" + string.Join("&", query);
-                var response = await _httpClient.GetAsync(url);
 
+                var response = await _httpClient.GetAsync(url);
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
-                    var apiResult = JsonConvert.DeserializeObject<PagedResult<ComboDisplayDto>>(json);
-                    if (apiResult?.Items != null)
-                        result = apiResult;
+                    result = JsonConvert.DeserializeObject<PagedResult<ComboDisplayDto>>(json) ?? result;
                 }
-                ViewData["Search"] = search;
-                ViewData["SelectedStatus"] = isAvailable;
-                // 2. Song song gọi API thống kê
-                var topCombosTask = _httpClient.GetAsync($"ManagerCombo/api/combo/top?period={period}");
-                var lowCombosTask = _httpClient.GetAsync($"ManagerCombo/api/combo/low?period={period}");
+
+                // 2. Gọi API thống kê song song (Top, Low, Overview)
+                var topTask = _httpClient.GetAsync($"ManagerCombo/api/combo/top?period={period}");
+                var lowTask = _httpClient.GetAsync($"ManagerCombo/api/combo/low?period={period}");
                 var overviewTask = _httpClient.GetAsync("ManagerCombo/api/combo/overview");
 
-                await Task.WhenAll(topCombosTask, lowCombosTask, overviewTask);
+                await Task.WhenAll(topTask, lowTask, overviewTask);
 
-                // 3. Xử lý kết quả API thống kê
-                if (topCombosTask.Result.IsSuccessStatusCode)
-                {
-                    var json = await topCombosTask.Result.Content.ReadAsStringAsync();
-                    ViewBag.TopCombos = JsonConvert.DeserializeObject<List<ComboDisplayDto>>(json);
-                }
-                else
-                {
-                    ViewBag.TopCombos = new List<ComboDisplayDto>();
-                }
+                ViewBag.TopCombos = topTask.Result.IsSuccessStatusCode
+                    ? JsonConvert.DeserializeObject<List<ComboDisplayDto>>(await topTask.Result.Content.ReadAsStringAsync())
+                    : new List<ComboDisplayDto>();
 
-                if (lowCombosTask.Result.IsSuccessStatusCode)
-                {
-                    var json = await lowCombosTask.Result.Content.ReadAsStringAsync();
-                    ViewBag.LowCombos = JsonConvert.DeserializeObject<List<ComboDisplayDto>>(json);
-                }
-                else
-                {
-                    ViewBag.LowCombos = new List<ComboDisplayDto>();
-                }
+                ViewBag.LowCombos = lowTask.Result.IsSuccessStatusCode
+                    ? JsonConvert.DeserializeObject<List<ComboDisplayDto>>(await lowTask.Result.Content.ReadAsStringAsync())
+                    : new List<ComboDisplayDto>();
 
-                if (overviewTask.Result.IsSuccessStatusCode)
-                {
-                    var json = await overviewTask.Result.Content.ReadAsStringAsync();
-                    ViewBag.Overview = JsonConvert.DeserializeObject<dynamic>(json);
-                }
-                else
-                {
-                    ViewBag.Overview = new { TotalActiveCombos = 0, TotalOrdersWeek = 0, TotalOrdersMonth = 0 };
-                }
+                ViewBag.Overview = overviewTask.Result.IsSuccessStatusCode
+                    ? JsonConvert.DeserializeObject<dynamic>(await overviewTask.Result.Content.ReadAsStringAsync())
+                    : new { TotalActiveCombos = 0, TotalOrdersWeek = 0, TotalOrdersMonth = 0 };
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine(ex.Message);
                 ViewBag.TopCombos = new List<ComboDisplayDto>();
                 ViewBag.LowCombos = new List<ComboDisplayDto>();
                 ViewBag.Overview = new { TotalActiveCombos = 0, TotalOrdersWeek = 0, TotalOrdersMonth = 0 };
             }
 
             ViewBag.Period = period;
+            ViewData["Search"] = search;
+            ViewData["SelectedStatus"] = isAvailable;
 
-            // Truyền vào View cả PagedResult + các thống kê qua ViewBag
-            return View("~/Views/Menu/ListCombo.cshtml", result);
+            return View("Index", result);
         }
-
         [HttpGet]
         public async Task<IActionResult> LoadComboList(string search = null, bool? isAvailable = null, int pageIndex = 1, int pageSize = 5)
         {
@@ -121,86 +144,139 @@ namespace WebSapaForestForStaff.Controllers
                 comboResult = JsonConvert.DeserializeObject<PagedResult<ComboDisplayDto>>(json) ?? comboResult;
             }
 
-            return PartialView("~/Views/Menu/_ComboListPartial.cshtml", comboResult);
+            return PartialView("~/Views/ManagerCombo/_ComboListPartial.cshtml", comboResult);
         }
 
+        // ==========================================================
+        // 3. CHỈNH SỬA COMBO (EDIT - GET & POST)
+        // ==========================================================
 
-
-
-        // GET: ComboController/Details/5
-        public ActionResult Details(int id)
-        {
-            return View();
-        }
-
-        // GET: ComboController/Create
-        public ActionResult Create()
-        {
-            return View();
-        }
-
-        // POST: ComboController/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
-        {
-            try
-            {
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
-
-        // GET: Combo/Edit/5
+        // GET: Hiển thị form Edit
         [HttpGet("EditCombo/{id}")]
         public async Task<IActionResult> EditCombo(int id)
         {
             try
             {
-                // Gọi API ManagerCombo
-                var response = await _httpClient.GetAsync($"ManagerCombo/{id}");
+                // 1. Lấy thông tin Combo chi tiết
+                var comboResponse = await _httpClient.GetAsync($"ManagerCombo/{id}");
+                if (!comboResponse.IsSuccessStatusCode) return NotFound();
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    return NotFound($"Combo với id={id} không tồn tại.");
-                }
+                var comboData = await comboResponse.Content.ReadFromJsonAsync<ComboEditDto>();
 
-                // Đọc dữ liệu JSON trả về thành DTO
-                var combo = await response.Content.ReadFromJsonAsync<ComboDetailDto>();
+                // 2. Load dữ liệu phụ trợ (Menu, Top dishes)
+                // QUAN TRỌNG: Gọi hàm này để có dữ liệu đổ vào modal chọn món
+                await LoadComboAuxData();
 
-                if (combo == null)
-                    return NotFound("Không thể đọc dữ liệu combo.");
-
-                // Truyền combo sang view EditCombo.cshtml
-                return View("EditCombo", combo); // 🎯 Tên view giữ nguyên
+                // Trả về view Edit (Lưu ý tên file View phải là Edit.cshtml)
+                return View("EditCombo", comboData);
             }
             catch (Exception ex)
             {
-                // Trả về lỗi chi tiết hơn để debug
-                return StatusCode(500, $"Lỗi khi lấy combo: {ex.Message}");
+                return StatusCode(500, "Lỗi Server: " + ex.Message);
             }
         }
 
+        // POST: Xử lý lưu Edit
 
-
-
-        // POST: ComboController/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public async Task<IActionResult> Edit(int id, ComboEditDto model)
+        {
+            // ===== VALIDATE =====
+            if (model.Items == null || !model.Items.Any())
+                ModelState.AddModelError("", "Combo phải có ít nhất 1 món.");
+
+            if (model.Items.Any(i => i.Quantity < 2))
+                ModelState.AddModelError("", "Mỗi món phải có số lượng ≥ 2.");
+
+            if (!ModelState.IsValid)
+            {
+                await LoadComboAuxData();
+                return View("EditCombo", model);
+            }
+
+            // ===== CALL API PUT =====
+            var json = JsonConvert.SerializeObject(model);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PutAsync($"ManagerCombo/{id}", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                TempData["Success"] = "Cập nhật thành công!";
+                return RedirectToAction("Index");
+            }
+
+            ModelState.AddModelError("", "Cập nhật thất bại.");
+            await LoadComboAuxData();
+            return View("EditCombo", model);
+        }
+        // ==========================================================
+        // 2. TẠO MỚI COMBO (CREATE - GET & POST)
+        // ==========================================================
+
+        // GET: Hiển thị form Create
+        [HttpGet("Create")] // Đường dẫn sẽ là /ManagerCombo/Create
+        public async Task<IActionResult> Create()
         {
             try
             {
-                return RedirectToAction(nameof(Index));
+                // 1. Load dữ liệu phụ trợ (Menu, Top dishes) để người dùng chọn món
+                await LoadComboAuxData();
+
+                // 2. Khởi tạo model rỗng để tránh lỗi null khi view render danh sách Items
+                var emptyModel = new CreateComboDto
+                {
+                    Items = new List<ComboItemInput>(),
+                    IsAvailable = true 
+                };
+
+                return View("Create", emptyModel);
             }
-            catch
+            catch (Exception ex)
             {
-                return View();
+                return StatusCode(500, "Lỗi Server: " + ex.Message);
             }
         }
+
+        // POST: Xử lý lưu Create
+        // POST: Create Combo
+        [HttpPost("Create")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(CreateComboDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                await LoadComboAuxData();
+                return View("Create", model);
+            }
+
+            try
+            {
+                var json = JsonConvert.SerializeObject(model);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync("ManagerCombo/CreateCombo", content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    TempData["Success"] = "Tạo combo mới thành công!";
+                    return RedirectToAction("Index");
+                }
+
+                // 🔥 Lấy lỗi từ BE
+                var error = await response.Content.ReadAsStringAsync();
+                ModelState.AddModelError("", error);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", "Không thể kết nối tới server.");
+            }
+
+            await LoadComboAuxData();
+            return View("Create", model);
+        }
+
 
     }
 }

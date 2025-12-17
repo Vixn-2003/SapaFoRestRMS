@@ -2,6 +2,7 @@
 using BusinessAccessLayer.DTOs.ManagementCombo;
 using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
+using DataAccessLayer.Repositories;
 using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Models;
@@ -244,42 +245,46 @@ namespace BusinessAccessLayer.Services
                 Items = itemDtos
             };
         }
-        public async Task UpdateComboAsync(int id, UpdateComboRequest request)
+       
+
+        // Thêm combo
+        public async Task AddComboAsync(CreateComboDto request)
         {
-            // 1. Kiểm tra Combo có tồn tại không
-            var existingCombo = await _repo.GetComboByIdWithItemsAsync(id);
-            if (existingCombo == null)
+            if (request.Items == null || !request.Items.Any())
+                throw new ArgumentException("Combo must have at least one item.");
+
+            if (request.Items.Count == 1 && request.Items[0].Quantity < 2)
             {
-                throw new KeyNotFoundException($"Không tìm thấy Combo với ID {id}");
+                throw new ArgumentException("Combo chỉ có 1 món ăn thì quantity phải ≥ 2.");
             }
 
-            // 2. Cập nhật thông tin cơ bản (Header)
-            existingCombo.Name = request.Name;
-            existingCombo.Price = request.ActualPrice;
-            existingCombo.Description = request.Description;
-            existingCombo.ImageUrl = request.ImageUrl;
-            existingCombo.IsAvailable = request.IsAvailable;
-            // existingCombo.UpdatedAt = DateTime.Now; // Nếu có trường này
-
-            // 3. Chuẩn bị danh sách Items mới (Entity List)
-            var newComboItems = new List<ComboItem>();
-
-            // Optional: Validate xem các MenuItemId gửi lên có tồn tại trong DB không
-            // var validMenuIds = await _menuItemRepo.GetActiveIdsAsync(...);
-
-            foreach (var itemDto in request.Items)
+            // Nếu combo >= 2 món, chỉ cần quantity ≥ 1
+            foreach (var item in request.Items)
             {
-                newComboItems.Add(new ComboItem
-                {
-                    MenuItemId = itemDto.MenuItemId,
-                    Quantity = itemDto.Quantity
-                    // ComboId sẽ được gán trong Repo
-                });
+                if (item.Quantity < 1)
+                    throw new ArgumentException($"Item với MenuItemId {item.MenuItemId} phải có quantity ≥ 1.");
             }
 
-            // 4. Gọi Repo để thực hiện lưu xuống DB
-            await _repo.UpdateComboAsync(existingCombo, newComboItems);
+
+            var combo = new Combo
+            {
+                Name = request.Name,
+                Price = request.SellingPrice,
+                Description = request.Description,
+                IsAvailable = request.IsAvailable,
+                ImageUrl = request.ImageUrl
+            };
+
+            var items = request.Items.Select(x => new ComboItem
+            {
+                MenuItemId = x.MenuItemId,
+                Quantity = x.Quantity
+            }).ToList();
+
+            await _repo.AddComboAsync(combo, items);
         }
+
+
         public async Task<ComboDetailDto> GetByIdAsync(int id)
         {
             var entity = await _repo.GetComboWithItemsAsync(id);
@@ -299,24 +304,75 @@ namespace BusinessAccessLayer.Services
                     MenuItemId = ci.MenuItemId,
                     MenuItemName = ci.MenuItem.Name,
                     OriginalPrice = ci.MenuItem.Price,
-                    Quantity = ci.Quantity
+                    Quantity = ci.Quantity,
+                    ImageUrl = ci.MenuItem.ImageUrl,
+                    CategoryName = ci.MenuItem.Category.CategoryName,
                 }).ToList()
             };
         }
 
-        public async Task<List<MenuItemDto>> SearchMenuAsync(string keyword)
+        public async Task<PagedResult<MenuItemDto>> SearchAsync(
+     string? keyword,
+     string? categoryName,
+     int pageIndex)
         {
-            var entities = await _repo.SearchMenuItemsAsync(keyword);
-            return entities.Select(x => new MenuItemDto
-            {
-                MenuItemId = x.MenuItemId,
-                Name = x.Name,
-                Price = x.Price
-            }).ToList();
+            const int pageSize = 9;
+            pageIndex = pageIndex <= 0 ? 1 : pageIndex;
+
+            IQueryable<MenuItem> query = _repo.QueryMenuItems();
+
+            query = query.Include(x => x.Category);
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+                query = query.Where(x => x.Name.Contains(keyword));
+
+            if (!string.IsNullOrWhiteSpace(categoryName))
+                query = query.Where(x => x.Category != null && x.Category.CategoryName == categoryName);
+
+            var totalRecords = await query.CountAsync();
+
+            var items = await query
+                .OrderBy(x => x.Name)
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .Select(x => new MenuItemDto
+                {
+                    MenuItemId = x.MenuItemId,
+                    MenuItemName = x.Name,
+                    OriginalPrice = x.Price,
+                    ImageURL = x.ImageUrl,
+                    CategoryName = x.Category.CategoryName != null ? x.Category.CategoryName : null
+                })
+                .ToListAsync();
+
+            return new PagedResult<MenuItemDto>(
+                items,
+                totalRecords,
+                pageIndex,
+                pageSize
+            );
         }
+
+
 
         public async Task UpdateAsync(int id, UpdateComboDto request)
         {
+            if (request.Items == null || !request.Items.Any())
+                throw new ArgumentException("Combo must have at least one item.");
+
+            if (request.Items.Count == 1 && request.Items[0].Quantity < 2)
+            {
+                throw new ArgumentException("Combo chỉ có 1 món ăn thì quantity phải ≥ 2.");
+            }
+
+            // Nếu combo >= 2 món, chỉ cần quantity ≥ 1
+            foreach (var item in request.Items)
+            {
+                if (item.Quantity < 1)
+                    throw new ArgumentException($"Item với MenuItemId {item.MenuItemId} phải có quantity ≥ 1.");
+            }
+
+
             var entity = await _repo.GetComboWithItemsAsync(id);
             if (entity == null) throw new KeyNotFoundException("Combo not found");
 
@@ -341,5 +397,22 @@ namespace BusinessAccessLayer.Services
         {
             throw new NotImplementedException();
         }
+
+        public async Task<List<MenuItemDto>> GetTop5NewMenuItemsAsync()
+        {
+            var entities = await _repo.GetTop5NewMenuItemsAsync();
+
+            var dtos = entities.Select(x => new MenuItemDto
+            {
+                MenuItemId = x.MenuItemId,
+                MenuItemName = x.Name,
+                OriginalPrice = x.Price,
+                CategoryName = x.Category.CategoryName,
+                ImageURL = x.ImageUrl,
+            }).ToList();
+
+            return dtos;
+        }
+
     }
 }

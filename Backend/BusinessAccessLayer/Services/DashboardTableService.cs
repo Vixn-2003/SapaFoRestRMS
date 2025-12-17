@@ -85,7 +85,7 @@ namespace BusinessAccessLayer.Services
     : data.ActiveReservation.Orders
         .SelectMany(o => o.OrderDetails)
         .Where(od => od.Status != "Cancelled")
-        .Sum(od => (od.Quantity) * (od.UnitPrice) ),
+        .Sum(od => (od.Quantity) * (od.UnitPrice)),
                 reservationId = data.ActiveReservation?.ReservationId,
 
             }).ToList();
@@ -507,12 +507,14 @@ namespace BusinessAccessLayer.Services
 
             // Query Combo cơ bản
             var baseComboQuery = _context.Combos
-                .Include(c => c.ComboItems)
+                    .Where(c => c.IsAvailable == true)
+                    .Include(c => c.ComboItems
+                    .Where(ci => ci.MenuItem.IsAvailable == true))
                     .ThenInclude(ci => ci.MenuItem)
-                .Where(c => c.IsAvailable == true)
-                .AsQueryable();
+                    .AsQueryable();
 
-            // --- TRƯỜNG HỢP 1: Chỉ lấy Combos ---
+
+            //  TRƯỜNG HỢP 1: Chỉ lấy Combos 
             if (categoryId.HasValue && categoryId.Value == -1)
             {
                 if (!string.IsNullOrEmpty(searchLower))
@@ -520,7 +522,7 @@ namespace BusinessAccessLayer.Services
 
                 combos = await baseComboQuery.ToListAsync();
             }
-            // --- TRƯỜNG HỢP 2: Lấy tất cả ---
+            //  TRƯỜNG HỢP 2: Lấy tất cả 
             else if (!categoryId.HasValue || categoryId.Value == 0)
             {
                 var menuQuery = await _dashboardRepo.GetActiveMenuItemsAsync();
@@ -534,7 +536,7 @@ namespace BusinessAccessLayer.Services
                 menuItems = menuQuery;
                 combos = await baseComboQuery.ToListAsync();
             }
-            // --- TRƯỜNG HỢP 3: Theo category ---
+            // TRƯỜNG HỢP 3: Theo category 
             else
             {
                 var menuQuery = await _dashboardRepo.GetActiveMenuItemsAsync();
@@ -579,7 +581,7 @@ namespace BusinessAccessLayer.Services
                 )
             }).ToList();
 
-            // --- XỬ LÝ ĐƠN ĐẶT MÓN (ORDER) ---
+            // XỬ LÝ ĐƠN ĐẶT MÓN (ORDER) 
             if (activeReservation != null)
             {
                 screenDto.ReservationId = activeReservation.ReservationId;
@@ -591,7 +593,7 @@ namespace BusinessAccessLayer.Services
                     screenDto.CustomerPhone = activeReservation.Customer.User.Phone;
                 }
 
-                // ✔ LẤY TẤT CẢ ORDERDETAILS CỦA TẤT CẢ ORDERS
+                //  LẤY TẤT CẢ ORDERDETAILS CỦA TẤT CẢ ORDERS
                 foreach (var order in activeReservation.Orders.OrderBy(o => o.CreatedAt))
                 {
                     foreach (var od in order.OrderDetails)
@@ -616,7 +618,7 @@ namespace BusinessAccessLayer.Services
                     }
                 }
 
-                // ✔ vẫn lấy OrderId mới nhất (nếu waiter cần)
+                //  vẫn lấy OrderId mới nhất (nếu waiter cần)
                 screenDto.ActiveOrderId = activeReservation.Orders
                     .OrderByDescending(o => o.CreatedAt)
                     .Select(o => o.OrderId)
@@ -738,7 +740,7 @@ namespace BusinessAccessLayer.Services
                 {
                     // --- CASE ADD: THÊM MÓN MỚI ---
                     case "Add":
-                        Console.WriteLine("--- [DEBUG] BẮT ĐẦU CASE ADD ---");
+                        Console.WriteLine(" [DEBUG] BẮT ĐẦU CASE ADD ");
                         decimal price = 0;
 
                         // 1. Lấy giá
@@ -783,11 +785,11 @@ namespace BusinessAccessLayer.Services
                             // KIỂM TRA QUAN TRỌNG
                             if (comboComponents == null || !comboComponents.Any())
                             {
-                                Console.WriteLine($"[DEBUG] ❌ CẢNH BÁO: Không tìm thấy món con nào trong bảng ComboItems cho ComboId = {newDetail.ComboId.Value}. Vui lòng kiểm tra Database bảng ComboItems!");
+                                Console.WriteLine($"[DEBUG]  CẢNH BÁO: Không tìm thấy món con nào trong bảng ComboItems cho ComboId = {newDetail.ComboId.Value}. Vui lòng kiểm tra Database bảng ComboItems!");
                             }
                             else
                             {
-                                Console.WriteLine($"[DEBUG] ✅ Tìm thấy {comboComponents.Count} món con. Bắt đầu Insert...");
+                                Console.WriteLine($"[DEBUG]  Tìm thấy {comboComponents.Count} món con. Bắt đầu Insert...");
 
                                 foreach (var component in comboComponents)
                                 {
@@ -808,7 +810,7 @@ namespace BusinessAccessLayer.Services
 
                                 // Save lần 2
                                 await _dashboardRepo.SaveChangesAsync();
-                                Console.WriteLine("[DEBUG] ✅ Đã gọi SaveChangesAsync() cho OrderComboItems.");
+                                Console.WriteLine("[DEBUG] Đã gọi SaveChangesAsync() cho OrderComboItems.");
                             }
                         }
                         else
@@ -862,8 +864,7 @@ namespace BusinessAccessLayer.Services
                                             if (definition != null)
                                             {
                                                 // C. Tính lại số lượng:
-                                                // Số lượng con = (Định lượng gốc trong menu) * (Số lượng cha mới)
-                                                // Ví dụ: 1 Combo có 2 gà. Khách sửa thành 3 Combo -> Con = 2 * 3 = 6 gà.
+
                                                 childItem.Quantity = definition.Quantity * itemDto.Quantity;
 
                                                 // Cập nhật ghi chú nếu cần (đồng bộ với cha)
@@ -871,9 +872,7 @@ namespace BusinessAccessLayer.Services
                                             }
                                         }
 
-                                        // D. Lưu thay đổi của các món con xuống DB
-                                        // Vì các childItem đã được tracking bởi EF Core khi Query lên, 
-                                        // nên chỉ cần gọi SaveChangesAsync là đủ.
+
                                         await _dashboardRepo.SaveChangesAsync();
                                     }
                                 }
@@ -887,7 +886,7 @@ namespace BusinessAccessLayer.Services
                         if (itemToDelete != null && itemToDelete.Order.ReservationId == activeReservation.ReservationId)
                         {
                             // Soft Delete: Đổi trạng thái
-                            itemToDelete.Status = "Cancelled"; // Hoặc "Cancelled" tùy DB
+                            itemToDelete.Status = "Cancelled";
 
                             // GỌI HÀM UPDATE REPO
                             await _dashboardRepo.UpdateOrderDetailAsync(itemToDelete);

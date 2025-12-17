@@ -22,10 +22,11 @@
         <!-- Header -->
         <div class="mb-6 d-flex justify-content-between align-items-center">
             <h1 class="text-3xl font-bold text-gray-800">Quản lý Combo</h1>
-            <button id="btnCreateCombo" class="btn btn-warning d-flex align-items-center gap-2">
+            <a asp-controller="ManagerCombo" asp-action="Create" class="btn btn-warning d-flex align-items-center gap-2">
                 <i class="mdi mdi-plus"></i>
                 Tạo Combo Mới
-            </button>
+            </a>
+
         </div>
         <div id="viewList" class="row">
             <!-- Left: Combo List -->
@@ -66,7 +67,7 @@
                     {
                         @foreach (var combo in Model.Items)
                         {
-                            <div class="card combo-card border-2 border-warning hover-shadow cursor-pointer" style="border-color: #dc2626;" asp-controller="ManagerComboController" asp-action="EditCombo" onclick="selectCombo(@combo.ComboId)">
+                            <div class="card combo-card border-2 border-warning hover-shadow cursor-pointer" style="border-color: #dc2626;" asp-controller="ManagerComboController" asp-action="EditCombo" asp-route-id="@combo.ComboId">
                                 <div class="card-body d-flex gap-3">
                                     <div style="font-size: 4rem;">
                                         <img src="@combo.ImageUrl" style="width:80px;height:80px; object-fit: cover; border-radius: 8px;" />
@@ -258,21 +259,26 @@
     </style>
 
     <script>
-                      function loadCombos(pageIndex = 1) {
-            const search = document.getElementById('searchCombo').value;
-            const status = document.getElementById('filterStatus').value;
+        document.addEventListener('DOMContentLoaded', () => {
+            function loadCombos(pageIndex = 1) {
+                const search = document.getElementById('searchCombo')?.value || '';
+                const status = document.getElementById('filterStatus')?.value || '';
 
-            fetch(`/ManagerCombo/LoadComboList?pageIndex=${pageIndex}&search=${search}&isAvailable=${status}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('comboList').innerHTML = html;
-                });
-        }
+                fetch(`/ManagerCombo/LoadComboList?pageIndex=${pageIndex}&search=${search}&isAvailable=${status}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        const comboList = document.getElementById('comboList');
+                        if (comboList) comboList.innerHTML = html;
+                    })
+                    .catch(err => console.error('Load combos error:', err));
+            }
 
-        document.getElementById('searchCombo').addEventListener('input', () => loadCombos());
-        document.getElementById('filterStatus').addEventListener('change', () => loadCombos());
+            const searchInput = document.getElementById('searchCombo');
+            const filterSelect = document.getElementById('filterStatus');
 
-        function loadPage(pageIndex) {
-            loadCombos(pageIndex);
-        }
+            if (searchInput) searchInput.addEventListener('input', () => loadCombos());
+            if (filterSelect) filterSelect.addEventListener('change', () => loadCombos());
+
+            window.loadPage = (pageIndex) => loadCombos(pageIndex);
+        });
     </script>
