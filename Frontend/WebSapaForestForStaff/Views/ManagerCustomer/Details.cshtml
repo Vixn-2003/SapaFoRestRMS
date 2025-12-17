@@ -1,4 +1,4 @@
-@model WebSapaForestForStaff.DTOs.Customers.CustomerVipStatisticsDto
+@model WebSapaForestForStaff.DTOs.CustomerManagement.CustomerDetailDto
 @{
     ViewData["Title"] = "Chi tiết khách hàng";
     Layout = "~/Views/Shared/_LayoutManager.cshtml";
@@ -43,10 +43,6 @@
             <span id="vipBadge" class="badge @(Model.IsVip ? "bg-warning text-dark" : "bg-secondary")">
                 @(Model.IsVip ? "VIP" : "Normal")
             </span>
-            @if (Model.IsManualOverride)
-            {
-                <span class="badge bg-info text-dark ms-2">Manual</span>
-            }
         </div>
     </div>
 </div>
@@ -56,31 +52,31 @@
         <div class="card text-center">
             <div class="card-body">
                 <div class="text-muted">Tổng chi tiêu</div>
-                <div id="totalSpend" class="fs-4 fw-bold">@Model.TotalSpend.ToString("N0")</div>
+                <div id="totalSpend" class="fs-4 fw-bold">@Model.TotalSpending.ToString("N0") đ</div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <div class="text-muted">Số hóa đơn</div>
-                <div id="totalBills" class="fs-4 fw-bold">@Model.TotalBills</div>
+                <div class="text-muted">Số lần ghé thăm</div>
+                <div id="totalVisits" class="fs-4 fw-bold">@Model.TotalVisits</div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <div class="text-muted">Tổng khách</div>
-                <div id="totalGuests" class="fs-4 fw-bold">@Model.TotalGuests</div>
+                <div class="text-muted">Điểm tích lũy</div>
+                <div id="loyaltyPoints" class="fs-4 fw-bold">@(Model.LoyaltyPoints?.ToString("N0") ?? "0")</div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card text-center">
             <div class="card-body">
-                <div class="text-muted">Lượt đặt bàn</div>
-                <div id="reservationCount" class="fs-4 fw-bold">@Model.NumberOfReservations</div>
+                <div class="text-muted">Ngày tham gia</div>
+                <div id="joinDate" class="fs-4 fw-bold">@(Model.JoinDate?.ToString("dd/MM/yyyy") ?? "N/A")</div>
             </div>
         </div>
     </div>
@@ -90,20 +86,100 @@
     <div class="col-md-6">
         <div class="card text-center">
             <div class="card-body">
-                <div class="text-muted">Trung bình / Khách</div>
-                <div id="avgPerPerson" class="fs-4 fw-bold">@Model.AverageSpendPerPerson.ToString("N0")</div>
+                <div class="text-muted">Trung bình / Lần ghé</div>
+                <div id="avgPerVisit" class="fs-4 fw-bold">@Model.AverageSpendPerVisit.ToString("N0") đ</div>
             </div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card text-center">
             <div class="card-body">
-                <div class="text-muted">Trung bình / Hóa đơn</div>
-                <div id="avgPerBill" class="fs-4 fw-bold">@Model.AverageSpendPerBill.ToString("N0")</div>
+                <div class="text-muted">Lần ghé cuối</div>
+                <div id="lastVisit" class="fs-4 fw-bold">@(Model.LastVisit?.ToString("dd/MM/yyyy") ?? "Chưa có")</div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Additional Customer Information -->
+@if (!string.IsNullOrEmpty(Model.Notes))
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">Ghi chú</h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-0">@Model.Notes</p>
+        </div>
+    </div>
+}
+
+<!-- Favorite Dishes -->
+@if (Model.FavoriteDishes.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">Món ăn yêu thích</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                @foreach (var dish in Model.FavoriteDishes.Take(6))
+                {
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">@dish.DishName</h6>
+                                <p class="text-muted mb-1">Đã đặt: @dish.OrderCount lần</p>
+                                <p class="text-success fw-bold">@dish.TotalSpent.ToString("N0") đ</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Recent Orders -->
+@if (Model.OrderHistory.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">Lịch sử đơn hàng gần đây</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Ngày đặt</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Số món</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model.OrderHistory.Take(10))
+                        {
+                            <tr>
+                                <td>#@order.OrderId</td>
+                                <td>@order.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="fw-bold text-success">@order.TotalAmount.ToString("N0") đ</td>
+                                <td>
+                                    <span class="badge @(order.Status.ToLower() == "completed" ? "bg-success" : order.Status.ToLower() == "pending" ? "bg-warning" : "bg-secondary")">
+                                        @order.Status
+                                    </span>
+                                </td>
+                                <td>@order.NumberOfItems</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
 
 <div class="d-flex gap-2">
     <form asp-action="Recalculate" asp-controller="ManagerCustomer" method="post" id="recalcForm">

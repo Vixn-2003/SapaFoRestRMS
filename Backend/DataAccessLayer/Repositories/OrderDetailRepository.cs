@@ -24,7 +24,9 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<OrderDetail>> GetAllAsync()
         {
-            return await _context.OrderDetails.ToListAsync();
+            return await _context.OrderDetails
+                .Include(od => od.MenuItem)
+                .ToListAsync();
         }
 
         public async Task AddAsync(OrderDetail entity)

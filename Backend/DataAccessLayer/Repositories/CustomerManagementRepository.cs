@@ -58,6 +58,7 @@ namespace DataAccessLayer.Repositories
             decimal? minSpending,
             decimal? maxSpending,
             int? minVisits,
+            int? maxVisits,
             string sortBy,
             string sortDirection,
             CancellationToken ct = default)
@@ -115,8 +116,21 @@ namespace DataAccessLayer.Repositories
         public async Task<bool> CustomerExistsAsync(int customerId, CancellationToken ct = default)
         {
             return await _context.Customers
-                .AnyAsync(c => c.CustomerId == customerId && 
+                .AnyAsync(c => c.CustomerId == customerId &&
                              (c.User == null || c.User.IsDeleted != true), ct);
+        }
+
+        /// <summary>
+        /// Update customer profile information (including User data)
+        /// </summary>
+        public async Task UpdateCustomerAsync(Customer customer, CancellationToken ct = default)
+        {
+            _context.Customers.Update(customer);
+            if (customer.User != null)
+            {
+                _context.Users.Update(customer.User);
+            }
+            await _context.SaveChangesAsync(ct);
         }
     }
 }

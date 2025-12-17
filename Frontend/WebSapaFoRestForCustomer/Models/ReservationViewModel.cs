@@ -37,7 +37,8 @@ namespace WebSapaFoRestForCustomer.Models
         [Required(ErrorMessage = "Vui lòng nhập OTP.")]
         public string? OtpCode { get; set; }
 
-
+        [Required(ErrorMessage = "Vui lòng chọn phương thức thanh toán.")]
+        public string PaymentMethod { get; set; } = "PAYOS";
         // Kiểm tra logic tổng hợp ngày & giờ đặt
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

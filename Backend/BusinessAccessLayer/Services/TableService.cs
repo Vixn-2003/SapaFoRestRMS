@@ -63,6 +63,11 @@ namespace BusinessAccessLayer.Services
             if (string.IsNullOrWhiteSpace(dto.TableNumber))
                 throw new ArgumentException("Tên bàn không được để trống.");
 
+            // 👉 Kiểm tra trùng
+            bool exists = await _repository.IsDuplicateTableNumberAsync(dto.TableNumber, dto.AreaId);
+            if (exists)
+                throw new ArgumentException("Bàn đã tồn tại trong khu vực này.");
+
             var table = new Table
             {
                 TableNumber = dto.TableNumber,
@@ -75,6 +80,7 @@ namespace BusinessAccessLayer.Services
             await _repository.SaveAsync();
         }
 
+
         public async Task UpdateAsync(int id, TableUpdateDto dto)
         {
             var table = await _repository.GetByIdAsync(id);
@@ -86,6 +92,11 @@ namespace BusinessAccessLayer.Services
             if (string.IsNullOrWhiteSpace(dto.TableNumber))
                 throw new ArgumentException("Tên bàn không được để trống.");
 
+            // 👉 Kiểm tra trùng, nhưng bỏ qua chính nó
+            bool exists = await _repository.IsDuplicateTableNumberAsync(dto.TableNumber, dto.AreaId, id);
+            if (exists)
+                throw new ArgumentException("Bàn đã tồn tại trong khu vực này.");
+
             table.TableNumber = dto.TableNumber;
             table.Capacity = dto.Capacity;
             table.AreaId = dto.AreaId;
@@ -94,6 +105,7 @@ namespace BusinessAccessLayer.Services
             await _repository.UpdateAsync(table);
             await _repository.SaveAsync();
         }
+
 
 
         public async Task<(bool Success, string Message)> DeleteAsync(int id)

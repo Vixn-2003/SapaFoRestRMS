@@ -95,7 +95,7 @@ namespace BusinessAccessLayer.Services
                                           status == "Cooking" || status == "Đang nấu";
                     var isDone = statusLower.Contains("done") || statusLower.Contains("hoàn thành") || statusLower.Contains("xong");
                     
-                    // ✅ Món ConsumptionBased có thể xác nhận số lượng ngay (không cần chờ Ready)
+                    //  Món ConsumptionBased có thể xác nhận số lượng ngay (không cần chờ Ready)
                     // Món KitchenPrepared chỉ có thể xác nhận khi đã Ready
                     var canConfirmQuantity = isConsumptionBased && !isDone;
                     
@@ -122,7 +122,7 @@ namespace BusinessAccessLayer.Services
                         }
                     }
 
-                    // ✅ Nếu là combo và đã có OrderComboItems → sổ ra từng món trong combo
+                    //  Nếu là combo và đã có OrderComboItems → sổ ra từng món trong combo
                     if (orderDetail.ComboId.HasValue &&
                         orderDetail.OrderComboItems != null &&
                         orderDetail.OrderComboItems.Any())
@@ -148,7 +148,7 @@ namespace BusinessAccessLayer.Services
                             var canCancelItem = normalizedComboStatus == "Pending";
                             var canRequestUrgentItem = normalizedComboStatus != "Done";
                             
-                            // ✅ Món ConsumptionBased có thể xác nhận số lượng ngay (không cần chờ Ready)
+                            //  Món ConsumptionBased có thể xác nhận số lượng ngay (không cần chờ Ready)
                             var isComboItemConsumptionBased = mi?.BillingType == DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased;
                             var canConfirmComboQuantity = isComboItemConsumptionBased && !comboIsDone;
 
@@ -403,7 +403,7 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+                //  QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
                 // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
                 // Phải gọi TRƯỚC khi set status = Cancelled để release có thể check status Pending/Cooking
                 if (orderDetail.MenuItem != null)
@@ -467,7 +467,7 @@ namespace BusinessAccessLayer.Services
                         };
                     }
 
-                    // ✅ Món có BillingType = 1 (ConsumptionBased) không cần chờ Ready, có thể xác nhận ngay
+                    //  Món có BillingType = 1 (ConsumptionBased) không cần chờ Ready, có thể xác nhận ngay
                     var isComboItemConsumptionBased = comboItem.MenuItem?.BillingType == DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased;
                     
                     if (!isComboItemConsumptionBased)
@@ -508,7 +508,7 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // ✅ Món có BillingType = 1 (ConsumptionBased) không cần chờ Ready, có thể xác nhận ngay
+                //  Món có BillingType = 1 (ConsumptionBased) không cần chờ Ready, có thể xác nhận ngay
                 // Chỉ món KitchenPrepared mới cần chờ Ready
                 var isConsumptionBased = orderDetail.MenuItem?.BillingType == DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased;
                 

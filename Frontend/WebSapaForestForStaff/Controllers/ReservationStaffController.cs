@@ -9,6 +9,7 @@ using WebSapaForestForStaff.Models;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class ReservationStaffController : Controller
     {
         private readonly HttpClient _client;
@@ -234,7 +235,7 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Manager")]
+        //[Authorize(Roles = "Manager")]
         public IActionResult CreateReservation()
         {
             return View();
@@ -242,7 +243,7 @@ namespace WebSapaForestForStaff.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Manager")]
+        //[Authorize(Roles = "Manager")]
         public async Task<IActionResult> CreateReservation(ReservationViewModel model)
         {
             if (!ModelState.IsValid)

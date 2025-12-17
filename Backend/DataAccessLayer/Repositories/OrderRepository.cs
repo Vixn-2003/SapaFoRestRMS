@@ -17,9 +17,7 @@ namespace DataAccessLayer.Repositories
             "Cooking",
             "Ready",
             "Late",
-            "Done",
-            "Processing",
-          
+            "Done"
         };
 
         public OrderRepository(SapaFoRestRmsContext context)
@@ -117,7 +115,10 @@ namespace DataAccessLayer.Repositories
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
                             .ThenInclude(t => t.Area)
-                .Where(o => KitchenActiveStatuses.Contains(o.Status))
+                // Bao gồm các trạng thái đang hoạt động trong bếp + Completed/Hoàn thành
+                .Where(o => KitchenActiveStatuses.Contains(o.Status)
+                            || o.Status == "Completed"
+                            || o.Status == "Hoàn thành")
                 .OrderBy(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -142,10 +143,9 @@ namespace DataAccessLayer.Repositories
 
         public async Task<List<Order>> GetRecentlyFulfilledOrdersAsync(int minutesAgo)
         {
-            // Lấy tất cả orders có items Done
-            // Vì OrderDetail không có CompletedAt field, ta không thể filter chính xác theo thời gian Done
-            // Nên lấy tất cả orders có items Done, không filter theo CreatedAt của order
-            // (vì order có thể được tạo từ lâu nhưng mới hoàn thành gần đây)
+            // Lấy các orders có món bếp đã hoàn tất (Ready/Done)
+            // Trạng thái đơn có thể là Completed hoặc vẫn đang active; bước lọc "đơn đã thực sự hoàn thành"
+            // sẽ được xử lý ở tầng service dựa trên trạng thái từng món.
             return await _context.Orders
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.MenuItem)
@@ -163,11 +163,11 @@ namespace DataAccessLayer.Repositories
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
                             .ThenInclude(t => t.Area)
-                .Where(o => KitchenActiveStatuses.Contains(o.Status) || o.Status == "Completed")
-                .Where(o => o.OrderDetails.Any(od => od.Status == "Done" || od.Status == "Hoàn thành"))
-                // Bỏ filter theo CreatedAt vì không chính xác (order có thể tạo từ lâu nhưng mới Done gần đây)
-                // Chỉ lấy orders được tạo trong vòng 24 giờ để tránh lấy quá nhiều dữ liệu cũ
-                .Where(o => o.CreatedAt >= System.DateTime.Now.AddHours(-24))
+                .Where(o => o.OrderDetails.Any(od =>
+                    od.Status == "Done" || od.Status == "Hoàn thành" ||
+                    od.Status == "Ready" || od.Status == "Sẵn sàng"))
+                // Không filter theo CreatedAt vì không có CompletedAt chính xác;
+                // lấy tối đa 50 đơn gần nhất theo thời gian tạo để tránh quá nhiều dữ liệu
                 .OrderByDescending(o => o.CreatedAt)
                 .Take(50)
                 .ToListAsync();
@@ -244,7 +244,10 @@ namespace DataAccessLayer.Repositories
                 .Include(o => o.Reservation)
                     .ThenInclude(r => r.ReservationTables)
                         .ThenInclude(rt => rt.Table)
-                .Where(o => KitchenActiveStatuses.Contains(o.Status))
+                // Bao gồm các trạng thái đang hoạt động trong bếp + Completed/Hoàn thành
+                .Where(o => KitchenActiveStatuses.Contains(o.Status)
+                            || o.Status == "Completed"
+                            || o.Status == "Hoàn thành")
                 .ToListAsync();
         }
     }

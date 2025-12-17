@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebSapaForestForStaff.DTOs.Payment;
 using WebSapaForestForStaff.Services.Api.Interfaces;
@@ -8,6 +9,7 @@ using WebSapaForestForStaff.Models.VoucherDTO;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Cashier")]
     [Route("cashier-flow")]
     public class CashierPaymentFlowController : Controller
     {

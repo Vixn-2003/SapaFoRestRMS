@@ -46,25 +46,40 @@ namespace WebSapaForestForStaff.Services.Api
                 if (filter.MinVisits.HasValue)
                     queryParams.Add($"minVisits={filter.MinVisits.Value}");
                 
+                if (filter.MaxVisits.HasValue)
+                    queryParams.Add($"maxVisits={filter.MaxVisits.Value}");
+                
                 queryParams.Add($"sortBy={filter.SortBy}");
                 queryParams.Add($"sortDirection={filter.SortDirection}");
                 queryParams.Add($"page={filter.Page}");
                 queryParams.Add($"pageSize={filter.PageSize}");
                 
                 var queryString = string.Join("&", queryParams);
-                var url = $"{GetApiBaseUrl()}/api/CustomerManagement?{queryString}";
+                var url = $"{GetApiBaseUrl()}/CustomerManagement?{queryString}";
                 
                 var response = await client.GetAsync(url);
                 var content = await response.Content.ReadAsStringAsync();
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    var apiResponse = JsonSerializer.Deserialize<ApiResponseWrapper<CustomerListResponse>>(content, new JsonSerializerOptions
+                    // API returns: { success: true, data: [...], page: 1, pageSize: 20, totalCount: 100, totalPages: 5 }
+                    var apiResponse = JsonSerializer.Deserialize<CustomerListApiResponse>(content, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     });
                     
-                    return (true, apiResponse?.Data, null);
+                    if (apiResponse != null && apiResponse.Success)
+                    {
+                        var customerListResponse = new CustomerListResponse
+                        {
+                            Data = apiResponse.Data ?? new List<CustomerListItemDto>(),
+                            Page = apiResponse.Page,
+                            PageSize = apiResponse.PageSize,
+                            TotalCount = apiResponse.TotalCount,
+                            TotalPages = apiResponse.TotalPages
+                        };
+                        return (true, customerListResponse, null);
+                    }
                 }
                 
                 return (false, null, $"API Error: {response.StatusCode}");
@@ -83,7 +98,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/CustomerManagement/{customerId}";
+                var url = $"{GetApiBaseUrl()}/CustomerManagement/{customerId}";
                 
                 var response = await client.GetAsync(url);
                 var content = await response.Content.ReadAsStringAsync();
@@ -119,7 +134,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/CustomerManagement/{dto.CustomerId}/vip";
+                var url = $"{GetApiBaseUrl()}/CustomerManagement/{dto.CustomerId}/vip";
                 
                 var json = JsonSerializer.Serialize(dto);
                 var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
@@ -158,7 +173,7 @@ namespace WebSapaForestForStaff.Services.Api
             try
             {
                 var client = GetAuthenticatedClient();
-                var url = $"{GetApiBaseUrl()}/api/CustomerManagement/{customerId}/vip-criteria";
+                var url = $"{GetApiBaseUrl()}/CustomerManagement/{customerId}/vip-criteria";
                 
                 var response = await client.GetAsync(url);
                 var content = await response.Content.ReadAsStringAsync();
@@ -186,6 +201,16 @@ namespace WebSapaForestForStaff.Services.Api
         {
             public bool Success { get; set; }
             public T? Data { get; set; }
+        }
+
+        private class CustomerListApiResponse
+        {
+            public bool Success { get; set; }
+            public List<CustomerListItemDto>? Data { get; set; }
+            public int Page { get; set; }
+            public int PageSize { get; set; }
+            public int TotalCount { get; set; }
+            public int TotalPages { get; set; }
         }
 
         private class ApiSuccessResponse

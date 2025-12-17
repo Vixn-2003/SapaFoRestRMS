@@ -27,6 +27,7 @@ namespace DataAccessLayer.Repositories.Interfaces
             decimal? minSpending,
             decimal? maxSpending,
             int? minVisits,
+            int? maxVisits,
             string sortBy,
             string sortDirection,
             CancellationToken ct = default);
@@ -45,5 +46,10 @@ namespace DataAccessLayer.Repositories.Interfaces
         /// Get customer with all related orders and payments
         /// </summary>
         Task<Customer?> GetCustomerWithOrdersAsync(int customerId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Update customer profile information
+        /// </summary>
+        Task UpdateCustomerAsync(Customer customer, CancellationToken ct = default);
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebSapaForestForStaff.DTOs.CustomerManagement;
 using WebSapaForestForStaff.Services.Api.Interfaces;
+using WebSapaForestForStaff.ViewModels.CustomerManagement;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -30,9 +31,123 @@ namespace WebSapaForestForStaff.Controllers
         /// GET: /CustomerManagement/Index
         /// </summary>
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index([FromQuery] CustomerFilterViewModel filter)
         {
-            return View();
+            try
+            {
+                // Set defaults
+                if (filter.PageNumber <= 0) filter.PageNumber = 1;
+                if (filter.PageSize <= 0 || filter.PageSize > 100) filter.PageSize = 20;
+
+                // Map sort options to backend format
+                string sortBy = filter.SortBy;
+                string sortDirection = filter.SortDirection;
+
+                // Handle special sort options
+                if (filter.SortBy == "FullNameDesc")
+                {
+                    sortBy = "FullName";
+                    sortDirection = "desc";
+                }
+                else if (filter.SortBy == "FullName")
+                {
+                    sortBy = "FullName";
+                    sortDirection = "asc";
+                }
+                else if (filter.SortBy == "TotalSpendingAsc")
+                {
+                    sortBy = "TotalSpending";
+                    sortDirection = "asc";
+                }
+                else if (filter.SortBy == "TotalSpending")
+                {
+                    sortBy = "TotalSpending";
+                    sortDirection = "desc";
+                }
+                else if (filter.SortBy == "TotalVisitsAsc")
+                {
+                    sortBy = "TotalVisits";
+                    sortDirection = "asc";
+                }
+                else if (filter.SortBy == "TotalVisits")
+                {
+                    sortBy = "TotalVisits";
+                    sortDirection = "desc";
+                }
+                else if (filter.SortBy == "LastVisit")
+                {
+                    sortBy = "LastVisit";
+                    sortDirection = "desc";
+                }
+
+                // Convert ViewModel to DTO
+                var filterDto = new CustomerFilterDto
+                {
+                    Page = filter.PageNumber,
+                    PageSize = filter.PageSize,
+                    SearchKeyword = filter.Keyword,
+                    IsVipOnly = filter.IsVip,
+                    MinSpending = filter.MinSpending,
+                    MaxSpending = filter.MaxSpending,
+                    MinVisits = filter.MinVisits,
+                    MaxVisits = filter.MaxVisits,
+                    SortBy = sortBy,
+                    SortDirection = sortDirection
+                };
+
+                // Call API service
+                var (success, data, message) = await _customerManagementApiService.GetCustomersAsync(filterDto);
+
+                if (!success || data == null)
+                {
+                    TempData["ErrorMessage"] = message ?? "An error occurred while loading customers.";
+                    // Return empty model on error
+                    return View(new CustomerListViewModel
+                    {
+                        Filters = filter,
+                        Pagination = new PaginationViewModel
+                        {
+                            PageNumber = filter.PageNumber,
+                            PageSize = filter.PageSize,
+                            TotalPages = 0,
+                            TotalRecords = 0
+                        }
+                    });
+                }
+
+                // Build ViewModel
+                var viewModel = new CustomerListViewModel
+                {
+                    Items = data.Data ?? new List<CustomerListItemDto>(),
+                    Filters = filter,
+                    Pagination = new PaginationViewModel
+                    {
+                        PageNumber = data.Page,
+                        PageSize = data.PageSize,
+                        TotalPages = data.TotalPages,
+                        TotalRecords = data.TotalCount
+                    }
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading customer list");
+                TempData["ErrorMessage"] = "An error occurred while loading customers.";
+                
+                return View(new CustomerListViewModel
+                {
+                    Filters = filter,
+                    Pagination = new PaginationViewModel
+                    {
+                        PageNumber = filter.PageNumber,
+                        PageSize = filter.PageSize,
+                        TotalPages = 0,
+                        TotalRecords = 0
+                    }
+                });
+            }
         }
 
         /// <summary>

@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using WebSapaForestForStaff.Models.Kitchen;
 using WebSapaForestForStaff.Services;
 
 namespace WebSapaFoRestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Kitchen")]
     public class KitchenDisplayController : Controller
     {
         private readonly IConfiguration _configuration;

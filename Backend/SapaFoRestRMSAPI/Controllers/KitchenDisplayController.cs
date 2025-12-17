@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.DTOs.Kitchen;
@@ -8,6 +9,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = "Position:Kitchen")]
     public class KitchenDisplayController : ControllerBase
     {
         private readonly IKitchenDisplayService _kitchenService;
@@ -310,7 +312,7 @@ namespace SapaFoRestRMSAPI.Controllers
 
         /// <summary>
         /// POST: api/KitchenDisplay/recall-order-detail
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         [HttpPost("recall-order-detail")]
         public async Task<IActionResult> RecallOrderDetail([FromBody] RecallOrderDetailRequest request)

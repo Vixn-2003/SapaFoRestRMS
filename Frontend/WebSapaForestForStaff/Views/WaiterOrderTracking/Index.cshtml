@@ -2,7 +2,7 @@
 @using System.Text.Json
 @{
     ViewData["Title"] = "Theo dõi tiến độ phục vụ";
-    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
 }
 
 @functions {
@@ -672,8 +672,24 @@
                         var readyCount = group.Items.Count(i => 
                             (i.Status ?? "").ToLower().Contains("ready") || 
                             (i.Status ?? "").ToLower().Contains("sẵn sàng"));
+
+                        // Món đã hoàn thành (Done / Hoàn thành / Xong)
+                        var doneCount = group.Items.Count(i =>
+                            (i.Status ?? "").ToLower().Contains("done") ||
+                            (i.Status ?? "").ToLower().Contains("hoàn thành") ||
+                            (i.Status ?? "").ToLower().Contains("xong"));
+
+                        // Món đã hủy
+                        var cancelledCount = group.Items.Count(i =>
+                            (i.Status ?? "").ToLower().Contains("cancelled") ||
+                            (i.Status ?? "").ToLower().Contains("hủy"));
+
                         var totalItems = group.Items.Count;
-                        var canComplete = readyCount == totalItems && totalItems > 0;
+
+                        // Cho phép hoàn thành nếu KHÔNG còn món nào đang ở Pending/Cooking/Late...
+                        // Tức là tất cả món đều nằm trong 3 nhóm: Ready, Done, Cancelled
+                        var finishedCount = readyCount + doneCount + cancelledCount;
+                        var canComplete = finishedCount == totalItems && totalItems > 0;
                         var hasUrgentItems = group.Items.Any(i => i.IsUrgent);
                         
                         <div class="order-card @(readyCount > 0 ? "has-ready" : "") @(hasUrgentItems ? "has-urgent" : "")" data-order-id="@group.OrderNumber">
@@ -1203,8 +1219,22 @@
                 (i.status || "").toLowerCase().includes("ready") || 
                 (i.status || "").toLowerCase().includes("sẵn sàng")
             ).length : 0;
+
+            const doneCount = group.items ? group.items.filter(i =>
+                (i.status || "").toLowerCase().includes("done") ||
+                (i.status || "").toLowerCase().includes("hoàn thành") ||
+                (i.status || "").toLowerCase().includes("xong")
+            ).length : 0;
+
+            const cancelledCount = group.items ? group.items.filter(i =>
+                (i.status || "").toLowerCase().includes("cancelled") ||
+                (i.status || "").toLowerCase().includes("hủy")
+            ).length : 0;
+
             const totalItems = group.items ? group.items.length : 0;
-            const canComplete = readyCount == totalItems && totalItems > 0;
+            // Cho phép hoàn thành nếu tất cả món đều ở trạng thái Ready/Sẵn sàng, Done/Hoàn thành hoặc Đã hủy
+            const finishedCount = readyCount + doneCount + cancelledCount;
+            const canComplete = finishedCount == totalItems && totalItems > 0;
             const hasUrgentItems = group.items ? group.items.some(i => i.isUrgent) : false;
             
             html += `

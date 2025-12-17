@@ -50,11 +50,11 @@ dotnet test Backend/Tests/Tests.csproj /p:CollectCoverage=true /p:CoverletOutput
 ## 📝 Test Cases hiện có
 
 ### UserServiceTests
-- ✅ `GetAllAsync_ReturnsActiveUsers`: Test lọc users không bị xóa
-- ✅ `GetByIdAsync_ReturnsCorrectUser`: Test lấy user theo ID
-- ✅ `CreateAsync_AddsNewUser`: Test tạo user mới
-- ✅ `UpdateAsync_UpdatesUserSuccessfully`: Test cập nhật user
-- ✅ `DeleteAsync_SoftDeletesUser`: Test soft delete user
+-  `GetAllAsync_ReturnsActiveUsers`: Test lọc users không bị xóa
+-  `GetByIdAsync_ReturnsCorrectUser`: Test lấy user theo ID
+-  `CreateAsync_AddsNewUser`: Test tạo user mới
+-  `UpdateAsync_UpdatesUserSuccessfully`: Test cập nhật user
+-  `DeleteAsync_SoftDeletesUser`: Test soft delete user
 
 ## 🎯 Nguyên tắc Testing
 

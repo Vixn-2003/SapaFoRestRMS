@@ -58,33 +58,8 @@ namespace WebSapaForestForStaff.Controllers
                     }
                 }
 
-                // Set layout based on role
-                if (User.IsInRole("Manager"))
-                {
-                    ViewBag.Layout = "~/Views/Shared/_LayoutManager.cshtml";
-                }
-                else if (User.IsInRole("Staff"))
-                {
-                    // Staff with Cashier position uses different layout
-                    var positionsClaim = User.FindFirst("Positions")?.Value;
-                    var isCashier = false;
-                    if (!string.IsNullOrEmpty(positionsClaim))
-                    {
-                        try
-                        {
-                            var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsClaim);
-                            isCashier = positions?.Any(p => string.Equals(p, "Cashier", StringComparison.OrdinalIgnoreCase)) ?? false;
-                        }
-                        catch { }
-                    }
-                    
-                    // Cashier uses payment layout, other staff use manager layout
-                    ViewBag.Layout = isCashier ? "~/Views/Shared/_Layout.cshtml" : "~/Views/Shared/_LayoutManager.cshtml";
-                }
-                else
-                {
-                    ViewBag.Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
-                }
+                // Set layout based on role/position
+                ViewBag.Layout = ResolveLayoutForUser(User);
 
                 return View(profile);
             }
@@ -182,6 +157,79 @@ namespace WebSapaForestForStaff.Controllers
 
             var result = await _apiService.ConfirmPasswordChangeAsync(request.Code, request.NewPassword);
             return Json(new { success = result.Success, message = result.Message });
+        }
+
+        private string ResolveLayoutForUser(ClaimsPrincipal user)
+        {
+            // Roles take precedence
+            if (user.IsInRole("Owner") || user.IsInRole("Admin"))
+            {
+                return "~/Views/Shared/_LayoutAdmin.cshtml";
+            }
+
+            if (user.IsInRole("Manager"))
+            {
+                return "~/Views/Shared/_LayoutManager.cshtml";
+            }
+
+            if (user.IsInRole("Staff"))
+            {
+                // Determine by PositionId/PositionIds claims
+                var positionIds = new List<int>();
+
+                var single = user.FindFirst("PositionId")?.Value;
+                if (int.TryParse(single, out var pid))
+                {
+                    positionIds.Add(pid);
+                }
+
+                var listJson = user.FindFirst("PositionIds")?.Value;
+                if (!string.IsNullOrEmpty(listJson))
+                {
+                    try
+                    {
+                        var ids = System.Text.Json.JsonSerializer.Deserialize<List<int>>(listJson);
+                        if (ids != null) positionIds.AddRange(ids);
+                    }
+                    catch
+                    {
+                        // ignore parsing errors
+                    }
+                }
+
+                bool hasPosition(int id) => positionIds.Any(x => x == id);
+
+                // Position-based layouts
+                // 1: Waiter/Waitress -> _waiterLayout
+                if (hasPosition(1))
+                {
+                    return "~/Views/Shared/_waiterLayout.cshtml";
+                }
+
+                // 2: Cashier -> _counterstaffLayout
+                if (hasPosition(2))
+                {
+                    return "~/Views/Shared/_counterstaffLayout.cshtml";
+                }
+
+                // 3: Kitchen -> _LayoutKitchen
+                if (hasPosition(3))
+                {
+                    return "~/Views/Shared/_LayoutKitchen.cshtml";
+                }
+
+                // 4: Inventory -> _LayoutInventory
+                if (hasPosition(4))
+                {
+                    return "~/Views/Shared/_LayoutInventory.cshtml";
+                }
+
+                // Staff without known position -> manager layout fallback
+                return "~/Views/Shared/_LayoutManager.cshtml";
+            }
+
+            // Fallback
+            return "~/Views/Shared/_LayoutAdmin.cshtml";
         }
 
         public class PasswordChangeRequest

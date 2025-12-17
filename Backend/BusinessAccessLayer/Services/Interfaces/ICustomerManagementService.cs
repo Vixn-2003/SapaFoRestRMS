@@ -1,5 +1,7 @@
 using BusinessAccessLayer.Common.Pagination;
 using BusinessAccessLayer.DTOs.CustomerManagement;
+using BusinessAccessLayer.DTOs.CustomerProfile;
+using BusinessAccessLayer.DTOs.Customers;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,8 +44,18 @@ namespace BusinessAccessLayer.Services.Interfaces
         /// VIP criteria: AverageAmountPerPerson = TotalSpending / TotalVisits / AvgPeople
         /// </summary>
         Task<(bool MeetsCriteria, decimal AverageAmountPerPerson, string Reason)> CheckVipCriteriaAsync(
-            int customerId, 
+            int customerId,
             CancellationToken ct = default);
+
+        /// <summary>
+        /// Get customer profile information
+        /// </summary>
+        Task<CustomerProfileDto?> GetCustomerProfileAsync(int customerId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Update customer profile information
+        /// </summary>
+        Task<CustomerProfileDto?> UpdateCustomerProfileAsync(int customerId, CustomerProfileUpdateRequest request, CancellationToken ct = default);
     }
 }
 

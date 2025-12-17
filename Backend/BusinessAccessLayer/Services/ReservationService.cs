@@ -2,6 +2,7 @@
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,17 +16,20 @@ namespace BusinessAccessLayer.Services
         private readonly IReservationRepository _reservationRepository;
         private readonly IUserRepository _userRepository;
         private readonly ICustomerRepository _customerRepository; // thêm repo Customer
+        private readonly IConfiguration _configuration;
 
-        private const decimal DEPOSIT_PER_GUEST = 50000m;
+        private const decimal DEPOSIT_PER_GUEST = 1000m;
 
         public ReservationService(
             IReservationRepository reservationRepository,
             IUserRepository userRepository,
-            ICustomerRepository customerRepository) // inject
+            ICustomerRepository customerRepository,
+            IConfiguration configuration) // inject
         {
             _reservationRepository = reservationRepository;
             _userRepository = userRepository;
             _customerRepository = customerRepository;
+            _configuration = configuration;
         }
 
         public async Task<bool> HasExistingReservationAsync(string phone, DateTime date, string timeSlot)
@@ -48,7 +52,10 @@ namespace BusinessAccessLayer.Services
             var user = await _userRepository.GetByPhoneAsync(dto.Phone);
             if (user == null)
             {
-                // ✅ FIX: Set Status=0 (active) để customer có thể đăng nhập ngay sau khi đặt bàn
+                //  FIX: Set Status=0 (active) để customer có thể đăng nhập ngay sau khi đặt bàn
+                var defaultAvatar = _configuration["CloudinarySettings:DefaultAvatarUrl"]
+                    ?? "/images/default-avatar.jpg";
+
                 user = new User
                 {
                     FullName = dto.CustomerName,
@@ -56,7 +63,8 @@ namespace BusinessAccessLayer.Services
                     PasswordHash = "666666", // TODO: hash thật
                     Phone = dto.Phone,
                     RoleId = 5,
-                    Status = 0 // 0 = Active, 1 = Inactive
+                    Status = 0, // 0 = Active, 1 = Inactive
+                    AvatarUrl = defaultAvatar // use Cloudinary default avatar URL if configured
                 };
                 user = await _userRepository.CreateAsync(user);
             }
@@ -287,6 +295,14 @@ namespace BusinessAccessLayer.Services
             var reservation = await _reservationRepository.GetReservationByIdAsync(dto.ReservationId);
             if (reservation == null)
                 throw new Exception("Reservation không tồn tại.");
+
+            //  CHẶN gán bàn nếu đã Confirmed hoặc Cancelled (bắt buộc Reset trước)
+            if (reservation.Status == "Cancelled" || reservation.Status == "Confirmed")
+                throw new Exception("Đơn đang ở trạng thái 'Cancelled' hoặc 'Confirmed' nên không thể gán bàn. Vui lòng Reset đơn về 'Pending' trước khi gán lại.");
+
+            //  (khuyến nghị) Chỉ cho phép gán bàn khi Pending
+            if (reservation.Status != "Pending")
+                throw new Exception("Chỉ có thể gán bàn khi đơn ở trạng thái 'Pending'. Vui lòng Reset trước khi gán lại.");
 
             // Check conflict
             var conflict = (await _reservationRepository

@@ -1515,7 +1515,7 @@
         fullName: '@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value',
         phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value',
         email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value',
-        // ✅ LẤY POSITION TỪ CLAIMS
+        //  LẤY POSITION TỪ CLAIMS
         position: '@Html.Raw(User.FindFirst("Positions")?.Value ?? "Nhân viên kho")'
     };
 
@@ -2066,7 +2066,7 @@
                     document.getElementById('confirmerRoleHighlight').textContent = '⏳ Đang tải...';
 
                     try {
-                        // ✅ LẤY THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT VÌ ĐÃ CÓ SẴN)
+                        //  LẤY THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT VÌ ĐÃ CÓ SẴN)
                         const user = await getCurrentUserFromSession();
 
                         // Hiển thị thông tin
@@ -2097,12 +2097,12 @@
 
 
     async function getCurrentUserFromSession() {
-        // ✅ VALIDATE DỮ LIỆU TỪ CLAIMS
+        //  VALIDATE DỮ LIỆU TỪ CLAIMS
         if (!currentUser || !currentUser.userId || currentUser.userId === 0) {
             throw new Error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
         }
 
-        // ✅ PARSE POSITION NẾU LÀ JSON ARRAY
+        //  PARSE POSITION NẾU LÀ JSON ARRAY
         let position = currentUser.position;
         try {
             // Nếu position là JSON array (VD: ["Nhân viên kho", "Thu ngân"])
@@ -2115,7 +2115,7 @@
             console.log('Position is a simple string:', position);
         }
 
-        // ✅ TRẢ VỀ THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT)
+        //  TRẢ VỀ THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT)
         return {
             userId: currentUser.userId,
             fullName: currentUser.fullName,
@@ -2160,7 +2160,7 @@
 
         const isConfirmed = await showConfirmModal({
             type: 'success',
-            icon: '✅',
+            icon: '',
             title: 'Xác nhận đơn kiểm kê',
             message: 'Bạn có chắc chắn muốn XÁC NHẬN đơn kiểm kê này?',
             warning: null,
@@ -2174,7 +2174,7 @@
         confirmBtn.textContent = '⏳ Đang xử lý...';
 
         try {
-            // ✅ LẤY THÔNG TIN TỪ CLAIMS
+            //  LẤY THÔNG TIN TỪ CLAIMS
             const user = await getCurrentUserFromSession();
 
             const requestData = {
@@ -2206,7 +2206,7 @@
                     title: 'Thành công!',
                     message: 'Xác nhận đơn kiểm kê thành công!',
                     warning: null,
-                    buttonText: '✅ Đóng',
+                    buttonText: ' Đóng',
                     buttonClass: 'confirm-modal-btn-confirm'
                 });
                 closeAuditModal();
@@ -2266,7 +2266,7 @@
         rejectBtn.textContent = ' Đang xử lý...';
 
         try {
-            // ✅ LẤY THÔNG TIN TỪ CLAIMS
+            //  LẤY THÔNG TIN TỪ CLAIMS
             const user = await getCurrentUserFromSession();
 
             const requestData = {

@@ -1,0 +1,467 @@
+@model WebSapaFoRestForCustomer.DTOs.CustomerProfile
+
+@{
+    ViewData["Title"] = "Thông tin cá nhân";
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-wrapper me-3">
+                            <img src="@(Model.AvatarUrl ?? "/images/default-avatar.png")"
+                                 alt="Avatar"
+                                 class="rounded-circle avatar-img"
+                                 style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #e9ecef;">
+                        </div>
+                        <div>
+                            <h2 class="mb-1">@Model.FullName</h2>
+                            <p class="text-muted mb-1">@Model.Phone</p>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-@(Model.VipLevel == "VIP" ? "warning" : "secondary")">
+                                    <i class="bi bi-star-fill me-1"></i>  @(string.Equals(Model.VipLevel, "Regular", StringComparison.OrdinalIgnoreCase)
+                                    ? "bình thường"
+                                    : Model.VipLevel)
+                                </span>
+                                <span class="badge bg-info">
+                                    <i class="bi bi-coin me-1"></i>@Model.LoyaltyPoints?.ToString("N0") Số lần đến ăn 
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-gear me-2"></i>Chỉnh sửa thông tin
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="profileForm" enctype="multipart/form-data">
+                        <div class="row">
+                            <!-- Avatar Upload -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label fw-bold">Ảnh đại diện</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-preview">
+                                        <img id="avatarPreview"
+                                             src="@(Model.AvatarUrl ?? "/images/default-avatar.png")"
+                                             alt="Avatar Preview"
+                                             class="rounded-circle"
+                                             style="width: 100px; height: 100px; object-fit: cover; border: 2px solid #dee2e6;">
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <input type="file" class="form-control" id="avatarFile" name="AvatarFile" accept="image/*">
+                                        <div class="form-text">
+                                            Chọn ảnh JPG, PNG hoặc GIF. Kích thước tối đa 2MB.
+                                        </div>
+                                        <input type="hidden" id="avatarUrl" name="AvatarUrl" value="@Model.AvatarUrl">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Full Name -->
+                            <div class="col-md-6 mb-3">
+                                <label for="fullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="fullName" name="FullName"
+                                       value="@Model.FullName" required maxlength="100">
+                                <div class="invalid-feedback"></div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="Email"
+                                       value="@Model.Email" maxlength="100">
+                                <div class="invalid-feedback"></div>
+                                <div id="emailOtpSection" class="mt-2 d-none">
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="sendEmailOtpBtn">Gửi OTP</button>
+                                        <input type="text" class="form-control form-control-sm" id="emailOtpCode" placeholder="Nhập OTP" style="max-width: 140px;">
+                                        <button type="button" class="btn btn-outline-success btn-sm" id="verifyEmailOtpBtn">Xác thực</button>
+                                    </div>
+                                    <div class="form-text">Email mới chỉ được lưu sau khi OTP được xác thực.</div>
+                                </div>
+                            </div>
+
+                            <!-- Phone -->
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">Số điện thoại</label>
+                                <input type="tel" class="form-control" id="phone" name="Phone"
+                                       value="@Model.Phone" maxlength="20">
+                                <div class="invalid-feedback"></div>
+                                <div id="phoneOtpSection" class="mt-2 d-none">
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="sendPhoneOtpBtn">Gửi OTP</button>
+                                        <input type="text" class="form-control form-control-sm" id="phoneOtpCode" placeholder="Nhập OTP" style="max-width: 140px;">
+                                        <button type="button" class="btn btn-outline-success btn-sm" id="verifyPhoneOtpBtn">Xác thực</button>
+                                    </div>
+                                    <div class="form-text">Số điện thoại mới chỉ được lưu sau khi OTP được xác thực.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Inline message (success/error) shown right above the buttons -->
+                        <div id="profileMessage" class="mt-3 d-none" role="alert"></div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary" id="saveBtn">
+                                <i class="bi bi-check-circle me-2"></i>Lưu thay đổi
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Đặt lại
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with stats -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Thống kê
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="fs-2 fw-bold text-primary">@Model.LoyaltyPoints?.ToString("N0")</div>
+                            <div class="text-muted small">Số lần đến ăn</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="fs-2 fw-bold text-warning">
+                                @(string.Equals(Model.VipLevel, "Regular", StringComparison.OrdinalIgnoreCase)
+                                    ? "bình thường"
+                                    : Model.VipLevel)
+                            </div>
+                            <div class="text-muted small">Hạng thành viên</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="small text-muted">
+                        <p><strong>Ngày tham gia:</strong> @Model.CreatedAt?.ToString("dd/MM/yyyy")</p>
+                        <p><strong>Cập nhật cuối:</strong> @Model.UpdatedAt?.ToString("dd/MM/yyyy HH:mm")</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Thông tin
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <small>
+                            <strong>Mẹo:</strong> Giữ thông tin cá nhân luôn cập nhật để nhận được ưu đãi tốt nhất từ nhà hàng!
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let originalData = @Html.Raw(Json.Serialize(Model));
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeForm();
+            setupAvatarPreview();
+            setupContactOtp();
+        });
+
+        function initializeForm() {
+            const form = document.getElementById('profileForm');
+            form.addEventListener('submit', handleFormSubmit);
+        }
+
+        let emailVerified = true;
+        let phoneVerified = true;
+
+        function setupContactOtp() {
+            const emailInput = document.getElementById('email');
+            const phoneInput = document.getElementById('phone');
+            const emailSection = document.getElementById('emailOtpSection');
+            const phoneSection = document.getElementById('phoneOtpSection');
+
+            const sendEmailBtn = document.getElementById('sendEmailOtpBtn');
+            const verifyEmailBtn = document.getElementById('verifyEmailOtpBtn');
+            const sendPhoneBtn = document.getElementById('sendPhoneOtpBtn');
+            const verifyPhoneBtn = document.getElementById('verifyPhoneOtpBtn');
+
+            const normalize = (v) => (v || '').trim();
+
+            const refreshFlags = () => {
+                const emailChanged = normalize(emailInput.value).toLowerCase() !== normalize(originalData.email).toLowerCase();
+                const phoneChanged = normalize(phoneInput.value) !== normalize(originalData.phone);
+
+                // Show OTP sections only when value changed from original
+                emailSection.classList.toggle('d-none', !emailChanged);
+                phoneSection.classList.toggle('d-none', !phoneChanged);
+
+                // Reset verified state when user edits a changed field
+                if (emailChanged) emailVerified = false;
+                if (phoneChanged) phoneVerified = false;
+            };
+
+            emailInput.addEventListener('input', refreshFlags);
+            phoneInput.addEventListener('input', refreshFlags);
+            refreshFlags();
+
+            sendEmailBtn.addEventListener('click', async () => {
+                clearInlineMessage();
+                const email = normalize(emailInput.value);
+                if (!email) return showInlineMessage('Vui lòng nhập email mới trước khi gửi OTP.', 'error');
+
+                const res = await fetch('/CustomerProfile/SendEmailChangeOtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const result = await res.json();
+                showInlineMessage(result.message || (result.success ? 'Đã gửi OTP.' : 'Không thể gửi OTP.'), result.success ? 'success' : 'error');
+            });
+
+            verifyEmailBtn.addEventListener('click', async () => {
+                clearInlineMessage();
+                const email = normalize(emailInput.value);
+                const code = normalize(document.getElementById('emailOtpCode').value);
+                if (!email || !code) return showInlineMessage('Vui lòng nhập email mới và mã OTP.', 'error');
+
+                const res = await fetch('/CustomerProfile/VerifyEmailChangeOtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, code })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    emailVerified = true;
+                    originalData.email = email;
+                    showInlineMessage(result.message || 'Email đã được cập nhật.', 'success');
+                    emailSection.classList.add('d-none');
+                    document.getElementById('emailOtpCode').value = '';
+                } else {
+                    showInlineMessage(result.message || 'Xác thực OTP email thất bại.', 'error');
+                }
+            });
+
+            sendPhoneBtn.addEventListener('click', async () => {
+                clearInlineMessage();
+                const phone = normalize(phoneInput.value);
+                if (!phone) return showInlineMessage('Vui lòng nhập số điện thoại mới trước khi gửi OTP.', 'error');
+
+                const res = await fetch('/CustomerProfile/SendPhoneChangeOtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                const result = await res.json();
+                showInlineMessage(result.message || (result.success ? 'Đã gửi OTP.' : 'Không thể gửi OTP.'), result.success ? 'success' : 'error');
+            });
+
+            verifyPhoneBtn.addEventListener('click', async () => {
+                clearInlineMessage();
+                const phone = normalize(phoneInput.value);
+                const code = normalize(document.getElementById('phoneOtpCode').value);
+                if (!phone || !code) return showInlineMessage('Vui lòng nhập số điện thoại mới và mã OTP.', 'error');
+
+                const res = await fetch('/CustomerProfile/VerifyPhoneChangeOtp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, code })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    phoneVerified = true;
+                    originalData.phone = phone;
+                    showInlineMessage(result.message || 'Số điện thoại đã được cập nhật.', 'success');
+                    phoneSection.classList.add('d-none');
+                    document.getElementById('phoneOtpCode').value = '';
+                } else {
+                    showInlineMessage(result.message || 'Xác thực OTP số điện thoại thất bại.', 'error');
+                }
+            });
+        }
+
+        function setupAvatarPreview() {
+            const avatarFile = document.getElementById('avatarFile');
+            const avatarPreview = document.getElementById('avatarPreview');
+
+            avatarFile.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        avatarPreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+            const msgEl = document.getElementById('profileMessage');
+
+            try {
+                // Confirmation popup before saving
+                const confirmed = confirm('Bạn có chắc chắn muốn lưu các thay đổi này không?');
+                if (!confirmed) {
+                    return;
+                }
+
+                // Disable button and show loading
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang lưu...';
+
+                // Clear previous errors
+                clearFormErrors();
+                clearInlineMessage();
+
+                if (!emailVerified || !phoneVerified) {
+                    return showInlineMessage('Bạn cần xác thực OTP cho Email/Số điện thoại mới trước khi lưu.', 'error');
+                }
+
+                // Collect form data
+                const formData = new FormData(document.getElementById('profileForm'));
+
+                // Send request
+                const response = await fetch('/CustomerProfile/UpdateProfile', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update original data for reset functionality
+                    originalData = result.data;
+
+                    // Show inline success message (right above buttons)
+                    showInlineMessage(result.message || 'Cập nhật thông tin khách hàng thành công!', 'success');
+
+                    // Update avatar URL if changed
+                    if (result.data.avatarUrl) {
+                        document.getElementById('avatarUrl').value = result.data.avatarUrl;
+                    }
+                } else {
+                    // Show validation errors
+                    if (result.errors && result.errors.length > 0) {
+                        showFieldErrors(result.errors);
+                        showInlineMessage(result.message || 'Dữ liệu không hợp lệ.', 'error');
+                    } else {
+                        showInlineMessage(result.message || 'Không thể cập nhật thông tin. Vui lòng thử lại sau.', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showInlineMessage('Đã xảy ra lỗi khi cập nhật thông tin.', 'error');
+            } finally {
+                // Re-enable button
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        }
+
+        function clearInlineMessage() {
+            const msgEl = document.getElementById('profileMessage');
+            if (!msgEl) return;
+            msgEl.className = 'mt-3 d-none';
+            msgEl.textContent = '';
+        }
+
+        function showInlineMessage(message, type = 'success') {
+            const msgEl = document.getElementById('profileMessage');
+            if (!msgEl) return;
+
+            msgEl.classList.remove('d-none');
+            msgEl.classList.toggle('alert', true);
+            msgEl.classList.toggle('alert-success', type === 'success');
+            msgEl.classList.toggle('alert-danger', type === 'error');
+            msgEl.classList.toggle('alert-info', type === 'info');
+            msgEl.textContent = message;
+        }
+
+        function clearFormErrors() {
+            // Remove all error styling
+            document.querySelectorAll('.is-invalid').forEach(el => {
+                el.classList.remove('is-invalid');
+            });
+
+            // Clear error messages
+            document.querySelectorAll('.invalid-feedback').forEach(el => {
+                el.textContent = '';
+            });
+        }
+
+        function showFieldErrors(errors) {
+            errors.forEach(error => {
+                // Try to find field by name pattern
+                const fieldName = error.split(' ')[0].toLowerCase();
+                let field = null;
+
+                // Map common error messages to field names
+                if (error.toLowerCase().includes('họ tên') || error.toLowerCase().includes('fullname')) {
+                    field = document.getElementById('fullName');
+                } else if (error.toLowerCase().includes('email')) {
+                    field = document.getElementById('email');
+                } else if (error.toLowerCase().includes('điện thoại') || error.toLowerCase().includes('phone')) {
+                    field = document.getElementById('phone');
+                }
+
+                if (field) {
+                    field.classList.add('is-invalid');
+                    const feedback = field.parentNode.querySelector('.invalid-feedback');
+                    if (feedback) {
+                        feedback.textContent = error;
+                    }
+                }
+            });
+        }
+
+        function resetForm() {
+            // Reset to original data
+            document.getElementById('fullName').value = originalData.fullName || '';
+            document.getElementById('email').value = originalData.email || '';
+            document.getElementById('phone').value = originalData.phone || '';
+
+            // Reset avatar
+            document.getElementById('avatarFile').value = '';
+            document.getElementById('avatarPreview').src = originalData.avatarUrl || '/images/default-avatar.png';
+            document.getElementById('avatarUrl').value = originalData.avatarUrl || '';
+
+            // Clear errors
+            clearFormErrors();
+
+            showInlineMessage('Đã đặt lại form về trạng thái ban đầu.', 'info');
+        }
+
+        function showToast(message, type = 'success') {
+            // Use existing toast system if available, otherwise create simple alert
+            if (typeof showToast === 'function' && window.showToast !== showToast) {
+                window.showToast(message, type);
+            } else {
+                alert(message);
+            }
+        }
+    </script>
+}

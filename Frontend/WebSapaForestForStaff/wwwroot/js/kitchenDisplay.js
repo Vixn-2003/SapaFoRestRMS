@@ -393,6 +393,15 @@ function getOrderQuantityTotals(order) {
 
     items.forEach(item => {
         const qty = getItemQuantity(item);
+
+        // Bỏ qua món đã hủy / trả (không tính vào tổng hoặc completed)
+        const status = (item.status || '').toLowerCase().trim();
+        const isCancelled = status.includes('cancelled') || status.includes('hủy') ||
+            status.includes('đã hủy') || status.includes('returned') || status.includes('trả');
+        if (isCancelled) {
+            return;
+        }
+
         totalQty += qty;
 
         if (isStatusReady(item.status) || isStatusDone(item.status)) {
@@ -445,7 +454,7 @@ function createOrderCard(order) {
 
     return `
         <div class="order-card ${hasUrgentPendingItems ? 'has-urgent' : ''}" data-order-id="${order.orderId}">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                     <h4 class="mb-0"># ${order.orderNumber} - Bàn ${order.tableNumber || 'N/A'}</h4>
                     <small class="text-muted">
@@ -463,7 +472,7 @@ function createOrderCard(order) {
                     </div>
                     <div class="mt-1">
                         <small class="text-muted">
-                            <i class="mdi mdi-clock-outline"></i> Đã chờ: ${order.waitingMinutes}p
+                            <i class="mdi mdi-clock-outline"></i> Đã chờ
                         </small>
                     </div>
                 </div>
@@ -645,7 +654,7 @@ async function completeOrder(orderId) {
             await Promise.all(promises);
         }
 
-        // Đánh dấu đơn là Completed (bếp phó xác nhận)
+        // Xác nhận toàn bộ đơn đã sẵn sàng (không còn chuyển trạng thái đơn sang Completed)
         const response = await fetch(`${API_BASE}/KitchenDisplay/complete-order`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -661,10 +670,10 @@ async function completeOrder(orderId) {
 
         const result = await response.json();
         if (!result.success) {
-            throw new Error(result.message || 'Không thể đánh dấu đơn hoàn thành');
+            throw new Error(result.message || 'Không thể xác nhận đơn sẵn sàng');
         }
 
-        showSuccess('Đã xác nhận đơn hoàn thành! Đơn sẽ bị ẩn khỏi màn hình "Tất cả".');
+        showSuccess('Đã xác nhận toàn bộ món trong đơn đều sẵn sàng/hoàn thành.');
         reloadCurrentView();
         
         // Tự động reload đơn vừa sẵn sàng nếu đang hiển thị
@@ -1025,7 +1034,7 @@ function createTableGroupCard(group) {
         
         return `
             <div class="order-card ${hasUrgentPendingItems ? 'has-urgent' : ''}" data-order-id="${order.orderId}" style="margin-bottom: 15px;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-3">
                     <div>
                         <h4 class="mb-0"># ${order.orderNumber} - Bàn ${order.tableNumber || 'N/A'}</h4>
                         <small class="text-muted">
@@ -1408,13 +1417,36 @@ function getItemWaitingScore(item) {
 // Create item card
 function createItemCard(item) {
     // Get all pending order detail IDs
-    const pendingOrderDetailIds = item.itemDetails
+    const pendingOrderDetailIds = (item.itemDetails || [])
         .filter(detail => detail.status === 'Pending' || !detail.status)
         .map(detail => detail.orderDetailId);
 
     // Get pending item details for batch selection
-    const pendingItemDetails = item.itemDetails
+    const pendingItemDetails = (item.itemDetails || [])
         .filter(detail => detail.status === 'Pending' || !detail.status);
+
+    // Calculate quantities by status (only Pending & Cooking; Late counts as Cooking)
+    let pendingQty = 0;
+    let cookingQty = 0;
+    
+    if (item.itemDetails && item.itemDetails.length > 0) {
+        item.itemDetails.forEach(detail => {
+            const status = (detail.status || 'Pending').toLowerCase().trim();
+            const qty = detail.quantity || 0;
+            
+            if (status.includes('pending') || status.includes('chờ')) {
+                pendingQty += qty;
+            } else if (
+                status.includes('cooking') ||
+                status.includes('nấu') ||
+                status.includes('chế biến') ||
+                status.includes('late') ||
+                status.includes('trễ')
+            ) {
+                cookingQty += qty;
+            }
+        });
+    }
 
     // Format timeCook display
     // Check if timeCook exists and is a valid number
@@ -1445,15 +1477,27 @@ function createItemCard(item) {
         itemDetails: pendingItemDetails
     };
 
+    // Build status summary HTML (only Pending & Cooking)
+    let statusSummaryHtml = '';
+    if (pendingQty > 0 || cookingQty > 0) {
+        statusSummaryHtml = '<div class="item-status-summary">';
+        if (pendingQty > 0) {
+            statusSummaryHtml += `<span class="status-badge status-pending">Chờ: ${pendingQty}</span>`;
+        }
+        if (cookingQty > 0) {
+            statusSummaryHtml += `<span class="status-badge status-cooking">Nấu: ${cookingQty}</span>`;
+        }
+        statusSummaryHtml += '</div>';
+    }
+
     return `
         <div class="item-card" data-menu-item-id="${item.menuItemId}">
-            <div class="item-header" style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="item-header">
                 <div class="item-name-large">
-                    ${item.menuItemName} x${item.totalQuantity}
+                    <span class="item-name-text">${item.menuItemName}</span>
+                    <span class="item-quantity-inline">x${item.totalQuantity}</span>
                 </div>
-                <div class="item-time-cook">
-                    Thời gian nấu: ${timeCookDisplay}
-                </div>
+                ${statusSummaryHtml}
             </div>
 
             <div class="item-card-actions" style="padding: 15px; text-align: center;">
@@ -1546,8 +1590,7 @@ function filterByItemStatus(status) {
         'Pending': 'filter-status-pending',
         'Cooking': 'filter-status-cooking',
         'Late': 'filter-status-late',
-        'Ready': 'filter-status-ready',
-        'Done': 'filter-status-done'
+        'Ready': 'filter-status-ready'
     };
 
     const activeButton = document.getElementById(buttonMap[status]);
@@ -1588,9 +1631,6 @@ function createModalIfNotExists() {
                         <span class="order-modal-time" id="modalOrderTime">00:00</span>
                     </div>
                     <div class="order-modal-header-right">
-                        <button class="btn-rush" id="btnRush" onclick="toggleRush()">
-                            <i class="mdi mdi-clock-fast"></i> CẦN LÀM NGAY
-                        </button>
                         <button class="btn-print" onclick="printOrder()">
                             <i class="mdi mdi-printer"></i> IN
                         </button>
@@ -1648,12 +1688,6 @@ async function openOrderModal(orderId) {
         const orderTime = new Date(order.createdAt);
         document.getElementById('modalOrderTime').textContent =
             `${String(orderTime.getHours()).padStart(2, '0')}:${String(orderTime.getMinutes()).padStart(2, '0')}`;
-
-        const hasUrgent = order.items && order.items.some(item => item.isUrgent);
-        const rushBtn = document.getElementById('btnRush');
-        if (rushBtn) {
-            rushBtn.classList.toggle('active', hasUrgent);
-        }
 
         renderModalItems(order.items || []);
 
@@ -1896,37 +1930,7 @@ function selectAllItems() {
     renderModalItems(currentModalOrder.items);
 }
 
-// Toggle RUSH
-async function toggleRush() {
-    if (!currentModalOrder) return;
-
-    const rushBtn = document.getElementById('btnRush');
-    const isUrgent = rushBtn.classList.contains('active');
-    const newUrgentStatus = !isUrgent;
-
-    const promises = currentModalOrder.items.map(item =>
-        markAsUrgent(item.orderDetailId, newUrgentStatus)
-    );
-
-    try {
-        await Promise.all(promises);
-        rushBtn.classList.toggle('active');
-        showSuccess(newUrgentStatus ? 'Đã đánh dấu cần làm ngay' : 'Đã bỏ đánh dấu cần làm ngay');
-        reloadCurrentView();
-    } catch (error) {
-        showError('Không thể cập nhật trạng thái cần làm ngay');
-    }
-}
-
-// Mark as urgent
-async function markAsUrgent(orderDetailId, isUrgent) {
-    const response = await fetch(`${API_BASE}/KitchenDisplay/mark-as-urgent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderDetailId, isUrgent })
-    });
-    return await response.json();
-}
+// (Removed rush/urgent control from KDS modal; waiter flow still retains its own logic)
 
 // Fire selected items
 async function fireSelectedItems() {
@@ -2710,52 +2714,95 @@ function showConfirmPopup(message, title = 'Xác nhận') {
     });
 }
 
-// Toast notifications
-function showSuccess(message) {
-    if (typeof toastr !== 'undefined') {
-        const toast = toastr.success(message, '', {
-            closeButton: true,
-            progressBar: true,
-            timeOut: 5000,
-            extendedTimeOut: 2000,
-            positionClass: 'toast-top-right',
-            escapeHtml: false
-        });
+// Toast notifications (force hide after ~5s, no hover extension)
+const KDS_TOAST_TIMEOUT = 5000;
+const KDS_TOAST_EXT_TIMEOUT = 0;
+const KDS_TOAST_CLEAR_BUFFER = 300;
+const KDS_TOAST_HIDE_DURATION = 200;
 
-        // Đảm bảo toast được clear sau 5s ngay cả khi cấu hình global bị override
+function showSuccess(message) {
+    if (typeof toastr === 'undefined') {
+        console.log('SUCCESS:', message);
+        return;
+    }
+
+    // Clear any existing toasts first
+    toastr.clear();
+
+    const toast = toastr.success(message, '', {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-right',
+        timeOut: KDS_TOAST_TIMEOUT,
+        extendedTimeOut: KDS_TOAST_EXT_TIMEOUT,
+        showDuration: KDS_TOAST_HIDE_DURATION,
+        hideDuration: KDS_TOAST_HIDE_DURATION,
+        newestOnTop: true,
+        preventDuplicates: true,
+        escapeHtml: false,
+        tapToDismiss: true
+    });
+
+    if (toast && toast[0]) {
+        toast[0].dataset.toastTime = Date.now();
+        // Hard clear after timeout + buffer even if hover happens
         setTimeout(() => {
-            try {
-                if (toast) {
-                    toastr.clear(toast);
-                }
-            } catch (e) { /* ignore */ }
-        }, 5000);
+            try { toastr.clear(toast); } catch (e) { /* ignore */ }
+        }, KDS_TOAST_TIMEOUT + KDS_TOAST_CLEAR_BUFFER);
     }
 }
 
 function showError(message) {
-    if (typeof toastr !== 'undefined') {
-        const toast = toastr.error(message, '', {
-            closeButton: true,
-            progressBar: true,
-            timeOut: 5000,
-            extendedTimeOut: 2000,
-            positionClass: 'toast-top-right',
-            escapeHtml: false
-        });
-
-        setTimeout(() => {
-            try {
-                if (toast) {
-                    toastr.clear(toast);
-                }
-            } catch (e) { /* ignore */ }
-        }, 5000);
-    } else {
+    if (typeof toastr === 'undefined') {
         console.error('ERROR:', message);
+        return;
+    }
+
+    // Clear any existing toasts first
+    toastr.clear();
+
+    const toast = toastr.error(message, '', {
+        closeButton: true,
+        progressBar: true,
+        positionClass: 'toast-top-right',
+        timeOut: KDS_TOAST_TIMEOUT,
+        extendedTimeOut: KDS_TOAST_EXT_TIMEOUT,
+        showDuration: KDS_TOAST_HIDE_DURATION,
+        hideDuration: KDS_TOAST_HIDE_DURATION,
+        newestOnTop: true,
+        preventDuplicates: true,
+        escapeHtml: false,
+        tapToDismiss: true
+    });
+
+    if (toast && toast[0]) {
+        toast[0].dataset.toastTime = Date.now();
+        setTimeout(() => {
+            try { toastr.clear(toast); } catch (e) { /* ignore */ }
+        }, KDS_TOAST_TIMEOUT + KDS_TOAST_CLEAR_BUFFER);
     }
 }
+// Cleanup stuck toasts every 10 seconds
+setInterval(() => {
+    const container = document.getElementById('toast-container');
+    if (container) {
+        const toasts = container.querySelectorAll('.toast');
+        toasts.forEach(toast => {
+            // Check if toast has been there for more than 10 seconds
+            const ageMs = Date.now() - (parseInt(toast.dataset.toastTime) || 0);
+            if (ageMs > 10000) {
+                toast.remove();
+            }
+        });
 
+        // Remove container if empty
+        if (container.children.length === 0) {
+            container.remove();
+        }
+    }
+}, 10000);
+
+// (Removed: toastr override; we stamp dataset time directly in showSuccess/showError)
 // ===========================
 // RECENTLY FULFILLED ORDERS
 // ===========================
@@ -3219,28 +3266,37 @@ function renderIngredientShortage(shortageList) {
                 ingredientName: item.ingredientName,
                 unitName: item.unitName || '',
                 totalShortage: 0,
-                totalRequired: 0,
-                totalReserved: 0,
                 affectedDishes: new Set(), // Set để tránh trùng lặp món
                 urgentCount: 0
             };
         }
-        
+
+        // Cộng dồn trực tiếp số lượng thiếu do backend tính sẵn
         ingredientSummary[key].totalShortage += item.shortageQuantity || 0;
-        ingredientSummary[key].totalRequired += item.requiredQuantity || 0;
-        ingredientSummary[key].totalReserved += item.reservedQuantity || 0;
+
         ingredientSummary[key].affectedDishes.add(item.menuItemName);
         if (item.isUrgent) {
             ingredientSummary[key].urgentCount++;
         }
     });
 
+    // Chỉ giữ lại nguyên liệu thực sự đang thiếu (> 0)
+    const filteredIngredients = Object.values(ingredientSummary).filter(ing => ing.totalShortage > 0);
+
+    // Nếu không còn nguyên liệu nào thiếu -> ẩn panel
+    if (filteredIngredients.length === 0) {
+        panel.style.display = 'none';
+        body.innerHTML = '<div class="text-center text-muted py-3">Không có nguyên liệu thiếu</div>';
+        countBadge.textContent = '0';
+        return;
+    }
+
     // Update count - số lượng nguyên liệu thiếu (không phải số món)
-    const uniqueIngredientCount = Object.keys(ingredientSummary).length;
+    const uniqueIngredientCount = filteredIngredients.length;
     countBadge.textContent = uniqueIngredientCount;
 
     // Sắp xếp: nguyên liệu có số lượng thiếu nhiều nhất trước, sau đó theo tên
-    const sortedIngredients = Object.values(ingredientSummary).sort((a, b) => {
+    const sortedIngredients = filteredIngredients.sort((a, b) => {
         if (b.totalShortage !== a.totalShortage) {
             return b.totalShortage - a.totalShortage; // Thiếu nhiều nhất trước
         }
@@ -3279,15 +3335,7 @@ function renderIngredientShortage(shortageList) {
                             <strong>${escapeHtml(ing.ingredientName)}</strong>${urgentBadge}
                         </div>
                         <div class="shortage-item-details" style="font-size: 13px; line-height: 1.6;">
-                            <div style="margin-bottom: 4px;">
-                                <span style="color: #6c757d;">Tổng cần:</span> 
-                                <strong>${formatNumber(ing.totalRequired)} ${ing.unitName}</strong>
-                            </div>
-                            <div style="margin-bottom: 4px;">
-                                <span style="color: #6c757d;">Đã reserve:</span> 
-                                <strong>${formatNumber(ing.totalReserved)} ${ing.unitName}</strong>
-                            </div>
-                            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0;">
+                            <div style="margin-top: 6px;">
                                 <span style="color: #6c757d; font-size: 12px;">Ảnh hưởng:</span> 
                                 <span style="color: #495057; font-size: 12px;">${affectedDishesList.slice(0, 3).map(d => escapeHtml(d)).join(', ')}${affectedDishesList.length > 3 ? ` và ${affectedDishesList.length - 3} món khác` : ''}</span>
                             </div>

@@ -1,8 +1,11 @@
 using AutoMapper;
 using BusinessAccessLayer.Common.Pagination;
 using BusinessAccessLayer.DTOs.CustomerManagement;
+using BusinessAccessLayer.DTOs.CustomerProfile;
+using BusinessAccessLayer.DTOs.Customers;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -22,6 +25,7 @@ namespace BusinessAccessLayer.Services
         private readonly IMapper _mapper;
         private readonly IAuditLogService _auditLogService;
         private readonly IConfiguration _configuration;
+        private readonly ICloudinaryService _cloudinaryService;
 
         // VIP Criteria Configuration
         private const decimal DEFAULT_VIP_THRESHOLD = 500000m; // 500k VND
@@ -31,12 +35,14 @@ namespace BusinessAccessLayer.Services
             IUnitOfWork unitOfWork, 
             IMapper mapper, 
             IAuditLogService auditLogService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ICloudinaryService cloudinaryService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _auditLogService = auditLogService;
             _configuration = configuration;
+            _cloudinaryService = cloudinaryService;
         }
 
         /// <summary>
@@ -57,6 +63,7 @@ namespace BusinessAccessLayer.Services
                 filter.MinSpending,
                 filter.MaxSpending,
                 filter.MinVisits,
+                filter.MaxVisits,
                 filter.SortBy,
                 filter.SortDirection,
                 ct);
@@ -88,6 +95,10 @@ namespace BusinessAccessLayer.Services
             if (filter.MinVisits.HasValue)
             {
                 customersWithStats = customersWithStats.Where(x => x.TotalVisits >= filter.MinVisits.Value);
+            }
+            if (filter.MaxVisits.HasValue)
+            {
+                customersWithStats = customersWithStats.Where(x => x.TotalVisits <= filter.MaxVisits.Value);
             }
 
             // Apply sorting
@@ -314,7 +325,7 @@ namespace BusinessAccessLayer.Services
         /// <summary>
         /// Check VIP criteria based on spending statistics
         /// </summary>
-        public async Task<(bool MeetsCriteria, decimal AverageAmountPerPerson, string Reason)> CheckVipCriteriaAsync(
+        public virtual async Task<(bool MeetsCriteria, decimal AverageAmountPerPerson, string Reason)> CheckVipCriteriaAsync(
             int customerId, 
             CancellationToken ct = default)
         {
@@ -365,8 +376,96 @@ namespace BusinessAccessLayer.Services
             var configValue = _configuration["CustomerManagement:AveragePeopleCount"];
             if (int.TryParse(configValue, out var count) && count > 0)
                 return count;
-            
+
             return DEFAULT_AVG_PEOPLE_COUNT;
+        }
+
+        /// <summary>
+        /// Get customer profile information
+        /// </summary>
+        public async Task<CustomerProfileDto?> GetCustomerProfileAsync(int customerId, CancellationToken ct = default)
+        {
+            var customer = await _unitOfWork.CustomerManagement.GetCustomerByIdAsync(customerId, ct);
+            if (customer == null || customer.User == null)
+                return null;
+
+            // Map from User entity since profile data is stored there
+            var profileDto = new CustomerProfileDto
+            {
+                CustomerId = customer.CustomerId,
+                FullName = customer.User.FullName,
+                Email = customer.User.Email,
+                Phone = customer.User.Phone,
+                AvatarUrl = customer.User.AvatarUrl,
+                LoyaltyPoints = customer.LoyaltyPoints.HasValue ? (decimal?)customer.LoyaltyPoints.Value : null,
+                VipLevel = customer.IsVip ? "VIP" : "Regular",
+                CreatedAt = customer.User.CreatedAt,
+                UpdatedAt = customer.User.ModifiedAt
+            };
+
+            return profileDto;
+        }
+
+        /// <summary>
+        /// Update customer profile information
+        /// </summary>
+        public async Task<CustomerProfileDto?> UpdateCustomerProfileAsync(int customerId, CustomerProfileUpdateRequest request, CancellationToken ct = default)
+        {
+            var customer = await _unitOfWork.CustomerManagement.GetCustomerByIdAsync(customerId, ct);
+            if (customer == null || customer.User == null)
+                return null;
+
+            // Update User entity (where profile data is stored)
+            var user = customer.User;
+            user.FullName = request.FullName;
+
+            // IMPORTANT: Email/Phone changes require OTP verification and are handled by dedicated endpoints.
+            // Do NOT update Email/Phone here even if they are present in the multipart form.
+            user.ModifiedAt = DateTime.UtcNow;
+
+            // Handle avatar upload if provided
+            if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+            {
+                try
+                {
+                    // Upload to Cloudinary (configured in DI)
+                    var uploadedUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile, folder: "avatars");
+                    if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                    {
+                        user.AvatarUrl = uploadedUrl;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the update
+                    await _auditLogService.LogEventAsync(
+                        eventType: "AvatarUploadError",
+                        entityType: "Customer",
+                        entityId: customerId,
+                        description: $"Failed to upload avatar: {ex.Message}",
+                        userId: null,
+                        ct: ct);
+                }
+            }
+            else if (!string.IsNullOrEmpty(request.AvatarUrl))
+            {
+                user.AvatarUrl = request.AvatarUrl;
+            }
+
+            // Update customer entity (including User data)
+            await _unitOfWork.CustomerManagement.UpdateCustomerAsync(customer, ct);
+
+            // Log the profile update
+            await _auditLogService.LogEventAsync(
+                eventType: "CustomerProfileUpdated",
+                entityType: "Customer",
+                entityId: customerId,
+                description: $"Customer profile updated: {request.FullName}",
+                userId: null, // TODO: Get current user ID
+                ct: ct);
+
+            // Return updated profile
+            return await GetCustomerProfileAsync(customerId, ct);
         }
     }
 }

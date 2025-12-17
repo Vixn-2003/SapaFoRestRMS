@@ -255,8 +255,9 @@ namespace DataAccessLayer.Repositories
         public async Task<List<InventoryBatch>> GetAvailableBatchesByIngredientAsync(int ingredientId)
         {
             return await _context.InventoryBatches
-                .Where(b => b.IngredientId == ingredientId 
-                    && b.QuantityRemaining > b.QuantityReserved) // Chỉ lấy batch còn khả dụng
+                .Where(b => b.IngredientId == ingredientId
+                            && b.IsActive            // chỉ batch đang hoạt động
+                            && b.QuantityRemaining > b.QuantityReserved) // Chỉ lấy batch còn khả dụng
                 .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
                 .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
                 .ToListAsync();
@@ -265,7 +266,8 @@ namespace DataAccessLayer.Repositories
         public async Task<List<InventoryBatch>> GetAllBatchesByIngredientAsync(int ingredientId)
         {
             return await _context.InventoryBatches
-                .Where(b => b.IngredientId == ingredientId) // Lấy tất cả batches (kể cả available <= 0)
+                .Where(b => b.IngredientId == ingredientId
+                            && b.IsActive) // Lấy tất cả batches active (kể cả available <= 0)
                 .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
                 .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
                 .ToListAsync();
@@ -278,7 +280,8 @@ namespace DataAccessLayer.Repositories
                 .Include(b => b.Ingredient)
                     .ThenInclude(i => i.Unit)
                 .Where(b => b.IngredientId == ingredientId 
-                    && b.QuantityReserved > 0) // Chỉ lấy batch đã được reserve
+                            && b.IsActive
+                            && b.QuantityReserved > 0) // Chỉ lấy batch đã được reserve
                 .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
                 .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
                 .ToListAsync();

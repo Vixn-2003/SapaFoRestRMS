@@ -12,6 +12,7 @@ namespace WebSapaForestForStaff.DTOs.CustomerManagement
         public decimal? MinSpending { get; set; }
         public decimal? MaxSpending { get; set; }
         public int? MinVisits { get; set; }
+        public int? MaxVisits { get; set; }
         public string SortBy { get; set; } = "TotalSpending";
         public string SortDirection { get; set; } = "desc";
     }

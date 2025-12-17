@@ -45,7 +45,7 @@ namespace WebSapaForestForStaff.Controllers
             var transactionList = await _transactionApiService.GetTransactionHistoryAsync(filter);
             if (transactionList == null)
             {
-                TempData["ErrorMessage"] = "Không thể tải danh sách transactions.";
+                TempData["ErrorMessage"] = "Không thể tải danh sách giao dịch.";
                 transactionList = new TransactionHistoryListDto();
             }
 
