@@ -23,8 +23,16 @@ using SapaFoRestRMSAPI.Hubs;
 using BusinessAccessLayer.Services.Inventory;
 using QuestPDF.Infrastructure;
 
+using OfficeOpenXml;
+
 //  FIX: Configure QuestPDF License (Community - Free for commercial use)
 QuestPDF.Settings.License = LicenseType.Community;
+
+// FIX: Configure EPPlus license (required from EPPlus 8+)
+// Choose the appropriate license type for your usage:
+// - Commercial: ExcelPackage.License.SetCommercial("YOUR_LICENSE_KEY");
+// - Non-commercial: SetNonCommercialPersonal/SetNonCommercialOrganization
+ExcelPackage.License.SetNonCommercialOrganization("SapaFoRestRMS");
 
 var builder = WebApplication.CreateBuilder(args);
 

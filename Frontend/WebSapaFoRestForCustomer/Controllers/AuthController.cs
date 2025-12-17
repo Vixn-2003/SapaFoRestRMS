@@ -6,6 +6,8 @@ using System.Security.Claims;
 using Newtonsoft.Json;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using WebSapaFoRestForCustomer.DTOs;
+using Microsoft.AspNetCore.Http;
 
 namespace WebSapaFoRestForCustomer.Controllers
 {
@@ -98,6 +100,34 @@ namespace WebSapaFoRestForCustomer.Controllers
                     var responseContent = await response.Content.ReadAsStringAsync();
                     var authResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
 
+                    // Store token in Session for downstream API calls (ApiService prefers Session token)
+                    HttpContext.Session.SetString("Token", authResponse.Token);
+
+                    // Fetch profile to get AvatarUrl for UI (layout dropdown)
+                    string? avatarUrl = null;
+                    try
+                    {
+                        using var profileClient = new HttpClient { BaseAddress = _httpClient.BaseAddress };
+                        profileClient.DefaultRequestHeaders.Authorization =
+                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+
+                        var profileResp = await profileClient.GetAsync("api/Customer/profile");
+                        if (profileResp.IsSuccessStatusCode)
+                        {
+                            var profileJson = await profileResp.Content.ReadAsStringAsync();
+                            var profile = JsonConvert.DeserializeObject<CustomerProfile>(profileJson);
+                            avatarUrl = profile?.AvatarUrl;
+                            if (!string.IsNullOrWhiteSpace(avatarUrl))
+                            {
+                                HttpContext.Session.SetString("AvatarUrl", avatarUrl);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Non-critical: avatar can fallback to default icon/image
+                    }
+
                     var claims = new List<Claim>
                     {
                         new Claim(ClaimTypes.NameIdentifier, authResponse.UserId.ToString()),
@@ -106,6 +136,10 @@ namespace WebSapaFoRestForCustomer.Controllers
                         new Claim(ClaimTypes.Role, "Customer"),
                         new Claim("Token", authResponse.Token)
                     };
+                    if (!string.IsNullOrWhiteSpace(avatarUrl))
+                    {
+                        claims.Add(new Claim("AvatarUrl", avatarUrl));
+                    }
 
                     var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                     var authProperties = new AuthenticationProperties

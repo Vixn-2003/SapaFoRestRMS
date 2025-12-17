@@ -182,12 +182,23 @@
                         </div>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
+                            var avatarUrl = User.FindFirst("AvatarUrl")?.Value
+                                ?? Context.Session.GetString("AvatarUrl")
+                                ?? Url.Content("~/images/default-avatar.png");
                             <div class="dropdown me-2">
-                                <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    <i class="bi bi-person-circle"></i> @User.Identity.Name
+                                <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                                    <img src="@avatarUrl"
+                                         alt="Avatar"
+                                         class="rounded-circle"
+                                         style="width:28px;height:28px;object-fit:cover;border:2px solid rgba(255,255,255,0.7);" />
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="CustomerProfile" asp-action="Index">
+                                            <i class="bi bi-person-lines-fill"></i> Thông tin cá nhân
+                                        </a>
+                                    </li>
                                     <li>
                                         <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
                                             <button type="submit" class="btn btn-link dropdown-item p-0 m-0">
@@ -227,6 +238,9 @@
                         <i class="bi bi-info-circle me-2"></i>
                         <span>Đăng nhập để xem lịch sử đặt bàn.</span>
                     </div>
+
+                    <!-- Message area inside modal (used by login-modal.js) -->
+                    <div id="loginModalMessage" class="alert d-none" role="alert"></div>
 
                     <!-- STEP 1: NHẬP SỐ ĐIỆN THOẠI -->
                     <form id="loginRequestOtpForm" method="post" action="/Auth/RequestOtp">

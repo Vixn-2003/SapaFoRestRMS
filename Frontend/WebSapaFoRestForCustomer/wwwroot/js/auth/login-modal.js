@@ -4,10 +4,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const phoneInput = document.getElementById('loginPhone');
     const verifyPhoneHidden = document.getElementById('verifyPhoneHidden');
     const backToPhoneBtn = document.getElementById('loginBackToPhoneBtn');
+    const messageBox = document.getElementById('loginModalMessage');
 
     function getAntiForgeryToken(form) {
         const tokenInput = form.querySelector('input[name="__RequestVerificationToken"]');
         return tokenInput ? tokenInput.value : '';
+    }
+
+    function setModalMessage(type, text) {
+        if (!messageBox) return;
+        messageBox.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning', 'alert-info');
+        const cls =
+            type === 'success' ? 'alert-success' :
+                type === 'warning' ? 'alert-warning' :
+                    type === 'info' ? 'alert-info' : 'alert-danger';
+        messageBox.classList.add(cls);
+        messageBox.textContent = text || '';
+    }
+
+    function clearModalMessage() {
+        if (!messageBox) return;
+        messageBox.classList.add('d-none');
+        messageBox.textContent = '';
+        messageBox.classList.remove('alert-success', 'alert-danger', 'alert-warning', 'alert-info');
     }
 
     if (requestForm) {
@@ -15,6 +34,13 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             const formData = new FormData(requestForm);
             const token = getAntiForgeryToken(requestForm);
+
+            clearModalMessage();
+            if (!phoneInput.value || !phoneInput.value.trim()) {
+                setModalMessage('danger', 'Vui lòng nhập số điện thoại');
+                return;
+            }
+
 
             fetch(requestForm.action, {
                 method: 'POST',
@@ -29,17 +55,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     return res.text();
                 })
                 .then(() => {
-                    if (!phoneInput.value) {
-                        showErrorToast('Vui lòng nhập số điện thoại');
-                        return;
-                    }
+                  
                     verifyPhoneHidden.value = phoneInput.value.trim();
                     requestForm.style.display = 'none';
                     verifyForm.style.display = '';
                     document.getElementById('loginOtpCode').focus();
-                    showSuccessToast('Mã OTP đã được gửi tới số điện thoại của bạn.');
+                    setModalMessage('success', 'Mã OTP đã được gửi tới số điện thoại của bạn.');
                 })
-                .catch(() => showErrorToast('Không thể gửi mã OTP. Vui lòng thử lại.'));
+                .catch(() => setModalMessage('danger', 'Không thể gửi mã OTP. Vui lòng thử lại.'));
         });
     }
 
@@ -49,6 +72,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData(verifyForm);
             const token = getAntiForgeryToken(verifyForm);
 
+            clearModalMessage();
+
             fetch(verifyForm.action, {
                 method: 'POST',
                 headers: { 'RequestVerificationToken': token },
@@ -56,20 +81,40 @@ document.addEventListener('DOMContentLoaded', function () {
             })
                 .then(res => {
                     if (res.redirected) {
-                        // Successful login returns redirect to Home
-                        window.location.href = res.url;
+                        // Successful login returns redirect (usually Home or returnUrl)
+                        try {
+                            const modalEl = document.getElementById('loginModal');
+                            const modalInstance = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+                            if (modalInstance) modalInstance.hide();
+                        } catch (e) {
+                            // ignore
+                        }
+
+                        if (window.toastr && toastr.success) {
+                            toastr.success('Đăng nhập thành công');
+                        }
+
+                        // Navigate so navbar updates (authenticated state)
+                        setTimeout(() => { window.location.href = res.url; }, 600);
                         return null;
                     }
-                    return res.text();
+                    return res;
                 })
-                .then(html => {
-                    if (html === null) return;
-                    // If not redirected, assume validation error
-                    showErrorToast('Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.');
+                .then(async (res) => {
+                    if (res === null) return;
+
+                    // Prefer JSON { message } (e.g. inactive account), fallback to default text
+                    let msg = 'Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.';
+                    try {
+                        const data = await res.json();
+                        if (data && data.message) msg = data.message;
+                    } catch { }
+                    setModalMessage('danger', msg);
                 })
-                .catch(() => showErrorToast('Có lỗi xảy ra. Vui lòng thử lại.'));
+                .catch(() => setModalMessage('danger', 'Có lỗi xảy ra. Vui lòng thử lại.'));
         });
     }
+
 
     if (backToPhoneBtn) {
         backToPhoneBtn.addEventListener('click', function () {

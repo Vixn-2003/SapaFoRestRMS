@@ -82,7 +82,6 @@
                             <tr>
                                 <th>Mã hóa đơn</th>
                                 <th>Mã đơn hàng</th>
-                                <th>Bàn</th>
                                 <th>Số tiền</th>
                                 <th>Phương thức thanh toán</th>
                                 <th>Thu ngân</th>
@@ -96,7 +95,6 @@
                                 <tr>
                                     <td><strong>@transaction.TransactionCode</strong></td>
                                     <td>@transaction.OrderCode</td>
-                                    <td>@transaction.TableNumber</td>
                                     <td><strong>@transaction.Amount.ToString("N0") ₫</strong></td>
                                     <td>
                                         @if (transaction.PaymentMethod == "Cash")

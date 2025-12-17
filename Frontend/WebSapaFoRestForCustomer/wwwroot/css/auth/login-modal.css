@@ -90,6 +90,12 @@
     font-size: 0.9rem;
 }
 
+/* Message area (success/error) shown inside modal */
+#loginModal #loginModalMessage {
+    border-radius: 12px;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.9rem;
+}
 /* Label + input */
 #loginModal .form-label {
     font-weight: 500;

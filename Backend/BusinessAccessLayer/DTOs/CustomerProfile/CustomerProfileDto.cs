@@ -12,5 +12,6 @@ namespace BusinessAccessLayer.DTOs.CustomerProfile
         public decimal? LoyaltyPoints { get; set; }
         public string? VipLevel { get; set; }
         public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }

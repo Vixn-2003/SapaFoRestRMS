@@ -25,6 +25,7 @@ namespace BusinessAccessLayer.Services
         private readonly IMapper _mapper;
         private readonly IAuditLogService _auditLogService;
         private readonly IConfiguration _configuration;
+        private readonly ICloudinaryService _cloudinaryService;
 
         // VIP Criteria Configuration
         private const decimal DEFAULT_VIP_THRESHOLD = 500000m; // 500k VND
@@ -34,12 +35,14 @@ namespace BusinessAccessLayer.Services
             IUnitOfWork unitOfWork, 
             IMapper mapper, 
             IAuditLogService auditLogService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ICloudinaryService cloudinaryService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _auditLogService = auditLogService;
             _configuration = configuration;
+            _cloudinaryService = cloudinaryService;
         }
 
         /// <summary>
@@ -394,9 +397,10 @@ namespace BusinessAccessLayer.Services
                 Email = customer.User.Email,
                 Phone = customer.User.Phone,
                 AvatarUrl = customer.User.AvatarUrl,
-                LoyaltyPoints = customer.LoyaltyPoints,
+                LoyaltyPoints = customer.LoyaltyPoints.HasValue ? (decimal?)customer.LoyaltyPoints.Value : null,
                 VipLevel = customer.IsVip ? "VIP" : "Regular",
-                CreatedAt = customer.User.CreatedAt
+                CreatedAt = customer.User.CreatedAt,
+                UpdatedAt = customer.User.ModifiedAt
             };
 
             return profileDto;
@@ -414,8 +418,9 @@ namespace BusinessAccessLayer.Services
             // Update User entity (where profile data is stored)
             var user = customer.User;
             user.FullName = request.FullName;
-            user.Email = request.Email;
-            user.Phone = request.Phone;
+
+            // IMPORTANT: Email/Phone changes require OTP verification and are handled by dedicated endpoints.
+            // Do NOT update Email/Phone here even if they are present in the multipart form.
             user.ModifiedAt = DateTime.UtcNow;
 
             // Handle avatar upload if provided
@@ -423,12 +428,12 @@ namespace BusinessAccessLayer.Services
             {
                 try
                 {
-                    // TODO: Implement file upload to Cloudinary or local storage
-                    // For now, just store the filename
-                    var fileName = $"{Guid.NewGuid()}_{request.AvatarFile.FileName}";
-                    user.AvatarUrl = $"/uploads/avatars/{fileName}";
-
-                    // TODO: Actually save the file to storage
+                    // Upload to Cloudinary (configured in DI)
+                    var uploadedUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile, folder: "avatars");
+                    if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                    {
+                        user.AvatarUrl = uploadedUrl;
+                    }
                 }
                 catch (Exception ex)
                 {

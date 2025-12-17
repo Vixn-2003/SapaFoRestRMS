@@ -807,13 +807,13 @@ namespace BusinessAccessLayer.Services
                     return new StatusUpdateResponse
                     {
                         Success = false,
-                        Message = \"Chưa phải tất cả món đều sẵn sàng hoặc hoàn thành\"
+                        Message = "Chưa phải tất cả món đều sẵn sàng hoặc hoàn thành"
                     };
                 }
 
                 // ✅ Giữ lại logic cũ: sau khi bếp phó ấn \"Sẵn sàng\", chuyển trạng thái đơn sang \"Completed\"
                 // để thể hiện đơn đã được hoàn tất ở phía bếp.
-                order.Status = \"Completed\";
+                order.Status = "Completed";
 
                 await _unitOfWork.Orders.UpdateAsync(order);
                 await _unitOfWork.SaveChangesAsync();
@@ -821,7 +821,7 @@ namespace BusinessAccessLayer.Services
                 return new StatusUpdateResponse
                 {
                     Success = true,
-                    Message = \"Order completed successfully\"
+                    Message = "Order completed successfully"
                 };
             }
             catch (Exception ex)

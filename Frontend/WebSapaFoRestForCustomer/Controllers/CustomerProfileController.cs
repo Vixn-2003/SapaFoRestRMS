@@ -92,5 +92,65 @@ namespace WebSapaFoRestForCustomer.Controllers
                 return Json(new { success = false, message = $"Đã xảy ra lỗi: {ex.Message}" });
             }
         }
+
+        // ====================== CHANGE EMAIL/PHONE (OTP) ======================
+        public class SendOtpRequest
+        {
+            public string? Email { get; set; }
+            public string? Phone { get; set; }
+        }
+
+        public class VerifyOtpRequest
+        {
+            public string? Email { get; set; }
+            public string? Phone { get; set; }
+            public string? Code { get; set; }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendEmailChangeOtp([FromBody] SendOtpRequest req)
+        {
+            var email = req.Email?.Trim();
+            if (string.IsNullOrWhiteSpace(email))
+                return Json(new { success = false, message = "Email mới không hợp lệ." });
+
+            var ok = await _apiService.SendChangeEmailOtpAsync(email);
+            return Json(new { success = ok, message = ok ? "Đã gửi OTP đến email mới." : "Không thể gửi OTP email. Vui lòng thử lại." });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> VerifyEmailChangeOtp([FromBody] VerifyOtpRequest req)
+        {
+            var email = req.Email?.Trim();
+            var code = req.Code?.Trim();
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(code))
+                return Json(new { success = false, message = "Thiếu email hoặc mã OTP." });
+
+            var (success, message) = await _apiService.VerifyChangeEmailOtpAsync(email, code);
+            return Json(new { success, message = success ? "Email đã được cập nhật." : (message ?? "Xác thực OTP email thất bại.") });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SendPhoneChangeOtp([FromBody] SendOtpRequest req)
+        {
+            var phone = req.Phone?.Trim();
+            if (string.IsNullOrWhiteSpace(phone))
+                return Json(new { success = false, message = "Số điện thoại mới không hợp lệ." });
+
+            var ok = await _apiService.SendChangePhoneOtpAsync(phone);
+            return Json(new { success = ok, message = ok ? "Đã gửi OTP đến số điện thoại mới." : "Không thể gửi OTP số điện thoại. Vui lòng thử lại." });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> VerifyPhoneChangeOtp([FromBody] VerifyOtpRequest req)
+        {
+            var phone = req.Phone?.Trim();
+            var code = req.Code?.Trim();
+            if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(code))
+                return Json(new { success = false, message = "Thiếu số điện thoại hoặc mã OTP." });
+
+            var (success, message) = await _apiService.VerifyChangePhoneOtpAsync(phone, code);
+            return Json(new { success, message = success ? "Số điện thoại đã được cập nhật." : (message ?? "Xác thực OTP số điện thoại thất bại.") });
+        }
     }
 }

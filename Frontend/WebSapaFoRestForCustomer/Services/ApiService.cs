@@ -28,8 +28,10 @@ namespace WebSapaFoRestForCustomer.Services
             var client = new HttpClient();
             client.BaseAddress = new Uri(GetApiBaseUrl());
 
-            // Get token from claims
-            var token = _httpContextAccessor.HttpContext?.User?.FindFirst("Token")?.Value;
+            // Get token from session first (refreshed token is stored in Session), then fallback to claims
+            var token =
+                _httpContextAccessor.HttpContext?.Session.GetString("Token")
+                ?? _httpContextAccessor.HttpContext?.User?.FindFirst("Token")?.Value;
             if (!string.IsNullOrEmpty(token))
             {
                 client.DefaultRequestHeaders.Authorization = 
@@ -127,139 +129,6 @@ namespace WebSapaFoRestForCustomer.Services
             }
         }
 
-        //Customer Profile Methods
-        //public async Task<CustomerProfile?> GetCustomerProfileAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/api/Customer/profile"));
-
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
-
-        //public async Task<bool> UpdateCustomerProfileAsync(CustomerProfileUpdate profile)
-        //{
-        //    try
-        //    {
-        //        var json = JsonSerializer.Serialize(profile);
-        //        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        //        var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/api/Customer/profile", content));
-        //        return response.IsSuccessStatusCode;
-        //    }
-        //    catch
-        //    {
-        //        return false;
-        //    }
-        //}
-
-        //Customer Orders Methods
-        //public async Task<List<CustomerOrder>?> GetCustomerOrdersAsync(string? status = null)
-        //{
-        //    try
-        //    {
-        //        var url = $"{GetApiBaseUrl()}/api/Customer/orders";
-        //        if (!string.IsNullOrEmpty(status))
-        //        {
-        //            url += $"?status={Uri.EscapeDataString(status)}";
-        //        }
-
-        //        var response = await SendWithAutoRefreshAsync(c => c.GetAsync(url));
-
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<CustomerOrder>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
-
-        //Menu and Restaurant Info Methods
-        //public async Task<List<MenuItemDto>?> GetMenuItemsAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/MenuItems");
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<MenuItemDto>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
-
-        //public async Task<List<ComboDto>?> GetCombosAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Combos");
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<ComboDto>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
-
-        //public async Task<List<EventDto>?> GetEventsAsync()
-        //{
-        //    try
-        //    {
-        //        var response = await _httpClient.GetAsync($"{GetApiBaseUrl()}/api/Events");
-        //        if (response.IsSuccessStatusCode)
-        //        {
-        //            var responseContent = await response.Content.ReadAsStringAsync();
-        //            return JsonSerializer.Deserialize<List<EventDto>>(responseContent, new JsonSerializerOptions
-        //            {
-        //                PropertyNameCaseInsensitive = true
-        //            });
-        //        }
-        //        return null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
-
-
         /// <summary>
         /// Get customer profile
         /// </summary>
@@ -267,18 +136,15 @@ namespace WebSapaFoRestForCustomer.Services
         {
             try
             {
-                var client = GetAuthenticatedClient();
-                var response = await client.GetAsync("api/customer-management/profile");
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync("api/Customer/profile"));
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<CustomerProfile>>(responseContent, new JsonSerializerOptions
+                    return JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     });
-
-                    return apiResponse?.Success == true ? apiResponse.Data : null;
                 }
                 return null;
             }
@@ -295,10 +161,8 @@ namespace WebSapaFoRestForCustomer.Services
         {
             try
             {
-                var client = GetAuthenticatedClient();
-
                 // Create form data for file upload
-                var formData = new MultipartFormDataContent();
+                using var formData = new MultipartFormDataContent();
 
                 // Add basic fields
                 formData.Add(new StringContent(request.FullName), "FullName");
@@ -317,17 +181,17 @@ namespace WebSapaFoRestForCustomer.Services
                     formData.Add(fileContent, "AvatarFile", request.AvatarFile.FileName);
                 }
 
-                var response = await client.PutAsync("api/customer-management/profile", formData);
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync("api/Customer/profile", formData));
 
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<CustomerProfile>>(responseContent, new JsonSerializerOptions
+                    // Backend returns updated profile as JSON
+                    var updated = JsonSerializer.Deserialize<CustomerProfile>(responseContent, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     });
-
-                    return apiResponse?.Success == true ? apiResponse.Data : null;
+                    return updated;
                 }
                 return null;
             }
@@ -335,6 +199,85 @@ namespace WebSapaFoRestForCustomer.Services
             {
                 return null;
             }
+        }
+
+        // ====================== CHANGE EMAIL/PHONE (OTP) ======================
+        public async Task<bool> SendChangeEmailOtpAsync(string newEmail)
+        {
+            try
+            {
+                var payload = new { Email = newEmail };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-email/send-otp", content));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<(bool Success, string? Message)> VerifyChangeEmailOtpAsync(string newEmail, string code)
+        {
+            try
+            {
+                var payload = new { Email = newEmail, Code = code };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-email/verify", content));
+                var body = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode) return (true, null);
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    if (doc.RootElement.TryGetProperty("message", out var msg)) return (false, msg.GetString());
+                }
+                catch { }
+
+                return (false, "Xác thực OTP email thất bại.");
+            }
+            catch { return (false, "Xác thực OTP email thất bại."); }
+        }
+
+        public async Task<bool> SendChangePhoneOtpAsync(string newPhone)
+        {
+            try
+            {
+                var payload = new { Phone = newPhone };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-phone/send-otp", content));
+                return response.IsSuccessStatusCode;
+            }
+            catch { return false; }
+        }
+
+        public async Task<(bool Success, string? Message)> VerifyChangePhoneOtpAsync(string newPhone, string code)
+        {
+            try
+            {
+                var payload = new { Phone = newPhone, Code = code };
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync("api/Customer/profile/change-phone/verify", content));
+                var body = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode) return (true, null);
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(body);
+                    if (doc.RootElement.TryGetProperty("message", out var msg)) return (false, msg.GetString());
+                }
+                catch { }
+
+                return (false, "Xác thực OTP số điện thoại thất bại.");
+            }
+            catch { return (false, "Xác thực OTP số điện thoại thất bại."); }
         }
 
         // Generic API response wrapper
