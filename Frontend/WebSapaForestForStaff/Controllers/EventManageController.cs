@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Json;
 using WebSapaForestForStaff.DTOs; // Tạo DTO tương tự API
-using Microsoft.AspNetCore.Http;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class EventManageController : Controller
     {
         private readonly HttpClient _client;

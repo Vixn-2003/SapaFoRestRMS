@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Net.Http;
 using WebSapaForestForStaff.DTOs;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class HomeManagerController : Controller
     {
         private readonly HttpClient _client;
