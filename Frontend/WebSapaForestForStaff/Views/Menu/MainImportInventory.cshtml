@@ -273,7 +273,7 @@
             .history-table thead {
                 position: sticky;
                 top: 0;
-                background: #2c3e50;
+                background: #000000;
                 color: white;
             }
 
@@ -401,6 +401,7 @@
             font-size: 14px;
             cursor: pointer;
             background: white;
+            color: #000000;
         }
 
         .btn-report {
@@ -566,7 +567,7 @@
                 <thead>
                     <tr>
                         <th style="width: 15%;">MÃ ĐƠN</th>
-                        <th style="width: 25%;">NHÀ CUNG CẤP</th>
+                        <th style="width: 15%;">NHÀ CUNG CẤP</th>
                         <th style="width: 15%;">NGÀY NHẬP</th>
                         <th style="width: 15%;">GIÁ TRỊ</th>
                         <th style="width: 15%;">TRẠNG THÁI</th>
@@ -612,6 +613,16 @@
         function formatCurrency(value) {
             return parseFloat(value || 0).toLocaleString('vi-VN') + 'đ';
         }
+
+        // Hàm sắp xếp đơn hàng theo ngày mới nhất
+        function sortOrdersByDate(orders, ascending = false) {
+            return [...orders].sort((a, b) => {
+                const dateA = new Date(a.OrderDate || a.orderDate || 0);
+                const dateB = new Date(b.OrderDate || b.orderDate || 0);
+                return ascending ? dateA - dateB : dateB - dateA; // false = giảm dần (mới nhất trước)
+            });
+        }
+
 
         // Hàm format số tiền ngắn gọn (cho stats)
         function formatCurrencyShort(value) {
@@ -768,6 +779,8 @@
                 return status === 'processing' || status === 'pending';
             });
 
+            const sortedOrders = sortOrdersByDate(processingOrders);
+
             const container = document.getElementById('processingOrdersList');
             if (!container) return;
 
@@ -811,6 +824,9 @@
                 const status = (p.Status || p.status || '').toLowerCase();
                 return status === 'completed' || status === 'cancelled';
             });
+
+
+            const sortedOrders = sortOrdersByDate(completedOrders);
 
             const container = document.getElementById('completedOrdersList');
             if (!container) return;
@@ -861,6 +877,8 @@
                     const totalB = calculateTotal(b);
                     return sortValue === 'asc' ? totalA - totalB : totalB - totalA;
                 });
+            } else {
+                orders = sortOrdersByDate(orders);
             }
 
             const tbody = document.getElementById('allOrdersTable');
@@ -906,8 +924,10 @@
             document.getElementById('filterStatus').value = '';
             document.getElementById('sortByValue').value = '';
             document.getElementById('searchInput').value = '';
-            renderAllOrders();
-            updateStatistics();
+            renderAllOrders(purchaseList);        
+            renderProcessingOrders();                 
+            renderCompletedHistory();
+            updateStatistics(purchaseList);
         }
 
         // Render đơn đang xử lý với dữ liệu đã lọc
@@ -916,6 +936,8 @@
                 const status = (p.Status || p.status || '').toLowerCase();
                 return status === 'processing' || status === 'pending';
             });
+
+            const sortedOrders = sortOrdersByDate(processingOrders);
 
             const container = document.getElementById('processingOrdersList');
             if (!container) return;
@@ -960,6 +982,9 @@
                 const status = (p.Status || p.status || '').toLowerCase();
                 return status === 'completed' || status === 'cancelled';
             });
+
+            const sortedOrders = sortOrdersByDate(completedOrders);
+
 
             const container = document.getElementById('completedOrdersList');
             if (!container) return;

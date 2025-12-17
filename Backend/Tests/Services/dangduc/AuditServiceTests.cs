@@ -8,17 +8,6 @@ using BusinessAccessLayer.DTOs.Inventory;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Models;
 
-/// <summary>
-/// Unit tests for AuditService
-/// 
-/// Function: ConfirmAuditAsync
-/// - Xác nhận kiểm kê, cập nhật số lượng tồn kho và trạng thái audit
-/// - Xử lý cả trường hợp thêm (IsAddition=true) và giảm (IsAddition=false) số lượng
-/// 
-/// Function: CreateAuditAsync
-/// - Tạo mới bản ghi kiểm kê nguyên liệu
-/// - Validate dữ liệu đầu vào
-/// </summary>
 public class AuditServiceTests
 {
     private readonly Mock<IUnitOfWork> _mockUnitOfWork;

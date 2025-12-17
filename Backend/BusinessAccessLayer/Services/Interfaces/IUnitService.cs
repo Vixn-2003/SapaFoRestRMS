@@ -12,5 +12,8 @@ namespace BusinessAccessLayer.Services.Interfaces
     {
         Task<IEnumerable<UnitDTO>> GetAllUnits();
         Task<int> getIdUnitByString (string unitName);
+
+        Task<UnitDTO> CreateAsync(UnitDTO dto);
+        Task UpdateAsync(int id, UnitDTO dto);
     }
 }

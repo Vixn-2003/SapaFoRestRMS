@@ -11,5 +11,11 @@ namespace DataAccessLayer.Repositories.Interfaces
     {
         Task<IEnumerable<Unit>> GetAllUnits(); 
         Task<int> GetIdUnitByString(string unitName);
+
+        Task<bool> ExistsByNameAsync(string unitName, int? excludeId = null);
+        Task AddAsync(Unit unit);
+        Task UpdateAsync(Unit unit);
+
+        Task<Unit?> GetByIdAsync(int id);
     }
 }

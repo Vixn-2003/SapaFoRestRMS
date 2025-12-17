@@ -14,5 +14,7 @@ namespace BusinessAccessLayer.DTOs.Inventory
         public string UnitName { get; set; } = null!;
 
         public UnitType UnitType { get; set; }
+
+        public int IngredientCount { get; set; }
     }
 }

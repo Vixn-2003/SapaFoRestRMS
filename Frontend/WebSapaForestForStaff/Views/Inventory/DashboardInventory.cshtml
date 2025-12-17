@@ -623,30 +623,45 @@
     .wd-w-2 {
         width: 8px;
     }
-    /* Giới hạn chiều cao Top mặt hàng */
-    #wd-top-items-list {
-        max-height: 380px; /* Khoảng 6 items x 63px/item */
-        overflow-y: auto;
+
+    .wd-task-item {
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: border-color 0.2s, transform 0.2s; /* Thêm transform */
     }
 
-        /* Styling cho scrollbar */
-        #wd-top-items-list::-webkit-scrollbar {
+        .wd-task-item:hover {
+            transform: translateY(-2px); /* Nhấc lên khi hover */
+        }   
+
+    /* Thêm vào cuối phần style */
+    .wd-task-section-scroll {
+        max-height: 500px; /* Chiều cao tối đa cho ~5 items */
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+        /* Tùy chỉnh scrollbar */
+        .wd-task-section-scroll::-webkit-scrollbar {
             width: 6px;
         }
 
-        #wd-top-items-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        .wd-task-section-scroll::-webkit-scrollbar-track {
+            background: #f3f4f6;
             border-radius: 3px;
         }
 
-        #wd-top-items-list::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+        .wd-task-section-scroll::-webkit-scrollbar-thumb {
+            background: #d1d5db;
             border-radius: 3px;
         }
 
-            #wd-top-items-list::-webkit-scrollbar-thumb:hover {
-                background: #94a3b8;
+            .wd-task-section-scroll::-webkit-scrollbar-thumb:hover {
+                background: #9ca3af;
             }
+
 </style>
 
 @* --- HTML STRUCTURE --- *@
@@ -654,7 +669,11 @@
     <div class="wd-header-bar">
         <div class="wd-flex wd-items-center wd-justify-between">
             <div>
-                <h1 class="wd-text-2xl wd-font-bold wd-text-gray-800">Dashboard Quản Lý Kho</h1>
+                <h1 class="wd-text-2xl wd-font-bold wd-text-gray-800" style="font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 5px;">
+                    Dashboard Quản Lý Kho
+                </h1>
                 <p class="wd-text-sm wd-text-gray-500 wd-mt-1" id="wd-current-date">
                     Đang tải...
                 </p>
@@ -713,28 +732,13 @@
                             <svg class="wd-mr-2 wd-text-purple-500" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                             Công Việc Cần Xử Lý
                         </h2>
-                        <button class="wd-text-sm wd-text-blue-600 wd-font-medium wd-btn-link">Xem tất cả →</button>
                     </div>
                     <div class="wd-task-grid" id="wd-pending-tasks"></div>
                 </div>
 
                 @* Bottom Left Grid *@
                 <div class="wd-grid-2-col wd-gap-6">
-                    @* Top Items *@
-                    <div class="wd-bg-white wd-rounded-xl wd-shadow-sm wd-border wd-border-gray-100">
-                        <div class="wd-task-panel-header">
-                            <div>
-                                <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Top mặt hàng</h2>
-                                <p class="wd-text-xs wd-text-gray-500 wd-mt-0-5">Tiêu hao 7 ngày qua</p>
-                            </div>
-                            <select class="wd-select" id="wd-top-items-select">
-                                <option value="7days">7 ngày</option>
-                                <option value="30days">30 ngày</option>
-                                <option value="90days">90 ngày</option>
-                            </select>
-                        </div>
-                        <div class="wd-padding-6" id="wd-top-items-list"></div>
-                    </div>
+                    
 
                     
                 </div>
@@ -759,17 +763,17 @@
                         <h2 class="wd-text-lg wd-font-bold wd-text-gray-800">Truy Cập Nhanh</h2>
                     </div>
                     <div class="wd-padding-4 wd-grid-2-col wd-gap-3">
-                        <button class="wd-action-btn-quick green">
+                        <button class="wd-action-btn-quick green" onclick="window.location.href='/ImportInventory'">
                             <div class="wd-bg-green-600 wd-p-2 wd-rounded-lg wd-mb-2 wd-scale-110">
                                 <svg class="wd-text-white" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14m-7-7h14"></path></svg>
                             </div>
                             <span class="wd-text-xs wd-font-semibold wd-text-gray-700">Tạo Đơn Nhập</span>
                         </button>
-                        <button class="wd-action-btn-quick gray">
+                        <button class="wd-action-btn-quick gray" onclick="window.location.href='/ManagerIngredent/DisplayIngredent'">
                             <div class="wd-bg-gray-600 wd-p-2 wd-rounded-lg wd-mb-2 wd-scale-110">
                                 <svg class="wd-text-white" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2z"></path></svg>
                             </div>
-                            <span class="wd-text-xs wd-font-semibold wd-text-gray-700">QL mặt hàng</span>
+                            <span class="wd-text-xs wd-font-semibold wd-text-gray-700">Quản lý mặt hàng</span>
                         </button>
                     </div>
                 </div>
@@ -819,7 +823,7 @@
             ).length;
 
             const processingAudits = auditInventories.filter(audit =>
-                audit.AuditStatus && audit.AuditStatus.trim() === 'Processing'
+                audit.AuditStatus && audit.AuditStatus.trim() === 'processing'
             ).length;
 
             const totalPendingOrders = processingPurchase + processingAudits;
@@ -839,78 +843,8 @@
             };
         }
 
-        // ====================================================================
-        // ===== III. TÍNH TOP 10 mặt hàng =====
-        // ====================================================================
-
-        function calculateTopIngredients(period = '7days') {
-            const now = new Date();
-            let startDate;
-
-            switch (period) {
-                case 'today':
-                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    break;
-                case '7days':
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    break;
-                case '30days':
-                    startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    break;
-                default:
-                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            }
-
-            // ✅ LẤY TRANSACTIONS TỪ BATCHES
-            const ingredientUsage = {};
-
-            ingredientList.forEach(ingredient => {
-                if (!ingredient.Batches || ingredient.Batches.length === 0) {
-                    return;
-                }
-
-                let totalExport = 0;
-
-                ingredient.Batches.forEach(batch => {
-                    if (!batch.StockTransactions || batch.StockTransactions.length === 0) {
-                        return;
-                    }
-
-                    batch.StockTransactions.forEach(trans => {
-                        // Kiểm tra Type = "Export" và trong khoảng thời gian
-                        if (trans.Type === 'Export' && trans.TransactionDate) {
-                            const transDate = new Date(trans.TransactionDate);
-
-                            if (transDate >= startDate && transDate <= now) {
-                                totalExport += trans.Quantity;
-                            }
-                        }
-                    });
-                });
-
-                // Chỉ thêm vào danh sách nếu có xuất kho
-                if (totalExport > 0) {
-                    ingredientUsage[ingredient.IngredientCode] = {
-                        code: ingredient.IngredientCode,
-                        name: ingredient.Name,
-                        totalQuantity: totalExport,
-                        unit: ingredient.Unit?.Name || ''
-                    };
-                }
-            });
-
-            // Sắp xếp và lấy top 10
-            const topList = Object.values(ingredientUsage)
-                .sort((a, b) => b.totalQuantity - a.totalQuantity)
-                .slice(0, 10);
-
-            console.log(`Top ingredients (${period}):`, topList);
-            return topList;
-        }
-
-        // ====================================================================
         // ===== IV. LẤY DANH SÁCH ĐƠN PROCESSING =====
-        // ====================================================================
+
 
         function getProcessingOrders() {
             const processingPurchase = purchaseOrders
@@ -923,12 +857,19 @@
                         supplier: po.Supplier?.Name || 'N/A',
                         itemCount: po.PurchaseOrderDetails?.length || 0,
                         orderDate: orderDate.toLocaleDateString('vi-VN'),
-                        time: orderDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                        time: orderDate.toLocaleString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                        })
+
                     };
                 });
 
             const processingAudit = auditInventories
-                .filter(audit => audit.AuditStatus && audit.AuditStatus.trim() === 'Processing')
+                .filter(audit => audit.AuditStatus && audit.AuditStatus.trim() === 'processing')
                 .map(audit => {
                     const createdDate = audit.CreatedAt ? new Date(audit.CreatedAt) : new Date();
                     return {
@@ -937,7 +878,13 @@
                         ingredientName: audit.IngredientName,
                         quantity: `${audit.AdjustmentQuantity} ${audit.Unit}`,
                         createdDate: createdDate.toLocaleDateString('vi-VN'),
-                        time: createdDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                        time: createdDate.toLocaleString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                        })
                     };
                 });
 
@@ -995,56 +942,60 @@
             const orders = getProcessingOrders();
 
             const importHtml = `
-                    <div>
-                        <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
-                            <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
-                                <div class="wd-w-2 wd-h-2 wd-bg-green-500 wd-rounded-full wd-mr-2"></div> Đơn Nhập
-                            </h3>
-                            <span class="wd-bg-green-100 wd-text-green-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${orders.purchaseOrders.length}</span>
-                        </div>
-                        <div class="wd-space-y-3">
-                            ${orders.purchaseOrders.length === 0
+            <div>
+                <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
+                    <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
+                        <div class="wd-w-2 wd-h-2 wd-bg-green-500 wd-rounded-full wd-mr-2"></div> Đơn Nhập
+                    </h3>
+                    <span class="wd-bg-green-100 wd-text-green-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${orders.purchaseOrders.length}</span>
+                </div>
+                <div class="wd-task-section-scroll">
+                    <div class="wd-space-y-3">
+                        ${orders.purchaseOrders.length === 0
                     ? '<p class="wd-text-xs wd-text-gray-400 wd-text-center wd-py-4">Không có đơn đang xử lý</p>'
                     : orders.purchaseOrders.map(order => `
-                                    <div class="wd-task-item import">
-                                        <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
-                                            <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
-                                            <span class="wd-tag-priority wd-tag-pending">Đang xử lý</span>
-                                        </div>
-                                        <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.supplier}</p>
-                                        <p class="wd-text-xs wd-text-gray-500">${order.itemCount} món • ${order.time}</p>
-                                    </div>
-                                `).join('')
-                }
+                    <div class="wd-task-item import" onclick="window.location.href='/DetailImport/Detail/${order.id}'">
+                        <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                            <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
+                            <span class="wd-tag-priority wd-tag-pending">Đang xử lý</span>
                         </div>
+                        <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.supplier}</p>
+                        <p class="wd-text-xs wd-text-gray-500">${order.itemCount} món • ${order.time}</p>
                     </div>
-                `;
+                `).join('')
+                }
+                    </div>
+                </div>
+            </div>
+        `;
 
             const inventoryHtml = `
-                    <div>
-                        <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
-                            <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
-                                <div class="wd-w-2 wd-h-2 wd-bg-purple-500 wd-rounded-full wd-mr-2"></div> Kiểm Kê
-                            </h3>
-                            <span class="wd-bg-purple-100 wd-text-purple-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${orders.auditOrders.length}</span>
-                        </div>
-                        <div class="wd-space-y-3">
-                            ${orders.auditOrders.length === 0
+            <div>
+                <div class="wd-flex wd-items-center wd-justify-between wd-mb-4">
+                    <h3 class="wd-font-semibold wd-text-gray-700 wd-flex wd-items-center wd-text-sm">
+                        <div class="wd-w-2 wd-h-2 wd-bg-purple-500 wd-rounded-full wd-mr-2"></div> Kiểm Kê
+                    </h3>
+                    <span class="wd-bg-purple-100 wd-text-purple-700 wd-text-xs wd-px-2 wd-py-1 wd-rounded-full wd-font-semibold">${orders.auditOrders.length}</span>
+                </div>
+                <div class="wd-task-section-scroll">
+                    <div class="wd-space-y-3">
+                        ${orders.auditOrders.length === 0
                     ? '<p class="wd-text-xs wd-text-gray-400 wd-text-center wd-py-4">Không có đơn đang xử lý</p>'
                     : orders.auditOrders.map(order => `
-                                    <div class="wd-task-item inventory">
-                                        <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
-                                            <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
-                                            <span class="wd-tag-priority wd-tag-pending">Đang xử lý</span>
-                                        </div>
-                                        <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.ingredientName}</p>
-                                        <p class="wd-text-xs wd-text-gray-500">${order.quantity} • ${order.time}</p>
-                                    </div>
-                                `).join('')
-                }
+                    <div class="wd-task-item inventory">
+                        <div class="wd-flex wd-justify-between wd-items-start wd-mb-2">
+                            <span class="wd-font-bold wd-text-sm wd-text-gray-800">${order.id}</span>
+                            <span class="wd-tag-priority wd-tag-pending">Đang xử lý</span>
                         </div>
+                        <p class="wd-text-xs wd-text-gray-700 wd-font-medium wd-mb-1">${order.ingredientName}</p>
+                        <p class="wd-text-xs wd-text-gray-500">${order.quantity} • ${order.time}</p>
                     </div>
-                `;
+                `).join('')
+                }
+                    </div>
+                </div>
+            </div>
+        `;
 
             container.innerHTML = importHtml + inventoryHtml;
         }
@@ -1077,42 +1028,6 @@
             container.innerHTML = html;
         }
 
-        function renderTopItems(period = '7days') {
-            const container = $('#wd-top-items-list');
-            const topList = calculateTopIngredients(period);
-
-            if (topList.length === 0) {
-                container.innerHTML = '<p class="wd-text-center wd-text-gray-400 wd-py-8">Chưa có dữ liệu xuất kho</p>';
-                return;
-            }
-
-            const maxQuantity = Math.max(...topList.map(item => item.totalQuantity));
-
-            const html = topList.map((item, idx) => {
-                const percentage = maxQuantity > 0 ? (item.totalQuantity / maxQuantity * 100).toFixed(0) : 0;
-                const barColorClass = idx === 0 ? 'wd-bg-gradient-blue' :
-                    idx === 1 ? 'wd-bg-gradient-green' : 'wd-bg-gradient-purple';
-
-                return `
-                        <div class="wd-mb-4 wd-last-mb-0">
-                            <div class="wd-flex wd-justify-between wd-items-center wd-mb-2">
-                                <div class="wd-flex wd-items-center wd-gap-2">
-                                    <span class="wd-text-lg wd-font-bold wd-text-gray-400">#${idx + 1}</span>
-                                    <span class="wd-text-sm wd-font-semibold wd-text-gray-700">${item.name}</span>
-                                </div>
-                                <div class="wd-flex wd-items-center wd-gap-3">
-                                    <span class="wd-text-sm wd-font-bold wd-text-gray-600">${item.totalQuantity.toFixed(2)} ${item.unit}</span>
-                                </div>
-                            </div>
-                            <div class="wd-w-full wd-bg-gray-100 wd-rounded-full wd-h-2">
-                                <div class="wd-h-2 wd-rounded-full ${barColorClass}" style="width: ${percentage}%"></div>
-                            </div>
-                        </div>
-                    `;
-            }).join('');
-
-            container.innerHTML = html;
-        }
 
         // ====================================================================
         // ===== VII. INITIALIZATION =====
@@ -1130,11 +1045,6 @@
             renderKpiCards();
             renderPendingTasks();
             renderAlerts();
-            renderTopItems('7days');
-
-            $('#wd-top-items-select').addEventListener('change', (e) => {
-                renderTopItems(e.target.value);
-            });
         }
 
         initializeDashboard();

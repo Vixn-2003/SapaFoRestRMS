@@ -300,7 +300,7 @@
     }
 
         .export-mgmt__table thead {
-            background: #f9fafb;
+            background: #000000;
             position: sticky;
             top: 0;
             z-index: 10;
@@ -311,7 +311,7 @@
             text-align: left;
             font-size: 0.75rem;
             font-weight: 600;
-            color: #6b7280;
+            color: #ffffff;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             border-bottom: 2px solid #e5e7eb;
@@ -403,7 +403,7 @@
     }
 
         .export-mgmt__comparison-table thead {
-            background: #f9fafb;
+            background: #000000;
         }
 
         .export-mgmt__comparison-table th {
@@ -411,7 +411,7 @@
             text-align: left;
             font-size: 0.75rem;
             font-weight: 600;
-            color: #6b7280;
+            color: #ffffff;
             text-transform: uppercase;
             border-bottom: 2px solid #e5e7eb;
         }
@@ -647,47 +647,153 @@
     .export-mgmt__stat-card--info .export-mgmt__stat-icon-wrapper {
         background: #ede9fe;
     }
+
+    /* ==================== HEADER UPDATE ==================== */
+.export-mgmt__header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+}
+
+.export-mgmt__header-left {
+    flex: 1;
+}
+
+.export-mgmt__header-right {
+    flex-shrink: 0;
+}
+
+.export-mgmt__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #111827;
+}
+
+.export-mgmt__subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.export-mgmt__report-controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.export-mgmt__report-select {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: white;
+    color: #111827;
+    min-width: 150px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.export-mgmt__report-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.export-mgmt__export-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    white-space: nowrap;
+}
+
+.export-mgmt__export-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.export-mgmt__export-btn:active {
+    transform: translateY(0);
+}
+
+.export-mgmt__export-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.export-mgmt__btn-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.export-mgmt__btn-text {
+    line-height: 1;
+}
+
+/* ==================== RESPONSIVE FOR HEADER ==================== */
+@@media (max-width: 768px) {
+    .export-mgmt__header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .export-mgmt__header-right {
+        width: 100%;
+    }
+
+    .export-mgmt__report-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .export-mgmt__report-select,
+    .export-mgmt__export-btn {
+        width: 100%;
+    }
+}
+
 </style>
 
 <div class="export-mgmt">
     <!-- Header -->
     <div class="export-mgmt__header">
-        <h1 class="export-mgmt__title" style="
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 5px;
-">
-            Lịch Sử Xuất Hàng
-        </h1>
-        <p>Lịch sử xuất hàng cho nhà bếp </p>
+        <div class="export-mgmt__header-content">
+            <div class="export-mgmt__header-left">
+                <h1 class="export-mgmt__title">Lịch Sử Xuất Hàng</h1>
+                <p class="export-mgmt__subtitle">Lịch sử xuất hàng cho nhà bếp</p>
+            </div>
+            <div class="export-mgmt__header-right">
+                <div class="export-mgmt__report-controls">
+                    <select class="export-mgmt__report-select" id="reportPeriod">
+                        <option value="today">Hôm nay</option>
+                        <option value="3days">3 ngày qua</option>
+                        <option value="7days">7 ngày qua</option>
+                        <option value="30days">30 ngày qua</option>
+                    </select>
+                    <button id="exportReportBtn" class="export-mgmt__export-btn">
+                        <span class="export-mgmt__btn-text">Xuất báo cáo</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Stats Cards -->
     <div class="export-mgmt__stats-grid">
-        <div class="export-mgmt__stat-card export-mgmt__stat-card--blue">
-            <div class="export-mgmt__stat-content">
-                <span class="export-mgmt__stat-label">Tổng xuất hôm nay</span>
-                <span class="export-mgmt__stat-value" id="todayExport">0</span>
-                <span class="export-mgmt__stat-status" id="todayCompare">Đang tải...</span>
-            </div>
-        </div>
-
-        <div class="export-mgmt__stat-card export-mgmt__stat-card--orange">
-            <div class="export-mgmt__stat-content">
-                <span class="export-mgmt__stat-label">Tổng xuất 7 ngày qua</span>
-                <span class="export-mgmt__stat-value" id="week7Export">0</span>
-                <span class="export-mgmt__stat-status" id="week7Compare">Đang tải...</span>
-            </div>
-        </div>
-
-        <div class="export-mgmt__stat-card export-mgmt__stat-card--green">
-            <div class="export-mgmt__stat-content">
-                <span class="export-mgmt__stat-label">Tổng xuất 30 ngày qua</span>
-                <span class="export-mgmt__stat-value" id="month30Export">0</span>
-                <span class="export-mgmt__stat-status" id="month30Compare">Đang tải...</span>
-            </div>
-        </div>
-
+       
         <div class="export-mgmt__stat-card export-mgmt__stat-card--warning">
             <div class="export-mgmt__stat-content">
                 <span class="export-mgmt__stat-label">Xuất bất thường (tăng >50%)</span>
@@ -701,6 +807,13 @@
                 <span class="export-mgmt__stat-label">Tổng giao dịch xuất kho</span>
                 <span class="export-mgmt__stat-value">@viewModel.TotalTransactions</span>
                 <span class="export-mgmt__stat-status">Tất cả thời gian</span>
+            </div>
+        </div>  
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--blue">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Giao dịch xuất kho hôm nay</span>
+                <span class="export-mgmt__stat-value">@viewModel.TodayTransactions</span>
+                <span class="export-mgmt__stat-status">@DateTime.Today.ToString("dd/MM/yyyy")</span>
             </div>
         </div>
     </div>
@@ -752,7 +865,6 @@
                     }
                 </select>
             </div>
-
         </div>
     </div>
 
@@ -842,12 +954,12 @@
 
     <!-- Comparison Table -->
     <div class="export-mgmt__comparison-section">
-        <div class="export-mgmt__comparison-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="export-mgmt__comparison-header" style="display: flex; align-items: center;">
             <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600;">So sánh tiêu hao</h2>
             <input type="text"
                    id="comparisonSearch"
-                   placeholder="🔍 Tìm Mặt hàng..."
-                   style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; width: 250px;" />
+                   placeholder="Tìm Mặt hàng..."
+                   style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; width: 250px; margin-left: 30px" />
         </div>
         <div class="export-mgmt__comparison-wrapper">
             <table class="export-mgmt__comparison-table" id="comparisonTable">
@@ -876,80 +988,21 @@
     function calculateStats() {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const fourteenDaysAgo = new Date(today);
-        fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const sixtyDaysAgo = new Date(today);
-        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-        // Xuất hôm nay
+        // GIỮ LẠI 2 DÒNG NÀY vì các hàm calculateAbnormalExports, calculateTopIngredients cần dùng
         const todayExports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= today;
         });
-        const todayTotal = todayExports.reduce((sum, x) => sum + x.quantity, 0);
 
-        // Xuất hôm qua để so sánh
-        const yesterdayExports = exportData.filter(x => {
-            const transDate = new Date(x.transactionDate);
-            return transDate >= yesterday && transDate < today;
-        });
-        const yesterdayTotal = yesterdayExports.reduce((sum, x) => sum + x.quantity, 0);
-
-        const todayPercent = yesterdayTotal > 0 ? ((todayTotal / yesterdayTotal - 1) * 100).toFixed(0) : 0;
-        const todayArrow = todayPercent > 0 ? '↑' : todayPercent < 0 ? '↓' : '→';
-        const todayColor = todayPercent > 0 ? '#ef4444' : todayPercent < 0 ? '#22c55e' : '#6b7280';
-
-        document.getElementById('todayExport').textContent = `${todayTotal.toFixed(2)} đơn vị`;
-        document.getElementById('todayCompare').innerHTML = `<span style="color: ${todayColor}">${todayArrow} ${Math.abs(todayPercent)}% vs hôm qua</span>`;
-
-        // Xuất 7 ngày
         const week7Exports = exportData.filter(x => {
             const transDate = new Date(x.transactionDate);
             return transDate >= sevenDaysAgo;
         });
-        const week7Total = week7Exports.reduce((sum, x) => sum + x.quantity, 0);
 
-        // 7 ngày trước đó để so sánh
-        const prevWeek7Exports = exportData.filter(x => {
-            const transDate = new Date(x.transactionDate);
-            return transDate >= fourteenDaysAgo && transDate < sevenDaysAgo;
-        });
-        const prevWeek7Total = prevWeek7Exports.reduce((sum, x) => sum + x.quantity, 0);
-
-        const week7Percent = prevWeek7Total > 0 ? ((week7Total / prevWeek7Total - 1) * 100).toFixed(0) : 0;
-        const week7Arrow = week7Percent > 0 ? '↑' : week7Percent < 0 ? '↓' : '→';
-        const week7Color = week7Percent > 0 ? '#ef4444' : week7Percent < 0 ? '#22c55e' : '#6b7280';
-
-        document.getElementById('week7Export').textContent = `${week7Total.toFixed(2)} đơn vị`;
-        document.getElementById('week7Compare').innerHTML = `<span style="color: ${week7Color}">${week7Arrow} ${Math.abs(week7Percent)}% vs 7 ngày trước</span>`;
-
-        // Xuất 30 ngày
-        const month30Exports = exportData.filter(x => {
-            const transDate = new Date(x.transactionDate);
-            return transDate >= thirtyDaysAgo;
-        });
-        const month30Total = month30Exports.reduce((sum, x) => sum + x.quantity, 0);
-
-        // 30 ngày trước đó để so sánh
-        const prevMonth30Exports = exportData.filter(x => {
-            const transDate = new Date(x.transactionDate);
-            return transDate >= sixtyDaysAgo && transDate < thirtyDaysAgo;
-        });
-        const prevMonth30Total = prevMonth30Exports.reduce((sum, x) => sum + x.quantity, 0);
-
-        const month30Percent = prevMonth30Total > 0 ? ((month30Total / prevMonth30Total - 1) * 100).toFixed(0) : 0;
-        const month30Arrow = month30Percent > 0 ? '↑' : month30Percent < 0 ? '↓' : '→';
-        const month30Color = month30Percent > 0 ? '#ef4444' : month30Percent < 0 ? '#22c55e' : '#6b7280';
-
-        document.getElementById('month30Export').textContent = `${month30Total.toFixed(2)} đơn vị`;
-        document.getElementById('month30Compare').innerHTML = `<span style="color: ${month30Color}">${month30Arrow} ${Math.abs(month30Percent)}% vs 30 ngày trước</span>`;
-
+        // Gọi các hàm tính toán khác
         calculateAbnormalExports(todayExports, week7Exports);
         calculateTopIngredients(todayExports);
         calculateWarehouseStats(todayExports);
@@ -1002,7 +1055,6 @@
         } else {
             document.getElementById('abnormalAlerts').innerHTML = `
                 <div class="export-mgmt__empty" style="padding: 2rem;">
-                    <div class="export-mgmt__empty-icon">📊</div>
                     <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu xuất bất thường</div>
                 </div>`;
         }
@@ -1034,7 +1086,6 @@
         } else {
             document.getElementById('topIngredients').innerHTML = `
                 <div class="export-mgmt__empty" style="padding: 2rem;">
-                    <div class="export-mgmt__empty-icon">🏆</div>
                     <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
                 </div>`;
         }
@@ -1064,12 +1115,12 @@
         } else {
             document.getElementById('warehouseStats').innerHTML = `
                 <div class="export-mgmt__empty" style="padding: 2rem;">
-                    <div class="export-mgmt__empty-icon">🏢</div>
                     <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
                 </div>`;
         }
     }
 
+    // So sánh tiêu hao
     // So sánh tiêu hao
     function calculateComparison() {
         const now = new Date();
@@ -1082,20 +1133,25 @@
 
         const comparison = {};
 
-        // Hôm nay
+        // CHỈ LẤY CÁC NGUYÊN LIỆU CÓ XUẤT HÔM NAY
         todayExports.forEach(x => {
             if (!comparison[x.ingredientId]) {
-                comparison[x.ingredientId] = { name: x.ingredientName, today: 0, week: 0, unit: x.unitName };
+                comparison[x.ingredientId] = {
+                    name: x.ingredientName,
+                    today: 0,
+                    week: 0,
+                    unit: x.unitName
+                };
             }
             comparison[x.ingredientId].today += x.quantity;
         });
 
-        // 7 ngày
+        // Tính trung bình 7 ngày CHỈ CHO CÁC NGUYÊN LIỆU ĐÃ XUẤT HÔM NAY
         week7Exports.forEach(x => {
-            if (!comparison[x.ingredientId]) {
-                comparison[x.ingredientId] = { name: x.ingredientName, today: 0, week: 0, unit: x.unitName };
+            // Chỉ tính nếu nguyên liệu này có xuất hôm nay
+            if (comparison[x.ingredientId]) {
+                comparison[x.ingredientId].week += x.quantity;
             }
-            comparison[x.ingredientId].week += x.quantity;
         });
 
         const rows = Object.values(comparison).map(c => {
@@ -1114,7 +1170,6 @@
 
         document.querySelector('#comparisonTable tbody').innerHTML = rows.length > 0 ? rows.join('') :
             `<tr><td colspan="4" style="text-align: center; padding: 2rem;">
-                <div class="export-mgmt__empty-icon">📊</div>
                 <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu so sánh</div>
             </td></tr>`;
     }
@@ -1225,5 +1280,51 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', calculateStats);
+
+
+    document.getElementById('exportReportBtn').addEventListener('click', async function () {
+        const period = document.getElementById('reportPeriod').value;
+        const btn = this;
+
+        try {
+            btn.disabled = true;
+            btn.textContent = 'Đang tạo báo cáo...';
+
+            const response = await fetch('/ExportInventory/ExportReport', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ period: period })
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể tạo báo cáo');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BaoCaoXuatKho_${new Date().getTime()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            btn.textContent = 'Tải thành công!';
+            setTimeout(() => {
+                btn.textContent = 'Xuất báo cáo';
+                btn.disabled = false;
+            }, 2000);
+
+        } catch (error) {
+            console.error('Lỗi:', error);
+            alert('Không thể tạo báo cáo. Vui lòng thử lại!');
+            btn.textContent = 'Xuất báo cáo';
+            btn.disabled = false;
+        }
+    });
+
 </script>
 
