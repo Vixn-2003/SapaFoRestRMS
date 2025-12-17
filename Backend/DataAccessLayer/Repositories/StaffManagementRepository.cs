@@ -213,7 +213,7 @@ namespace DataAccessLayer.Repositories
         public async Task<List<Position>> GetActivePositionsAsync(CancellationToken ct = default)
         {
             return await _context.Positions
-                .Where(p => p.Status == 1) // Assuming 1 = Active
+                .Where(p => p.Status == 0) // 0 = Active, 1 = Inactive
                 .OrderBy(p => p.PositionName)
                 .ToListAsync(ct);
         }
@@ -227,6 +227,32 @@ namespace DataAccessLayer.Repositories
                 .Where(s => s.DepartmentId == departmentId &&
                            (s.User == null || s.User.IsDeleted != true))
                 .CountAsync(ct);
+        }
+
+        /// <summary>
+        /// Add position to staff (insert into StaffPosition junction table)
+        /// </summary>
+        public async Task AddStaffPositionAsync(int staffId, int positionId, CancellationToken ct = default)
+        {
+            var staff = await _context.Staffs
+                .Include(s => s.Positions)
+                .FirstOrDefaultAsync(s => s.StaffId == staffId, ct);
+
+            if (staff == null)
+                throw new InvalidOperationException($"Staff with ID {staffId} not found.");
+
+            var position = await _context.Positions.FindAsync(new object[] { positionId }, ct);
+
+            if (position == null)
+                throw new InvalidOperationException($"Position with ID {positionId} not found.");
+
+            // Clear existing positions (enforce 1 position only)
+            staff.Positions.Clear();
+            
+            // Add the single position
+            staff.Positions.Add(position);
+            
+            await _context.SaveChangesAsync(ct);
         }
     }
 }

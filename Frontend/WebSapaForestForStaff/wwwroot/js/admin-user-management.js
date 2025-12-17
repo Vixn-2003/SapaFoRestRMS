@@ -139,43 +139,40 @@ function submitDeactivate() {
  * Change user status (activate/deactivate)
  */
 function changeStatus(userId, status) {
-    const statusText = status === 0 ? 'activate' : 'deactivate';
+    const statusText = status === 0 ? 'kích hoạt' : 'ngừng hoạt động';
 
-    if (!confirm(`Are you sure you want to ${statusText} this user?`)) {
-        return;
-    }
-
-    // Show loading
-    toastr.info('Processing...');
-
-    // Call controller endpoint via AJAX (controller uses ApiService)
-    // Note: This would need a ChangeStatus action in the controller
-    // For now, we'll use the deactivate endpoint pattern
-    $.ajax({
-        url: '/AdminUserManagement/Deactivate',
-        type: 'POST',
-        contentType: 'application/json',
-        headers: {
-            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-        },
-        data: JSON.stringify({
-            userId: userId,
-            reason: status === 0 ? 'Activated by admin' : 'Deactivated by admin'
-        }),
-        success: function (response) {
-            if (response.success) {
-                toastr.success(`User ${statusText}d successfully`);
-                // Reload page after short delay
-                setTimeout(function() {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                toastr.error(response.message || `Failed to ${statusText} user`);
-            }
-        },
-        error: function (xhr, status, error) {
-            console.error(`Error ${statusText}ing user:`, error);
-            toastr.error(`An error occurred while ${statusText}ing user`);
+    showConfirmModal({
+        title: 'Xác nhận',
+        message: `Bạn có chắc muốn ${statusText} người dùng này?`,
+        confirmText: 'Xác nhận',
+        onConfirm: function () {
+            toastr.info('Đang xử lý...');
+            $.ajax({
+                url: '/AdminUserManagement/Deactivate',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                data: JSON.stringify({
+                    userId: userId,
+                    reason: status === 0 ? 'Activated by admin' : 'Deactivated by admin'
+                }),
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success(`Đã ${statusText} người dùng`);
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 800);
+                    } else {
+                        toastr.error(response.message || `Không thể ${statusText} người dùng`);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error(`Error ${statusText}:`, error);
+                    toastr.error(`Lỗi khi ${statusText} người dùng`);
+                }
+            });
         }
     });
 }
@@ -281,56 +278,57 @@ function executeBulkAction() {
  * Bulk change status
  */
 function bulkChangeStatus(userIds, status) {
-    const statusText = status === 0 ? 'activate' : 'deactivate';
+    const statusText = status === 0 ? 'kích hoạt' : 'ngừng hoạt động';
 
-    if (!confirm(`Are you sure you want to ${statusText} ${userIds.length} selected users?`)) {
-        return;
-    }
+    showConfirmModal({
+        title: 'Xác nhận',
+        message: `Bạn có chắc muốn ${statusText} ${userIds.length} người dùng đã chọn?`,
+        confirmText: 'Xác nhận',
+        onConfirm: function () {
+            toastr.info(`Đang xử lý ${userIds.length} người dùng...`);
 
-    // Show loading
-    toastr.info(`Processing ${userIds.length} users...`);
+            let completed = 0;
+            let failed = 0;
 
-    // Process each user (could be optimized to use a bulk endpoint if available)
-    let completed = 0;
-    let failed = 0;
-
-    userIds.forEach((userId, index) => {
-        setTimeout(() => {
-            $.ajax({
-                url: '/AdminUserManagement/Deactivate',
-                type: 'POST',
-                contentType: 'application/json',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                },
-                data: JSON.stringify({
-                    userId: userId,
-                    reason: `Bulk ${statusText} by admin`
-                }),
-                success: function (response) {
-                    completed++;
-                    if (completed + failed === userIds.length) {
-                        if (failed === 0) {
-                            toastr.success(`Successfully ${statusText}d ${completed} users`);
-                        } else {
-                            toastr.warning(`Successfully ${statusText}d ${completed} users, ${failed} failed`);
+            userIds.forEach((userId, index) => {
+                setTimeout(() => {
+                    $.ajax({
+                        url: '/AdminUserManagement/Deactivate',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        headers: {
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        data: JSON.stringify({
+                            userId: userId,
+                            reason: `Bulk ${statusText} by admin`
+                        }),
+                        success: function () {
+                            completed++;
+                            if (completed + failed === userIds.length) {
+                                if (failed === 0) {
+                                    toastr.success(`Đã ${statusText} ${completed} người dùng`);
+                                } else {
+                                    toastr.warning(`Đã ${statusText} ${completed} người dùng, ${failed} thất bại`);
+                                }
+                                setTimeout(() => window.location.reload(), 800);
+                            }
+                        },
+                        error: function () {
+                            failed++;
+                            if (completed + failed === userIds.length) {
+                                if (failed === userIds.length) {
+                                    toastr.error(`Không thể ${statusText} người dùng`);
+                                } else {
+                                    toastr.warning(`Đã ${statusText} ${completed} người dùng, ${failed} thất bại`);
+                                }
+                                setTimeout(() => window.location.reload(), 800);
+                            }
                         }
-                        setTimeout(() => window.location.reload(), 1000);
-                    }
-                },
-                error: function () {
-                    failed++;
-                    if (completed + failed === userIds.length) {
-                        if (failed === userIds.length) {
-                            toastr.error(`Failed to ${statusText} users`);
-                        } else {
-                            toastr.warning(`Successfully ${statusText}d ${completed} users, ${failed} failed`);
-                        }
-                        setTimeout(() => window.location.reload(), 1000);
-                    }
-                }
+                    });
+                }, index * 100);
             });
-        }, index * 100); // Stagger requests
+        }
     });
 }
 
@@ -338,49 +336,83 @@ function bulkChangeStatus(userIds, status) {
  * Bulk delete users
  */
 function bulkDelete(userIds) {
-    if (!confirm(`Are you sure you want to delete ${userIds.length} selected users? This action cannot be undone!`)) {
+    showConfirmModal({
+        title: 'Xác nhận xóa',
+        message: `Bạn có chắc muốn xóa ${userIds.length} người dùng đã chọn? Thao tác này không thể hoàn tác!`,
+        confirmText: 'Xóa',
+        onConfirm: function () {
+            toastr.info(`Đang xử lý ${userIds.length} người dùng...`);
+
+            let completed = 0;
+            let failed = 0;
+
+            userIds.forEach((userId, index) => {
+                setTimeout(() => {
+                    $.ajax({
+                        url: `/AdminUserManagement/Delete/${userId}`,
+                        type: 'POST',
+                        headers: {
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function () {
+                            completed++;
+                            if (completed + failed === userIds.length) {
+                                if (failed === 0) {
+                                    toastr.success(`Đã xóa ${completed} người dùng`);
+                                } else {
+                                    toastr.warning(`Đã xóa ${completed} người dùng, ${failed} thất bại`);
+                                }
+                                setTimeout(() => window.location.reload(), 800);
+                            }
+                        },
+                        error: function () {
+                            failed++;
+                            if (completed + failed === userIds.length) {
+                                if (failed === userIds.length) {
+                                    toastr.error('Không thể xóa người dùng');
+                                } else {
+                                    toastr.warning(`Đã xóa ${completed} người dùng, ${failed} thất bại`);
+                                }
+                                setTimeout(() => window.location.reload(), 800);
+                            }
+                        }
+                    });
+                }, index * 100);
+            });
+        }
+    });
+}
+
+/**
+ * Generic confirmation modal (replaces alert/confirm)
+ */
+function showConfirmModal(options) {
+    const opts = Object.assign({
+        title: 'Xác nhận',
+        message: 'Bạn chắc chắn muốn thực hiện hành động này?',
+        confirmText: 'Xác nhận',
+        cancelText: 'Hủy',
+        onConfirm: null
+    }, options || {});
+
+    const modal = $('#confirmModal');
+    if (!modal || modal.length === 0) {
+        console.error('Confirm modal not found on page');
         return;
     }
 
-    // Show loading
-    toastr.info(`Processing ${userIds.length} users...`);
+    modal.find('.modal-title').text(opts.title);
+    modal.find('.confirm-message').text(opts.message);
+    modal.find('.btn-confirm').text(opts.confirmText);
+    modal.find('.btn-cancel').text(opts.cancelText);
 
-    // Process each user
-    let completed = 0;
-    let failed = 0;
-
-    userIds.forEach((userId, index) => {
-        setTimeout(() => {
-            $.ajax({
-                url: `/AdminUserManagement/Delete/${userId}`,
-                type: 'POST',
-                headers: {
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                },
-                success: function (response) {
-                    completed++;
-                    if (completed + failed === userIds.length) {
-                        if (failed === 0) {
-                            toastr.success(`Successfully deleted ${completed} users`);
-                        } else {
-                            toastr.warning(`Successfully deleted ${completed} users, ${failed} failed`);
-                        }
-                        setTimeout(() => window.location.reload(), 1000);
-                    }
-                },
-                error: function () {
-                    failed++;
-                    if (completed + failed === userIds.length) {
-                        if (failed === userIds.length) {
-                            toastr.error('Failed to delete users');
-                        } else {
-                            toastr.warning(`Successfully deleted ${completed} users, ${failed} failed`);
-                        }
-                        setTimeout(() => window.location.reload(), 1000);
-                    }
-                }
-            });
-        }, index * 100); // Stagger requests
+    modal.find('.btn-confirm').off('click').on('click', function () {
+        modal.modal('hide');
+        if (typeof opts.onConfirm === 'function') {
+            opts.onConfirm();
+        }
     });
+
+    modal.modal('show');
 }
 

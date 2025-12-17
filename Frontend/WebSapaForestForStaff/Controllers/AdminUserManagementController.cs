@@ -34,46 +34,45 @@ namespace WebSapaForestForStaff.Controllers
         {
             try
             {
-                searchRequest ??= new UserSearchRequest
+                var normalizedRequest = new UserSearchRequest
                 {
-                    Page = 1,
-                    PageSize = 10,
-                    SortBy = "FullName",
-                    SortOrder = "asc"
+                    SearchTerm = searchRequest?.SearchTerm,
+                    RoleId = searchRequest?.RoleId,
+                    Status = searchRequest?.Status ?? 0, // default to active
+                    Page = searchRequest?.Page > 0 ? searchRequest.Page : 1,
+                    PageSize = searchRequest?.PageSize > 0 ? searchRequest.PageSize : 10,
+                    SortBy = string.IsNullOrWhiteSpace(searchRequest?.SortBy) ? "FullName" : searchRequest.SortBy!,
+                    SortOrder = string.IsNullOrWhiteSpace(searchRequest?.SortOrder) ? "asc" : searchRequest.SortOrder!
                 };
 
-                // Set ViewBag for form values
-                ViewBag.SearchTerm = searchRequest.SearchTerm;
-                ViewBag.RoleId = searchRequest.RoleId;
-                ViewBag.Status = searchRequest.Status;
-                ViewBag.PageSize = searchRequest.PageSize;
-                ViewBag.SortBy = searchRequest.SortBy ?? "FullName";
-                ViewBag.SortOrder = searchRequest.SortOrder ?? "asc";
+                // Fetch paged data from API (backend handles search/filter/sort/pagination)
+                var result = await _userApiService.GetUsersWithPaginationAsync(normalizedRequest)
+                             ?? new UserListResponse
+                             {
+                                 Users = new List<User>(),
+                                 TotalCount = 0,
+                                 Page = normalizedRequest.Page,
+                                 PageSize = normalizedRequest.PageSize
+                             };
 
-                // Get users with pagination
-                var result = await _userApiService.GetUsersWithPaginationAsync(searchRequest);
-                
-                if (result == null)
+                // Role list for filters/dropdowns
+                var roles = await _userApiService.GetRolesAsync() ?? new List<Role>();
+
+                ViewBag.UserCounts = new
                 {
-                    // Fallback to simple list if pagination API is not available
-                    var users = await _userApiService.GetUsersAsync();
-                    result = new UserListResponse
-                    {
-                        Users = users ?? new List<User>(),
-                        TotalCount = users?.Count ?? 0,
-                        Page = 1,
-                        PageSize = users?.Count ?? 0
-                    };
-                }
-
-                // Get roles for filter dropdown
-                var roles = await _userApiService.GetRolesAsync();
+                    Total = result.TotalCount,
+                    Owner = result.Users.Count(u => u.RoleId == 1),
+                    Admin = result.Users.Count(u => u.RoleId == 2),
+                    Manager = result.Users.Count(u => u.RoleId == 3),
+                    Staff = result.Users.Count(u => u.RoleId == 4),
+                    Customer = result.Users.Count(u => u.RoleId == 5)
+                };
 
                 var viewModel = new UserListViewModel
                 {
                     UserList = result,
-                    AvailableRoles = roles ?? new List<Role>(),
-                    SearchRequest = searchRequest
+                    AvailableRoles = roles,
+                    SearchRequest = normalizedRequest
                 };
 
                 return View(viewModel);

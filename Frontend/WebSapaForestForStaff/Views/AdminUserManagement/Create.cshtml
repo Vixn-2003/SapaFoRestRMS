@@ -1,7 +1,7 @@
 @model WebSapaForestForStaff.Models.UserManagement.UserCreateViewModel
 
 @{
-    ViewData["Title"] = "Create User";
+    ViewData["Title"] = "Tạo người dùng";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
 }
 
@@ -9,11 +9,11 @@
 <div class="page-header">
     <div class="row align-items-center">
         <div class="col">
-            <h3 class="page-title">Create New User</h3>
+            <h3 class="page-title">Tạo người dùng mới</h3>
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
-                <li class="breadcrumb-item"><a asp-action="Index">User Management</a></li>
-                <li class="breadcrumb-item active">Create User</li>
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Quản lý người dùng</a></li>
+                <li class="breadcrumb-item active">Tạo mới</li>
             </ul>
         </div>
     </div>
@@ -24,10 +24,10 @@
     <div class="col-md-8 offset-md-2">
         <div class="card">
             <div class="card-header">
-                <h4 class="card-title mb-0">User Information</h4>
+                <h4 class="card-title mb-0">Thông tin người dùng</h4>
             </div>
             <div class="card-body">
-                <form asp-action="Create" method="post">
+                <form asp-action="Create" method="post" onsubmit="return confirm('Bạn có chắc muốn tạo người dùng này?');">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
                     <div class="row">
@@ -59,7 +59,7 @@
                             <div class="form-group">
                                 <label asp-for="RoleId" class="control-label"></label>
                                 <select asp-for="RoleId" class="form-control">
-                                    <option value="">-- Select Role --</option>
+                                <option value="">-- Chọn vai trò --</option>
                                     @if (Model.AvailableRoles != null)
                                     {
                                         @foreach (var role in Model.AvailableRoles)
@@ -78,8 +78,8 @@
                             <div class="form-group">
                                 <label asp-for="Status" class="control-label"></label>
                                 <select asp-for="Status" class="form-control">
-                                    <option value="0">Active</option>
-                                    <option value="1">Inactive</option>
+                                    <option value="0">Hoạt động</option>
+                                    <option value="1">Ngừng hoạt động</option>
                                 </select>
                                 <span asp-validation-for="Status" class="text-danger"></span>
                             </div>
@@ -89,7 +89,7 @@
                                 <label asp-for="TemporaryPassword" class="control-label"></label>
                                 <input asp-for="TemporaryPassword" class="form-control" type="password" />
                                 <span asp-validation-for="TemporaryPassword" class="text-danger"></span>
-                                <small class="form-text text-muted">Leave blank to auto-generate</small>
+                                <small class="form-text text-muted">Để trống để hệ thống tự tạo</small>
                             </div>
                         </div>
                     </div>
@@ -98,14 +98,14 @@
                         <div class="form-check">
                             <input asp-for="SendEmailNotification" class="form-check-input" type="checkbox" />
                             <label asp-for="SendEmailNotification" class="form-check-label">
-                                Send email notification to user
+                                Gửi email thông báo cho người dùng
                             </label>
                         </div>
                     </div>
 
                     <div class="form-group text-right">
-                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Create User</button>
+                        <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                        <button type="submit" class="btn btn-primary">Tạo</button>
                     </div>
                 </form>
             </div>

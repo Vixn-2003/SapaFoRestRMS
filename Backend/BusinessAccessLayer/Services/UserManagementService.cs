@@ -37,14 +37,14 @@ namespace BusinessAccessLayer.Services
             // Role check: adminUserId must be Admin
             var admin = await _unitOfWork.Users.GetByIdAsync(adminUserId);
             if (admin == null)
-                throw new UnauthorizedAccessException("Only admin can create manager accounts");
+                throw new UnauthorizedAccessException("Chỉ quản trị viên mới có thể tạo tài khoản quản lý");
 
             var adminRoleName = await _context.Roles.Where(r => r.RoleId == admin.RoleId).Select(r => r.RoleName).FirstOrDefaultAsync(ct);
             if (!string.Equals(adminRoleName, "Admin", StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("Only admin can create manager accounts");
+                throw new UnauthorizedAccessException("Chỉ quản trị viên mới có thể tạo tài khoản quản lý");
 
             if (await _unitOfWork.Users.IsEmailExistsAsync(request.Email))
-                throw new InvalidOperationException("Email already exists");
+                throw new InvalidOperationException("Email đã tồn tại");
 
             int roleId;
             if (request.RoleId.HasValue)
@@ -54,7 +54,7 @@ namespace BusinessAccessLayer.Services
             else
             {
                 var managerRole = await _context.Roles.Where(r => r.RoleName == "Manager").Select(r => r.RoleId).FirstOrDefaultAsync(ct);
-                if (managerRole == 0) throw new InvalidOperationException("Manager role not found");
+                if (managerRole == 0) throw new InvalidOperationException("Không tìm thấy vai trò quản lý");
                 roleId = managerRole;
             }
 
@@ -92,13 +92,13 @@ namespace BusinessAccessLayer.Services
         public async Task SendStaffVerificationCodeAsync(CreateStaffVerificationRequest request, int managerUserId, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(request.FullName))
-                throw new InvalidOperationException("Full name is required");
+                throw new InvalidOperationException("Họ và tên là bắt buộc");
 
             if (string.IsNullOrWhiteSpace(request.Email))
-                throw new InvalidOperationException("Email is required");
+                throw new InvalidOperationException("Email là bắt buộc");
 
             if (await _unitOfWork.Users.IsEmailExistsAsync(request.Email))
-                throw new InvalidOperationException("Email already exists");
+                throw new InvalidOperationException("Email đã tồn tại");
 
             var purpose = BuildStaffVerificationPurpose(request.Email);
 
@@ -112,18 +112,18 @@ namespace BusinessAccessLayer.Services
             // Role check: managerUserId must be Manager
             var manager = await _unitOfWork.Users.GetByIdAsync(managerUserId);
             if (manager == null)
-                throw new UnauthorizedAccessException("Only manager can create staff accounts");
+                throw new UnauthorizedAccessException("Chỉ quản lý mới có thể tạo tài khoản nhân viên");
 
             var managerRoleName = await _context.Roles.Where(r => r.RoleId == manager.RoleId).Select(r => r.RoleName).FirstOrDefaultAsync(ct);
             if (!string.Equals(managerRoleName, "Manager", StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("Only manager can create staff accounts");
+                throw new UnauthorizedAccessException("Chỉ quản lý mới có thể tạo tài khoản nhân viên");
 
             if (await _unitOfWork.Users.IsEmailExistsAsync(request.Email))
-                throw new InvalidOperationException("Email already exists");
+                throw new InvalidOperationException("Email đã tồn tại");
 
             var verificationCode = request.VerificationCode?.Trim();
             if (string.IsNullOrWhiteSpace(verificationCode))
-                throw new InvalidOperationException("Verification code is required");
+                throw new InvalidOperationException("Mã xác nhận là bắt buộc");
 
             int roleId;
             if (request.RoleId.HasValue)
@@ -133,14 +133,14 @@ namespace BusinessAccessLayer.Services
             else
             {
                 var staffRole = await _context.Roles.Where(r => r.RoleName == "Staff").Select(r => r.RoleId).FirstOrDefaultAsync(ct);
-                if (staffRole == 0) throw new InvalidOperationException("Staff role not found");
+                if (staffRole == 0) throw new InvalidOperationException("Không tìm thấy vai trò nhân viên");
                 roleId = staffRole;
             }
 
             var purpose = BuildStaffVerificationPurpose(request.Email);
             var verified = await _verificationService.VerifyCodeAsync(managerUserId, purpose, verificationCode, ct);
             if (!verified)
-                throw new InvalidOperationException("Invalid or expired verification code");
+                throw new InvalidOperationException("Mã xác nhận không hợp lệ hoặc đã hết hạn");
 
             // Validate positions if provided
             var positions = new List<Position>();
@@ -150,7 +150,7 @@ namespace BusinessAccessLayer.Services
                     .Where(p => request.PositionIds.Contains(p.PositionId))
                     .ToListAsync(ct);
                 if (positions.Count != request.PositionIds.Count)
-                    throw new InvalidOperationException("One or more positions not found");
+                    throw new InvalidOperationException("Một hoặc nhiều vị trí không tìm thấy");
             }
 
             var tempPassword = PasswordGenerator.Generate();

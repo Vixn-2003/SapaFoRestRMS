@@ -1,8 +1,11 @@
 @model WebSapaForestForStaff.ViewModels.CounterStaff.CounterStaffDashboardViewModel
+@using WebSapaForestForStaff.Controllers
 
 @{
     ViewData["Title"] = "Bảng điều khiển Nhân viên quầy";
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
+
 }
 
 <div class="container-fluid">
@@ -13,15 +16,13 @@
             <small class="text-muted">Tổng quan thời gian thực - @DateTime.Today.ToString("dd/MM/yyyy")</small>
         </div>
         <div class="d-flex gap-2">
-            <a href="@Url.Action("Index", "CounterStaffOrder")" class="btn btn-outline-primary">
+            <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" class="menu-item @(currentController == "CashierPaymentFlow" ? "active" : ""))" class="btn btn-outline-primary">
                 <i class="bi bi-list-ul me-1"></i>Danh sách đơn hàng
             </a>
             <a href="@Url.Action("Index", "CounterStaffTransaction")" class="btn btn-outline-info">
                 <i class="bi bi-receipt me-1"></i>Lịch sử giao dịch
             </a>
-            <a href="@Url.Action("Index", "ShiftManagement")" class="btn btn-outline-secondary">
-                <i class="bi bi-calendar3 me-1"></i>Quản lý ca làm việc
-            </a>
+          
         </div>
     </div>
 

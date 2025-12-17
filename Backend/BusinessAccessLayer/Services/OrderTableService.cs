@@ -609,7 +609,7 @@ namespace BusinessAccessLayer.Services
                 }
             }
 
-            // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC khi cập nhật status
+            //  QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC khi cập nhật status
             // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
             var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
             if (!releaseResult.success)

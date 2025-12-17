@@ -380,7 +380,7 @@ namespace BusinessAccessLayer.Services
         //        if (latestOrder != null)
         //        {
         //            screenDto.ActiveOrderId = latestOrder.OrderId;
-        //            // ✅ Đưa trạng thái order hiện tại ra FE để dùng cho flow waiter/cashier
+        //            //  Đưa trạng thái order hiện tại ra FE để dùng cho flow waiter/cashier
         //            // Chuẩn hoá về lowercase để so sánh đơn giản ở frontend
         //            screenDto.OrderStatus = latestOrder.Status?.ToLowerInvariant();
 
@@ -434,7 +434,7 @@ namespace BusinessAccessLayer.Services
         //        }
         //    }
 
-        //    // ✅ TÍNH TOÁN SỐ LƯỢNG MÓN THEO TRẠNG THÁI (Backend)
+        //    //  TÍNH TOÁN SỐ LƯỢNG MÓN THEO TRẠNG THÁI (Backend)
         //    screenDto.TotalQuantity = screenDto.OrderedItems.Sum(item => item.Quantity);
 
         //    foreach (var item in screenDto.OrderedItems)
@@ -715,7 +715,7 @@ namespace BusinessAccessLayer.Services
             }
             else
             {
-                // Không cho phép chỉnh sửa/thêm món nếu order đã xác nhận thanh toán hoặc đang chờ thanh toán
+                // Không cho phép chỉnh sửa/thêm món nếu order đã xác nhận/thanh toán (nhưng vẫn cho phép với trạng thái Completed do bếp hoàn tất)
                 var lockedStatuses = new[]
                 {
                     OrderStatusConstants.Confirmed,
@@ -723,7 +723,6 @@ namespace BusinessAccessLayer.Services
                     "WaitingForPayment",
                     "Processing",
                     OrderStatusConstants.Paid,
-                    "Completed",
                     "Success"
                 };
 
@@ -790,7 +789,7 @@ namespace BusinessAccessLayer.Services
                             }
                             else
                             {
-                                Console.WriteLine($"[DEBUG] ✅ Tìm thấy {comboComponents.Count} món con. Bắt đầu Insert...");
+                                Console.WriteLine($"[DEBUG]  Tìm thấy {comboComponents.Count} món con. Bắt đầu Insert...");
 
                                 foreach (var component in comboComponents)
                                 {
@@ -811,7 +810,7 @@ namespace BusinessAccessLayer.Services
 
                                 // Save lần 2
                                 await _dashboardRepo.SaveChangesAsync();
-                                Console.WriteLine("[DEBUG] ✅ Đã gọi SaveChangesAsync() cho OrderComboItems.");
+                                Console.WriteLine("[DEBUG]  Đã gọi SaveChangesAsync() cho OrderComboItems.");
                             }
                         }
                         else
@@ -828,7 +827,7 @@ namespace BusinessAccessLayer.Services
                             Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {newDetail.OrderDetailId}: {reserveResult.message}");
                         }
 
-                        // ✅ Broadcast đơn mới đến màn hình bếp qua SignalR
+                        //  Broadcast đơn mới đến màn hình bếp qua SignalR
                         try
                         {
                             await NotifyKitchenNewOrderAsync(currentOrder.OrderId);
@@ -900,7 +899,7 @@ namespace BusinessAccessLayer.Services
 
                         if (itemToDelete != null && itemToDelete.Order.ReservationId == activeReservation.ReservationId)
                         {
-                            // ✅ QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+                            //  QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
                             // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
                             // Phải gọi TRƯỚC khi set status = Cancelled để release có thể check status Pending/Cooking
                             if (itemToDelete.MenuItem != null)

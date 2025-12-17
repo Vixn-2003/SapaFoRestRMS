@@ -649,7 +649,7 @@ public class PaymentServiceTests
             .Returns((object?)null);
 
         // Act
-        var result = await _paymentService.ConfirmOrderAsync(request);
+        var result = await _paymentService.ConfirmOrderAsync(request, 1); // userId = 1
 
         // Assert
         result.Should().NotBeNull();
@@ -673,8 +673,8 @@ public class PaymentServiceTests
             .ReturnsAsync((Order?)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => 
-            _paymentService.ConfirmOrderAsync(request));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _paymentService.ConfirmOrderAsync(request, 1)); // userId = 1
     }
 
     [Fact]
@@ -696,8 +696,8 @@ public class PaymentServiceTests
             .ReturnsAsync(order);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => 
-            _paymentService.ConfirmOrderAsync(request));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _paymentService.ConfirmOrderAsync(request, 1)); // userId = 1
     }
 
     #endregion

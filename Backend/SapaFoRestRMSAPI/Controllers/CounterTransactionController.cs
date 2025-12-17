@@ -14,7 +14,7 @@ namespace SapaFoRestRMSAPI.Controllers
     /// </summary>
     [ApiController]
     [Route("api/counter/transactions")]
-    [Authorize(Roles = "Owner,Manager,Staff")]
+    [Authorize(Policy = "Position:Cashier")]
     public class CounterTransactionController : ControllerBase
     {
         private readonly ICounterTransactionService _transactionService;

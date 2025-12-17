@@ -3,47 +3,122 @@
 @{
     ViewData["Title"] = "Quản lý người dùng hệ thống ";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+    var search = Model?.SearchRequest ?? new WebSapaForestForStaff.DTOs.UserManagement.UserSearchRequest();
 }
 
 <!-- Page Header -->
 <div class="page-header">
     <div class="row align-items-center">
         <div class="col">
-            <h3 class="page-title">User Management</h3>
+            <h3 class="page-title">Quản lý người dùng</h3>
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Dashboard</a></li>
-                <li class="breadcrumb-item active">Quản lý người dùng hệ thống </li>
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+                <li class="breadcrumb-item active">Quản lý người dùng hệ thống</li>
             </ul>
         </div>
         <div class="col-auto">
             <a asp-action="Create" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Add New User
+                <i class="fas fa-plus"></i> Thêm người dùng
             </a>
         </div>
     </div>
 </div>
 
+<!-- Stats Summary -->
+<div class="row g-3 mb-3">
+    @{
+        var counts = ViewBag.UserCounts;
+        int Safe(object? v) => v is int i ? i : 0;
+        var total = Safe(counts?.Total);
+        var ownerCount = Safe(counts?.Owner);
+        var adminCount = Safe(counts?.Admin);
+        var managerCount = Safe(counts?.Manager);
+        var staffCount = Safe(counts?.Staff);
+        var customerCount = Safe(counts?.Customer);
+    }
+    <div class="col-md-2">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = (int?)null, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Tổng</div>
+                    <div class="h5 mb-0 fw-bold">@total</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 1, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Owner</div>
+                    <div class="h5 mb-0 fw-bold">@ownerCount</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 2, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Admin</div>
+                    <div class="h5 mb-0 fw-bold">@adminCount</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 3, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Manager</div>
+                    <div class="h5 mb-0 fw-bold">@managerCount</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 4, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Staff</div>
+                    <div class="h5 mb-0 fw-bold">@staffCount</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2">
+        <a class="text-reset text-decoration-none" href="@Url.Action("Index", new { roleId = 5, status = search.Status ?? 0, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body py-3">
+                    <div class="text-muted small">Customer</div>
+                    <div class="h5 mb-0 fw-bold">@customerCount</div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
 <!-- Filter Section -->
-<div class="card mb-3">
+<div class="card mb-3 border-0 shadow-sm">
     <div class="card-body">
-        <form method="get" id="filterForm" asp-action="Index">
-            <div class="row">
+        <form method="get" id="filterForm" asp-action="Index" class="p-2">
+            <div class="row g-3">
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label>Search</label>
-                        <input type="text" name="searchTerm" class="form-control" placeholder="Name, email, phone..." value="@ViewBag.SearchTerm">
+                        <label class="fw-semibold">Tìm kiếm</label>
+                        <input type="text" name="searchTerm" class="form-control form-control-sm" placeholder="Tên, email, số điện thoại..." value="@search.SearchTerm">
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Role</label>
-                        <select name="roleId" class="form-control">
-                            <option value="">All Roles</option>
+                        <label class="fw-semibold">Vai trò</label>
+                        <select name="roleId" class="form-select form-select-sm">
+                            <option value="">Tất cả vai trò</option>
                             @if (Model.AvailableRoles != null)
                             {
                                 @foreach (var role in Model.AvailableRoles)
                                 {
-                                    <option value="@role.RoleId" selected="@(ViewBag.RoleId != null && ViewBag.RoleId.ToString() == role.RoleId.ToString())">@role.RoleName</option>
+                                    <option value="@role.RoleId" selected="@(search.RoleId != null && search.RoleId.ToString() == role.RoleId.ToString())">@role.RoleName</option>
                                 }
                             }
                         </select>
@@ -51,46 +126,45 @@
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Status</label>
-                        <select name="status" class="form-control">
-                            <option value="">All Status</option>
-                            <option value="0" selected="@(ViewBag.Status != null && ViewBag.Status.ToString() == "0")">Active</option>
-                            <option value="1" selected="@(ViewBag.Status != null && ViewBag.Status.ToString() == "1")">Inactive</option>
+                        <label class="fw-semibold">Trạng thái</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Tất cả</option>
+                            <option value="0" selected="@(search.Status != null && search.Status.ToString() == "0")">Hoạt động</option>
+                            <option value="1" selected="@(search.Status != null && search.Status.ToString() == "1")">Ngừng hoạt động</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Page Size</label>
-                        <select name="pageSize" class="form-control">
-                            <option value="10" selected="@(ViewBag.PageSize == 10)">10 per page</option>
-                            <option value="25" selected="@(ViewBag.PageSize == 25)">25 per page</option>
-                            <option value="50" selected="@(ViewBag.PageSize == 50)">50 per page</option>
-                            <option value="100" selected="@(ViewBag.PageSize == 100)">100 per page</option>
+                        <label class="fw-semibold">Số dòng</label>
+                        <select name="pageSize" class="form-select form-select-sm">
+                            <option value="10" selected="@(search.PageSize == 10)">10 / trang</option>
+                            <option value="25" selected="@(search.PageSize == 25)">25 / trang</option>
+                            <option value="50" selected="@(search.PageSize == 50)">50 / trang</option>
+                            <option value="100" selected="@(search.PageSize == 100)">100 / trang</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class="form-group">
-                        <label>Sort By</label>
-                        <select name="sortBy" class="form-control">
-                            <option value="FullName" selected="@(ViewBag.SortBy == "FullName")">Name</option>
-                            <option value="Email" selected="@(ViewBag.SortBy == "Email")">Email</option>
-                            <option value="RoleName" selected="@(ViewBag.SortBy == "RoleName")">Role</option>
-                            <option value="CreatedAt" selected="@(ViewBag.SortBy == "CreatedAt")">Created Date</option>
+                        <label class="fw-semibold">Sắp xếp theo</label>
+                        <select name="sortBy" class="form-select form-select-sm">
+                            <option value="FullName" selected="@(search.SortBy == "FullName")">Tên</option>
+                            <option value="Email" selected="@(search.SortBy == "Email")">Email</option>
+                            <option value="RoleName" selected="@(search.SortBy == "RoleName")">Vai trò</option>
+                            <option value="CreatedAt" selected="@(search.SortBy == "CreatedAt")">Ngày tạo</option>
                         </select>
                     </div>
                 </div>
                 <div class="col-md-1">
-                    <div class="form-group">
-                        <label>&nbsp;</label>
-                        <button type="submit" class="btn btn-primary btn-block">
-                            <i class="fas fa-search"></i>
+                    <div class="form-group d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold shadow-sm">
+                            <i class="fas fa-search"></i> Lọc
                         </button>
                     </div>
                 </div>
             </div>
-            <input type="hidden" name="sortOrder" value="@(ViewBag.SortOrder ?? "asc")" id="sortOrder" />
+            <input type="hidden" name="sortOrder" value="@(search.SortOrder ?? "asc")" id="sortOrder" />
         </form>
     </div>
 </div>
@@ -99,20 +173,21 @@
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover table-center mb-0">
+<table class="table table-striped table-bordered align-middle">
                 <thead>
                     <tr>
                         <th>
                             <input type="checkbox" id="selectAll" />
                         </th>
                         <th>ID</th>
-                        <th>Name</th>
+                        <th>Tên</th>
+                        <th>Ảnh</th>
                         <th>Email</th>
-                        <th>Phone</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Created Date</th>
-                        <th class="text-right">Actions</th>
+                        <th>Số điện thoại</th>
+                        <th>Vai trò</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th class="text-right">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -126,6 +201,9 @@
                                 </td>
                                 <td>@user.UserId</td>
                                 <td>
+                                    <a href="@Url.Action("Details", new { id = user.UserId })">@user.FullName</a>
+                                </td>
+                                <td>
                                     <h2 class="table-avatar">
                                         <a href="@Url.Action("Details", new { id = user.UserId })" class="avatar avatar-sm mr-2">
                                             @if (!string.IsNullOrEmpty(user.AvatarUrl))
@@ -137,21 +215,21 @@
                                                 <div class="avatar-img rounded-circle  text-white d-flex align-items-center justify-content-center">
                                                     @{
                                                         var lastWord = user.FullName?.Split(' ').LastOrDefault();
-                                                        var initial = !string.IsNullOrEmpty(lastWord) && lastWord.Length > 0 
-                                                            ? lastWord.Substring(0, 1).ToUpper() 
-                                                            : !string.IsNullOrEmpty(user.FullName) && user.FullName.Length > 0 
-                                                                ? user.FullName.Substring(0, 1).ToUpper() 
-                                                                : "?";
+                                                        var initial = !string.IsNullOrEmpty(lastWord) && lastWord.Length > 0
+                                                        ? lastWord.Substring(0, 1).ToUpper()
+                                                        : !string.IsNullOrEmpty(user.FullName) && user.FullName.Length > 0
+                                                        ? user.FullName.Substring(0, 1).ToUpper()
+                                                        : "?";
                                                     }
                                                     <span>@initial</span>
                                                 </div>
                                             }
                                         </a>
-                                        <a href="@Url.Action("Details", new { id = user.UserId })">@user.FullName</a>
+                                       
                                     </h2>
                                 </td>
                                 <td>@user.Email</td>
-                                <td>@(user.Phone ?? "N/A")</td>
+                                <td>@(user.Phone ?? "Không có")</td>
                                 <td>
                                     <span class="badge badge-pill @(user.RoleId == 1 ? "badge-danger" : user.RoleId == 2 ? "badge-warning" : user.RoleId == 3 ? "badge-info" : "badge-secondary")">
                                         @(user.RoleName ?? "Unknown")
@@ -160,36 +238,36 @@
                                 <td>
                                     @if (user.Status == 0)
                                     {
-                                        <span class="badge badge-success">Active</span>
+                                        <span class="badge badge-success">Hoạt động</span>
                                     }
                                     else
                                     {
-                                        <span class="badge badge-danger">Inactive</span>
+                                        <span class="badge badge-danger">Ngừng hoạt động</span>
                                     }
                                 </td>
-                                <td>@(user.CreatedAt?.ToString("dd/MM/yyyy") ?? "N/A")</td>
+                                <td>@(user.CreatedAt?.ToString("dd/MM/yyyy") ?? "Không có")</td>
                                 <td class="text-right">
                                     <div class="actions">
                                         <a href="@Url.Action("Details", new { id = user.UserId })" class="btn btn-sm bg-info-light">
-                                            <i class="far fa-eye"></i> View
+                                            <i class="far fa-eye"></i> Xem
                                         </a>
-                                        <a href="@Url.Action("Edit", new { id = user.UserId })" class="btn btn-sm bg-warning-light">
-                                            <i class="fas fa-edit"></i> Edit
+                                        <a href="@Url.Action("Edit", new { id = user.UserId })" class="btn btn-sm bg-warning-light" onclick="return confirm('Bạn có chắc muốn chỉnh sửa người dùng này?');">
+                                            <i class="fas fa-edit"></i> Sửa
                                         </a>
                                         @if (user.Status == 0)
                                         {
                                             <button type="button" class="btn btn-sm bg-danger-light" onclick="openDeactivateModal(@user.UserId, '@user.FullName')">
-                                                <i class="fas fa-ban"></i> Deactivate
+                                                <i class="fas fa-ban"></i> Ngừng hoạt động
                                             </button>
                                         }
                                         else
                                         {
-                                            <button type="button" class="btn btn-sm bg-success-light" onclick="changeStatus(@user.UserId, 0)">
-                                                <i class="fas fa-check"></i> Activate
+                                            <button type="button" class="btn btn-sm bg-success-light" onclick="if(confirm('Kích hoạt người dùng này?')) changeStatus(@user.UserId, 0);">
+                                                <i class="fas fa-check"></i> Kích hoạt
                                             </button>
                                         }
                                         <button type="button" class="btn btn-sm bg-danger-light" onclick="openDeleteModal(@user.UserId, '@user.FullName')">
-                                            <i class="fas fa-trash"></i> Delete
+                                            <i class="fas fa-trash"></i> Xóa
                                         </button>
                                     </div>
                                 </td>
@@ -202,8 +280,8 @@
                             <td colspan="9" class="text-center">
                                 <div class="py-4">
                                     <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                                    <h5>No users found</h5>
-                                    <p class="text-muted">Try adjusting your search criteria or create a new user.</p>
+                                    <h5>Không có người dùng</h5>
+                                    <p class="text-muted">Hãy đổi điều kiện tìm kiếm hoặc tạo mới.</p>
                                 </div>
                             </td>
                         </tr>
@@ -218,7 +296,7 @@
             <div class="row mt-3">
                 <div class="col-md-6">
                     <div class="dataTables_info">
-                        Showing @((Model.UserList.Page - 1) * Model.UserList.PageSize + 1) to @Math.Min(Model.UserList.Page * Model.UserList.PageSize, Model.UserList.TotalCount) of @Model.UserList.TotalCount entries
+                        Hiển thị @((Model.UserList.Page - 1) * Model.UserList.PageSize + 1) - @Math.Min(Model.UserList.Page * Model.UserList.PageSize, Model.UserList.TotalCount) trên @Model.UserList.TotalCount bản ghi
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -227,13 +305,13 @@
                             @if (Model.UserList.HasPreviousPage)
                             {
                                 <li class="paginate_button page-item previous">
-                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page - 1, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">Previous</a>
+                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page - 1, searchTerm = search.SearchTerm, roleId = search.RoleId, status = search.Status, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })" class="page-link">Trước</a>
                                 </li>
                             }
                             else
                             {
                                 <li class="paginate_button page-item previous disabled">
-                                    <a href="#" class="page-link">Previous</a>
+                                    <a href="#" class="page-link">Trước</a>
                                 </li>
                             }
 
@@ -248,7 +326,7 @@
                                 else
                                 {
                                     <li class="paginate_button page-item">
-                                        <a href="@Url.Action("Index", new { page = i, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">@i</a>
+                                    <a href="@Url.Action("Index", new { page = i, searchTerm = search.SearchTerm, roleId = search.RoleId, status = search.Status, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })" class="page-link">@i</a>
                                     </li>
                                 }
                             }
@@ -256,13 +334,13 @@
                             @if (Model.UserList.HasNextPage)
                             {
                                 <li class="paginate_button page-item next">
-                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page + 1, searchTerm = ViewBag.SearchTerm, roleId = ViewBag.RoleId, status = ViewBag.Status, pageSize = ViewBag.PageSize, sortBy = ViewBag.SortBy, sortOrder = ViewBag.SortOrder })" class="page-link">Next</a>
+                                    <a href="@Url.Action("Index", new { page = Model.UserList.Page + 1, searchTerm = search.SearchTerm, roleId = search.RoleId, status = search.Status, pageSize = search.PageSize, sortBy = search.SortBy, sortOrder = search.SortOrder })" class="page-link">Tiếp</a>
                                 </li>
                             }
                             else
                             {
                                 <li class="paginate_button page-item next disabled">
-                                    <a href="#" class="page-link">Next</a>
+                                    <a href="#" class="page-link">Tiếp</a>
                                 </li>
                             }
                         </ul>
@@ -278,23 +356,23 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Deactivate User</h5>
+                <h5 class="modal-title">Ngừng hoạt động người dùng</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to deactivate this user?</p>
-                <p><strong>Name:</strong> <span id="deactivateUserName"></span></p>
+                <p>Bạn có chắc muốn ngừng hoạt động người dùng này?</p>
+                <p><strong>Tên:</strong> <span id="deactivateUserName"></span></p>
                 <div class="form-group">
-                    <label for="deactivateReason">Reason (optional)</label>
-                    <textarea id="deactivateReason" class="form-control" rows="3" placeholder="Enter reason for deactivation..."></textarea>
+                    <label for="deactivateReason">Lý do (không bắt buộc)</label>
+                    <textarea id="deactivateReason" class="form-control" rows="3" placeholder="Nhập lý do ngừng hoạt động..."></textarea>
                 </div>
                 <input type="hidden" id="deactivateUserId" />
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="submitDeactivate()">Deactivate</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="submitDeactivate()">Xác nhận</button>
             </div>
         </div>
     </div>
@@ -305,24 +383,45 @@
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Delete User</h5>
+                <h5 class="modal-title text-danger">Xóa người dùng</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <p class="text-danger"><strong>Warning: This action cannot be undone!</strong></p>
-                <p>Are you sure you want to permanently delete this user?</p>
-                <p><strong>Name:</strong> <span id="deleteUserName"></span></p>
+                <p class="text-danger"><strong>Cảnh báo: Thao tác này không thể hoàn tác!</strong></p>
+                <p>Bạn có chắc chắn muốn xóa vĩnh viễn người dùng này?</p>
+                <p><strong>Tên:</strong> <span id="deleteUserName"></span></p>
                 <div class="form-group">
-                    <label for="deleteReason">Reason (optional)</label>
-                    <textarea id="deleteReason" class="form-control" rows="3" placeholder="Enter reason for deletion..."></textarea>
+                    <label for="deleteReason">Lý do (không bắt buộc)</label>
+                    <textarea id="deleteReason" class="form-control" rows="3" placeholder="Nhập lý do xóa..."></textarea>
                 </div>
                 <input type="hidden" id="deleteUserId" />
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="submitDelete()">Delete Permanently</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="submitDelete()">Xóa vĩnh viễn</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generic Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Xác nhận</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="confirm-message mb-0">Bạn chắc chắn muốn thực hiện hành động này?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-cancel" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary btn-confirm">Xác nhận</button>
             </div>
         </div>
     </div>

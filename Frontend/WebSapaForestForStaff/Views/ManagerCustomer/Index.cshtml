@@ -36,7 +36,7 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
                         <div class="rounded-circle bg-primary bg-opacity-10 p-3">
-                            <i class="mdi mdi-account-multiple text-primary" style="font-size: 24px;"></i>
+                            <i class="fas fa-users text-primary" style="font-size: 24px;"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
@@ -54,7 +54,7 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
                         <div class="rounded-circle bg-warning bg-opacity-10 p-3">
-                            <i class="mdi mdi-crown text-warning" style="font-size: 24px;"></i>
+                            <i class="fas fa-crown text-warning" style="font-size: 24px;"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
@@ -73,7 +73,7 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
                         <div class="rounded-circle bg-info bg-opacity-10 p-3">
-                            <i class="mdi mdi-account text-info" style="font-size: 24px;"></i>
+                            <i class="fas fa-user text-info" style="font-size: 24px;"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
@@ -92,7 +92,7 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
                         <div class="rounded-circle bg-success bg-opacity-10 p-3">
-                            <i class="mdi mdi-star text-success" style="font-size: 24px;"></i>
+                            <i class="fas fa-star text-success" style="font-size: 24px;"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
@@ -113,7 +113,7 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
                         <div class="rounded-circle bg-primary bg-opacity-10 p-3">
-                            <i class="mdi mdi-chart-line text-primary" style="font-size: 24px;"></i>
+                            <i class="fas fa-chart-line text-primary" style="font-size: 24px;"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
@@ -131,7 +131,7 @@
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
                         <div class="rounded-circle bg-danger bg-opacity-10 p-3">
-                            <i class="mdi mdi-trophy text-danger" style="font-size: 24px;"></i>
+                            <i class="fas fa-trophy text-danger" style="font-size: 24px;"></i>
                         </div>
                     </div>
                     <div class="flex-grow-1 ms-3">
@@ -149,7 +149,7 @@
 @if (TempData["SuccessMessage"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="mdi mdi-check-circle me-2"></i>
+        <i class="fas fa-check-circle me-2"></i>
         <strong>Thành công!</strong> @TempData["SuccessMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
@@ -158,20 +158,20 @@
 @if (TempData["ErrorMessage"] != null)
 {
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="mdi mdi-alert-circle me-2"></i>
+        <i class="fas fa-exclamation-circle me-2"></i>
         <strong>Lỗi!</strong> @TempData["ErrorMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
 
-<!-- Two Column Layout: Search and Filter Section (col-3) | Customer List Section (col-7) -->
+<!-- Two Column Layout: Search and Filter Section (col-3) | Customer List Section (col-9) -->
 <div class="row">
     <!-- Search and Filter Section (Left - col-3) -->
     <div class="col-3">
         <div class="card border-0 shadow-sm sticky-top" style="top: 20px;">
             <div class="card-header bg-light">
                 <h6 class="mb-0">
-                    <i class="mdi mdi-filter-outline me-2"></i>
+                    <i class="fas fa-filter me-2"></i>
                     Tìm kiếm & Lọc
                 </h6>
             </div>
@@ -258,8 +258,8 @@
         </div>
     </div>
 
-    <!-- Customer List Section (Right - col-7) -->
-    <div class="col-7">
+    <!-- Customer List Section (Right - col-9) -->
+    <div class="col-9">
         <!-- Statistics Summary -->
        
 
@@ -534,6 +534,7 @@
         background-color: #e9ecef;
         color: #0d6efd;
     }
+    public async Task<OrderDto> ConfirmOrderAsync(CustomerConfirmRequestDto request, CancellationToken ct = default)
 </style>
 
 <script>

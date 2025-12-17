@@ -25,7 +25,7 @@ namespace SapaFoRestRMSAPI.Services
             var enableSsl = bool.TryParse(_configuration["Smtp:EnableSsl"], out var ssl) ? ssl : true;
 
             using var message = new MailMessage();
-            message.From = new MailAddress(from);
+            message.From = new MailAddress(from, "SapaFoRest_RMS");
             message.To.Add(new MailAddress(toEmail));
             message.Subject = subject;
             message.Body = body;

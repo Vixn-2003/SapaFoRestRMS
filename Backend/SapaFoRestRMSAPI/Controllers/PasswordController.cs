@@ -43,7 +43,7 @@ namespace SapaFoRestRMSAPI.Controllers
             var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             dto.UserId = userId;
@@ -51,7 +51,7 @@ namespace SapaFoRestRMSAPI.Controllers
             try
             {
                 await _passwordService.RequestChangeAsync(dto, ct);
-                return Ok(new { message = "Verification code sent" });
+                return Ok(new { message = "Đã gửi mã xác nhận" });
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -70,7 +70,7 @@ namespace SapaFoRestRMSAPI.Controllers
             var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
             {
-                return Unauthorized(new { message = "User not authenticated" });
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
             }
 
             dto.UserId = userId;
@@ -78,7 +78,7 @@ namespace SapaFoRestRMSAPI.Controllers
             try
             {
                 await _passwordService.ChangeAsync(dto, ct);
-                return Ok(new { message = "Password changed" });
+                return Ok(new { message = "Mật khẩu đã được thay đổi" });
             }
             catch (UnauthorizedAccessException ex)
             {

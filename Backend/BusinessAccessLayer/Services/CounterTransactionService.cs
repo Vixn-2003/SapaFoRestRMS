@@ -67,7 +67,6 @@ namespace BusinessAccessLayer.Services
             // Header
             worksheet.Cells[1, 1].Value = "Receipt ID";
             worksheet.Cells[1, 2].Value = "Order ID";
-            worksheet.Cells[1, 3].Value = "Table";
             worksheet.Cells[1, 4].Value = "Amount";
             worksheet.Cells[1, 5].Value = "Payment Method";
             worksheet.Cells[1, 6].Value = "Cashier";
@@ -75,7 +74,7 @@ namespace BusinessAccessLayer.Services
             worksheet.Cells[1, 8].Value = "Status";
 
             // Style header
-            using (var range = worksheet.Cells[1, 1, 1, 8])
+            using (var range = worksheet.Cells[1, 1, 1, 7])
             {
                 range.Style.Font.Bold = true;
                 range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;

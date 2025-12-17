@@ -152,7 +152,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
 
-        // ✅ API KIỂM TRA MÃ TRÙNG
+        //  API KIỂM TRA MÃ TRÙNG
         /// <summary>
         /// Kiểm tra mã nhà cung cấp đã tồn tại chưa
         /// Route: GET api/inventory/supplier/check-code/{code}
@@ -171,7 +171,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        // ✅ API TẠO MỚI NHÀ CUNG CẤP
+        //  API TẠO MỚI NHÀ CUNG CẤP
         /// <summary>
         /// Tạo nhà cung cấp mới
         /// Route: POST api/inventory/supplier
@@ -212,7 +212,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        // ✅ API CẬP NHẬT NHÀ CUNG CẤP
+        //  API CẬP NHẬT NHÀ CUNG CẤP
         /// <summary>
         /// Cập nhật thông tin nhà cung cấp (không cho phép sửa mã)
         /// Route: PUT api/inventory/supplier/{id}

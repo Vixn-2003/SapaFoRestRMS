@@ -46,7 +46,7 @@ namespace BusinessAccessLayer.Services
 
         public async Task RequestOtpAsync(string phone, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(phone)) throw new ArgumentException("Phone is required");
+            if (string.IsNullOrWhiteSpace(phone)) throw new ArgumentException("Số điện thoại là bắt buộc");
 
             var now = DateTime.Now;
             if (_otpCache.ContainsKey(phone))

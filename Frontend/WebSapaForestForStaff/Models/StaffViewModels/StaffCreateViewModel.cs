@@ -37,9 +37,10 @@ namespace WebSapaForestForStaff.Models.StaffViewModels
         [Display(Name = "Department")]
         public int DepartmentId { get; set; }
 
-        [Required(ErrorMessage = "At least one position is required")]
-        [Display(Name = "Positions")]
-        public List<int> SelectedPositionIds { get; set; } = new();
+        [Required(ErrorMessage = "Position is required")]
+        [Display(Name = "Position")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a position")]
+        public int PositionId { get; set; }
 
         [Required(ErrorMessage = "Role is required")]
         [Display(Name = "Role")]
