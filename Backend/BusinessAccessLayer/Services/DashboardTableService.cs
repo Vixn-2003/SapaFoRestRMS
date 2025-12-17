@@ -741,6 +741,18 @@ namespace BusinessAccessLayer.Services
                     // --- CASE ADD: THÊM MÓN MỚI ---
                     case "Add":
                         Console.WriteLine("--- [DEBUG] BẮT ĐẦU CASE ADD ---");
+
+                        // Nếu đơn hiện tại đã ở trạng thái Completed/Hoàn thành thì khi thêm món mới
+                        // ta coi như đơn "mở lại" cho bếp -> đưa trạng thái đơn về Pending
+                        if (!string.IsNullOrWhiteSpace(currentOrder.Status) &&
+                            (currentOrder.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                             currentOrder.Status.Equals("Hoàn thành", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            currentOrder.Status = "Pending";
+                            await _unitOfWork.Orders.UpdateAsync(currentOrder);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+
                         decimal price = 0;
 
                         // 1. Lấy giá
