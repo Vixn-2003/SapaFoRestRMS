@@ -3,42 +3,100 @@ using Microsoft.AspNetCore.Mvc;
 using WebSapaForestForStaff.DTOs.Staff;
 using WebSapaForestForStaff.Models.StaffViewModels;
 using WebSapaForestForStaff.Services.Api.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace WebSapaForestForStaff.Controllers
 {
     /// <summary>
     /// MVC Controller for Staff Management Module
-    /// UC55 - View List Staff
-    /// UC56 - Update Staff
-    /// UC57 - Deactivate / Delete Staff
-    /// Create Staff
+    /// Responsibilities:
+    /// - Render views only (Index, Create, Edit)
+    /// - Handle form submissions (Create, Edit)
+    /// - Provide AJAX endpoints that delegate to API service
     /// </summary>
-    [Authorize(Policy = "Manager")] // Only Manager and above can access
+    [Authorize(Policy = "Manager")]
     public class StaffManagementController : Controller
     {
-        private readonly IStaffManagementApiService _staffManagementApiService;
+        private readonly IStaffManagementApiService _staffApiService;
         private readonly ILogger<StaffManagementController> _logger;
 
         public StaffManagementController(
-            IStaffManagementApiService staffManagementApiService,
+            IStaffManagementApiService staffApiService,
             ILogger<StaffManagementController> logger)
         {
-            _staffManagementApiService = staffManagementApiService;
+            _staffApiService = staffApiService;
             _logger = logger;
         }
 
         /// <summary>
-        /// UC55 - View List Staff
+        /// UC55 - View List Staff (renders view only, data loaded via AJAX)
         /// GET: /StaffManagement/Index
         /// </summary>
         [HttpGet]
         public IActionResult Index()
         {
+            // Pure view rendering - no data loading here
+            // JavaScript will call GetStaffList AJAX endpoint
             return View();
+        }
+
+        /// <summary>
+        /// AJAX endpoint: Get paginated staff list with filters
+        /// POST: /StaffManagement/GetStaffList
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> GetStaffList([FromBody] StaffFilterDto filter)
+        {
+            try
+            {
+                // Validate and normalize filter
+                filter ??= new StaffFilterDto();
+                filter.Page = filter.Page > 0 ? filter.Page : 1;
+                filter.PageSize = filter.PageSize > 0 ? filter.PageSize : 20;
+                filter.SortBy = string.IsNullOrWhiteSpace(filter.SortBy) ? "HireDate" : filter.SortBy;
+                filter.SortDirection = string.IsNullOrWhiteSpace(filter.SortDirection) ? "desc" : filter.SortDirection;
+
+                var (success, data, message) = await _staffApiService.GetStaffListAsync(filter);
+
+                if (!success || data == null)
+                {
+                    return Ok(new
+                    {
+                        success = false,
+                        message = message ?? "Không thể tải danh sách nhân viên",
+                        data = Array.Empty<object>(),
+                        page = filter.Page,
+                        pageSize = filter.PageSize,
+                        totalCount = 0,
+                        totalPages = 0
+                    });
+                }
+
+                // Return normalized response
+                return Ok(new
+                {
+                    success = true,
+                    message = (string?)null,
+                    data = data.Data,
+                    page = data.Page,
+                    pageSize = data.PageSize,
+                    totalCount = data.TotalCount,
+                    totalPages = data.TotalPages
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetStaffList endpoint");
+                return Ok(new
+                {
+                    success = false,
+                    message = "Đã xảy ra lỗi khi tải danh sách nhân viên",
+                    data = Array.Empty<object>(),
+                    page = 1,
+                    pageSize = 20,
+                    totalCount = 0,
+                    totalPages = 0
+                });
+            }
         }
 
         /// <summary>
@@ -50,8 +108,7 @@ namespace WebSapaForestForStaff.Controllers
         {
             try
             {
-                // Get positions for dropdown
-                var (success, positions, message) = await _staffManagementApiService.GetActivePositionsAsync();
+                var (success, positions, message) = await _staffApiService.GetActivePositionsAsync();
 
                 var viewModel = new StaffCreateViewModel
                 {
@@ -64,7 +121,7 @@ namespace WebSapaForestForStaff.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading create staff page");
-                TempData["ErrorMessage"] = "An error occurred while loading the page.";
+                TempData["ErrorMessage"] = "Lỗi khi tải trang tạo nhân viên";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -77,50 +134,51 @@ namespace WebSapaForestForStaff.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(StaffCreateViewModel viewModel)
         {
+            if (!ModelState.IsValid)
+            {
+                var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                viewModel.AvailablePositions = positions ?? new List<PositionDto>();
+                return View(viewModel);
+            }
+
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    // Reload positions
-                    var (_, positions, _) = await _staffManagementApiService.GetActivePositionsAsync();
-                    viewModel.AvailablePositions = positions ?? new List<PositionDto>();
-                    return View(viewModel);
-                }
-
-                // Map ViewModel to DTO
+                // Always set RoleId to Staff (4) for new staff
+                // BaseSalary is calculated from selected positions on client side
                 var dto = new StaffCreateDto
                 {
                     FullName = viewModel.FullName,
                     Email = viewModel.Email,
                     Phone = viewModel.Phone,
-                    BaseSalary = viewModel.BaseSalary,
+                    BaseSalary = viewModel.BaseSalary, // From selected position
                     HireDate = viewModel.HireDate,
-                    DepartmentId = viewModel.DepartmentId,
-                    PositionIds = viewModel.SelectedPositionIds,
-                    RoleId = viewModel.RoleId,
+                    DepartmentId = viewModel.DepartmentId > 0 ? viewModel.DepartmentId : 1, // Default to 1
+                    PositionId = viewModel.PositionId, // Single position only
+                    RoleId = 4, // Always Staff
                     Password = viewModel.Password,
                     AvatarUrl = viewModel.AvatarUrl
                 };
 
-                var (success, staffId, message) = await _staffManagementApiService.CreateStaffAsync(dto);
+                var (success, staffId, message) = await _staffApiService.CreateStaffAsync(dto);
 
                 if (!success)
                 {
-                    TempData["ErrorMessage"] = message;
-                    // Reload positions
-                    var (_, positions, _) = await _staffManagementApiService.GetActivePositionsAsync();
+                    ModelState.AddModelError("", message ?? "Lỗi khi tạo nhân viên");
+                    var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
                     viewModel.AvailablePositions = positions ?? new List<PositionDto>();
                     return View(viewModel);
                 }
 
-                TempData["SuccessMessage"] = message;
+                TempData["SuccessMessage"] = message ?? "Tạo nhân viên thành công";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating staff");
-                TempData["ErrorMessage"] = "An error occurred while creating staff.";
-                return RedirectToAction(nameof(Index));
+                ModelState.AddModelError("", "Đã xảy ra lỗi khi tạo nhân viên");
+                var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                viewModel.AvailablePositions = positions ?? new List<PositionDto>();
+                return View(viewModel);
             }
         }
 
@@ -133,16 +191,15 @@ namespace WebSapaForestForStaff.Controllers
         {
             try
             {
-                var (success, staffDetail, message) = await _staffManagementApiService.GetStaffDetailAsync(id);
+                var (success, staffDetail, message) = await _staffApiService.GetStaffDetailAsync(id);
 
                 if (!success || staffDetail == null)
                 {
-                    TempData["ErrorMessage"] = message ?? "Staff not found.";
+                    TempData["ErrorMessage"] = message ?? "Không tìm thấy nhân viên";
                     return RedirectToAction(nameof(Index));
                 }
 
-                // Get positions for dropdown
-                var (_, positions, _) = await _staffManagementApiService.GetActivePositionsAsync();
+                var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
 
                 var viewModel = new StaffEditViewModel
                 {
@@ -154,7 +211,7 @@ namespace WebSapaForestForStaff.Controllers
                     Status = staffDetail.Status,
                     HireDate = staffDetail.HireDate,
                     DepartmentName = staffDetail.DepartmentName,
-                    SelectedPositionIds = staffDetail.Positions.Select(p => p.PositionId).ToList(),
+                    PositionId = staffDetail.Positions.FirstOrDefault()?.PositionId ?? 0, // Single position only
                     AvailablePositions = positions ?? new List<PositionDto>(),
                     AvatarUrl = staffDetail.AvatarUrl
                 };
@@ -163,8 +220,8 @@ namespace WebSapaForestForStaff.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading edit staff page for ID {StaffId}", id);
-                TempData["ErrorMessage"] = "An error occurred while loading staff details.";
+                _logger.LogError(ex, "Error loading edit page for staff ID {StaffId}", id);
+                TempData["ErrorMessage"] = "Lỗi khi tải thông tin nhân viên";
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -177,23 +234,21 @@ namespace WebSapaForestForStaff.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, StaffEditViewModel viewModel)
         {
+            if (id != viewModel.StaffId)
+            {
+                TempData["ErrorMessage"] = "ID không hợp lệ";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                viewModel.AvailablePositions = positions ?? new List<PositionDto>();
+                return View(viewModel);
+            }
+
             try
             {
-                if (id != viewModel.StaffId)
-                {
-                    TempData["ErrorMessage"] = "Invalid staff ID.";
-                    return RedirectToAction(nameof(Index));
-                }
-
-                if (!ModelState.IsValid)
-                {
-                    // Reload positions
-                    var (_, positions, _) = await _staffManagementApiService.GetActivePositionsAsync();
-                    viewModel.AvailablePositions = positions ?? new List<PositionDto>();
-                    return View(viewModel);
-                }
-
-                // Map ViewModel to DTO
                 var dto = new StaffUpdateDto
                 {
                     StaffId = viewModel.StaffId,
@@ -201,115 +256,57 @@ namespace WebSapaForestForStaff.Controllers
                     Phone = viewModel.Phone,
                     BaseSalary = viewModel.BaseSalary,
                     Status = viewModel.Status,
-                    PositionIds = viewModel.SelectedPositionIds,
+                    PositionId = viewModel.PositionId, // Single position only
                     AvatarUrl = viewModel.AvatarUrl
                 };
 
-                var (success, message) = await _staffManagementApiService.UpdateStaffAsync(id, dto);
+                var (success, message) = await _staffApiService.UpdateStaffAsync(id, dto);
 
                 if (!success)
                 {
-                    TempData["ErrorMessage"] = message;
-                    // Reload positions
-                    var (_, positions, _) = await _staffManagementApiService.GetActivePositionsAsync();
+                    ModelState.AddModelError("", message ?? "Lỗi khi cập nhật nhân viên");
+                    var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
                     viewModel.AvailablePositions = positions ?? new List<PositionDto>();
                     return View(viewModel);
                 }
 
-                TempData["SuccessMessage"] = message;
+                TempData["SuccessMessage"] = message ?? "Cập nhật nhân viên thành công";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating staff ID {StaffId}", id);
-                TempData["ErrorMessage"] = "An error occurred while updating staff.";
-                return RedirectToAction(nameof(Index));
+                ModelState.AddModelError("", "Đã xảy ra lỗi khi cập nhật nhân viên");
+                var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                viewModel.AvailablePositions = positions ?? new List<PositionDto>();
+                return View(viewModel);
             }
         }
 
         /// <summary>
-        /// UC57 - Deactivate Staff
+        /// UC57 - Deactivate Staff (AJAX endpoint)
         /// POST: /StaffManagement/Deactivate
-        /// Called via AJAX from JavaScript
         /// </summary>
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Deactivate([FromBody] StaffDeactivateDto dto)
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (dto == null || dto.StaffId <= 0)
                 {
-                    return BadRequest(new { success = false, message = "Invalid request data." });
+                    return Ok(new { success = false, message = "Dữ liệu không hợp lệ" });
                 }
 
-                var (success, message) = await _staffManagementApiService.DeactivateStaffAsync(dto.StaffId, dto);
+                var (success, message) = await _staffApiService.DeactivateStaffAsync(dto.StaffId, dto);
 
-                return Ok(new { success = success, message = message });
+                return Ok(new { success, message = message ?? (success ? "Ngừng hoạt động thành công" : "Lỗi khi ngừng hoạt động") });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deactivating staff {StaffId}", dto.StaffId);
-                return StatusCode(500, new { success = false, message = "An error occurred while deactivating staff." });
-            }
-        }
-
-        /// <summary>
-        /// API endpoint for loading staff list via AJAX
-        /// POST: /StaffManagement/LoadStaffList
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> LoadStaffList([FromBody] StaffFilterDto filter)
-        {
-            try
-            {
-                var (success, data, message) = await _staffManagementApiService.GetStaffListAsync(filter);
-
-                if (!success || data == null)
-                {
-                    return BadRequest(new { success = false, message = message });
-                }
-
-                return Ok(new
-                {
-                    success = true,
-                    data = data.Data,
-                    page = data.Page,
-                    pageSize = data.PageSize,
-                    totalCount = data.TotalCount,
-                    totalPages = data.TotalPages
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading staff list");
-                return StatusCode(500, new { success = false, message = "An error occurred while loading staff list." });
-            }
-        }
-
-        /// <summary>
-        /// Get staff detail via AJAX
-        /// GET: /StaffManagement/GetStaffDetail/{id}
-        /// </summary>
-        [HttpGet]
-        public async Task<IActionResult> GetStaffDetail(int id)
-        {
-            try
-            {
-                var (success, data, message) = await _staffManagementApiService.GetStaffDetailAsync(id);
-
-                if (!success || data == null)
-                {
-                    return BadRequest(new { success = false, message = message });
-                }
-
-                return Ok(new { success = true, data = data });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting staff detail for ID {StaffId}", id);
-                return StatusCode(500, new { success = false, message = "An error occurred while getting staff details." });
+                _logger.LogError(ex, "Error deactivating staff {StaffId}", dto?.StaffId);
+                return Ok(new { success = false, message = "Đã xảy ra lỗi khi ngừng hoạt động nhân viên" });
             }
         }
     }
 }
-

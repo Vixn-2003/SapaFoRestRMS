@@ -35,10 +35,11 @@ namespace BusinessAccessLayer.Services
         public async Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct = default)
         {
             var users = await _unitOfWork.Users.GetAllAsync();
-            var activeUsers = users.Where(u => u.IsDeleted == false).ToList();
+            // Loại bỏ Admin (RoleId = 2) và user đã xóa
+            var filtered = users.Where(u => u.IsDeleted == false && u.RoleId != 2).ToList();
 
             var userDtos = new List<UserDto>();
-            foreach (var user in activeUsers)
+            foreach (var user in filtered)
             {
                 var userDto = _mapper.Map<UserDto>(user);
                 // Load Role name
@@ -100,9 +101,13 @@ namespace BusinessAccessLayer.Services
 
         public async Task<UserListResponse> SearchAsync(UserSearchRequest request, CancellationToken ct = default)
         {
+            const int AdminRoleId = 2;
+
             // Get all users from repository (already filtered by IsDeleted = false)
             var allUsers = await _unitOfWork.Users.GetAllAsync();
-            var usersList = allUsers.ToList();
+            var usersList = allUsers
+                .Where(u => u.IsDeleted == false && u.RoleId != AdminRoleId) // loại admin, giữ owner
+                .ToList();
 
             // Apply search term (search in FullName, Email, Phone)
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))

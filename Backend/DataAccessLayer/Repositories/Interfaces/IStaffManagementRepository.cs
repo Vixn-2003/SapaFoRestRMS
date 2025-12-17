@@ -68,6 +68,12 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<List<Position>> GetActivePositionsAsync(CancellationToken ct = default);
 
         /// <summary>
+        /// Add position to staff (insert into StaffPosition junction table)
+        /// Enforces 1 position per staff rule
+        /// </summary>
+        Task AddStaffPositionAsync(int staffId, int positionId, CancellationToken ct = default);
+
+        /// <summary>
         /// Get staff count in department
         /// </summary>
         Task<int> GetStaffCountInDepartmentAsync(int departmentId, CancellationToken ct = default);

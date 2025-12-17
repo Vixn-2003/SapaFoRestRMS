@@ -1,94 +1,236 @@
 /**
- * Staff Management JavaScript
- * UC55 - View List Staff
- * UC56 - Update Staff
- * UC57 - Deactivate / Delete Staff
+ * Staff Management Module
+ * Clean architecture: State management, API calls, UI rendering separated
  */
 
-// Global variables
-let currentPage = 1;
-let pageSize = 20;
-let totalPages = 1;
-
-/**
- * Load staff list with filters
- */
-function loadStaffList(page = 1) {
-    currentPage = page;
-
-    const filter = {
-        searchKeyword: $('#searchKeyword').val(),
-        position: $('#positionFilter').val(),
-        status: $('#statusFilter').val() ? parseInt($('#statusFilter').val()) : null,
-        departmentId: null,
-        sortBy: $('#sortBy').val() || 'HireDate',
-        sortDirection: $('#sortDirection').val() || 'desc',
-        page: currentPage,
-        pageSize: pageSize
-    };
-
-    // Show loading
-    $('#staffTableBody').html(`
-        <tr>
-            <td colspan="9" class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="sr-only">Loading...</span>
-                </div>
-            </td>
-        </tr>
-    `);
-
-    // Call API via AJAX
-    $.ajax({
-        url: '/StaffManagement/LoadStaffList',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(filter),
-        success: function (response) {
-            if (response.success) {
-                renderStaffTable(response.data);
-                updatePagination(response.page, response.pageSize, response.totalCount, response.totalPages);
-            } else {
-                toastr.error(response.message || 'Không thể tải danh sách nhân viên');
-                $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Không thể tải dữ liệu</td></tr>');
-            }
+// ============================================================================
+// STATE MANAGEMENT
+// ============================================================================
+const StaffManagement = {
+    state: {
+        currentPage: 1,
+        pageSize: 20,
+        totalPages: 0,
+        totalCount: 0,
+        filters: {
+            searchKeyword: '',
+            position: '',
+            status: null,
+            sortBy: 'HireDate',
+            sortDirection: 'desc'
         },
-        error: function (xhr, status, error) {
-            console.error('Error loading staff list:', error);
-            toastr.error('Đã xảy ra lỗi khi tải danh sách nhân viên');
-            $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Lỗi khi tải dữ liệu</td></tr>');
+        isLoading: false
+    },
+
+    /**
+     * Initialize module
+     */
+    init() {
+        this.bindEvents();
+        this.loadStaffList();
+    },
+
+    /**
+     * Bind all event listeners
+     */
+    bindEvents() {
+        // Filter button
+        $('#filterBtn').on('click', () => this.handleFilter());
+
+        // Search on Enter key
+        $('#searchKeyword').on('keypress', (e) => {
+            if (e.which === 13) {
+                this.handleFilter();
+            }
+        });
+
+        // Sort/Status dropdowns change
+        $('#sortBy, #sortDirection, #statusFilter').on('change', () => {
+            this.handleFilter();
+        });
+    },
+
+    /**
+     * Handle filter button click
+     */
+    handleFilter() {
+        // Read current filter values from DOM
+        this.state.filters = {
+            searchKeyword: $('#searchKeyword').val().trim(),
+            position: $('#positionFilter').val().trim(),
+            status: $('#statusFilter').val() ? parseInt($('#statusFilter').val()) : null,
+            sortBy: $('#sortBy').val() || 'HireDate',
+            sortDirection: $('#sortDirection').val() || 'desc'
+        };
+
+        // Reset to page 1 when filtering
+        this.state.currentPage = 1;
+
+        this.loadStaffList();
+    },
+
+    /**
+     * Load staff list from API
+     */
+    async loadStaffList(page = null) {
+        if (page !== null) {
+            this.state.currentPage = page;
         }
-    });
-}
 
-/**
- * Render staff table rows
- */
-function renderStaffTable(staffList) {
-    if (!staffList || staffList.length === 0) {
-        $('#staffTableBody').html('<tr><td colspan="9" class="text-center">Không tìm thấy nhân viên nào</td></tr>');
-        return;
-    }
+        // Prevent multiple concurrent requests
+        if (this.state.isLoading) return;
 
-    let html = '';
-    staffList.forEach(staff => {
-        const avatar = staff.avatarUrl || '/images/default-avatar.png';
-        const statusBadge = staff.status === 1 
-            ? '<span class="badge badge-success">Đang hoạt động</span>' 
-            : '<span class="badge badge-danger">Ngừng hoạt động</span>';
+        this.state.isLoading = true;
+        this.showLoading();
 
-        html += `
+        const requestData = {
+            searchKeyword: this.state.filters.searchKeyword,
+            position: this.state.filters.position,
+            status: this.state.filters.status,
+            departmentId: null,
+            sortBy: this.state.filters.sortBy,
+            sortDirection: this.state.filters.sortDirection,
+            page: this.state.currentPage,
+            pageSize: this.state.pageSize
+        };
+
+        try {
+            const response = await $.ajax({
+                url: '/StaffManagement/GetStaffList',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(requestData)
+            });
+
+            this.state.isLoading = false;
+
+            // Normalize response
+            const normalizedData = this.normalizeApiResponse(response);
+
+            if (normalizedData.success) {
+                this.state.totalCount = normalizedData.totalCount;
+                this.state.totalPages = normalizedData.totalPages;
+                this.renderStaffTable(normalizedData.data);
+                this.renderPagination();
+            } else {
+                this.showError(normalizedData.message || 'Không thể tải danh sách nhân viên');
+            }
+        } catch (error) {
+            this.state.isLoading = false;
+            console.error('Error loading staff list:', error);
+            this.showError('Đã xảy ra lỗi khi tải danh sách nhân viên. Vui lòng thử lại.');
+        }
+    },
+
+    /**
+     * Normalize API response to consistent format
+     */
+    normalizeApiResponse(response) {
+        return {
+            success: response?.success ?? false,
+            data: response?.data ?? [],
+            page: response?.page ?? 1,
+            pageSize: response?.pageSize ?? 20,
+            totalCount: response?.totalCount ?? 0,
+            totalPages: response?.totalPages ?? 0,
+            message: response?.message
+        };
+    },
+
+    /**
+     * Show loading state
+     */
+    showLoading() {
+        $('#filterBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang tải...');
+        $('#staffTableBody').html(`
             <tr>
-                <td>
-                    <img src="${avatar}" alt="${staff.fullName}" class="avatar" style="width: 40px; height: 40px; border-radius: 50%;">
+                <td colspan="9" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Đang tải...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Đang tải danh sách nhân viên...</p>
                 </td>
-                <td>${staff.fullName}</td>
-                <td>${staff.phone || 'N/A'}</td>
-                <td>${staff.email}</td>
-                <td>${staff.positions || 'N/A'}</td>
-                <td>${formatCurrency(staff.baseSalary)}</td>
+            </tr>
+        `);
+    },
+
+    /**
+     * Show error state with retry option
+     */
+    showError(message) {
+        toastr.error(message);
+        $('#filterBtn').prop('disabled', false).html('<i class="fas fa-search"></i>');
+        $('#staffTableBody').html(`
+            <tr>
+                <td colspan="9" class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                    <h5 class="text-danger">${this.escapeHtml(message)}</h5>
+                    <button class="btn btn-primary mt-3" onclick="StaffManagement.loadStaffList()">
+                        <i class="fas fa-redo"></i> Thử lại
+                    </button>
+                </td>
+            </tr>
+        `);
+    },
+
+    /**
+     * Render staff table with data
+     */
+    renderStaffTable(staffList) {
+        $('#filterBtn').prop('disabled', false).html('<i class="fas fa-search"></i>');
+
+        if (!staffList || staffList.length === 0) {
+            $('#staffTableBody').html(`
+                <tr>
+                    <td colspan="9" class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Không tìm thấy nhân viên nào</h5>
+                        <p class="text-muted">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                    </td>
+                </tr>
+            `);
+            this.updateTableInfo(0, 0, 0);
+            $('#staffPagination').html('');
+            return;
+        }
+
+        const html = staffList.map(staff => this.renderStaffRow(staff)).join('');
+        $('#staffTableBody').html(html);
+
+        // Update info
+        const start = (this.state.currentPage - 1) * this.state.pageSize + 1;
+        const end = Math.min(this.state.currentPage * this.state.pageSize, this.state.totalCount);
+        this.updateTableInfo(start, end, this.state.totalCount);
+    },
+
+    /**
+     * Render single staff row (safe from XSS)
+     */
+    renderStaffRow(staff) {
+        const avatar = this.escapeHtml(staff.avatarUrl || '/images/default-avatar.png');
+        const fullName = this.escapeHtml(staff.fullName);
+        const phone = this.escapeHtml(staff.phone || 'N/A');
+        const email = this.escapeHtml(staff.email);
+        const positions = this.escapeHtml(staff.positions || 'N/A');
+        const baseSalary = this.formatCurrency(staff.baseSalary);
+        const statusBadge = staff.status === 0 // 0 = Active, 1 = Inactive
+            ? '<span class="badge badge-success">Đang hoạt động</span>'
+            : '<span class="badge badge-danger">Ngừng hoạt động</span>';
+        const hireDate = this.formatDate(staff.hireDate);
+
+        return `
+            <tr data-staff-id="${staff.staffId}">
+                <td>
+                    <img src="${avatar}" alt="${fullName}" class="avatar" 
+                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                </td>
+                <td>${fullName}</td>
+                <td>${phone}</td>
+                <td>${email}</td>
+                <td>${positions}</td>
+                <td>${baseSalary}</td>
                 <td>${statusBadge}</td>
-                <td>${formatDate(staff.hireDate)}</td>
+                <td>${hireDate}</td>
                 <td class="text-right">
                     <div class="dropdown dropdown-action">
                         <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -98,193 +240,210 @@ function renderStaffTable(staffList) {
                             <a class="dropdown-item" href="/StaffManagement/Edit/${staff.staffId}">
                                 <i class="fas fa-edit m-r-5"></i> Chỉnh sửa
                             </a>
-                            <a class="dropdown-item" href="#" onclick="openDeactivateModal(${staff.staffId}, '${staff.fullName}')">
+                            ${staff.status === 0 ? ` 
+                            <a class="dropdown-item" href="#" data-action="deactivate" data-staff-id="${staff.staffId}" data-staff-name="${fullName}">
                                 <i class="fas fa-ban m-r-5"></i> Ngừng hoạt động
                             </a>
+                            ` : ''}
                         </div>
                     </div>
                 </td>
             </tr>
         `;
-    });
+    },
 
-    $('#staffTableBody').html(html);
-}
+    /**
+     * Render pagination controls
+     */
+    renderPagination() {
+        if (this.state.totalPages <= 1) {
+            $('#staffPagination').html('');
+            return;
+        }
 
-/**
- * Update pagination UI
- */
-function updatePagination(page, size, totalCount, totalPagesCount) {
-    currentPage = page;
-    pageSize = size;
-    totalPages = totalPagesCount;
+        const maxPagesToShow = 5;
+        let startPage = Math.max(1, this.state.currentPage - Math.floor(maxPagesToShow / 2));
+        let endPage = Math.min(this.state.totalPages, startPage + maxPagesToShow - 1);
 
-    // Update info text
-    const start = (page - 1) * size + 1;
-    const end = Math.min(page * size, totalCount);
-    $('#staffTableInfo').text(`Hiển thị ${start} đến ${end} trong tổng số ${totalCount} bản ghi`);
+        if (endPage - startPage < maxPagesToShow - 1) {
+            startPage = Math.max(1, endPage - maxPagesToShow + 1);
+        }
 
-    // Generate pagination buttons
-    let paginationHtml = '';
+        let html = '';
 
-    // Previous button
-    if (page > 1) {
-        paginationHtml += `<li class="paginate_button page-item previous">
-            <a href="#" class="page-link" onclick="loadStaffList(${page - 1}); return false;">Trước</a>
-        </li>`;
-    } else {
-        paginationHtml += `<li class="paginate_button page-item previous disabled">
-            <a href="#" class="page-link">Trước</a>
-        </li>`;
+        // Previous button
+        if (this.state.currentPage > 1) {
+            html += `<li class="paginate_button page-item previous">
+                <a href="#" class="page-link" data-page="${this.state.currentPage - 1}">Trước</a>
+            </li>`;
+        } else {
+            html += `<li class="paginate_button page-item previous disabled">
+                <a href="#" class="page-link">Trước</a>
+            </li>`;
+        }
+
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            const activeClass = i === this.state.currentPage ? 'active' : '';
+            html += `<li class="paginate_button page-item ${activeClass}">
+                <a href="#" class="page-link" data-page="${i}">${i}</a>
+            </li>`;
+        }
+
+        // Next button
+        if (this.state.currentPage < this.state.totalPages) {
+            html += `<li class="paginate_button page-item next">
+                <a href="#" class="page-link" data-page="${this.state.currentPage + 1}">Sau</a>
+            </li>`;
+        } else {
+            html += `<li class="paginate_button page-item next disabled">
+                <a href="#" class="page-link">Sau</a>
+            </li>`;
+        }
+
+        $('#staffPagination').html(html);
+
+        // Bind pagination clicks (event delegation)
+        $('#staffPagination').off('click').on('click', 'a[data-page]', (e) => {
+            e.preventDefault();
+            const page = parseInt($(e.currentTarget).data('page'));
+            if (page && page !== this.state.currentPage) {
+                this.loadStaffList(page);
+            }
+        });
+    },
+
+    /**
+     * Update table info text
+     */
+    updateTableInfo(start, end, total) {
+        $('#staffTableInfo').text(`Hiển thị ${start} đến ${end} trong tổng số ${total} bản ghi`);
+    },
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+
+    /**
+     * Format currency (VND)
+     */
+    formatCurrency(amount) {
+        if (!amount) return '0 ₫';
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    },
+
+    /**
+     * Format date (DateOnly from API)
+     */
+    formatDate(dateString) {
+        if (!dateString) return 'N/A';
+
+        // Handle DateOnly format from .NET (YYYY-MM-DD)
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        // Fallback
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'N/A';
+
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
     }
+};
 
-    // Page numbers
-    const maxPagesToShow = 5;
-    let startPage = Math.max(1, page - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+// ============================================================================
+// DEACTIVATE STAFF MODULE
+// ============================================================================
+const StaffDeactivate = {
+    currentStaffId: null,
+    currentStaffName: '',
 
-    if (endPage - startPage < maxPagesToShow - 1) {
-        startPage = Math.max(1, endPage - maxPagesToShow + 1);
-    }
+    /**
+     * Open deactivate modal
+     */
+    open(staffId, staffName) {
+        this.currentStaffId = staffId;
+        this.currentStaffName = staffName;
+        $('#deactivateStaffName').text(staffName);
+        $('#deactivateReason').val('');
+        $('#deactivateModal').modal('show');
+    },
 
-    for (let i = startPage; i <= endPage; i++) {
-        const activeClass = i === page ? 'active' : '';
-        paginationHtml += `<li class="paginate_button page-item ${activeClass}">
-            <a href="#" class="page-link" onclick="loadStaffList(${i}); return false;">${i}</a>
-        </li>`;
-    }
+    /**
+     * Submit deactivate request
+     */
+    async submit() {
+        if (!this.currentStaffId) {
+            toastr.error('ID nhân viên không hợp lệ');
+            return;
+        }
 
-    // Next button
-    if (page < totalPages) {
-        paginationHtml += `<li class="paginate_button page-item next">
-            <a href="#" class="page-link" onclick="loadStaffList(${page + 1}); return false;">Sau</a>
-        </li>`;
-    } else {
-        paginationHtml += `<li class="paginate_button page-item next disabled">
-            <a href="#" class="page-link">Sau</a>
-        </li>`;
-    }
+        const reason = $('#deactivateReason').val().trim();
+        const $btn = $('#deactivateModal .btn-danger');
+        const originalText = $btn.html();
 
-    $('#staffPagination').html(paginationHtml);
-}
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
 
-/**
- * Filter staff list
- */
-function filterStaff() {
-    loadStaffList(1); // Reset to page 1 when filtering
-}
+        try {
+            const response = await $.ajax({
+                url: '/StaffManagement/Deactivate',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                data: JSON.stringify({
+                    staffId: this.currentStaffId,
+                    reason: reason
+                })
+            });
 
-/**
- * Search staff (triggered on Enter key)
- */
-$('#searchKeyword').on('keypress', function (e) {
-    if (e.which === 13) { // Enter key
-        filterStaff();
-    }
-});
-
-/**
- * Open deactivate modal
- */
-function openDeactivateModal(staffId, staffName) {
-    $('#deactivateStaffId').val(staffId);
-    $('#deactivateStaffName').text(staffName);
-    $('#deactivateReason').val('');
-    $('#deactivateModal').modal('show');
-}
-
-/**
- * Submit deactivate request
- */
-function submitDeactivate() {
-    const staffId = parseInt($('#deactivateStaffId').val());
-    const reason = $('#deactivateReason').val();
-
-    const dto = {
-        staffId: staffId,
-        reason: reason
-    };
-
-    // Disable button to prevent double-click
-    const $btn = $('#deactivateModal .btn-danger');
-    $btn.prop('disabled', true).text('Đang xử lý...');
-
-    $.ajax({
-        url: '/StaffManagement/Deactivate',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(dto),
-        success: function (response) {
             if (response.success) {
                 toastr.success(response.message || 'Ngừng hoạt động nhân viên thành công');
                 $('#deactivateModal').modal('hide');
-                loadStaffList(currentPage); // Reload current page
+                StaffManagement.loadStaffList(); // Reload current page
             } else {
                 toastr.error(response.message || 'Không thể ngừng hoạt động nhân viên');
             }
-        },
-        error: function (xhr, status, error) {
+        } catch (error) {
             console.error('Error deactivating staff:', error);
             toastr.error('Đã xảy ra lỗi khi ngừng hoạt động nhân viên');
-        },
-        complete: function () {
-            $btn.prop('disabled', false).text('Ngừng hoạt động');
+        } finally {
+            $btn.prop('disabled', false).html(originalText);
         }
-    });
-}
-
-/**
- * Sort staff by salary
- */
-function sortBySalary(direction) {
-    $('#sortBy').val('BaseSalary');
-    $('#sortDirection').val(direction);
-    filterStaff();
-}
-
-/**
- * Sort staff by position
- */
-function sortByPosition(direction) {
-    $('#sortBy').val('Position');
-    $('#sortDirection').val(direction);
-    filterStaff();
-}
-
-/**
- * Format currency (VND)
- */
-function formatCurrency(amount) {
-    if (!amount) return '0 VND';
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND'
-    }).format(amount);
-}
-
-/**
- * Format date (DateOnly from API)
- */
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    
-    // Handle DateOnly format from .NET (YYYY-MM-DD)
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-        const year = parts[0];
-        const month = parts[1];
-        const day = parts[2];
-        return `${day}/${month}/${year}`;
     }
-    
-    // Fallback to Date parsing
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'N/A';
-    
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-}
+};
 
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+$(document).ready(function () {
+    // Initialize staff management
+    StaffManagement.init();
+
+    // Event delegation for deactivate buttons (since table rows are dynamic)
+    $(document).on('click', 'a[data-action="deactivate"]', function (e) {
+        e.preventDefault();
+        const staffId = $(this).data('staff-id');
+        const staffName = $(this).data('staff-name');
+        StaffDeactivate.open(staffId, staffName);
+    });
+
+    // Deactivate modal submit button
+    $('#deactivateModal .btn-danger').on('click', function () {
+        StaffDeactivate.submit();
+    });
+});

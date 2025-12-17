@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"] - WareHouse</title>
+    @RenderSection("Styles", required: false)
     <style>
         /* Reset cho toàn bộ trang */
         * {
@@ -272,11 +273,16 @@
             margin: 10px 15px;
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
             border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .layout-sidebar .sidebar-user-link {
             display: flex;
             align-items: center;
             gap: 12px;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            text-decoration: none;
+            color: inherit;
         }
 
         .layout-sidebar.collapsed .sidebar-user-section {
@@ -539,38 +545,40 @@
             </nav>
 
             <div class="sidebar-user-section">
-                <div class="sidebar-user-avatar">
-                    @if (User.Identity.IsAuthenticated)
-                    {
-                        @User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value?.Substring(0, 1).ToUpper()
-                    }
-                    else
-                    {
-                        @:A
-                    }
-                </div>
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-name">
+                <a href="@Url.Action("Index", "UserProfile")" class="sidebar-user-link">
+                    <div class="sidebar-user-avatar">
                         @if (User.Identity.IsAuthenticated)
                         {
-                            @User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                            @User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value?.Substring(0, 1).ToUpper()
                         }
                         else
                         {
-                            @:Admin User
+                            @:A
                         }
                     </div>
-                    <div class="sidebar-user-email">
-                        @if (User.Identity.IsAuthenticated)
-                        {
-                            @User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                        }
-                        else
-                        {
-                            @:admin@warehouse.vn
-                        }
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name">
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                @User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                            }
+                            else
+                            {
+                                @:Admin User
+                            }
+                        </div>
+                        <div class="sidebar-user-email">
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                @User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                            }
+                            else
+                            {
+                                @:admin@warehouse.vn
+                            }
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="sidebar-logout-wrapper">

@@ -34,74 +34,45 @@ namespace WebSapaForestForStaff.Controllers
         {
             try
             {
-                searchRequest ??= new UserSearchRequest
+                var normalizedRequest = new UserSearchRequest
                 {
-                    Page = 1,
-                    PageSize = 10,
-                    SortBy = "FullName",
-                    SortOrder = "asc"
+                    SearchTerm = searchRequest?.SearchTerm,
+                    RoleId = searchRequest?.RoleId,
+                    Status = searchRequest?.Status ?? 0, // default to active
+                    Page = searchRequest?.Page > 0 ? searchRequest.Page : 1,
+                    PageSize = searchRequest?.PageSize > 0 ? searchRequest.PageSize : 10,
+                    SortBy = string.IsNullOrWhiteSpace(searchRequest?.SortBy) ? "FullName" : searchRequest.SortBy!,
+                    SortOrder = string.IsNullOrWhiteSpace(searchRequest?.SortOrder) ? "asc" : searchRequest.SortOrder!
                 };
 
-                // Default: chỉ lấy tài khoản đang hoạt động
-                if (searchRequest.Status == null)
-                {
-                    searchRequest.Status = 0;
-                }
+                // Fetch paged data from API (backend handles search/filter/sort/pagination)
+                var result = await _userApiService.GetUsersWithPaginationAsync(normalizedRequest)
+                             ?? new UserListResponse
+                             {
+                                 Users = new List<User>(),
+                                 TotalCount = 0,
+                                 Page = normalizedRequest.Page,
+                                 PageSize = normalizedRequest.PageSize
+                             };
 
-                // Set ViewBag for form values
-                ViewBag.SearchTerm = searchRequest.SearchTerm;
-                ViewBag.RoleId = searchRequest.RoleId;
-                ViewBag.Status = searchRequest.Status;
-                ViewBag.PageSize = searchRequest.PageSize;
-                ViewBag.SortBy = searchRequest.SortBy ?? "FullName";
-                ViewBag.SortOrder = searchRequest.SortOrder ?? "asc";
+                // Role list for filters/dropdowns
+                var roles = await _userApiService.GetRolesAsync() ?? new List<Role>();
 
-                // Lấy toàn bộ danh sách, rồi lọc & tự phân trang để đảm bảo thống kê chính xác
-                var allUsers = await _userApiService.GetUsersAsync() ?? new List<User>();
-
-                // Lọc: chỉ user hoạt động (Status=0) và không phải Admin (RoleId != 1)
-                var filtered = allUsers
-                    .Where(u => u.Status == 0 && u.RoleId != 1)
-                    .ToList();
-
-                // Thống kê theo role (dùng cho view)
-                int CountRole(int roleId) => filtered.Count(u => u.RoleId == roleId);
                 ViewBag.UserCounts = new
                 {
-                    Total = filtered.Count,
-                    Owner = CountRole(1),
-                    Admin = CountRole(2),
-                    Manager = CountRole(3),
-                    Staff = CountRole(4),
-                    Customer = CountRole(5)
+                    Total = result.TotalCount,
+                    Owner = result.Users.Count(u => u.RoleId == 1),
+                    Admin = result.Users.Count(u => u.RoleId == 2),
+                    Manager = result.Users.Count(u => u.RoleId == 3),
+                    Staff = result.Users.Count(u => u.RoleId == 4),
+                    Customer = result.Users.Count(u => u.RoleId == 5)
                 };
-
-                // Phân trang thủ công
-                var page = (searchRequest.Page > 0 ? searchRequest.Page : 1);
-                var pageSize = (searchRequest.PageSize > 0 ? searchRequest.PageSize : 10);
-                var totalCount = filtered.Count;
-                var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
-                var pagedUsers = filtered
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
-
-                var result = new UserListResponse
-                {
-                    Users = pagedUsers,
-                    TotalCount = totalCount,
-                    Page = page,
-                    PageSize = pageSize
-                };
-
-                // Get roles for filter dropdown (loại Admin khỏi filter)
-                var roles = await _userApiService.GetRolesAsync();
 
                 var viewModel = new UserListViewModel
                 {
                     UserList = result,
-                    AvailableRoles = roles?.Where(r => r.RoleId != 1).ToList() ?? new List<Role>(),
-                    SearchRequest = searchRequest
+                    AvailableRoles = roles,
+                    SearchRequest = normalizedRequest
                 };
 
                 return View(viewModel);

@@ -30,9 +30,9 @@ namespace WebSapaForestForStaff.DTOs.Staff
         [Required(ErrorMessage = "Department is required")]
         public int DepartmentId { get; set; }
 
-        [Required(ErrorMessage = "At least one position is required")]
-        [MinLength(1)]
-        public List<int> PositionIds { get; set; } = new();
+        [Required(ErrorMessage = "Position is required")]
+        [Range(1, int.MaxValue, ErrorMessage = "A valid position must be selected")]
+        public int PositionId { get; set; }
 
         [Required(ErrorMessage = "Role is required")]
         public int RoleId { get; set; }
