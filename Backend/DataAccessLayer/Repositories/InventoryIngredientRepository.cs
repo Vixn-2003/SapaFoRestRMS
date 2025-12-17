@@ -262,6 +262,15 @@ namespace DataAccessLayer.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<InventoryBatch>> GetAllBatchesByIngredientAsync(int ingredientId)
+        {
+            return await _context.InventoryBatches
+                .Where(b => b.IngredientId == ingredientId) // Lấy tất cả batches (kể cả available <= 0)
+                .OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue) // Ưu tiên batch sắp hết hạn (FEFO)
+                .ThenBy(b => b.CreatedAt) // Sau đó theo thời gian tạo (FIFO)
+                .ToListAsync();
+        }
+
         public async Task<List<InventoryBatch>> GetReservedBatchesByIngredientAsync(int ingredientId)
         {
             return await _context.InventoryBatches

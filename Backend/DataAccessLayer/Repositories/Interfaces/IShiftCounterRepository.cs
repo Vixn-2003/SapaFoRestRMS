@@ -48,5 +48,15 @@ namespace DataAccessLayer.Repositories.Interfaces
         /// Lấy số lượng đơn hàng theo ca
         /// </summary>
         Task<int> GetShiftOrderCountAsync(int shiftId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Thêm record vào ShiftHistory
+        /// </summary>
+        Task AddHistoryAsync(ShiftHistory history, CancellationToken ct = default);
+
+        /// <summary>
+        /// Lấy danh sách history của một shift
+        /// </summary>
+        Task<List<ShiftHistory>> GetShiftHistoriesAsync(int shiftId, CancellationToken ct = default);
     }
 }

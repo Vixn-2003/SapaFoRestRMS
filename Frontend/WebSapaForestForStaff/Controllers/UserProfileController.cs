@@ -1,5 +1,8 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebSapaForestForStaff.DTOs;
@@ -121,7 +124,7 @@ namespace WebSapaForestForStaff.Controllers
         /// Update user profile (AJAX endpoint)
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> UpdateProfile([FromBody] UserProfileUpdateRequest request)
+        public async Task<IActionResult> UpdateProfile([FromForm] UserProfileUpdateRequest request)
         {
             if (!ModelState.IsValid)
             {
@@ -140,6 +143,8 @@ namespace WebSapaForestForStaff.Controllers
                 {
                     return Json(new { success = false, message = "Không thể cập nhật thông tin. Vui lòng thử lại sau." });
                 }
+
+                await RefreshUserClaimsAsync(updatedProfile);
 
                 return Json(new { success = true, message = "Cập nhật thông tin thành công!", data = updatedProfile });
             }
@@ -196,6 +201,41 @@ namespace WebSapaForestForStaff.Controllers
 
             [Required(ErrorMessage = "Mật khẩu xác nhận là bắt buộc")]
             public string ConfirmPassword { get; set; } = null!;
+        }
+
+        private async Task RefreshUserClaimsAsync(User updatedUser)
+        {
+            var authResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = authResult?.Principal ?? HttpContext.User;
+            if (principal?.Identity is not ClaimsIdentity identity)
+            {
+                return;
+            }
+
+            void ReplaceClaim(string type, string value)
+            {
+                var existing = identity.FindFirst(type);
+                if (existing != null)
+                {
+                    identity.RemoveClaim(existing);
+                }
+                identity.AddClaim(new Claim(type, value));
+            }
+
+            ReplaceClaim(ClaimTypes.Name, updatedUser.FullName ?? string.Empty);
+            ReplaceClaim(ClaimTypes.Email, updatedUser.Email ?? string.Empty);
+            ReplaceClaim(ClaimTypes.MobilePhone, updatedUser.Phone ?? string.Empty);
+
+            var authProperties = authResult?.Properties ?? new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(1)
+            };
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                authProperties);
         }
     }
 }

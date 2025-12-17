@@ -1,0 +1,228 @@
+@model WebSapaForestForStaff.DTOs.CustomerManagement.CustomerDetailDto
+@{
+    ViewData["Title"] = "Chi tiết khách hàng";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0">Chi tiết khách hàng</h2>
+        <div class="text-muted">ID: @Model.CustomerId</div>
+    </div>
+    <a class="btn btn-outline-secondary" href="@Url.Action("Index")">
+        <i class="mdi mdi-arrow-left"></i> Quay lại danh sách
+    </a>
+</div>
+
+<!-- Success/Error Messages from TempData -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="mdi mdi-check-circle me-2"></i>
+        <strong>Thành công!</strong> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="mdi mdi-alert-circle me-2"></i>
+        <strong>Lỗi!</strong> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <div class="fw-bold">@(!string.IsNullOrWhiteSpace(Model.FullName) ? Model.FullName : "Khách lẻ")</div>
+                <div class="text-muted">@Model.Phone</div>
+            </div>
+            <span id="vipBadge" class="badge @(Model.IsVip ? "bg-warning text-dark" : "bg-secondary")">
+                @(Model.IsVip ? "VIP" : "Normal")
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Tổng chi tiêu</div>
+                <div id="totalSpend" class="fs-4 fw-bold">@Model.TotalSpending.ToString("N0") đ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Số lần ghé thăm</div>
+                <div id="totalVisits" class="fs-4 fw-bold">@Model.TotalVisits</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Điểm tích lũy</div>
+                <div id="loyaltyPoints" class="fs-4 fw-bold">@(Model.LoyaltyPoints?.ToString("N0") ?? "0")</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Ngày tham gia</div>
+                <div id="joinDate" class="fs-4 fw-bold">@(Model.JoinDate?.ToString("dd/MM/yyyy") ?? "N/A")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Trung bình / Lần ghé</div>
+                <div id="avgPerVisit" class="fs-4 fw-bold">@Model.AverageSpendPerVisit.ToString("N0") đ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="text-muted">Lần ghé cuối</div>
+                <div id="lastVisit" class="fs-4 fw-bold">@(Model.LastVisit?.ToString("dd/MM/yyyy") ?? "Chưa có")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Customer Information -->
+@if (!string.IsNullOrEmpty(Model.Notes))
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">Ghi chú</h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-0">@Model.Notes</p>
+        </div>
+    </div>
+}
+
+<!-- Favorite Dishes -->
+@if (Model.FavoriteDishes.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">Món ăn yêu thích</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                @foreach (var dish in Model.FavoriteDishes.Take(6))
+                {
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">@dish.DishName</h6>
+                                <p class="text-muted mb-1">Đã đặt: @dish.OrderCount lần</p>
+                                <p class="text-success fw-bold">@dish.TotalSpent.ToString("N0") đ</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Recent Orders -->
+@if (Model.OrderHistory.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0">Lịch sử đơn hàng gần đây</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Ngày đặt</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Số món</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model.OrderHistory.Take(10))
+                        {
+                            <tr>
+                                <td>#@order.OrderId</td>
+                                <td>@order.OrderDate?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="fw-bold text-success">@order.TotalAmount.ToString("N0") đ</td>
+                                <td>
+                                    <span class="badge @(order.Status.ToLower() == "completed" ? "bg-success" : order.Status.ToLower() == "pending" ? "bg-warning" : "bg-secondary")">
+                                        @order.Status
+                                    </span>
+                                </td>
+                                <td>@order.NumberOfItems</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="d-flex gap-2">
+    <form asp-action="Recalculate" asp-controller="ManagerCustomer" method="post" id="recalcForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="customerId" value="@Model.CustomerId" />
+        <button type="submit" class="btn btn-primary" id="recalcVipBtn">
+            <i class="mdi mdi-calculator"></i> Tính lại VIP
+        </button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle recalculate form submission with confirmation
+        const recalcForm = document.getElementById('recalcForm');
+        if (recalcForm) {
+            recalcForm.addEventListener('submit', function(e) {
+                if (!confirm('Bạn có chắc muốn tính lại trạng thái VIP cho khách hàng này?')) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Show loading state
+                const btn = document.getElementById('recalcVipBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+            });
+        }
+
+        // Auto-hide success/error messages after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+        
+        // Smooth scroll to messages if they exist
+        const alerts = document.querySelectorAll('.alert');
+        if (alerts.length > 0) {
+            alerts[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
+</script>
+

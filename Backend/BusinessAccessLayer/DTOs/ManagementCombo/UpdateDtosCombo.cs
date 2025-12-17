@@ -1,0 +1,58 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BusinessAccessLayer.DTOs.ManagementCombo
+{
+    public class UpdateDtosCombo
+    {
+        // DTO trả về thông tin chi tiết Combo (để hiển thị lên Form Edit)
+        public class ComboDetailDto
+        {
+            public int ComboId { get; set; }
+            public string Name { get; set; }
+            public decimal SellingPrice { get; set; }
+            public string Description { get; set; }
+            public bool IsAvailable { get; set; }
+            public string ImageUrl { get; set; }
+            public List<ComboItemDto> Items { get; set; } = new List<ComboItemDto>();
+        }
+
+        // DTO của từng món trong Combo
+        public class ComboItemDto
+        {
+            public int MenuItemId { get; set; }
+            public string MenuItemName { get; set; }
+            public decimal OriginalPrice { get; set; } // Giá gốc món lẻ
+            public int Quantity { get; set; }
+        }
+
+        // DTO nhận dữ liệu Cập nhật từ Client gửi lên
+        public class UpdateComboDto
+        {
+            public string Name { get; set; }
+            public decimal SellingPrice { get; set; }
+            public string Description { get; set; }
+            public bool IsAvailable { get; set; }
+            public string ImageUrl { get; set; }
+            // Chỉ cần ID và Số lượng để lưu xuống DB
+            public List<ComboItemInput> Items { get; set; }
+        }
+
+        public class ComboItemInput
+        {
+            public int MenuItemId { get; set; }
+            public int Quantity { get; set; }
+        }
+
+        // DTO cho Menu Item (Dropdown chọn món)
+        public class MenuItemDto
+        {
+            public int MenuItemId { get; set; }
+            public string Name { get; set; }
+            public decimal Price { get; set; }
+        }
+    }
+}

@@ -64,7 +64,7 @@ namespace BusinessAccessLayer.DTOs.OrderConfirmation
         /// <summary>
         /// Có thể hủy món hay không
         /// </summary>
-        public bool CanCancel => IsKitchenItem && (Status == "Pending" || Status == "Confirmed");
+        public bool CanCancel => IsKitchenItem && (Status == "Pending" || Status == "Confirmed" || Status == "Cooking");
         
         /// <summary>
         /// Badge color cho trạng thái bếp

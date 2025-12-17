@@ -196,6 +196,37 @@ namespace BusinessAccessLayer.DTOs.Kitchen
     }
 
     /// <summary>
+    /// Batch cook/update request để gom nhiều món trong một call
+    /// </summary>
+    public class BatchCookRequest
+    {
+        public int UserId { get; set; }
+        public List<BatchCookItem> Items { get; set; } = new();
+    }
+
+    public class BatchCookItem
+    {
+        public int OrderDetailId { get; set; }
+        public int? OrderComboItemId { get; set; }
+        public int Quantity { get; set; }
+    }
+
+    public class BatchCookItemResult
+    {
+        public int OrderDetailId { get; set; }
+        public int? OrderComboItemId { get; set; }
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+
+    public class BatchCookResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public List<BatchCookItemResult> Items { get; set; } = new();
+    }
+
+    /// <summary>
     /// Request để in ticket cho món đã hoàn thành
     /// </summary>
     public class PrintItemTicketRequest

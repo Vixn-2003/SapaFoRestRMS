@@ -21,9 +21,14 @@ namespace BusinessAccessLayer.DTOs.Users
         [Range(1, 5)]
         public int RoleId { get; set; }
 
-        [Required]
+        // Cho phép bỏ trống để hệ thống tự tạo mật khẩu ngẫu nhiên
         [StringLength(100, MinimumLength = 6)]
-        public string Password { get; set; } = null!;
+        public string? Password { get; set; }
+
+        [StringLength(50, MinimumLength = 6)]
+        public string? TemporaryPassword { get; set; }
+
+        public bool SendEmailNotification { get; set; } = true;
 
         [Range(0, 2)]
         public int Status { get; set; } = 0;

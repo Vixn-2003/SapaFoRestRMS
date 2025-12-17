@@ -36,7 +36,24 @@ builder.Services.AddHttpClient<IProfileApiService, ProfileApiService>();
 builder.Services.AddHttpClient<IPositionApiService, PositionApiService>();
 builder.Services.AddHttpClient<IPaymentApiService, PaymentApiService>();
 builder.Services.AddHttpClient<IShiftManagementApiService, ShiftManagementApiService>();
+builder.Services.AddHttpClient<ICustomerManagementApiService, CustomerManagementApiService>();
+builder.Services.AddHttpClient<IStaffManagementApiService, StaffManagementApiService>();
 
+// Manager Customer API Service
+builder.Services.AddHttpClient<ICustomerManagementApiService, CustomerManagementApiService>();
+
+// Owner Dashboard API Services
+builder.Services.AddHttpClient<IOwnerDashboardApiService, OwnerDashboardApiService>();
+builder.Services.AddHttpClient<IOwnerRevenueApiService, OwnerRevenueApiService>();
+builder.Services.AddHttpClient<IOwnerWarehouseAlertApiService, OwnerWarehouseAlertApiService>();
+
+// Counter Staff Dashboard API Services
+builder.Services.AddHttpClient<ICounterStaffDashboardApiService, CounterStaffDashboardApiService>();
+builder.Services.AddHttpClient<ICounterStaffOrderApiService, CounterStaffOrderApiService>();
+builder.Services.AddHttpClient<ICounterTransactionApiService, CounterTransactionApiService>();
+
+// Admin Dashboard API Services
+builder.Services.AddHttpClient<IAdminDashboardApiService, AdminDashboardApiService>();
 
 // Keep backward compatibility with old ApiService (can be removed after migration)
 builder.Services.AddHttpClient<ApiService>();

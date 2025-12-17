@@ -1,6 +1,5 @@
 ﻿$(document).on('click', '.btn-print-receipt', function () {
     const orderCode = $(this).data('order-code');
-    const tables = $(this).data('tables');
     const customerName = $(this).data('customer-name');
     const customerPhone = $(this).data('customer-phone');
     const createdAt = $(this).data('created-at');
@@ -14,21 +13,55 @@
     const discount = parseFloat($(this).data('discount') || 0);
     const total = parseFloat($(this).data('total') || 0);
 
+    // ✅ NEW: Lấy thông tin tiền đặt cọc từ receiptData
+    const depositAmount = window.receiptData?.DepositAmount || 0;
+    const depositPaid = window.receiptData?.DepositPaid || false;
+    const depositRefundAmount = window.receiptData?.DepositRefundAmount || 0;
+
     // NEW: validate dữ liệu
-    if (!orderCode || total <= 0) {
+    if (!orderCode) {
         alert("❗ Không thể in hóa đơn vì dữ liệu không hợp lệ!");
         return;
     }
 
-    // NEW: nhận tiền khách đưa & tiền thối
-    const customerPaid = parseFloat($(this).data('customer-paid') || 0);
-    const changeAmount = parseFloat($(this).data('change-amount') || 0);
+    // NEW: nhận breakdown từ receiptData.Transactions (nếu có)
+    const txs = (window.receiptData && Array.isArray(window.receiptData.Transactions))
+        ? window.receiptData.Transactions
+        : [];
+
+    // Nếu không có transactions, fallback dùng PaymentMethod + tổng
+    const paymentBreakdown = txs.length
+        ? txs.map(t => ({
+            method: t.PaymentMethod || 'Unknown',
+            amount: parseFloat(t.Amount || 0),
+            amountReceived: parseFloat(t.AmountReceived || 0),
+            refundAmount: parseFloat(t.RefundAmount || 0)
+        }))
+        : [{
+            method: paymentMethod || 'Unknown',
+            amount: total,
+            amountReceived: parseFloat($(this).data('customer-paid') || 0),
+            refundAmount: parseFloat($(this).data('change-amount') || 0)
+        }];
 
     // Lấy dữ liệu items từ biến global (được định nghĩa trong Receipt.cshtml)
     const items = (window.receiptData && window.receiptData.Items) ? window.receiptData.Items : [];
+    
+    // ✅ Tính tổng thanh toán TRƯỚC KHI TRỪ CỌC
+    const totalBeforeDeposit = subtotal + vat + serviceFee - discount;
 
     function formatCurrency(amount) {
         return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+    }
+
+    function renderMethod(method) {
+        const m = (method || '').toLowerCase();
+        if (m === 'cash') return 'Tiền mặt';
+        if (m === 'qrbanktransfer' || m === 'qr' || m === 'vietqr') return 'QR';
+        if (m === 'card') return 'Thẻ';
+        if (m === 'ewallet') return 'Ví điện tử';
+        if (m === 'split') return 'Chia hóa đơn';
+        return method || 'Khác';
     }
 
     let itemsHtml = "";
@@ -61,7 +94,6 @@
             </div>
 
             <div>
-                <div><b>Bàn:</b> ${tables}</div>
                 <div><b>Khách hàng:</b> ${customerName}</div>
                 ${customerPhone !== "—" ? `<div><b>Điện thoại:</b> ${customerPhone}</div>` : ""}
                 <div><b>Thời gian tạo:</b> ${createdAt}</div>
@@ -90,19 +122,53 @@
                 <tr><td>VAT 10%</td><td style="text-align:right;">${formatCurrency(vat)}</td></tr>
                 <tr><td>Phí dịch vụ 5%</td><td style="text-align:right;">${formatCurrency(serviceFee)}</td></tr>
                 ${discount > 0 ? `<tr><td style="color:red;">Giảm giá</td><td style="text-align:right; color:red;">-${formatCurrency(discount)}</td></tr>` : ""}
-                <tr style="font-size:20px; font-weight:bold; color:#16a34a;">
-                    <td>TỔNG THANH TOÁN</td>
-                    <td style="text-align:right;">${formatCurrency(total)}</td>
+                
+                <!-- ✅ Hiển thị tiền đặt cọc nếu có -->
+                ${depositPaid && depositAmount > 0 ? `
+                    <tr style="border-top: 2px solid #ddd;">
+                        <td style="padding-top:8px;"><strong>Tổng cộng thanh toán</strong></td>
+                        <td style="text-align:right; padding-top:8px;"><strong>${formatCurrency(totalBeforeDeposit)}</strong></td>
+                    </tr>
+                    <tr style="color:#16a34a;">
+                        <td>Đã đặt cọc</td>
+                        <td style="text-align:right;">-${formatCurrency(depositAmount)}</td>
+                    </tr>
+                ` : ''}
+                
+                <!-- ✅ Hiển thị tiền trả lại nếu cọc > tổng bill -->
+                ${depositRefundAmount > 0 ? `
+                    <tr style="color:#f59e0b;">
+                        <td><strong>Tiền cần trả lại cho khách</strong></td>
+                        <td style="text-align:right;"><strong>+${formatCurrency(depositRefundAmount)}</strong></td>
+                    </tr>
+                ` : ''}
+                
+                <tr style="font-size:20px; font-weight:bold; color:#16a34a; border-top: 3px double #16a34a;">
+                    <td style="padding-top:8px;">SỐ TIỀN KHÁCH PHẢI TRẢ</td>
+                    <td style="text-align:right; padding-top:8px;">${formatCurrency(total)}</td>
                 </tr>
 
-                <!-- NEW: khách trả - tiền thối -->
-                ${customerPaid > 0
-            ? `
-                <tr><td>Khách đưa</td><td style="text-align:right;">${formatCurrency(customerPaid)}</td></tr>
-                <tr><td>Tiền thối lại</td><td style="text-align:right;">${formatCurrency(changeAmount)}</td></tr>
-                `
-            : ""
-        }
+                <!-- ✅ Breakdown theo phương thức thanh toán -->
+                ${paymentBreakdown.length > 0 ? `
+                    <tr style="border-top: 1px solid #ddd;">
+                        <td colspan="2" style="padding-top:8px; font-style:italic; color:#666; font-size:14px;">
+                            Thanh toán bằng:
+                        </td>
+                    </tr>
+                    ${paymentBreakdown.map(p => `
+                        <tr>
+                            <td style="padding-left:20px;">• ${renderMethod(p.method)}</td>
+                            <td style="text-align:right;">${formatCurrency(p.amount)}</td>
+                        </tr>
+                        ${p.method && p.method.toLowerCase() === 'cash' && p.refundAmount > 0
+                            ? `<tr style="color:#f59e0b;">
+                                <td style="padding-left:40px; font-size:14px;">Tiền thối lại</td>
+                                <td style="text-align:right; font-size:14px;">+${formatCurrency(p.refundAmount)}</td>
+                            </tr>`
+                            : ''
+                        }
+                    `).join('')}
+                ` : ''}
             </table>
 
             <div style="text-align:center; margin-top:30px; color:#16a34a;">
