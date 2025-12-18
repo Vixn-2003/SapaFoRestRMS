@@ -11,10 +11,12 @@ namespace SapaFoRestRMSAPI.Controllers
     public class ManagerComboController : ControllerBase
     {
         private readonly IManagerComboService _managerComboService;
+        private readonly ICloudinaryService _cloudinaryService;
 
-        public ManagerComboController(IManagerComboService comboService)
+        public ManagerComboController(IManagerComboService comboService, ICloudinaryService cloudinaryService)
         {
             _managerComboService = comboService;
+            _cloudinaryService = cloudinaryService;
         }
 
         [HttpGet]
@@ -144,15 +146,39 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
 
-        // PUT: api/combos/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateComboDto request)
+        public async Task<IActionResult> Update(int id, [FromForm] UpdateComboDto request)
         {
             try
             {
+                // 1. Nếu có file ảnh mới → Upload lên Cloudinary
+                if (request.ImageFile != null && request.ImageFile.Length > 0)
+                {
+                    var newImageUrl = await _cloudinaryService.UploadImageAsync(
+                        request.ImageFile,
+                        "combos"
+                    );
+
+                    if (string.IsNullOrEmpty(newImageUrl))
+                    {
+                        return BadRequest(new { message = "❌ Upload ảnh thất bại" });
+                    }
+
+                    // 2. Xóa ảnh cũ (nếu có)
+                    if (!string.IsNullOrEmpty(request.ImageUrl))
+                    {
+                        await _cloudinaryService.DeleteImageAsync(request.ImageUrl);
+                    }
+
+                    // 3. Gán URL ảnh mới
+                    request.ImageUrl = newImageUrl;
+                }
+                // Nếu không có file mới → giữ nguyên ImageUrl cũ (đã có trong request.ImageUrl)
+
+                // 4. Cập nhật combo
                 await _managerComboService.UpdateAsync(id, request);
 
-                return Ok(new { message = "Cập nhật combo thành công" });
+                return Ok(new { message = "✅ Cập nhật combo thành công" });
             }
             catch (InvalidOperationException ex)
             {
@@ -178,12 +204,12 @@ namespace SapaFoRestRMSAPI.Controllers
                     message = ex.Message
                 });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
                     errorCode = "INTERNAL_SERVER_ERROR",
-                    message = "Có lỗi xảy ra, vui lòng thử lại"
+                    message = $"Có lỗi xảy ra: {ex.Message}"
                 });
             }
         }
@@ -191,23 +217,35 @@ namespace SapaFoRestRMSAPI.Controllers
 
 
         [HttpPost("CreateCombo")]
-        public async Task<IActionResult> Create([FromBody] CreateComboDto request)
-        {
-            await _managerComboService.AddComboAsync(request);
-            return Ok(new { message = "Created successfully" });
-        }
-
-        [HttpGet("Top_Item_new")]
-        public async Task<IActionResult> TopItemNew()
+        public async Task<IActionResult> Create([FromForm] CreateComboDto request)
         {
             try
             {
-                var top5 = await _managerComboService.GetTop5NewMenuItemsAsync();
-                return Ok(top5);
+                // 1. Upload ảnh lên Cloudinary (nếu có)
+                if (request.ImageFile != null && request.ImageFile.Length > 0)
+                {
+                    var imageUrl = await _cloudinaryService.UploadImageAsync(
+                        request.ImageFile,
+                        "combos" // Folder trên Cloudinary
+                    );
+
+                    if (string.IsNullOrEmpty(imageUrl))
+                    {
+                        return BadRequest(new { message = "❌ Upload ảnh thất bại" });
+                    }
+
+                    // Gán URL vào DTO để lưu DB
+                    request.ImageUrl = imageUrl;
+                }
+
+                // 2. Tạo combo (Service sẽ lưu ImageUrl vào DB)
+                await _managerComboService.AddComboAsync(request);
+
+                return Ok(new { message = "Tạo combo thành công!" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = ex.Message, stack = ex.StackTrace });
+                return StatusCode(500, new { message = $"❌ Lỗi: {ex.Message}" });
             }
         }
 
