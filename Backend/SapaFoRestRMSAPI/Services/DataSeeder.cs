@@ -71,9 +71,9 @@ namespace SapaFoRestRMSAPI.Services
             var desiredPositions = new List<Position>
             {
                 new Position { PositionName = "Waiter/Waitress", Description = "Front-of-house service staff", Status = 0 },
-                new Position { PositionName = "Cashier", Description = "Handles billing and payments", Status = 0 },
+                new Position { PositionName = "CounterStaff", Description = "Handles billing and payments", Status = 0 },
                 new Position { PositionName = "Kitchen Staff", Description = "Back-of-house food preparation", Status = 0 },
-                new Position { PositionName = "Inventory Staff", Description = "Warehouse and stock management", Status = 0 }
+                new Position { PositionName = "Warehouse Staff", Description = "Warehouse and stock management", Status = 0 }
             };
 
             foreach (var pos in desiredPositions)

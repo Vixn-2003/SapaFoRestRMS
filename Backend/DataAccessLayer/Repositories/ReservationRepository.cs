@@ -52,6 +52,7 @@ namespace DataAccessLayer.Repositories
         .Include(r => r.Customer)
             .ThenInclude(c => c.User)
         .Include(r => r.ReservationTables)
+        .Include(r => r.ReservationDeposits) // ✅ Include deposits để tính doanh thu
         .AsQueryable();
 
     // Lọc trạng thái

@@ -1,10 +1,12 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using WebSapaForestForStaff.DTOs.Inventory;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Inventory")]
     public class UnitInventoryController : Controller
     {
         private readonly HttpClient _httpClient;
@@ -139,7 +141,7 @@ namespace WebSapaForestForStaff.Controllers
                     return Json(new
                     {
                         success = false,
-                        message = $"Lỗi từ API: {content}"
+                        message = $"{content}"
                     });
                 }
             }
@@ -338,7 +340,7 @@ namespace WebSapaForestForStaff.Controllers
                     return Json(new
                     {
                         success = false,
-                        message = $"Lỗi từ API: {content}"
+                        message = $"{content}"
                     });
                 }
             }

@@ -36,9 +36,16 @@ namespace BusinessAccessLayer.Services
             var transactions = (await _unitOfWork.Payments.GetAllTransactionsAsync()).ToList();
             var orderDetails = (await _unitOfWork.OrderDetails.GetAllAsync()).ToList();
             var ingredients = (await _unitOfWork.InventoryIngredient.GetAllAsync()).ToList();
+            
+            // Load reservations with deposits to calculate deposit revenue
+            var reservations = await _unitOfWork.Reservations.GetPendingAndConfirmedReservationsAsync(
+                status: null, date: null, customerName: null, phone: null, timeSlot: null, page: 1, pageSize: int.MaxValue);
+            var deposits = reservations.Data
+                .SelectMany(r => r.ReservationDeposits ?? new List<ReservationDeposit>())
+                .ToList();
 
             // Now process in parallel on in-memory data
-            var kpiTask = Task.Run(() => GetKpiCardsAsync(today, startOfMonth, yesterday, lastMonth, orders, transactions, ingredients));
+            var kpiTask = Task.Run(() => GetKpiCardsAsync(today, startOfMonth, yesterday, lastMonth, orders, transactions, deposits, ingredients));
             var revenueTrendTask = Task.Run(() => GetRevenueTrendAsync(today.AddDays(-30), today, transactions));
             var topSellingTask = Task.Run(() => GetTopSellingItemsAsync(startOfMonth, today, orders, orderDetails));
             var branchComparisonTask = Task.Run(() => GetBranchComparisonAsync(startOfMonth, today, transactions));
@@ -59,35 +66,71 @@ namespace BusinessAccessLayer.Services
         private KpiCardsDto GetKpiCardsAsync(DateOnly today, DateOnly startOfMonth, DateOnly yesterday, DateOnly lastMonth, 
             List<Order> orders, 
             List<Transaction> transactions,
+            List<ReservationDeposit> deposits,
             List<Ingredient> ingredients)
         {
 
-            // Today Revenue
-            var todayRevenue = transactions
+            // Today Revenue from Transactions
+            var todayTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
                 .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == today)
                 .Sum(t => t.Amount);
 
-            // Yesterday Revenue (for comparison)
-            var yesterdayRevenue = transactions
+            // Today Revenue from Deposits
+            var todayDepositRevenue = deposits
+                .Where(d => DateOnly.FromDateTime(d.DepositDate) == today)
+                .Sum(d => d.Amount);
+
+            // Today Revenue = Transactions + Deposits
+            var todayRevenue = todayTransactionRevenue + todayDepositRevenue;
+
+            // Yesterday Revenue from Transactions
+            var yesterdayTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
                 .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == yesterday)
                 .Sum(t => t.Amount);
 
-            // Monthly Revenue
-            var monthlyRevenue = transactions
+            // Yesterday Revenue from Deposits
+            var yesterdayDepositRevenue = deposits
+                .Where(d => DateOnly.FromDateTime(d.DepositDate) == yesterday)
+                .Sum(d => d.Amount);
+
+            // Yesterday Revenue = Transactions + Deposits
+            var yesterdayRevenue = yesterdayTransactionRevenue + yesterdayDepositRevenue;
+
+            // Monthly Revenue from Transactions
+            var monthlyTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
                 .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) >= startOfMonth)
                 .Sum(t => t.Amount);
 
-            // Last Month Revenue (for comparison)
-            var lastMonthRevenue = transactions
+            // Monthly Revenue from Deposits
+            var monthlyDepositRevenue = deposits
+                .Where(d => DateOnly.FromDateTime(d.DepositDate) >= startOfMonth)
+                .Sum(d => d.Amount);
+
+            // Monthly Revenue = Transactions + Deposits
+            var monthlyRevenue = monthlyTransactionRevenue + monthlyDepositRevenue;
+
+            // Last Month Revenue from Transactions
+            var lastMonthTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
                 .Where(t => {
                     var date = DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt);
                     return date >= lastMonth && date < startOfMonth;
                 })
                 .Sum(t => t.Amount);
+
+            // Last Month Revenue from Deposits
+            var lastMonthDepositRevenue = deposits
+                .Where(d => {
+                    var date = DateOnly.FromDateTime(d.DepositDate);
+                    return date >= lastMonth && date < startOfMonth;
+                })
+                .Sum(d => d.Amount);
+
+            // Last Month Revenue = Transactions + Deposits
+            var lastMonthRevenue = lastMonthTransactionRevenue + lastMonthDepositRevenue;
 
             // Total Orders (this month)
             var totalOrders = orders
@@ -144,21 +187,31 @@ namespace BusinessAccessLayer.Services
         private List<RevenueTrendDataDto> GetRevenueTrendAsync(DateOnly startDate, DateOnly endDate, 
             List<Transaction> transactions)
         {
-
-            var trendData = transactions
+            // Revenue from Transactions
+            var transactionTrend = transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
                 .GroupBy(t => DateOnly.FromDateTime(t.CompletedAt.Value))
                 .Where(g => g.Key >= startDate && g.Key <= endDate)
-                .Select(g => new RevenueTrendDataDto
+                .Select(g => new
                 {
-                    Date = g.Key.ToString("dd/MM"),
+                    Date = g.Key,
                     Revenue = g.Sum(t => t.Amount),
                     OrderCount = g.Select(t => t.OrderId).Distinct().Count()
                 })
-                .OrderBy(d => d.Date)
                 .ToList();
 
-            return trendData;
+            // Note: Deposits are not included in trend chart as they are typically paid before the order date
+            // If needed, can be added separately
+
+            return transactionTrend
+                .Select(g => new RevenueTrendDataDto
+                {
+                    Date = g.Date.ToString("dd/MM"),
+                    Revenue = g.Revenue,
+                    OrderCount = g.OrderCount
+                })
+                .OrderBy(d => d.Date)
+                .ToList();
         }
 
         private List<TopSellingItemDto> GetTopSellingItemsAsync(DateOnly startDate, DateOnly endDate,
@@ -196,12 +249,16 @@ namespace BusinessAccessLayer.Services
             // Hiện tại chỉ có 1 branch, trả về data mẫu
             // TODO: Implement khi có multi-branch
 
-            var totalRevenue = transactions
+            // Revenue from Transactions
+            var transactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && 
                        t.CompletedAt.HasValue &&
                        DateOnly.FromDateTime(t.CompletedAt.Value) >= startDate &&
                        DateOnly.FromDateTime(t.CompletedAt.Value) <= endDate)
                 .Sum(t => t.Amount);
+
+            // Note: Deposits are not included in branch comparison as they are typically paid before the order date
+            // If needed, can be added separately
 
             var totalOrders = transactions
                 .Where(t => t.Status == "Paid" && 
@@ -217,7 +274,7 @@ namespace BusinessAccessLayer.Services
                 new BranchComparisonDto
                 {
                     BranchName = "Sapa Forest Restaurant",
-                    Revenue = totalRevenue,
+                    Revenue = transactionRevenue,
                     OrderCount = totalOrders
                 }
             };

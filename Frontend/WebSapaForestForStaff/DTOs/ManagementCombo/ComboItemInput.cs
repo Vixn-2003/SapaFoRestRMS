@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace WebSapaForestForStaff.DTOs.ManagementCombo
 {
-    public class ComboItemInputDto
+    public class ComboItemInput
     {
         [Required]
         public int MenuItemId { get; set; }
@@ -15,5 +15,13 @@ namespace WebSapaForestForStaff.DTOs.ManagementCombo
         [Required]
         [Range(1, 100, ErrorMessage = "Số lượng phải từ 1 trở lên")]
         public int Quantity { get; set; }
+
+
+        // --- Thêm mấy dòng này để View không bị lỗi đỏ (DTO hiển thị) ---
+        // Dấu ? nghĩa là có thể null (vì lúc gửi lên API ta không cần gửi mấy cái này)
+        public string? MenuItemName { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? CategoryName { get; set; }
+        public decimal? OriginalPrice { get; set; }
     }
 }

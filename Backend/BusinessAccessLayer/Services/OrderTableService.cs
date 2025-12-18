@@ -16,15 +16,15 @@ namespace BusinessAccessLayer.Services
     public class OrderTableService : IOrderTableService
     {
         private readonly IOrderTableRepository _orderTableRepository;
-        private readonly IConfiguration _config; //  KHAI BÁO _config
-        private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
+        private readonly IConfiguration _config;
+        private readonly SapaFoRestRmsContext _context;
         private readonly IInventoryIngredientService _inventoryService;
         private readonly IHubContext<RestaurantHub> _hubContext;
         public OrderTableService(
              IOrderTableRepository orderTableRepository,
              IConfiguration config, SapaFoRestRmsContext context,
              IInventoryIngredientService inventoryService,
-        
+
              IHubContext<RestaurantHub> hubContext)
         {
             _orderTableRepository = orderTableRepository;
@@ -47,7 +47,7 @@ namespace BusinessAccessLayer.Services
                     Status = rt.Table.Status,
                     AreaName = rt.Table.Area?.AreaName,
                     Floor = rt.Table.Area?.Floor,
-                    NumberGuest = r.NumberOfGuests //  lấy từ Reservation
+                    NumberGuest = r.NumberOfGuests
                 }))
                 .DistinctBy(t => t.TableId) // tránh trùng bàn nếu có nhiều ReservationTable
                 .ToList();
@@ -209,8 +209,6 @@ namespace BusinessAccessLayer.Services
         }
 
         // === HÀM MỚI CHO KHÁCH QUÉT QR ===
-        // (Xóa hàm BuildMenuDtoForReservation cũ đi)
-
         public async Task<MenuPageViewModel> GetMenuForTableAsync(int tableId, int? categoryId, string? searchString)
         {
             // 1. Lấy chi tiết Bàn (Giữ nguyên)
@@ -220,14 +218,14 @@ namespace BusinessAccessLayer.Services
                 throw new Exception("Bàn không tồn tại.");
             }
 
-            // 2. Lấy Reservation (ĐÃ SỬA: Phải Include cả MenuItem VÀ Combo)
+            // 2. Lấy Reservation 
             var reservation = await _context.Reservations
                 .Include(r => r.Orders)
                     .ThenInclude(o => o.OrderDetails)
-                        .ThenInclude(od => od.MenuItem) // <-- Cần cho tên món
-                .Include(r => r.Orders) // <-- THÊM MỚI
-                    .ThenInclude(o => o.OrderDetails) // <-- THÊM MỚI
-                        .ThenInclude(od => od.Combo) // <-- THÊM MỚI (Rất quan trọng)
+                        .ThenInclude(od => od.MenuItem)
+                .Include(r => r.Orders)
+                    .ThenInclude(o => o.OrderDetails)
+                        .ThenInclude(od => od.Combo)
                 .Where(r => r.ReservationTables.Any(rt => rt.TableId == tableId)
                 && r.Status == "Guest Seated")
                 .FirstOrDefaultAsync();
@@ -237,15 +235,15 @@ namespace BusinessAccessLayer.Services
                 throw new Exception("Bàn không hợp lệ hoặc hiện không có khách.");
             }
 
-            // 3. Lấy danh sách món đã gọi (ĐÃ SỬA: Xử lý cả Món và Combo)
+            // 3. Lấy danh sách món đã gọi
             var orderedItems = reservation.Orders
                 .SelectMany(o => o.OrderDetails)
                 .Where(od => od.Status != "Đã hủy")
                 .Select(od => new OrderDetailStatusDto
                 {
                     OrderDetailId = od.OrderDetailId,
-                    MenuItemId = od.MenuItemId, // Gán int? (an toàn)
-                    ComboId = od.ComboId,       // Gán int? (an toàn)
+                    MenuItemId = od.MenuItemId,
+                    ComboId = od.ComboId,
 
                     // === SỬA LẠI LOGIC LẤY TÊN ===
                     ItemName = od.MenuItemId.HasValue // Kiểm tra xem có phải món ăn không
@@ -261,11 +259,11 @@ namespace BusinessAccessLayer.Services
                 .OrderByDescending(od => od.CreatedAt)
                 .ToList();
 
-            // 4. Khởi tạo danh sách kết quả (Giữ nguyên)
+            // 4. Khởi tạo danh sách kết quả
             IEnumerable<MenuItemDto> menuDto = new List<MenuItemDto>();
             IEnumerable<ComboOrderDto> comboDto = new List<ComboOrderDto>();
 
-            // 5. PHẦN LOGIC MỚI (Giữ nguyên)
+            // 5. PHẦN LOGIC MỚI 
             if (categoryId.HasValue && categoryId == -1) // Người dùng bấm tab "Combos"
             {
                 comboDto = await BuildComboDtoAsync(searchString);
@@ -327,8 +325,8 @@ namespace BusinessAccessLayer.Services
         public async Task<IEnumerable<ComboOrderDto>> BuildComboDtoAsync(string? searchString)
         {
             var query = _context.Combos
-                .Include(c => c.ComboItems) // <-- BẮT BUỘC INCLUDE
-                    .ThenInclude(ci => ci.MenuItem) // <-- BẮT BUỘC INCLUDE
+                .Include(c => c.ComboItems) 
+                    .ThenInclude(ci => ci.MenuItem)
                 .Where(c => c.IsAvailable == true);
 
             if (!string.IsNullOrEmpty(searchString))
@@ -483,7 +481,7 @@ namespace BusinessAccessLayer.Services
                             {
                                 MenuItemId = component.MenuItemId,
                                 // Công thức: (Định lượng gốc) * (Số lượng khách gọi)
-                                Quantity = component.Quantity  * cartCombo.Quantity,
+                                Quantity = component.Quantity * cartCombo.Quantity,
                                 Status = "Pending",
                                 CreatedAt = DateTime.Now,
                                 Notes = cartCombo.Notes ?? "", // Copy ghi chú từ cha
@@ -521,10 +519,10 @@ namespace BusinessAccessLayer.Services
                 // TH1: Trừ kho món lẻ
                 if (orderDetail.MenuItemId.HasValue && orderDetail.Status == "Pending")
                 {
-               
+
                     var reserveResult = await _inventoryService.ReserveBatchesForOrderDetailAsync(orderDetail.OrderDetailId);
 
-         
+
                     if (!reserveResult.success)
                     {
                         Console.WriteLine($"Warning Inventory: {reserveResult.message}");
@@ -596,7 +594,7 @@ namespace BusinessAccessLayer.Services
                 throw new Exception("Chỉ có thể hủy món đang chờ hoặc đang nấu. Vui lòng kiểm tra trạng thái món.");
             }
 
-         
+
             if (item.OrderComboItems != null && item.OrderComboItems.Any())
             {
                 // Kiểm tra xem có bất kỳ món con nào đã "Done" hay "Served" hay không
@@ -701,7 +699,8 @@ namespace BusinessAccessLayer.Services
                 .AsNoTracking() // <--- QUAN TRỌNG
                 .Include(t => t.Area)
                 .Where(t => t.TableId == requestDto.TableId)
-                .Select(t => new {
+                .Select(t => new
+                {
                     t.TableNumber,
                     AreaName = t.Area.AreaName
                 })
@@ -858,11 +857,6 @@ namespace BusinessAccessLayer.Services
             if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} phút trước";
             return $"{(int)diff.TotalHours} giờ trước";
         }
-
-      
-
-        // (Trong BusinessAccessLayer/Services/OrderTableService.cs, lồng bên trong)
-
         // 3. DTO tổng hợp (Đây là thứ mà API sẽ nhận)
 
 
@@ -954,7 +948,7 @@ namespace BusinessAccessLayer.Services
 
             public string? Notes { get; set; }
 
-            public decimal Price { get; set; }      
+            public decimal Price { get; set; }
 
         }
 
@@ -1008,11 +1002,6 @@ namespace BusinessAccessLayer.Services
             public int Capacity { get; set; }
 
             public string Status { get; set; }
-
-            // Chúng ta nên thêm cả AreaId và AreaName
-            // AreaId để client có thể dùng để lọc
-            // AreaName để hiển thị trực tiếp
-
             public int AreaId { get; set; }
 
             public string AreaName { get; set; }
