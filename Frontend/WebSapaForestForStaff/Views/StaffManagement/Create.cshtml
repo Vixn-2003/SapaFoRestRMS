@@ -27,7 +27,7 @@
                 <h4 class="card-title mb-0"><i class="fas fa-user-plus"></i> Thông tin nhân viên</h4>
             </div>
             <div class="card-body">
-                <form asp-action="Create" method="post" id="createStaffForm">
+                <form asp-action="Create" method="post" id="createStaffForm" enctype="multipart/form-data">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
                     <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-id-card"></i> Thông tin cá nhân</h5>
@@ -111,10 +111,6 @@
                         </small>
                     </div>
 
-                    <!-- Hidden fields -->
-                    <input type="hidden" asp-for="RoleId" value="4" />
-                    <input type="hidden" asp-for="DepartmentId" value="1" />
-
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i> <strong>Vai trò:</strong> Staff (Nhân viên) - Tự động gán cho tất cả nhân viên mới
                     </div>
@@ -143,17 +139,17 @@
                                 </button>
                             </div>
                             
-                            <!-- Upload Button -->
-                            <button type="button" class="btn btn-primary btn-block" id="uploadAvatarBtn">
-                                <i class="fas fa-cloud-upload-alt"></i> Upload ảnh từ máy tính
-                            </button>
+                            <!-- File Input -->
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="avatarFileInput" 
+                                   name="AvatarFile"
+                                   accept="image/jpeg,image/png,image/jpg,image/gif">
                             
-                            <!-- Hidden input to store Cloudinary URL -->
-                            <input type="hidden" asp-for="AvatarUrl" id="avatarUrlInput" />
                             <span asp-validation-for="AvatarUrl" class="text-danger"></span>
                         </div>
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle"></i> Click vào nút để upload ảnh. Hỗ trợ JPG, PNG, GIF (tối đa 5MB)
+                            <i class="fas fa-info-circle"></i> Chọn ảnh để upload. Hỗ trợ JPG, PNG, GIF (tối đa 5MB)
                         </small>
                     </div>
 
@@ -174,79 +170,43 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     
-    <!-- Cloudinary Upload Widget -->
-    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
-    
     <script>
         $(document).ready(function() {
-            // ========== CLOUDINARY UPLOAD WIDGET ==========
-            const CLOUDINARY_CLOUD_NAME = 'dqn7os3pr'; // Replace with your cloud name
-            const CLOUDINARY_UPLOAD_PRESET = 'ml_default'; // Replace with your upload preset
-            
-            let cloudinaryWidget = cloudinary.createUploadWidget({
-                cloudName: CLOUDINARY_CLOUD_NAME,
-                uploadPreset: CLOUDINARY_UPLOAD_PRESET,
-                sources: ['local', 'url', 'camera'],
-                multiple: false,
-                maxFileSize: 5000000, // 5MB
-                clientAllowedFormats: ['jpg', 'png', 'gif', 'jpeg', 'webp'],
-                maxImageWidth: 2000,
-                maxImageHeight: 2000,
-                cropping: true,
-                croppingAspectRatio: 1, // Square crop
-                croppingShowDimensions: true,
-                folder: 'staff_avatars', // Cloudinary folder
-                resourceType: 'image',
-                language: 'vi',
-                text: {
-                    vi: {
-                        or: 'Hoặc',
-                        back: 'Quay lại',
-                        close: 'Đóng',
-                        no_results: 'Không có kết quả',
-                        search_placeholder: 'Tìm kiếm...',
-                        menu: {
-                            files: 'Tệp của tôi',
-                            web: 'Địa chỉ web',
-                            camera: 'Camera'
-                        },
-                        local: {
-                            browse: 'Chọn tệp',
-                            dd_title_single: 'Kéo thả ảnh vào đây',
-                            dd_title_multi: 'Kéo thả ảnh vào đây',
-                            drop_title_single: 'Thả để upload',
-                            drop_title_multiple: 'Thả để upload'
-                        }
+            // ========== AVATAR UPLOAD ==========
+            $('#avatarFileInput').on('change', function(e) {
+                const file = e.target.files[0];
+                
+                if (file) {
+                    // Validate file size (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        toastr.error('Kích thước ảnh không được vượt quá 5MB');
+                        $(this).val('');
+                        return;
                     }
-                }
-            }, (error, result) => {
-                if (!error && result && result.event === 'success') {
-                    const imageUrl = result.info.secure_url;
                     
-                    // Set avatar URL
-                    $('#avatarUrlInput').val(imageUrl);
+                    // Validate file type
+                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                    if (!validTypes.includes(file.type)) {
+                        toastr.error('Vui lòng chọn file ảnh JPG, PNG hoặc GIF');
+                        $(this).val('');
+                        return;
+                    }
                     
                     // Show preview
-                    $('#avatarPreview').attr('src', imageUrl);
-                    $('#avatarPreviewContainer').show();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#avatarPreview').attr('src', e.target.result);
+                        $('#avatarPreviewContainer').show();
+                    };
+                    reader.readAsDataURL(file);
                     
-                    toastr.success('Upload ảnh thành công!');
+                    toastr.success('Đã chọn ảnh thành công');
                 }
-                
-                if (error) {
-                    console.error('Cloudinary upload error:', error);
-                    toastr.error('Lỗi khi upload ảnh. Vui lòng thử lại!');
-                }
-            });
-            
-            // Open upload widget
-            $('#uploadAvatarBtn').on('click', function() {
-                cloudinaryWidget.open();
             });
             
             // Remove avatar
             $('#removeAvatarBtn').on('click', function() {
-                $('#avatarUrlInput').val('');
+                $('#avatarFileInput').val('');
                 $('#avatarPreview').attr('src', '');
                 $('#avatarPreviewContainer').hide();
                 toastr.info('Đã xóa ảnh đại diện');

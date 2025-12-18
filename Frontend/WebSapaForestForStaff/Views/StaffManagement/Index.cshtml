@@ -10,7 +10,7 @@
 <div class="page-header">
     <div class="row align-items-center">
         <div class="col">
-            <h3 class="page-title">Quản lý Nhân viên</h3>
+            <h3 class="page-title">Quản lý thông tin Nhân viên</h3>
             <ul class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
                 <li class="breadcrumb-item active">Quản lý Nhân viên</li>
@@ -41,11 +41,18 @@
             <div class="col-md-2">
                 <div class="form-group">
                     <label for="positionFilter">Chức vụ</label>
-                    <input type="text" 
-                           id="positionFilter" 
-                           class="form-control" 
-                           placeholder="Chức vụ..."
-                           autocomplete="off">
+                    <select id="positionFilter" class="form-control">
+                        <option value="">Tất cả</option>
+                        @{
+                            var positions = ViewBag.AvailablePositions as List<WebSapaForestForStaff.DTOs.Staff.PositionDto> 
+                                           ?? new List<WebSapaForestForStaff.DTOs.Staff.PositionDto>();
+                        }
+                        @foreach (var p in positions)
+                        {
+                            // Backend filter currently expects position name string
+                            <option value="@p.PositionName">@p.PositionName</option>
+                        }
+                    </select>
                 </div>
             </div>
             <div class="col-md-2">
@@ -53,8 +60,8 @@
                     <label for="statusFilter">Trạng thái</label>
                     <select id="statusFilter" class="form-control">
                         <option value="">Tất cả</option>
-                        <option value="1">Đang hoạt động</option>
-                        <option value="0">Ngừng hoạt động</option>
+                        <option value="0">Đang hoạt động</option>
+                        <option value="1">Ngừng hoạt động</option>
                     </select>
                 </div>
             </div>
@@ -143,14 +150,12 @@
 </div>
 
 <!-- Deactivate Modal -->
-<div class="modal fade" id="deactivateModal" tabindex="-1" role="dialog" aria-labelledby="deactivateModalLabel" aria-hidden="true">
+<div class="modal fade" id="deactivateModal" tabindex="-1" aria-labelledby="deactivateModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="deactivateModalLabel">Ngừng hoạt động nhân viên</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p>Bạn có chắc chắn muốn ngừng hoạt động nhân viên này?</p>
@@ -166,7 +171,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-danger">Ngừng hoạt động</button>
             </div>
         </div>

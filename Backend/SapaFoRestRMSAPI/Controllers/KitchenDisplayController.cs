@@ -9,7 +9,6 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = "Position:Kitchen")]
     public class KitchenDisplayController : ControllerBase
     {
         private readonly IKitchenDisplayService _kitchenService;
