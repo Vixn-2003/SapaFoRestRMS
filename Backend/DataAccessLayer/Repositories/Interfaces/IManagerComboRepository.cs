@@ -47,5 +47,6 @@ namespace DataAccessLayer.Repositories.Interfaces
         //topnew
         Task<List<MenuItem>> GetTop5NewMenuItemsAsync();
 
+        Task ChangeStatusComboAsync(int idcombo, bool status);
     }
 }

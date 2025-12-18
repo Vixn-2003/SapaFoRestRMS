@@ -13,12 +13,16 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BusinessAccessLayer.Services;
 
 /// <summary>
 /// Service xử lý business logic cho Payment
 /// </summary>
+/// 
+[Authorize(Policy = "Position:Cashier")]
+
 public class PaymentService : IPaymentService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -58,7 +62,7 @@ public class PaymentService : IPaymentService
 
     public async Task<OrderListResponseDto> GetOrdersAsync(DateOnly? date = default, string? statusFilter = null, string sortOrder = "desc", CancellationToken ct = default)
     {
-        var selectedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var selectedDate = date ?? DateOnly.FromDateTime(DateTime.Now);
 
         // 🔄 Luôn lấy toàn bộ orders, sau đó filter theo ngày dựa trên PaidAt (nếu có) hoặc CreatedAt
         var orders = await _unitOfWork.Payments.GetAllOrdersWithDetailsAsync();
@@ -398,17 +402,17 @@ public class PaymentService : IPaymentService
         }
 
         // Tạo sessionId cho giao dịch
-        var sessionId = $"SESSION-{DateTime.UtcNow.Ticks}-{request.OrderId}";
+        var sessionId = $"SESSION-{DateTime.Now.Ticks}-{request.OrderId}";
 
         // Tạo transaction record
         var transaction = new Transaction
         {
             OrderId = request.OrderId,
-            TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
+            TransactionCode = $"TXN-{DateTime.Now.Ticks}",
             Amount = request.Amount,
             PaymentMethod = request.PaymentMethod,
             Status = "Pending",
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.Now,
             SessionId = sessionId
         };
 
@@ -482,7 +486,7 @@ public class PaymentService : IPaymentService
         {
             //  Cập nhật transaction đã tồn tại thay vì tạo mới
             existingTransaction.Status = "Paid";
-            existingTransaction.CompletedAt = DateTime.UtcNow;
+            existingTransaction.CompletedAt = DateTime.Now;
             existingTransaction.Notes = request.Notes ?? existingTransaction.Notes;
             
             if (request.PaymentMethod == "Cash" && request.CashGiven.HasValue)
@@ -500,12 +504,12 @@ public class PaymentService : IPaymentService
             var transaction = new Transaction
             {
                 OrderId = request.OrderId,
-                TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
+                TransactionCode = $"TXN-{DateTime.Now.Ticks}",
                 Amount = request.Amount,
                 PaymentMethod = request.PaymentMethod,
                 Status = "Paid",
-                CreatedAt = DateTime.UtcNow,
-                CompletedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                CompletedAt = DateTime.Now,
                 SessionId = request.SessionId,
                 Notes = request.Notes
             };
@@ -679,7 +683,7 @@ public class PaymentService : IPaymentService
 
         // Sau khi khách xác nhận, chuyển trạng thái đơn sang "Confirmed" (đã xác nhận, chờ thanh toán)
         order.Status = OrderStatusConstants.Confirmed;
-        order.ConfirmedAt = DateTime.UtcNow;
+        order.ConfirmedAt = DateTime.Now;
 
         // Lưu staffId của người thực hiện xác nhận
         var staffId = await ResolveStaffIdAsync(userId, ct);
@@ -697,7 +701,7 @@ public class PaymentService : IPaymentService
             Action = "Order Confirmation",
             Reason = $"Confirmed by staff. Total amount: {orderDto.TotalAmount:N0} VND",
             StaffId = staffId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
 
         await _unitOfWork.Payments.AddOrderHistoryAsync(history);
@@ -745,7 +749,7 @@ public class PaymentService : IPaymentService
             Action = "Undo Confirmation",
             Reason = request.Reason,
             StaffId = staffId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.Now
         };
 
         await _unitOfWork.Payments.AddOrderHistoryAsync(history);
@@ -1009,37 +1013,72 @@ public class PaymentService : IPaymentService
             System.Diagnostics.Debug.WriteLine($"[PopulateOrderMetadata] Order {order.OrderId} has CustomerId={orderDto.CustomerId} but CustomerName is null. Order.Customer={order.Customer != null}, Order.Customer.User={order.Customer?.User != null}, Reservation.Customer={order.Reservation?.Customer != null}, Reservation.Customer.User={order.Reservation?.Customer?.User != null}");
         }
 
-        if (order.Reservation?.Staff != null)
+        // ✅ FIX: WaiterName (Nhân viên phục vụ) lấy từ Order.ConfirmedByStaff (waiter xác nhận order)
+        if (order.ConfirmedByStaff != null && order.ConfirmedByStaff.User != null)
         {
-            var staffName = order.Reservation.Staff.FullName;
-            orderDto.StaffName = staffName;
-            orderDto.WaiterName = staffName;
+            orderDto.WaiterName = order.ConfirmedByStaff.User.FullName;
         }
 
+        // ✅ FIX: StaffName (Thu ngân xử lý) lấy từ Transaction.ConfirmedByUser (staff xử lý thanh toán)
         if (order.Transactions != null && order.Transactions.Any())
         {
-            var latestPaidTransaction = order.Transactions
-                .OrderByDescending(t => t.CompletedAt ?? t.CreatedAt)
-                .FirstOrDefault(t =>
+            var paidTransactions = order.Transactions
+                .Where(t =>
                     string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase));
+                    string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-            if (latestPaidTransaction != null)
+            if (paidTransactions.Any())
             {
-                orderDto.PaidAt = latestPaidTransaction.CompletedAt ?? latestPaidTransaction.CreatedAt;
-                orderDto.PaymentMethod = latestPaidTransaction.PaymentMethod;
+                var latestPaidTransaction = paidTransactions
+                    .OrderByDescending(t => t.CompletedAt ?? t.CreatedAt)
+                    .FirstOrDefault();
+
+                if (latestPaidTransaction != null)
+                {
+                    orderDto.PaidAt = latestPaidTransaction.CompletedAt ?? latestPaidTransaction.CreatedAt;
+                    
+                    // ✅ FIX: Lấy StaffName từ Transaction.ConfirmedByUser (staff xử lý thanh toán)
+                    if (latestPaidTransaction.ConfirmedByUser != null)
+                    {
+                        orderDto.StaffName = latestPaidTransaction.ConfirmedByUser.FullName;
+                    }
+                    
+                    // ✅ FIX: Kiểm tra nếu có combined payment (cả Cash và QRBankTransfer)
+                    var distinctPaymentMethods = paidTransactions
+                        .Select(t => t.PaymentMethod)
+                        .Where(pm => !string.IsNullOrWhiteSpace(pm))
+                        .Distinct()
+                        .ToList();
+
+                    if (distinctPaymentMethods.Count > 1 && 
+                        distinctPaymentMethods.Contains("Cash", StringComparer.OrdinalIgnoreCase) &&
+                        (distinctPaymentMethods.Any(pm => pm.Contains("QR", StringComparison.OrdinalIgnoreCase)) ||
+                         distinctPaymentMethods.Any(pm => pm.Contains("BankTransfer", StringComparison.OrdinalIgnoreCase))))
+                    {
+                        // Combined payment: Cash + QR
+                        orderDto.PaymentMethod = "Combined";
+                    }
+                    else
+                    {
+                        // Single payment method
+                        orderDto.PaymentMethod = latestPaidTransaction.PaymentMethod;
+                    }
+                }
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(orderDto.WaiterName) && string.IsNullOrWhiteSpace(orderDto.StaffName))
+        // Fallback: Nếu không có StaffName từ transaction, thử lấy từ Reservation.Staff (legacy)
+        if (string.IsNullOrWhiteSpace(orderDto.StaffName) && order.Reservation?.Staff != null)
         {
-            orderDto.StaffName = orderDto.WaiterName;
+            orderDto.StaffName = order.Reservation.Staff.FullName;
         }
 
-        if (!string.IsNullOrWhiteSpace(orderDto.StaffName) && string.IsNullOrWhiteSpace(orderDto.WaiterName))
+        // Fallback: Nếu không có WaiterName từ ConfirmedByStaff, thử lấy từ Reservation.Staff (legacy)
+        if (string.IsNullOrWhiteSpace(orderDto.WaiterName) && order.Reservation?.Staff != null)
         {
-            orderDto.WaiterName = orderDto.StaffName;
+            orderDto.WaiterName = order.Reservation.Staff.FullName;
         }
     }
 
@@ -1126,14 +1165,14 @@ public class PaymentService : IPaymentService
                 var transaction = new Transaction
                 {
                     OrderId = request.OrderId,
-                    TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
+                    TransactionCode = $"TXN-{DateTime.Now.Ticks}",
                     Amount = 0, // Đã thanh toán đủ bằng tiền cọc
                     AmountReceived = 0,
                     RefundAmount = depositRefundAmount, // Trả lại tiền thừa từ cọc
                     PaymentMethod = "Cash",
                     Status = "Paid",
-                    CreatedAt = DateTime.UtcNow,
-                    CompletedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
+                    CompletedAt = DateTime.Now,
                     IsManualConfirmed = true,
                     ConfirmedByUserId = userId,
                     Notes = request.Notes ?? $"Đã thanh toán đủ bằng tiền cọc. Trả lại tiền thừa: {depositRefundAmount:N0} VND"
@@ -1213,14 +1252,14 @@ public class PaymentService : IPaymentService
             var transaction = new Transaction
             {
                 OrderId = request.OrderId,
-                TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
+                TransactionCode = $"TXN-{DateTime.Now.Ticks}",
                 Amount = totalAmount,
                 AmountReceived = request.AmountReceived,
                 RefundAmount = refundAmount,
                 PaymentMethod = "Cash",
                 Status = "Paid",
-                CreatedAt = DateTime.UtcNow,
-                CompletedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                CompletedAt = DateTime.Now,
                 IsManualConfirmed = true,
                 ConfirmedByUserId = userId,
                 Notes = request.Notes ?? (refundAmount.HasValue ? $"Tiền thối lại: {refundAmount.Value:N0} VND" : null)
@@ -1336,14 +1375,14 @@ public class PaymentService : IPaymentService
             var cashTransaction = new Transaction
             {
                 OrderId = request.OrderId,
-                TransactionCode = $"TXN-CASH-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}",
+                TransactionCode = $"TXN-CASH-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}",
                 Amount = request.CashAmount,
                 AmountReceived = request.CashReceived ?? request.CashAmount,
                 RefundAmount = cashRefundAmount,
                 PaymentMethod = "Cash",
                 Status = "Paid",
-                CreatedAt = DateTime.UtcNow,
-                CompletedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                CompletedAt = DateTime.Now,
                 IsManualConfirmed = true,
                 ConfirmedByUserId = userId,
                 Notes = $"Thanh toán kết hợp - Phần tiền mặt: {request.CashAmount:N0} VND" + (cashRefundAmount.HasValue ? $", Tiền thối: {cashRefundAmount.Value:N0} VND" : "")
@@ -1356,12 +1395,13 @@ public class PaymentService : IPaymentService
             var qrTransaction = new Transaction
             {
                 OrderId = request.OrderId,
-                TransactionCode = $"TXN-QR-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}",
+                TransactionCode = $"TXN-QR-{DateTime.Now:yyyyMMddHHmmss}-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}",
                 Amount = request.QrAmount,
+                AmountReceived = request.QrAmount, // ✅ FIX: Lưu AmountReceived cho QR transaction (đã được xác nhận thủ công)
                 PaymentMethod = "QRBankTransfer",
                 Status = "Paid", // Combined payment: QR được xác nhận ngay khi cashier confirm
-                CreatedAt = DateTime.UtcNow,
-                CompletedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
+                CompletedAt = DateTime.Now,
                 IsManualConfirmed = true,
                 ConfirmedByUserId = userId,
                 Notes = $"Thanh toán kết hợp - Phần QR: {request.QrAmount:N0} VND"
@@ -1448,7 +1488,7 @@ public class PaymentService : IPaymentService
 
         // Increment retry count
         transaction.RetryCount++;
-        transaction.LastRetryAt = DateTime.UtcNow;
+        transaction.LastRetryAt = DateTime.Now;
         transaction.Status = "PaymentProcessing";
         transaction.GatewayErrorCode = null;
         transaction.GatewayErrorMessage = null;
@@ -1542,7 +1582,7 @@ public class PaymentService : IPaymentService
         if (request.Status == "Paid" || request.Status == "Success")
         {
             transaction.Status = "Paid";
-            transaction.CompletedAt = DateTime.UtcNow;
+            transaction.CompletedAt = DateTime.Now;
 
             // Update order status
             var order = await _unitOfWork.Payments.GetByIdAsync(transaction.OrderId);
@@ -1596,8 +1636,8 @@ public class PaymentService : IPaymentService
             LockedByUserId = userId,
             SessionId = request.SessionId,
             Reason = request.Reason ?? "Payment in progress",
-            LockedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+            LockedAt = DateTime.Now,
+            ExpiresAt = DateTime.Now.AddMinutes(10)
         };
 
         await _unitOfWork.OrderLocks.AddAsync(orderLock);
@@ -1682,11 +1722,11 @@ public class PaymentService : IPaymentService
             var parentTransaction = new Transaction
             {
                 OrderId = request.OrderId,
-                TransactionCode = $"TXN-SPLIT-{DateTime.UtcNow.Ticks}",
+                TransactionCode = $"TXN-SPLIT-{DateTime.Now.Ticks}",
                 Amount = totalAmount,
                 PaymentMethod = "Split",
                 Status = "PartiallyPaid",
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 Notes = $"Split bill thành {request.Parts.Count} phần"
             };
 
@@ -1699,16 +1739,16 @@ public class PaymentService : IPaymentService
                 {
                     OrderId = request.OrderId,
                     ParentTransactionId = savedParent.TransactionId,
-                    TransactionCode = $"TXN-SPLIT-{DateTime.UtcNow.Ticks}-{part.GetHashCode()}",
+                    TransactionCode = $"TXN-SPLIT-{DateTime.Now.Ticks}-{part.GetHashCode()}",
                     Amount = part.Amount,
                     AmountReceived = part.AmountReceived,
                     PaymentMethod = part.PaymentMethod,
                     Status = part.PaymentMethod == "Cash" && part.AmountReceived.HasValue && part.AmountReceived.Value >= part.Amount
                         ? "Paid"
                         : "PaymentProcessing",
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.Now,
                     CompletedAt = part.PaymentMethod == "Cash" && part.AmountReceived.HasValue && part.AmountReceived.Value >= part.Amount
-                        ? DateTime.UtcNow
+                        ? DateTime.Now
                         : null,
                     IsManualConfirmed = part.PaymentMethod == "Cash",
                     ConfirmedByUserId = part.PaymentMethod == "Cash" ? userId : null,
@@ -1734,7 +1774,7 @@ public class PaymentService : IPaymentService
             if (allPaid)
             {
                 savedParent.Status = "Paid";
-                savedParent.CompletedAt = DateTime.UtcNow;
+                savedParent.CompletedAt = DateTime.Now;
                 order.Status = OrderStatusConstants.Paid;
             }
             else
@@ -1827,7 +1867,7 @@ public class PaymentService : IPaymentService
         try
         {
             // Generate transaction code
-            var transactionCode = $"TXN-{DateTime.UtcNow:yyyyMMddHHmmss}-{orderId}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+            var transactionCode = $"TXN-{DateTime.Now:yyyyMMddHHmmss}-{orderId}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
             var sessionId = Guid.NewGuid().ToString();
 
             // Create transaction
@@ -1838,7 +1878,7 @@ public class PaymentService : IPaymentService
                 Amount = totalAmount,
                 PaymentMethod = paymentMethod,
                 Status = paymentMethod == "Cash" ? "WaitingForPayment" : "PaymentProcessing",
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 SessionId = sessionId,
                 Notes = $"Bắt đầu thanh toán bằng {paymentMethod}"
             };
@@ -1931,7 +1971,7 @@ public class PaymentService : IPaymentService
 
         // Update transaction
         transaction.Status = "Paid";
-        transaction.CompletedAt = DateTime.UtcNow;
+        transaction.CompletedAt = DateTime.Now;
         transaction.IsManualConfirmed = true;
         transaction.ConfirmedByUserId = userId;
         transaction.GatewayReference = request.GatewayReference ?? transaction.GatewayReference;
@@ -2021,7 +2061,7 @@ public class PaymentService : IPaymentService
     public async Task<List<TransactionDto>> RetryPendingTransactionsAsync(CancellationToken ct = default)
     {
         // Get all pending transactions older than 5 minutes
-        var cutoffTime = DateTime.UtcNow.AddMinutes(-5);
+        var cutoffTime = DateTime.Now.AddMinutes(-5);
 
         // Note: This requires a repository method to get pending transactions
         // For now, we'll get transactions by order and filter
@@ -2133,10 +2173,26 @@ public class PaymentService : IPaymentService
                 // Step 8.1.2: Tăng LoyaltyPoints +1 cho Customer sau khi thanh toán thành công
                 try
                 {
+                    // ✅ FIX: Fallback sang Reservation.Customer nếu Order.Customer null
+                    DomainAccessLayer.Models.Customer? customerToUpdate = null;
+                    int customerId = 0;
+                    
                     if (order.Customer != null)
                     {
+                        customerToUpdate = order.Customer;
+                        customerId = order.Customer.CustomerId;
+                    }
+                    else if (order.Reservation?.Customer != null)
+                    {
+                        // Fallback: Lấy Customer từ Reservation nếu Order.Customer null
+                        customerToUpdate = order.Reservation.Customer;
+                        customerId = order.Reservation.Customer.CustomerId;
+                    }
+                    
+                    if (customerToUpdate != null)
+                    {
                         // Tăng LoyaltyPoints +1 (nếu null thì set = 1)
-                        order.Customer.LoyaltyPoints = (order.Customer.LoyaltyPoints ?? 0) + 1;
+                        customerToUpdate.LoyaltyPoints = (customerToUpdate.LoyaltyPoints ?? 0) + 1;
                         
                         // Save changes để lưu LoyaltyPoints
                         await _unitOfWork.SaveChangesAsync();
@@ -2145,8 +2201,19 @@ public class PaymentService : IPaymentService
                         await _auditLogService.LogEventAsync(
                             eventType: "LoyaltyPointsIncreased",
                             entityType: "Customer",
-                            entityId: order.Customer.CustomerId,
-                            description: $"Tăng điểm tích lũy +1 sau thanh toán thành công. Điểm hiện tại: {order.Customer.LoyaltyPoints}",
+                            entityId: customerId,
+                            description: $"Tăng điểm tích lũy +1 sau thanh toán thành công. Điểm hiện tại: {customerToUpdate.LoyaltyPoints}",
+                            userId: null,
+                            ct: ct);
+                    }
+                    else
+                    {
+                        // Log warning nếu không tìm thấy customer
+                        await _auditLogService.LogEventAsync(
+                            eventType: "LoyaltyPointsSkipped",
+                            entityType: "Order",
+                            entityId: orderId,
+                            description: $"Không thể tăng điểm tích lũy: Order không có Customer (OrderId: {orderId}, CustomerId: {order.CustomerId}, ReservationId: {order.ReservationId})",
                             userId: null,
                             ct: ct);
                     }
@@ -2157,7 +2224,7 @@ public class PaymentService : IPaymentService
                     await _auditLogService.LogEventAsync(
                         eventType: "LoyaltyPointsError",
                         entityType: "Customer",
-                        entityId: order.CustomerId ?? 0,
+                        entityId: order.CustomerId ?? (order.Reservation?.CustomerId ?? 0),
                         description: $"Không thể tăng điểm tích lũy sau thanh toán: {loyaltyEx.Message}",
                         userId: null,
                         ct: ct);

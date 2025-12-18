@@ -650,7 +650,6 @@
 #qrError i {
     opacity: 0.8;
 }
-
 @media print {
     .no-print {
         display: none !important;
@@ -661,5 +660,6 @@
         max-width: 100%;
     }
 }
+
 
 

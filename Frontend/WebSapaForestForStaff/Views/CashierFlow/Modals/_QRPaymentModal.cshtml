@@ -100,3 +100,36 @@
     </div>
 </div>
 
+<!-- QR Payment Loading Modal -->
+<div class="modal fade" id="qrPaymentLoadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Đang xử lý...</span>
+                </div>
+                <h5 id="qrPaymentLoadingTitle">Đang xác nhận thanh toán</h5>
+                <p class="text-muted mb-0" id="qrPaymentLoadingMessage">Vui lòng đợi trong giây lát...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Payment Result Modal -->
+<div class="modal fade" id="qrPaymentResultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div id="qrPaymentResultIcon" class="mb-3">
+                    <!-- Success or Error icon will be inserted here -->
+                </div>
+                <h5 id="qrPaymentResultTitle"></h5>
+                <p class="text-muted mb-3" id="qrPaymentResultMessage"></p>
+                <button type="button" class="btn btn-primary" id="qrPaymentResultBtn" onclick="closeQrPaymentResultModal()">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

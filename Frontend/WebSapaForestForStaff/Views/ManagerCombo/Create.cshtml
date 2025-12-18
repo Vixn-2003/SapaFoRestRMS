@@ -143,22 +143,36 @@
                     <i class="mdi mdi-information-outline"></i> Thiết lập Combo
                 </div>
                 <div class="card-body overflow-auto custom-scroll">
-                    <form asp-action="Create"
+                    <form asp-action="Creates"
                           asp-controller="ManagerCombo"
                           method="post"
-                          id="createComboForm">
+                          id="createComboForm"
+                          enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
                         <div asp-validation-summary="All"
                              class="alert alert-danger small">
                         </div>
-                        <div id="hiddenItemsContainer" class="d-none"></div>
 
                         <div class="mb-3 text-center">
                             <div class="position-relative d-inline-block w-100">
-                                <img id="comboImagePreview" src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "/images/default-food.png" : Model.ImageUrl)"
-                                     class="img-thumbnail shadow-sm w-100" style="height: 160px; object-fit: cover; border-radius: 8px;" />
+                                <!-- Preview ảnh -->
+                                <img id="comboImagePreview"
+                                     src="/images/default-food.png"
+                                     class="img-thumbnail shadow-sm w-100"
+                                     style="height: 160px; object-fit: cover; border-radius: 8px;" />
+
+                                <!-- Input chọn file -->
                                 <div class="mt-2">
-                                    <input asp-for="ImageUrl" class="form-control form-control-sm" placeholder="URL Hình ảnh" onchange="document.getElementById('comboImagePreview').src = this.value || '/images/default-food.png'" />
+                                    <label for="imageFileInput" class="btn btn-sm btn-outline-primary w-100">
+                                        <i class="mdi mdi-camera"></i> Chọn ảnh từ máy tính
+                                    </label>
+                                    <input type="file"
+                                           id="imageFileInput"
+                                           name="ImageFile"
+                                           accept="image/*"
+                                           class="d-none"
+                                           onchange="previewImageCreate(event)" />
+                                    <small class="text-muted d-block mt-1">JPG, PNG hoặc GIF (tối đa 5MB)</small>
                                 </div>
                             </div>
                         </div>
@@ -209,8 +223,6 @@
                                        value="true"
                                        onchange="updateStatusText(this)" />
 
-                                <!--  BẮT BUỘC: đảm bảo gửi false khi uncheck -->
-                                <input type="hidden" name="IsAvailable" value="false" />
                             </div>
 
                             <!-- Trạng thái (bên phải) -->
@@ -374,14 +386,49 @@
                 }
             });
 
-            // Submit Form: Sắp xếp lại index
-            // CHÚ Ý: Bắt sự kiện vào form createComboForm
             const form = document.getElementById('createComboForm');
-            if(form){
-                form.addEventListener('submit', function(e) {
-                    reindexItems();
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    const items = document.querySelectorAll("#selectedDishes .dish-item");
+
+                    if (items.length === 0) {
+                        e.preventDefault();
+                        alert("⚠️ Vui lòng chọn ít nhất 1 món ăn!");
+                        return;
+                    }
+
+                    // ✅ 1. Xóa các input Items cũ trong form (nếu có)
+                    form.querySelectorAll('input[name^="Items"]').forEach(input => {
+                        input.remove();
+                    });
+
+                    // ✅ 2. Clone tất cả items vào TRONG form
+                    items.forEach((item, index) => {
+                        // Lấy tất cả input trong item này
+                        const inputs = item.querySelectorAll('input[name^="Items"]');
+
+                        inputs.forEach(input => {
+                            // Clone input
+                            const clonedInput = input.cloneNode(true);
+
+                            // Reindex tên
+                            const fieldName = input.name.match(/Items\[\d+\]\.(.*)/)[1]; // Lấy phần sau dấu chấm
+                            clonedInput.name = `Items[${index}].${fieldName}`;
+
+                            // Thêm vào form (ẩn đi)
+                            clonedInput.type = 'hidden';
+                            form.appendChild(clonedInput);
+                        });
+                    });
+
+                    console.log("Form đang submit với", items.length, "món");
+                    console.log("Items trong form:");
+                    form.querySelectorAll('input[name^="Items"]').forEach(input => {
+                        console.log(`  - ${input.name} = ${input.value}`);
+                    });
                 });
             }
+
 
             // Tìm kiếm (Debounce)
             let timeout = null;
@@ -443,36 +490,8 @@
                 container.style.opacity = '1';
             }
         }
-                const form = document.getElementById('createComboForm');
+                
 
-        form.addEventListener('submit', function () {
-
-            const hiddenContainer = document.getElementById('hiddenItemsContainer');
-            hiddenContainer.innerHTML = ''; // clear cũ
-
-            // Clone toàn bộ Items từ cột 3
-            document.querySelectorAll('#selectedDishes input[name^="Items"]').forEach(input => {
-                hiddenContainer.appendChild(input.cloneNode(true));
-            });
-
-            // Re-index cho chuẩn ModelBinder
-            reindexHiddenItems();
-        });
-        function reindexHiddenItems() {
-            const rows = document.querySelectorAll('#hiddenItemsContainer .dish-item, #hiddenItemsContainer input');
-
-            let index = 0;
-            let currentGroup = {};
-
-            document.querySelectorAll('#hiddenItemsContainer input[name^="Items"]').forEach(input => {
-                input.name = input.name.replace(/Items\[\d+\]/, `Items[${index}]`);
-
-                // tăng index khi gặp Quantity (1 món = 1 group)
-                if (input.name.endsWith('.Quantity')) {
-                    index++;
-                }
-            });
-        }
 
         function renderPagination() {
             const container = document.getElementById('paginationControls');
@@ -788,19 +807,25 @@
             }
         }
 
-            document.getElementById("createComboForm")
-        .addEventListener("submit", function () {
 
-            const items = document.querySelectorAll("#selectedDishes .dish-item");
+        function previewImageCreate(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-            items.forEach((item, index) => {
-                item.querySelectorAll("input[name^='Items']").forEach(input => {
-                    input.name = input.name.replace(/Items\[\d+\]/, `Items[${index}]`);
-                });
-            });
+            // Kiểm tra kích thước file (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File quá lớn! Vui lòng chọn ảnh nhỏ hơn 5MB.');
+                event.target.value = '';
+                return;
+            }
 
-            console.log("✅ Items reindexed before submit");
-        });
+            // Hiển thị preview
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('comboImagePreview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
 
     </script>
 }

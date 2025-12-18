@@ -35,7 +35,7 @@
 }
 
 <div class="container-fluid py-4">
-    <h2 class="mb-4">💰 Revenue Management</h2>
+    <h2 class="mb-4">💰 Quản lý doanh thu </h2>
 
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
@@ -69,7 +69,6 @@
                         <option value="ALL" selected="@(Model.SelectedPaymentMethod == "ALL")">Tất cả</option>
                         <option value="Cash" selected="@(Model.SelectedPaymentMethod == "Cash")">Tiền mặt</option>
                         <option value="QR" selected="@(Model.SelectedPaymentMethod == "QR")">QR Code</option>
-                        <option value="Combined" selected="@(Model.SelectedPaymentMethod == "Combined")">Kết hợp</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
@@ -102,11 +101,10 @@
             </div>
             <div class="col-md-3">
                 <div class="summary-card bg-light">
-                    <div class="summary-label">Tiền Mặt / QR / Kết hợp</div>
+                    <div class="summary-label">Tiền Mặt / QR</div>
                     <div class="summary-value text-warning" style="font-size: 1rem;">
                         @Model.Summary.CashRevenue.ToString("N0") / 
-                        @Model.Summary.QrRevenue.ToString("N0") / 
-                        @Model.Summary.CombinedRevenue.ToString("N0")
+                        @Model.Summary.QrRevenue.ToString("N0")
                     </div>
                 </div>
             </div>

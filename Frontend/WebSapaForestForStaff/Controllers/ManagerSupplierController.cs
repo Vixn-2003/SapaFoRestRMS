@@ -5,9 +5,11 @@ using System;
 using Newtonsoft.Json;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.DTOs.Inventory;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Inventory")]
     public class ManagerSupplierController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;

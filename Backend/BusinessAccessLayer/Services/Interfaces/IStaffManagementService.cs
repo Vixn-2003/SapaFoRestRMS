@@ -57,6 +57,16 @@ namespace BusinessAccessLayer.Services.Interfaces
             CancellationToken ct = default);
 
         /// <summary>
+        /// Change staff status (0 = Active, 1 = Inactive)
+        /// </summary>
+        Task<(bool Success, string Message)> ChangeStatusAsync(
+            int staffId,
+            int status,
+            int modifiedBy,
+            string? ipAddress = null,
+            CancellationToken ct = default);
+
+        /// <summary>
         /// Get available positions for dropdown
         /// </summary>
         Task<List<PositionDto>> GetActivePositionsAsync(CancellationToken ct = default);

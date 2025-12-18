@@ -94,6 +94,8 @@ public class PaymentRepository : IPaymentRepository
             .Include(o => o.Payments)
             .Include(o => o.Transactions)
                 .ThenInclude(t => t.ConfirmedByUser)
+            .Include(o => o.ConfirmedByStaff)
+                .ThenInclude(s => s.User)
             .FirstOrDefaultAsync(o => o.OrderId == orderId);
     }
 

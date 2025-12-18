@@ -13,7 +13,6 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = "Position:Waiter")]
     public class DashboardTableController : ControllerBase
     {
         private readonly IDashboardTableService _dashboardTableService;

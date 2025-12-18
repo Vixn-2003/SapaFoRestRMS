@@ -61,6 +61,7 @@
         if (m === 'card') return 'Thẻ';
         if (m === 'ewallet') return 'Ví điện tử';
         if (m === 'split') return 'Chia hóa đơn';
+        if (m === 'combined') return 'Tiền mặt + QR'; // ✅ FIX: Hiển thị Combined payment
         return method || 'Khác';
     }
 

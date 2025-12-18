@@ -2,8 +2,6 @@ using BusinessAccessLayer.DTOs.Waiter;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 using SapaFoRestRMSAPI.Hubs;
-using BusinessAccessLayer.DTOs;
-using Microsoft.AspNetCore.Mvc;
 using BusinessAccessLayer.DTOs.Kitchen;
 
 namespace SapaFoRestRMSAPI.Controllers

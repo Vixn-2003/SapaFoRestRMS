@@ -117,7 +117,7 @@ namespace WebSapaForestForStaff.Services.Api
             }
             catch (Exception ex)
             {
-                return (false, null, $"Exception: {ex.Message}");
+                return (false, null, $"Lỗi hệ thống: {ex.Message}");
             }
         }
 
@@ -149,11 +149,11 @@ namespace WebSapaForestForStaff.Services.Api
                     PropertyNameCaseInsensitive = true
                 });
 
-                return (false, null, errorResponse?.Message ?? $"API Error: {response.StatusCode}");
+                return (false, null, errorResponse?.Message ?? $"Lỗi API: {response.StatusCode}");
             }
             catch (Exception ex)
             {
-                return (false, null, $"Exception: {ex.Message}");
+                return (false, null, $"Lỗi hệ thống: {ex.Message}");
             }
         }
 
@@ -180,7 +180,7 @@ namespace WebSapaForestForStaff.Services.Api
                         PropertyNameCaseInsensitive = true
                     });
 
-                    return (true, apiResponse?.Data?.StaffId, apiResponse?.Message ?? "Staff created successfully.");
+                    return (true, apiResponse?.Data?.StaffId, apiResponse?.Message ?? "Tạo nhân viên thành công.");
                 }
 
                 var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, new JsonSerializerOptions
@@ -188,11 +188,11 @@ namespace WebSapaForestForStaff.Services.Api
                     PropertyNameCaseInsensitive = true
                 });
 
-                return (false, null, errorResponse?.Message ?? $"API Error: {response.StatusCode}");
+                return (false, null, errorResponse?.Message ?? $"Lỗi API: {response.StatusCode}");
             }
             catch (Exception ex)
             {
-                return (false, null, $"Exception: {ex.Message}");
+                return (false, null, $"Lỗi hệ thống: {ex.Message}");
             }
         }
 
@@ -219,7 +219,7 @@ namespace WebSapaForestForStaff.Services.Api
                         PropertyNameCaseInsensitive = true
                     });
 
-                    return (true, apiResponse?.Message ?? "Staff updated successfully.");
+                    return (true, apiResponse?.Message ?? "Cập nhật nhân viên thành công.");
                 }
 
                 var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, new JsonSerializerOptions
@@ -227,11 +227,11 @@ namespace WebSapaForestForStaff.Services.Api
                     PropertyNameCaseInsensitive = true
                 });
 
-                return (false, errorResponse?.Message ?? $"API Error: {response.StatusCode}");
+                return (false, errorResponse?.Message ?? $"Lỗi API: {response.StatusCode}");
             }
             catch (Exception ex)
             {
-                return (false, $"Exception: {ex.Message}");
+                return (false, $"Lỗi hệ thống: {ex.Message}");
             }
         }
 
@@ -258,7 +258,7 @@ namespace WebSapaForestForStaff.Services.Api
                         PropertyNameCaseInsensitive = true
                     });
 
-                    return (true, apiResponse?.Message ?? "Staff deactivated successfully.");
+                    return (true, apiResponse?.Message ?? "Ngừng hoạt động nhân viên thành công.");
                 }
 
                 var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, new JsonSerializerOptions
@@ -266,11 +266,11 @@ namespace WebSapaForestForStaff.Services.Api
                     PropertyNameCaseInsensitive = true
                 });
 
-                return (false, errorResponse?.Message ?? $"API Error: {response.StatusCode}");
+                return (false, errorResponse?.Message ?? $"Lỗi API: {response.StatusCode}");
             }
             catch (Exception ex)
             {
-                return (false, $"Exception: {ex.Message}");
+                return (false, $"Lỗi hệ thống: {ex.Message}");
             }
         }
 
@@ -297,11 +297,11 @@ namespace WebSapaForestForStaff.Services.Api
                     return (true, apiResponse?.Data, null);
                 }
 
-                return (false, null, $"API Error: {response.StatusCode}");
+                return (false, null, $"Lỗi API: {response.StatusCode}");
             }
             catch (Exception ex)
             {
-                return (false, null, $"Exception: {ex.Message}");
+                return (false, null, $"Lỗi hệ thống: {ex.Message}");
             }
         }
 
@@ -345,6 +345,86 @@ namespace WebSapaForestForStaff.Services.Api
         private class StaffIdData
         {
             public int StaffId { get; set; }
+        }
+
+        /// <summary>
+        /// Change staff status (Activate/Deactivate)
+        /// </summary>
+        public async Task<(bool Success, string? Message)> ChangeStaffStatusAsync(int staffId, int status)
+        {
+            try
+            {
+                var client = GetAuthenticatedClient();
+                var url = $"{GetApiBaseUrl()}/StaffManagement/{staffId}/status/{status}";
+
+                var response = await client.PutAsync(url, null);
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    if (string.IsNullOrWhiteSpace(content))
+                    {
+                        return (true, "Thay đổi trạng thái thành công.");
+                    }
+
+                    var apiResponse = JsonSerializer.Deserialize<ApiSuccessResponse>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    return (true, apiResponse?.Message ?? "Thay đổi trạng thái thành công.");
+                }
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    return (false, $"Lỗi: {response.StatusCode}");
+                }
+
+                var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return (false, errorResponse?.Message ?? $"Lỗi: {response.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Lỗi hệ thống: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Reset staff password
+        /// </summary>
+        public async Task<(bool Success, string? Message)> ResetStaffPasswordAsync(int staffId)
+        {
+            try
+            {
+                var client = GetAuthenticatedClient();
+                var url = $"{GetApiBaseUrl()}/StaffManagement/{staffId}/reset-password";
+
+                var response = await client.PostAsync(url, null);
+                var content = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var apiResponse = JsonSerializer.Deserialize<ApiSuccessResponse>(content, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    return (true, apiResponse?.Message ?? "Reset mật khẩu thành công");
+                }
+
+                var errorResponse = JsonSerializer.Deserialize<ApiErrorResponse>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return (false, errorResponse?.Message ?? $"Lỗi: {response.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Lỗi hệ thống: {ex.Message}");
+            }
         }
     }
 }

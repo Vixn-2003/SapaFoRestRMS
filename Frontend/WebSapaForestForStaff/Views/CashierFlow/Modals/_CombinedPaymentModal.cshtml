@@ -198,3 +198,36 @@
     </div>
 </div>
 
+<!-- Combined Payment Loading Modal -->
+<div class="modal fade" id="combinedPaymentLoadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Đang xử lý...</span>
+                </div>
+                <h5 id="combinedPaymentLoadingTitle">Đang xác nhận thanh toán</h5>
+                <p class="text-muted mb-0" id="combinedPaymentLoadingMessage">Vui lòng đợi trong giây lát...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Combined Payment Result Modal -->
+<div class="modal fade" id="combinedPaymentResultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div id="combinedPaymentResultIcon" class="mb-3">
+                    <!-- Success or Error icon will be inserted here -->
+                </div>
+                <h5 id="combinedPaymentResultTitle"></h5>
+                <p class="text-muted mb-3" id="combinedPaymentResultMessage"></p>
+                <button type="button" class="btn btn-primary" id="combinedPaymentResultBtn" onclick="closeCombinedPaymentResultModal()">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

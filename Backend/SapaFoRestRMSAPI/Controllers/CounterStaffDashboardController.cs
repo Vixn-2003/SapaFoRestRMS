@@ -13,7 +13,7 @@ namespace SapaFoRestRMSAPI.Controllers
     /// </summary>
     [ApiController]
     [Route("api/counter/dashboard")]
-    [Authorize(Roles = "Staff")]
+
     public class CounterStaffDashboardController : ControllerBase
     {
         private readonly ICounterStaffDashboardService _dashboardService;

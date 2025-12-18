@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using WebSapaForestForStaff.Services.Api.Interfaces;
@@ -9,6 +10,8 @@ namespace WebSapaForestForStaff.Controllers
     /// MVC Controller cho Counter Staff Dashboard - UC122
     /// </summary>
     [Route("counter-staff/dashboard")]
+    [Authorize(Policy = "Position:Cashier")]
+
     public class CounterStaffDashboardController : Controller
     {
         private readonly ICounterStaffDashboardApiService _dashboardApiService;

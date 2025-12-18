@@ -7,7 +7,7 @@ using WebSapaForestForStaff.DTOs.AdminDashboard;
 
 namespace WebSapaForestForStaff.Controllers
 {
-    [Authorize(Roles = "Admin,Owner")]
+    [Authorize(Policy = "Admin")]
     public class AdminController : Controller
     {
         private readonly ApiService _apiService;
