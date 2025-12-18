@@ -32,18 +32,31 @@ namespace DataAccessLayer.Repositories
                 .CountAsync();
         }
 
+        /// <summary>
+        /// Tính doanh thu hôm nay
+        /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
+        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today
+        /// </summary>
         public async Task<decimal> GetTodayRevenueAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
             var todayStart = today.ToDateTime(TimeOnly.MinValue);
             var todayEnd = today.ToDateTime(TimeOnly.MaxValue);
 
-            return await _context.Transactions
-                .Where(t => t.CompletedAt.HasValue &&
-                            t.CompletedAt.Value >= todayStart &&
-                            t.CompletedAt.Value <= todayEnd)
-                .Where(t => t.Status == "Paid" || t.Status == "Completed")
+            // Doanh thu từ Transactions
+            var transactionRevenue = await _context.Transactions
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.CompletedAt.Value.Date >= todayStart.Date && 
+                            t.CompletedAt.Value.Date <= todayEnd.Date)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
+
+            // Doanh thu từ ReservationDeposits (tiền cọc)
+            var depositRevenue = await _context.ReservationDeposits
+                .Where(d => d.DepositDate.Date >= todayStart.Date && 
+                           d.DepositDate.Date <= todayEnd.Date)
+                .SumAsync(d => (decimal?)d.Amount) ?? 0m;
+
+            return transactionRevenue + depositRevenue;
         }
 
         public async Task<int> GetActiveOrdersCountAsync()
@@ -61,13 +74,28 @@ namespace DataAccessLayer.Repositories
                 .CountAsync();
         }
 
+        /// <summary>
+        /// Đếm số bàn đang sử dụng
+        /// = Số bàn có Reservation với status "Guest Seated" (khách đã ngồi vào bàn)
+        /// Lưu ý: Table.Status chỉ là trạng thái bàn (hỏng/dùng được), không phải trạng thái sử dụng
+        /// </summary>
         public async Task<int> GetActiveTablesCountAsync()
         {
-            return await _context.Tables
-                .Where(t => t.Status == "Occupied" || t.Status == "Reserved")
+            // Đếm số bàn có Reservation với status "Guest Seated" (khách đã ngồi vào bàn)
+            // Reservation phải có ReservationTables (bàn đã được gán)
+            return await _context.ReservationTables
+                .Include(rt => rt.Reservation)
+                .Where(rt => rt.Reservation != null && 
+                            rt.Reservation.Status == "Guest Seated")
+                .Select(rt => rt.TableId)
+                .Distinct()
                 .CountAsync();
         }
 
+        /// <summary>
+        /// Đếm số transaction đã hoàn thành hôm nay - Áp dụng logic từ OwnerRevenueService
+        /// Chỉ đếm transactions có Status = "Paid" và CompletedAt.HasValue
+        /// </summary>
         public async Task<int> GetTransactionCountAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
@@ -75,24 +103,26 @@ namespace DataAccessLayer.Repositories
             var todayEnd = today.ToDateTime(TimeOnly.MaxValue);
 
             return await _context.Transactions
-                .Where(t => t.CompletedAt.HasValue &&
-                            t.CompletedAt.Value >= todayStart &&
-                            t.CompletedAt.Value <= todayEnd)
-                .Where(t => t.Status == "Paid" || t.Status == "Completed")
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.CompletedAt.Value >= todayStart && t.CompletedAt.Value <= todayEnd)
                 .CountAsync();
         }
 
+        /// <summary>
+        /// Tính doanh thu theo giờ trong ngày
+        /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
+        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today
+        /// </summary>
         public async Task<Dictionary<int, decimal>> GetHourlyRevenueChartAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
             var todayStart = today.ToDateTime(TimeOnly.MinValue);
             var todayEnd = today.ToDateTime(TimeOnly.MaxValue);
 
+            // Revenue from Transactions
             var transactions = await _context.Transactions
-                .Where(t => t.CompletedAt.HasValue &&
-                            t.CompletedAt.Value >= todayStart &&
-                            t.CompletedAt.Value <= todayEnd)
-                .Where(t => t.Status == "Paid" || t.Status == "Completed")
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.CompletedAt.Value >= todayStart && t.CompletedAt.Value <= todayEnd)
                 .Select(t => new
                 {
                     Hour = t.CompletedAt!.Value.Hour,
@@ -100,16 +130,29 @@ namespace DataAccessLayer.Repositories
                 })
                 .ToListAsync();
 
-            // Group by hour and sum revenue
-            var hourlyRevenue = transactions
-                .GroupBy(t => t.Hour)
+            // Revenue from Deposits
+            var deposits = await _context.ReservationDeposits
+                .Where(d => d.DepositDate >= todayStart && d.DepositDate <= todayEnd)
+                .Select(d => new
+                {
+                    Hour = d.DepositDate.Hour,
+                    Amount = d.Amount
+                })
+                .ToListAsync();
+
+            // Combine and group by hour
+            var allRevenue = transactions
+                .Select(t => new { t.Hour, t.Amount })
+                .Concat(deposits.Select(d => new { d.Hour, d.Amount }))
+                .Where(x => x.Hour >= 8 && x.Hour <= 22) // Chỉ lấy giờ từ 8h-22h
+                .GroupBy(x => x.Hour)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
 
-            // Fill missing hours with 0
+            // Fill missing hours with 0 (chỉ từ 8h-22h)
             var result = new Dictionary<int, decimal>();
-            for (int hour = 0; hour < 24; hour++)
+            for (int hour = 8; hour <= 22; hour++)
             {
-                result[hour] = hourlyRevenue.ContainsKey(hour) ? hourlyRevenue[hour] : 0m;
+                result[hour] = allRevenue.ContainsKey(hour) ? allRevenue[hour] : 0m;
             }
 
             return result;
@@ -132,14 +175,15 @@ namespace DataAccessLayer.Repositories
                 })
                 .ToListAsync();
 
-            // Group by hour and count
+            // Group by hour and count (chỉ lấy giờ từ 8h-22h)
             var hourlyOrders = orders
+                .Where(o => o.Hour >= 8 && o.Hour <= 22)
                 .GroupBy(o => o.Hour)
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            // Fill missing hours with 0
+            // Fill missing hours with 0 (chỉ từ 8h-22h)
             var result = new Dictionary<int, int>();
-            for (int hour = 0; hour < 24; hour++)
+            for (int hour = 8; hour <= 22; hour++)
             {
                 result[hour] = hourlyOrders.ContainsKey(hour) ? hourlyOrders[hour] : 0;
             }

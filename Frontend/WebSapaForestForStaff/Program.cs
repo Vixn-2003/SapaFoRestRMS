@@ -122,6 +122,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Position:Inventory", policy =>
         policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
             (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 4))));
+
+    // OR logic: Allow access if user has Waiter OR Cashier position
+    options.AddPolicy("Position:WaiterOrCashier", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") &&
+             (HasPositionClaim(ctx.User, 1) || HasPositionClaim(ctx.User, 2)))));
 });
 
 builder.Services.AddSignalR();

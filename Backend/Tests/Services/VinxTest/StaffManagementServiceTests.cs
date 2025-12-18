@@ -432,7 +432,6 @@ public class StaffManagementServiceTests
             Phone = "0987654321",
             BaseSalary = 6000000,
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            DepartmentId = 1,
             RoleId = 4,
             PositionId = 1, // Single position only
             Password = "Password123!"
@@ -440,7 +439,7 @@ public class StaffManagementServiceTests
 
         var position = CreateTestPosition(1, "Waiter");
 
-        var createdStaff = CreateTestStaff(1, 1, dto.FullName, dto.Email, dto.Phone, dto.DepartmentId, dto.BaseSalary);
+        var createdStaff = CreateTestStaff(1, 1, dto.FullName, dto.Email, dto.Phone, null, dto.BaseSalary);
         createdStaff.Positions = new List<Position> { position };
 
         _mockStaffManagementRepository
@@ -504,7 +503,6 @@ public class StaffManagementServiceTests
             Phone = "0987654321",
             BaseSalary = 6000000,
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            DepartmentId = 1,
             RoleId = 4,
             PositionId = 1, // Single position only
             Password = null // No password provided
@@ -555,7 +553,6 @@ public class StaffManagementServiceTests
             Email = "existing@example.com",
             BaseSalary = 6000000,
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            DepartmentId = 1,
             RoleId = 4,
             PositionId = 1 // Single position only
         };
@@ -587,7 +584,6 @@ public class StaffManagementServiceTests
             Email = "newstaff@example.com",
             BaseSalary = 6000000,
             HireDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            DepartmentId = 1,
             RoleId = 4,
             PositionId = 999 // Invalid position ID (doesn't exist)
         };

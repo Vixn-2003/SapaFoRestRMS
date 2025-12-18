@@ -1,0 +1,323 @@
+@model WebSapaForestForStaff.DTOs.Staff.StaffDetailDto
+
+@{
+    ViewData["Title"] = "Chi tiết nhân viên";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+@if (Model == null)
+{
+    <div class="alert alert-danger">
+        <h4>Không tìm thấy nhân viên</h4>
+        <p>Không thể tìm thấy thông tin nhân viên yêu cầu.</p>
+        <a asp-action="Index" class="btn btn-primary">Quay lại danh sách</a>
+    </div>
+}
+else
+{
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="page-title">Chi tiết nhân viên</h3>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a asp-action="Index">Quản lý Nhân viên</a></li>
+                    <li class="breadcrumb-item active">Chi tiết</li>
+                </ul>
+            </div>
+            <div class="col-auto">
+                <a asp-action="Edit" asp-route-id="@Model.StaffId" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Chỉnh sửa
+                </a>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Staff Profile Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                    {
+                        <img src="@Model.AvatarUrl" alt="Avatar" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px; font-size: 48px;">
+                            @{
+                                var lastWord = Model.FullName?.Split(' ').LastOrDefault();
+                                var initial = !string.IsNullOrEmpty(lastWord) && lastWord.Length > 0 
+                                    ? lastWord.Substring(0, 1).ToUpper() 
+                                    : !string.IsNullOrEmpty(Model.FullName) && Model.FullName.Length > 0 
+                                        ? Model.FullName.Substring(0, 1).ToUpper() 
+                                        : "?";
+                            }
+                            <span>@initial</span>
+                        </div>
+                    }
+                    <h4>@Model.FullName</h4>
+                    <p class="text-muted">@Model.Email</p>
+                    <div class="mb-3">
+                        @if (Model.Status == 0)
+                        {
+                            <span class="badge badge-success">Đang hoạt động</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">Ngừng hoạt động</span>
+                        }
+                        <span class="badge badge-info ml-2">@Model.RoleName</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Thống kê nhanh</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">Lương cơ bản</small>
+                        <h5 class="text-primary">@Model.BaseSalary.ToString("N0") VND</h5>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Ngày vào làm</small>
+                        <h6>@Model.HireDate.ToString("dd/MM/yyyy")</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Card -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0"><i class="fas fa-info-circle"></i> Thông tin nhân viên</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th width="30%"><i class="fas fa-id-badge text-primary"></i> ID Nhân viên</th>
+                                <td>@Model.StaffId</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-user text-primary"></i> ID Người dùng</th>
+                                <td>@Model.UserId</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-user-circle text-primary"></i> Họ và tên</th>
+                                <td><strong>@Model.FullName</strong></td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-envelope text-primary"></i> Email</th>
+                                <td>@Model.Email</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-phone text-primary"></i> Số điện thoại</th>
+                                <td>@(Model.Phone ?? "Chưa cập nhật")</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-briefcase text-primary"></i> Chức vụ</th>
+                                <td>
+                                    @if (Model.Positions != null && Model.Positions.Any())
+                                    {
+                                        foreach (var position in Model.Positions)
+                                        {
+                                            <span class="badge badge-primary mr-1">@position.PositionName</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Chưa có chức vụ</span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-money-bill-wave text-primary"></i> Lương cơ bản</th>
+                                <td><strong class="text-success">@Model.BaseSalary.ToString("N0") VND</strong></td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-calendar-alt text-primary"></i> Ngày vào làm</th>
+                                <td>@Model.HireDate.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-shield-alt text-primary"></i> Vai trò hệ thống</th>
+                                <td><span class="badge badge-info">@Model.RoleName</span></td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-toggle-on text-primary"></i> Trạng thái</th>
+                                <td>
+                                    @if (Model.Status == 0)
+                                    {
+                                        <span class="badge badge-success">Đang hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Ngừng hoạt động</span>
+                                    }
+                                    <small class="text-muted ml-2">(@Model.StatusText)</small>
+                                </td>
+                            </tr>
+                            @if (Model.CreatedAt.HasValue)
+                            {
+                                <tr>
+                                    <th><i class="fas fa-clock text-primary"></i> Ngày tạo hồ sơ</th>
+                                    <td>@Model.CreatedAt.Value.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                            @if (Model.ModifiedAt.HasValue)
+                            {
+                                <tr>
+                                    <th><i class="fas fa-edit text-primary"></i> Cập nhật lần cuối</th>
+                                    <td>@Model.ModifiedAt.Value.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-cogs"></i> Thao tác</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a asp-action="Edit" asp-route-id="@Model.StaffId" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Chỉnh sửa thông tin
+                        </a>
+                        @if (Model.Status == 0)
+                        {
+                            <button type="button" class="btn btn-danger" onclick="confirmDeactivate(@Model.StaffId, '@Model.FullName')">
+                                <i class="fas fa-ban"></i> Ngừng hoạt động
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-success" onclick="confirmActivate(@Model.StaffId, '@Model.FullName')">
+                                <i class="fas fa-check-circle"></i> Kích hoạt lại
+                            </button>
+                        }
+                        <button type="button" class="btn btn-primary" onclick="confirmResetPassword(@Model.StaffId, '@Model.FullName')">
+                            <i class="fas fa-key"></i> Reset mật khẩu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @Html.AntiForgeryToken()
+    <script>
+        function confirmDeactivate(staffId, staffName) {
+            if (confirm(`Bạn có chắc chắn muốn ngừng hoạt động nhân viên "${staffName}"?`)) {
+                deactivateStaff(staffId);
+            }
+        }
+
+        function confirmActivate(staffId, staffName) {
+            if (confirm(`Bạn có chắc chắn muốn kích hoạt lại nhân viên "${staffName}"?`)) {
+                activateStaff(staffId);
+            }
+        }
+
+        function confirmResetPassword(staffId, staffName) {
+            if (confirm(`Bạn có chắc chắn muốn reset mật khẩu cho nhân viên "${staffName}"?\n\nMật khẩu mới sẽ được gửi qua email.`)) {
+                resetPassword(staffId);
+            }
+        }
+
+        async function deactivateStaff(staffId) {
+            try {
+                const response = await $.ajax({
+                    url: '/StaffManagement/Deactivate',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    data: JSON.stringify({ staffId: staffId, reason: 'Deactivated from details page' })
+                });
+
+                if (response.success) {
+                    toastr.success(response.message || 'Ngừng hoạt động thành công');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    toastr.error(response.message || 'Lỗi khi ngừng hoạt động');
+                }
+            } catch (error) {
+                toastr.error('Đã xảy ra lỗi');
+            }
+        }
+
+        async function activateStaff(staffId) {
+            try {
+                const response = await $.ajax({
+                    url: '/StaffManagement/Activate',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    data: JSON.stringify({ staffId: staffId })
+                });
+
+                if (response.success) {
+                    toastr.success(response.message || 'Kích hoạt thành công');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    toastr.error(response.message || 'Lỗi khi kích hoạt');
+                }
+            } catch (error) {
+                toastr.error('Đã xảy ra lỗi');
+            }
+        }
+
+        async function resetPassword(staffId) {
+            try {
+                const response = await $.ajax({
+                    url: '/StaffManagement/ResetPassword',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    data: JSON.stringify({ staffId: staffId })
+                });
+
+                if (response.success) {
+                    toastr.success(response.message || 'Reset mật khẩu thành công');
+                } else {
+                    toastr.error(response.message || 'Lỗi khi reset mật khẩu');
+                }
+            } catch (error) {
+                toastr.error('Đã xảy ra lỗi');
+            }
+        }
+
+        // Show TempData messages
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>
+            toastr.success('@Html.Raw(TempData["SuccessMessage"])');
+            </text>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+            toastr.error('@Html.Raw(TempData["ErrorMessage"])');
+            </text>
+        }
+    </script>
+}
+

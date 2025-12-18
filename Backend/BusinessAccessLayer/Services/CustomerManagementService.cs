@@ -72,10 +72,26 @@ namespace BusinessAccessLayer.Services
             var customersWithStats = query.Select(c => new
             {
                 Customer = c,
-                TotalSpending = c.Orders
+                // ✅ FIX: Tính TotalSpending từ Transactions + ReservationDeposits
+                // 1. Tính từ Transactions đã thanh toán thành công (Status = "Paid" và CompletedAt != null)
+                TransactionSpending = c.Orders
                     .Where(o => o.Status == "Completed" || o.Status == "Paid")
-                    .SelectMany(o => o.Payments)
-                    .Sum(p => (decimal?)p.FinalAmount) ?? 0,
+                    .SelectMany(o => o.Transactions)
+                    .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                    .Sum(t => (decimal?)t.Amount) ?? 0,
+                // 2. Tính từ ReservationDeposits (tiền đặt cọc)
+                DepositSpending = c.Reservations
+                    .SelectMany(r => r.ReservationDeposits)
+                    .Sum(d => (decimal?)d.Amount) ?? 0,
+                // 3. Tổng chi tiêu = TransactionSpending + DepositSpending
+                TotalSpending = (c.Orders
+                    .Where(o => o.Status == "Completed" || o.Status == "Paid")
+                    .SelectMany(o => o.Transactions)
+                    .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                    .Sum(t => (decimal?)t.Amount) ?? 0) +
+                    (c.Reservations
+                    .SelectMany(r => r.ReservationDeposits)
+                    .Sum(d => (decimal?)d.Amount) ?? 0),
                 TotalVisits = c.Orders
                     .Count(o => o.Status == "Completed" || o.Status == "Paid"),
                 LastVisit = c.Orders
@@ -177,9 +193,20 @@ namespace BusinessAccessLayer.Services
                 .Where(o => o.Status == "Completed" || o.Status == "Paid")
                 .ToList();
 
-            customerDetail.TotalSpending = completedOrders
-                .SelectMany(o => o.Payments)
-                .Sum(p => p.FinalAmount);
+            // ✅ FIX: Tính TotalSpending từ Transactions + ReservationDeposits
+            // 1. Tính từ Transactions đã thanh toán thành công (Status = "Paid" và CompletedAt != null)
+            var transactionSpending = completedOrders
+                .SelectMany(o => o.Transactions)
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Sum(t => t.Amount);
+            
+            // 2. Tính từ ReservationDeposits (tiền đặt cọc)
+            var depositSpending = customer.Reservations
+                .SelectMany(r => r.ReservationDeposits)
+                .Sum(d => d.Amount);
+            
+            // 3. Tổng chi tiêu = TransactionSpending + DepositSpending
+            customerDetail.TotalSpending = transactionSpending + depositSpending;
             
             customerDetail.TotalVisits = completedOrders.Count;
             

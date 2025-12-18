@@ -122,19 +122,23 @@
                    class="menu-item @(currentController == "DashboardTable" && currentAction == "ListOrder" ? "active" : "")">
                     Đơn đặt bàn
                 </a>
-                <a href="/WaiterOrderTracking/Index"
-                   class="menu-item @(currentController == "WaiterOrderTracking" ? "active" : "")">
-                    Tiến độ phục vụ
-                </a>
+               
+             
                 <a href="/DashboardTable/Index" 
                    class="menu-item @(currentController == "DashboardTable" && currentAction == "Index" ? "active" : "")">
                     Sơ đồ bàn
                 </a>
-                <a href="/OrderTable/AssistanceList" 
-                   class="menu-item @(currentController == "OrderTable" && currentAction == "AssistanceList" ? "active" : "")">
-                    Hỗ trợ
-                </a>
-               
+                @if (userPositionId == 1) // Chỉ hiển thị cho Waiter (Position = 1)
+                {
+                    <a href="/OrderTable/AssistanceList"
+                       class="menu-item @(currentController == "OrderTable" && currentAction == "AssistanceList" ? "active" : "")">
+                        Hỗ trợ
+                    </a>
+                    <a href="/WaiterOrderTracking/Index"
+                       class="menu-item @(currentController == "WaiterOrderTracking" ? "active" : "")">
+                        Tiến độ phục vụ
+                    </a>
+                }
                 @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
                 {
                     @* <a asp-controller="ShiftManagement" 

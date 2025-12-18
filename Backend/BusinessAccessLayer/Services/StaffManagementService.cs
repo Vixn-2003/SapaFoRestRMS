@@ -102,7 +102,7 @@ namespace BusinessAccessLayer.Services
                 Positions = string.Join(", ", s.Positions.Select(p => p.PositionName)),
                 BaseSalary = s.SalaryBase,
                 Status = s.Status,
-                StatusText = s.Status == 0 ? "Active" : "Inactive", // 0 = Active, 1 = Inactive
+                StatusText = s.Status == 0 ? "Đang hoạt động" : "Ngừng hoạt động", // 0 = Active, 1 = Inactive
                 HireDate = s.HireDate,
                 DepartmentName = s.Department?.Name,
                 DepartmentId = s.DepartmentId
@@ -138,7 +138,7 @@ namespace BusinessAccessLayer.Services
                 HireDate = staff.HireDate,
                 BaseSalary = staff.SalaryBase,
                 Status = staff.Status,
-                StatusText = staff.Status == 0 ? "Active" : "Inactive", // 0 = Active, 1 = Inactive
+                StatusText = staff.Status == 0 ? "Đang hoạt động" : "Ngừng hoạt động", // 0 = Active, 1 = Inactive
                 DepartmentId = staff.DepartmentId,
                 DepartmentName = staff.Department?.Name,
                 RoleId = staff.User.RoleId,
@@ -196,7 +196,7 @@ namespace BusinessAccessLayer.Services
             var staff = new Staff
             {
                 User = user,
-                DepartmentId = dto.DepartmentId,
+                DepartmentId = null, // Department is not used anymore
                 HireDate = dto.HireDate,
                 SalaryBase = dto.BaseSalary,
                 Status = 0 // Active (0 = Active, 1 = Inactive)
@@ -225,7 +225,6 @@ namespace BusinessAccessLayer.Services
                     UserId = createdStaff.UserId,
                     FullName = dto.FullName,
                     Email = dto.Email,
-                    DepartmentId = dto.DepartmentId,
                     PositionId = dto.PositionId,
                     BaseSalary = dto.BaseSalary,
                     CreatedBy = createdBy
@@ -331,11 +330,11 @@ namespace BusinessAccessLayer.Services
                     ct: ct
                 );
 
-                return (true, "Staff updated successfully.");
+                return (true, "Cập nhật nhân viên thành công.");
             }
             catch (Exception ex)
             {
-                return (false, $"Error updating staff: {ex.Message}");
+                return (false, $"Lỗi khi cập nhật nhân viên: {ex.Message}");
             }
         }
 
@@ -352,7 +351,7 @@ namespace BusinessAccessLayer.Services
             var staff = await _unitOfWork.StaffManagement.GetStaffByIdAsync(dto.StaffId, ct);
             if (staff == null)
             {
-                return (false, "Staff not found.");
+                return (false, "Không tìm thấy nhân viên.");
             }
 
             // Business rule: Cannot deactivate yourself (if needed)
@@ -364,13 +363,13 @@ namespace BusinessAccessLayer.Services
                 var success = await _unitOfWork.StaffManagement.DeactivateStaffAsync(dto.StaffId, dto.Reason, ct);
                 if (!success)
                 {
-                    return (false, "Failed to deactivate staff.");
+                    return (false, "Không thể ngừng hoạt động nhân viên.");
                 }
 
-                // Update DeletedBy in User
+                // (Không xoá user nữa) - chỉ ghi nhận người thực hiện vào ModifiedBy nếu có
                 if (staff.User != null)
                 {
-                    staff.User.DeletedBy = deletedBy;
+                    staff.User.ModifiedBy = deletedBy;
                     await _unitOfWork.SaveChangesAsync();
                 }
 
@@ -378,8 +377,8 @@ namespace BusinessAccessLayer.Services
                 var metadata = JsonSerializer.Serialize(new
                 {
                     StaffId = dto.StaffId,
-                    StaffName = staff.User?.FullName ?? "Unknown",
-                    Reason = dto.Reason ?? "No reason provided",
+                    StaffName = staff.User?.FullName ?? "Không rõ",
+                    Reason = dto.Reason ?? "Không có",
                     DeletedBy = deletedBy
                 });
 
@@ -387,18 +386,75 @@ namespace BusinessAccessLayer.Services
                     eventType: "staff_deactivated",
                     entityType: "Staff",
                     entityId: dto.StaffId,
-                    description: $"Manager {deletedBy} deactivated staff {staff.User?.FullName} (ID: {dto.StaffId})",
+                    description: $"Quản lý {deletedBy} đã ngừng hoạt động nhân viên {staff.User?.FullName} (ID: {dto.StaffId})",
                     metadata: metadata,
                     userId: deletedBy,
                     ipAddress: ipAddress,
                     ct: ct
                 );
 
-                return (true, "Staff deactivated successfully.");
+                return (true, "Ngừng hoạt động nhân viên thành công.");
             }
             catch (Exception ex)
             {
-                return (false, $"Error deactivating staff: {ex.Message}");
+                return (false, $"Lỗi khi ngừng hoạt động nhân viên: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Change staff status (0 = Active, 1 = Inactive)
+        /// </summary>
+        public async Task<(bool Success, string Message)> ChangeStatusAsync(
+            int staffId,
+            int status,
+            int modifiedBy,
+            string? ipAddress = null,
+            CancellationToken ct = default)
+        {
+            if (status != 0 && status != 1)
+            {
+                return (false, "Trạng thái không hợp lệ.");
+            }
+
+            var staff = await _unitOfWork.StaffManagement.GetStaffByIdAsync(staffId, ct);
+            if (staff == null)
+            {
+                return (false, "Không tìm thấy nhân viên.");
+            }
+
+            try
+            {
+                var success = await _unitOfWork.StaffManagement.ChangeStaffStatusAsync(staffId, status, ct);
+                if (!success)
+                {
+                    return (false, "Không thể thay đổi trạng thái nhân viên.");
+                }
+
+                // Log to AuditLog
+                var metadata = JsonSerializer.Serialize(new
+                {
+                    StaffId = staffId,
+                    StaffName = staff.User?.FullName ?? "Không rõ",
+                    Status = status,
+                    ModifiedBy = modifiedBy
+                });
+
+                await _auditLogService.LogEventAsync(
+                    eventType: "staff_status_changed",
+                    entityType: "Staff",
+                    entityId: staffId,
+                    description: $"Quản lý {modifiedBy} đã {(status == 0 ? "kích hoạt" : "ngừng hoạt động")} nhân viên {staff.User?.FullName} (ID: {staffId})",
+                    metadata: metadata,
+                    userId: modifiedBy,
+                    ipAddress: ipAddress,
+                    ct: ct
+                );
+
+                return (true, status == 0 ? "Kích hoạt nhân viên thành công." : "Ngừng hoạt động nhân viên thành công.");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Lỗi khi thay đổi trạng thái nhân viên: {ex.Message}");
             }
         }
 

@@ -33,7 +33,6 @@
                     else
                     {
                         <th>Mã đơn</th>
-                        <th>Bàn</th>
                         <th>Nhân viên phục vụ</th>
                         <th>Giờ thanh toán</th>
                         <th class="text-end">Tổng tiền</th>
@@ -60,10 +59,11 @@ else
             <thead class="table-light">
                 <tr>
                     <th>Mã đơn</th>
-                    <th>Bàn</th>
-                    <th>Nhân viên phục vụ</th>
+                   
                     @if (isUnpaid)
                     {
+                        <th>Bàn</th>
+                        <th>Nhân viên phục vụ</th>
                         <th>Giờ tạo</th>
                         <th class="text-end">Tổng tiền</th>
                         <th>Trạng thái</th>
@@ -71,6 +71,7 @@ else
                     }
                     else
                     {
+                        <th>Nhân viên phục vụ</th>
                         <th>Giờ thanh toán</th>
                         <th class="text-end">Tổng tiền</th>
                         <th>Hình thức TT</th>
@@ -92,10 +93,11 @@ else
 
                     <tr>
                         <td class="fw-bold">@code</td>
-                        <td class="fw-bold">@tableName</td>
-                        <td>@(order.WaiterName ?? "—")</td>
+                   
                         @if (isUnpaid)
                         {
+                            <td class="fw-bold">@tableName</td>
+                            <td>@(order.WaiterName ?? "—")</td>
                             <td>
                                 @FormatTime(order.CreatedAt)
                                 @if (isOver15Minutes)
@@ -118,6 +120,7 @@ else
                         }
                         else
                         {
+                            <td>@(order.WaiterName ?? "—")</td>
                             <td>@FormatTime(paidTime)</td>
                             <td class="text-end fw-bold text-success">@FormatCurrency(order.Total)</td>
                             <td>@(order.PaymentMethod ?? "—")</td>

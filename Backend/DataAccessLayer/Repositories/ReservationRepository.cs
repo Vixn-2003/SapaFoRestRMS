@@ -52,6 +52,7 @@ namespace DataAccessLayer.Repositories
         .Include(r => r.Customer)
             .ThenInclude(c => c.User)
         .Include(r => r.ReservationTables)
+        .Include(r => r.ReservationDeposits) // ✅ Include deposits để tính doanh thu
         .AsQueryable();
 
     // Lọc trạng thái
@@ -83,6 +84,7 @@ namespace DataAccessLayer.Repositories
     var data = await query
         .OrderByDescending(r => r.ReservationDate)
         .ThenBy(r => r.ReservationTime)
+        .ThenByDescending(r => r.Customer.IsVip)
         .ThenByDescending(r => r.Customer.LoyaltyPoints ?? 0)
         .Skip((page - 1) * pageSize)
         .Take(pageSize)

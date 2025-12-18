@@ -77,6 +77,10 @@ namespace DataAccessLayer.Repositories
                 .CountAsync();
         }
 
+        /// <summary>
+        /// Đếm số payment đã hoàn thành hôm nay - Áp dụng logic từ OwnerRevenueService
+        /// Chỉ đếm transactions có Status = "Paid" và CompletedAt.HasValue
+        /// </summary>
         public async Task<int> GetCompletedPaymentsTodayAsync()
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
@@ -84,10 +88,8 @@ namespace DataAccessLayer.Repositories
             var todayEnd = today.ToDateTime(TimeOnly.MaxValue);
 
             return await _context.Transactions
-                .Where(t => t.CompletedAt.HasValue &&
-                            t.CompletedAt.Value >= todayStart &&
-                            t.CompletedAt.Value <= todayEnd)
-                .Where(t => t.Status == "Paid" || t.Status == "Completed")
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.CompletedAt.Value >= todayStart && t.CompletedAt.Value <= todayEnd)
                 .CountAsync();
         }
 
@@ -99,30 +101,43 @@ namespace DataAccessLayer.Repositories
         }
 
         // ========== REVENUE STATISTICS ==========
+        /// <summary>
+        /// Tính doanh thu hôm nay
+        /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
+        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today
+        /// </summary>
         public async Task<decimal> GetTodayRevenueAsync()
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            var todayStart = today.ToDateTime(TimeOnly.MinValue);
-            var todayEnd = today.ToDateTime(TimeOnly.MaxValue);
+            var today = DateTime.Today;
+            var todayStart = today.Date;
+            var todayEnd = today.Date;
 
-            return await _context.Transactions
-                .Where(t => t.CompletedAt.HasValue &&
-                            t.CompletedAt.Value >= todayStart &&
-                            t.CompletedAt.Value <= todayEnd)
-                .Where(t => t.Status == "Paid" || t.Status == "Completed")
+            // Doanh thu từ Transactions
+            var transactionRevenue = await _context.Transactions
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.CompletedAt.Value.Date >= todayStart && t.CompletedAt.Value.Date <= todayEnd)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
+
+            // Doanh thu từ ReservationDeposits (tiền cọc)
+            var depositRevenue = await _context.ReservationDeposits
+                .Where(d => d.DepositDate.Date >= todayStart && d.DepositDate.Date <= todayEnd)
+                .SumAsync(d => (decimal?)d.Amount) ?? 0m;
+
+            return transactionRevenue + depositRevenue;
         }
 
+        /// <summary>
+        /// Tính doanh thu 7 ngày gần nhất - Áp dụng logic từ OwnerRevenueService
+        /// Chỉ lấy transactions có Status = "Paid" và CompletedAt.HasValue
+        /// </summary>
         public async Task<List<(DateTime Date, decimal Revenue)>> GetRevenueLast7DaysAsync()
         {
             var startDate = DateTime.Today.AddDays(-6); // 7 days including today
-            var endDate = DateTime.Today.AddDays(1).AddSeconds(-1);
+            var endDate = DateTime.Today;
 
             var transactions = await _context.Transactions
-                .Where(t => t.CompletedAt.HasValue &&
-                            t.CompletedAt.Value >= startDate &&
-                            t.CompletedAt.Value <= endDate)
-                .Where(t => t.Status == "Paid" || t.Status == "Completed")
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.CompletedAt.Value.Date >= startDate.Date && t.CompletedAt.Value.Date <= endDate.Date)
                 .Select(t => new
                 {
                     Date = t.CompletedAt!.Value.Date,
@@ -148,16 +163,18 @@ namespace DataAccessLayer.Repositories
             return result;
         }
 
+        /// <summary>
+        /// Tính doanh thu tháng hiện tại - Áp dụng logic từ OwnerRevenueService
+        /// Chỉ lấy transactions có Status = "Paid" và CompletedAt.HasValue
+        /// </summary>
         public async Task<decimal> GetMonthRevenueAsync()
         {
             var firstDayOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddSeconds(-1);
+            var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
             return await _context.Transactions
-                .Where(t => t.CompletedAt.HasValue &&
-                            t.CompletedAt.Value >= firstDayOfMonth &&
-                            t.CompletedAt.Value <= lastDayOfMonth)
-                .Where(t => t.Status == "Paid" || t.Status == "Completed")
+                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.CompletedAt.Value.Date >= firstDayOfMonth.Date && t.CompletedAt.Value.Date <= lastDayOfMonth.Date)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
         }
 
@@ -280,11 +297,16 @@ namespace DataAccessLayer.Repositories
             return result;
         }
 
+        /// <summary>
+        /// Lấy top 5 danh mục bán chạy nhất - Áp dụng logic từ OwnerRevenueService
+        /// Chỉ lấy orders có Status = "Paid" để đồng nhất với cách tính revenue
+        /// </summary>
         public async Task<List<(string CategoryName, int ItemsSold, decimal Revenue)>> GetTop5BestSellingCategoriesAsync()
         {
             // Lấy dữ liệu từ OrderDetails join với MenuItem và Category
+            // Chỉ lấy orders có Status = "Paid" để đồng nhất với cách tính revenue từ Transactions
             var categoryStats = await _context.OrderDetails
-                .Where(od => od.Order.Status == "Paid" || od.Order.Status == "Completed")
+                .Where(od => od.Order.Status == "Paid")
                 .GroupBy(od => od.MenuItem.Category.CategoryName)
                 .Select(g => new
                 {

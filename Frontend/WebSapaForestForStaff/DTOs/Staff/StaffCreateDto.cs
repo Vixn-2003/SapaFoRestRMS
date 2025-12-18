@@ -7,34 +7,31 @@ namespace WebSapaForestForStaff.DTOs.Staff
     /// </summary>
     public class StaffCreateDto
     {
-        [Required(ErrorMessage = "Full name is required")]
+        [Required(ErrorMessage = "Vui lòng nhập họ và tên")]
         [StringLength(100)]
         public string FullName { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [Required(ErrorMessage = "Vui lòng nhập email")]
+        [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
         [StringLength(100)]
         public string Email { get; set; } = string.Empty;
 
-        [Phone(ErrorMessage = "Invalid phone number format")]
+        [Phone(ErrorMessage = "Số điện thoại không đúng định dạng")]
         [StringLength(20)]
         public string? Phone { get; set; }
 
-        [Required(ErrorMessage = "Base salary is required")]
+        [Required(ErrorMessage = "Vui lòng nhập lương cơ bản")]
         [Range(0, double.MaxValue)]
         public decimal BaseSalary { get; set; }
 
-        [Required(ErrorMessage = "Hire date is required")]
+        [Required(ErrorMessage = "Vui lòng chọn ngày vào làm")]
         public DateOnly HireDate { get; set; }
 
-        [Required(ErrorMessage = "Department is required")]
-        public int DepartmentId { get; set; }
-
-        [Required(ErrorMessage = "Position is required")]
+        [Required(ErrorMessage = "Vui lòng chọn chức vụ")]
         [Range(1, int.MaxValue, ErrorMessage = "A valid position must be selected")]
         public int PositionId { get; set; }
 
-        [Required(ErrorMessage = "Role is required")]
+        [Required(ErrorMessage = "Vai trò là bắt buộc")]
         public int RoleId { get; set; }
 
         [StringLength(100, MinimumLength = 6)]
