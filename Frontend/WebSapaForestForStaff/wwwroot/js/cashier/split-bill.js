@@ -626,7 +626,14 @@
             document.getElementById('splitBillOrderId').value = currentOrderId;
             document.getElementById('splitBillPartsJson').value = JSON.stringify(partsData);
             document.getElementById('splitBillNotes').value = notes || '';
-            
+
+            // Set processing state for result modal
+            sessionStorage.setItem('splitBillProcessing', 'true');
+            sessionStorage.setItem('splitBillOrderId', currentOrderId);
+
+            // Show loading modal
+            showSplitBillLoadingModal();
+
             // Submit form
             document.getElementById('splitBillForm').submit();
         } catch (error) {
@@ -636,6 +643,77 @@
             showToast(errorMessage, 'error');
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn';
+        }
+    };
+
+    function showSplitBillLoadingModal() {
+        const modal = new bootstrap.Modal(document.getElementById('splitBillLoadingModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        modal.show();
+    }
+
+    function hideSplitBillLoadingModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('splitBillLoadingModal'));
+        if (modal) {
+            modal.hide();
+        }
+    }
+
+    function showSplitBillResultModal(success, message, redirectUrl = null) {
+        const resultModal = document.getElementById('splitBillResultModal');
+        const resultIcon = document.getElementById('splitBillResultIcon');
+        const resultTitle = document.getElementById('splitBillResultTitle');
+        const resultMessage = document.getElementById('splitBillResultMessage');
+        const resultBtn = document.getElementById('splitBillResultBtn');
+
+        // Set result content
+        if (success) {
+            resultIcon.innerHTML = '<i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>';
+            resultTitle.textContent = 'Thành công';
+            resultBtn.textContent = 'Xem hóa đơn';
+            resultBtn.className = 'btn btn-success';
+            resultBtn.onclick = function() {
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                } else {
+                    window.location.href = `/cashier-flow/receipt/${currentOrderId}`;
+                }
+            };
+        } else {
+            resultIcon.innerHTML = '<i class="bi bi-x-circle-fill text-danger" style="font-size: 3rem;"></i>';
+            resultTitle.textContent = 'Thất bại';
+            resultBtn.textContent = 'Đóng';
+            resultBtn.className = 'btn btn-secondary';
+            resultBtn.onclick = function() {
+                closeSplitBillResultModal();
+            };
+        }
+
+        resultMessage.textContent = message || '';
+
+        const modal = new bootstrap.Modal(resultModal);
+        modal.show();
+    }
+
+    window.closeSplitBillResultModal = function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('splitBillResultModal'));
+        if (modal) {
+            modal.hide();
+        }
+        // Clear processing state
+        sessionStorage.removeItem('splitBillProcessing');
+        sessionStorage.removeItem('splitBillOrderId');
+
+        // Re-enable confirm button if split bill modal is still open
+        const splitBillModal = bootstrap.Modal.getInstance(document.getElementById('splitBillModal'));
+        if (splitBillModal) {
+            const confirmBtn = document.getElementById('confirmSplitBillBtn');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn';
+            }
         }
     };
 
@@ -656,7 +734,51 @@
                 });
             }
         }
+
+        // Check for split bill processing result
+        checkSplitBillResult();
     });
+
+    function checkSplitBillResult() {
+        // Check if we just processed a split bill
+        const wasProcessing = sessionStorage.getItem('splitBillProcessing');
+        if (wasProcessing === 'true') {
+            // Clear processing state
+            sessionStorage.removeItem('splitBillProcessing');
+
+            // Check for success/error messages from TempData
+            const successMessage = getTempDataMessage('SuccessMessage');
+            const errorMessage = getTempDataMessage('ErrorMessage');
+
+            if (successMessage) {
+                // Find redirect URL from success message or construct it
+                const orderId = sessionStorage.getItem('splitBillOrderId') || currentOrderId;
+                const redirectUrl = orderId ? `/cashier-flow/receipt/${orderId}` : null;
+                showSplitBillResultModal(true, successMessage, redirectUrl);
+            } else if (errorMessage) {
+                showSplitBillResultModal(false, errorMessage);
+            }
+
+            // Clear stored orderId
+            sessionStorage.removeItem('splitBillOrderId');
+        }
+    }
+
+    function getTempDataMessage(key) {
+        // Try to get TempData messages from various sources
+        // This is a simplified approach - in reality, TempData is server-side only
+        // We'll check for success/error indicators in the page
+        const alerts = document.querySelectorAll('.alert');
+        for (let alert of alerts) {
+            if (key === 'SuccessMessage' && alert.classList.contains('alert-success')) {
+                return alert.textContent.trim();
+            }
+            if (key === 'ErrorMessage' && alert.classList.contains('alert-danger')) {
+                return alert.textContent.trim();
+            }
+        }
+        return null;
+    }
 
     // Export
     window.SplitBill = {
