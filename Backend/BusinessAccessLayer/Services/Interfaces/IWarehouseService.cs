@@ -14,5 +14,10 @@ namespace BusinessAccessLayer.Services.Interfaces
         Task<WarehouseDTO> GetWarehouseById(int id);
         Task<int> GetWarehouseByString(string warehouse);
         Task<IEnumerable<InventoryBatchDTO>> GetBatchesByWarehouseAsync(int warehouseId);
+
+        Task<bool> UpdateWarehouseAsync(int id, WarehouseDTO dto);
+
+        Task<bool> CreateWarehouseAsync(WarehouseDTO dto);
+        Task<bool> DeleteWarehouseAsync(int id);
     }
 }

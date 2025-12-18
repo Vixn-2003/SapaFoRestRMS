@@ -9,6 +9,7 @@ using WebSapaForestForStaff.Models;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class ReservationStaffController : Controller
     {
         private readonly HttpClient _client;

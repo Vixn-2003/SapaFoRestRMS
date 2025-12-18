@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using BusinessAccessLayer.DTOs.Inventory;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using WebSapaForestForStaff.DTOs.Inventory;
 
@@ -40,14 +41,11 @@ namespace WebSapaForestForStaff.Controllers
                             PropertyNameCaseInsensitive = true
                         }
                     ) ?? new List<UnitDTO>();
-                }
-                else
-                {
-                    _logger.LogWarning("Unit API Error: {StatusCode}", unitResponse.StatusCode);
-                    ViewBag.UnitError = $"Lỗi tải dữ liệu đơn vị: {unitResponse.StatusCode}";
+
+                    // ✅ KHÔNG CẦN THÊM GÌ CHO UNIT vì IngredientCount đã có sẵn từ API
                 }
 
-                // ✅ Call API Warehouse
+                // ✅ Call API Warehouse (giữ nguyên như code hiện tại)
                 var warehouseResponse = await _httpClient.GetAsync("api/Warehouse");
                 if (warehouseResponse.IsSuccessStatusCode)
                 {
@@ -61,11 +59,32 @@ namespace WebSapaForestForStaff.Controllers
                             PropertyNameCaseInsensitive = true
                         }
                     ) ?? new List<WarehouseDTO>();
-                }
-                else
-                {
-                    _logger.LogWarning("Warehouse API Error: {StatusCode}", warehouseResponse.StatusCode);
-                    ViewBag.WarehouseError = $"Lỗi tải dữ liệu kho: {warehouseResponse.StatusCode}";
+
+                    // ✅ Load số lượng lô cho từng kho
+                    foreach (var warehouse in viewModel.Warehouses)
+                    {
+                        try
+                        {
+                            var batchResponse = await _httpClient.GetAsync($"api/Warehouse/warehouse/{warehouse.WarehouseId}");
+                            if (batchResponse.IsSuccessStatusCode)
+                            {
+                                var batchContent = await batchResponse.Content.ReadAsStringAsync();
+                                var batches = JsonSerializer.Deserialize<List<BatchDTO>>(
+                                    batchContent,
+                                    new JsonSerializerOptions
+                                    {
+                                        PropertyNameCaseInsensitive = true
+                                    }
+                                );
+                                warehouse.BatchCount = batches?.Count ?? 0;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error loading batch count for warehouse {WarehouseId}", warehouse.WarehouseId);
+                            warehouse.BatchCount = 0;
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -136,6 +155,7 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         // ============ ADD WAREHOUSE ============
+
         [HttpPost]
         public async Task<IActionResult> AddWarehouse([FromBody] AddWarehouseRequest request)
         {
@@ -150,35 +170,32 @@ namespace WebSapaForestForStaff.Controllers
                     JsonSerializer.Serialize(new
                     {
                         name = request.Name,
-                        isActive = request.IsActive
+                        isActive = true  // ✅ Mặc định true
                     }),
                     System.Text.Encoding.UTF8,
                     "application/json"
                 );
 
                 var response = await _httpClient.PostAsync("api/Warehouse", jsonContent);
-                var content = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var warehouse = JsonSerializer.Deserialize<WarehouseDTO>(content, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
-
+                    // ✅ Không cần parse response, chỉ cần báo thành công
                     return Json(new
                     {
                         success = true,
-                        message = "Thêm kho thành công",
-                        warehouse = warehouse
+                        message = "Thêm kho thành công"
                     });
                 }
                 else
                 {
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("API Error: {StatusCode} - {Content}", response.StatusCode, content);
+
                     return Json(new
                     {
                         success = false,
-                        message = $"Lỗi từ API: {content}"
+                        message = "Không thể thêm kho. Vui lòng thử lại."
                     });
                 }
             }
@@ -231,7 +248,7 @@ namespace WebSapaForestForStaff.Controllers
                     return Json(new
                     {
                         success = false,
-                        message = $"Lỗi từ API: {content}"
+                        message = $"Tên kho đã tồn tại, không thể cập nhật"
                     });
                 }
             }
@@ -241,6 +258,47 @@ namespace WebSapaForestForStaff.Controllers
                 return Json(new { success = false, message = "Có lỗi xảy ra: " + ex.Message });
             }
         }
+
+        // ============ DELETE WAREHOUSE ============
+        [HttpPost]
+        public async Task<IActionResult> DeleteWarehouse([FromBody] DeleteWarehouseRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/Warehouse/{request.WarehouseId}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Xóa kho thành công"
+                    });
+                }
+                else
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("API Error: {StatusCode} - {Content}", response.StatusCode, content);
+
+                    // API có thể trả về lỗi nếu kho đang có lô hàng
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Không thể xóa kho. Kho có thể đang chứa lô hàng hoặc đang được sử dụng."
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting warehouse");
+                return Json(new
+                {
+                    success = false,
+                    message = "Lỗi: " + ex.Message
+                });
+            }
+        }
+
 
         // ============ UPDATE UNIT ============
         [HttpPost]
@@ -290,6 +348,51 @@ namespace WebSapaForestForStaff.Controllers
                 return Json(new { success = false, message = "Có lỗi xảy ra: " + ex.Message });
             }
         }
+        [HttpGet]
+        public async Task<IActionResult> GetBatchesByWarehouse(int warehouseId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/Warehouse/warehouse/{warehouseId}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    var batches = JsonSerializer.Deserialize<List<BatchDTO>>(
+                        content,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        }
+                    );
+
+                    return Json(new
+                    {
+                        success = true,
+                        batches = batches
+                    });
+                }
+                else
+                {
+                    _logger.LogWarning("Error getting batches: {StatusCode}", response.StatusCode);
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Không thể tải danh sách lô"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting batches for warehouse {WarehouseId}", warehouseId);
+                return Json(new
+                {
+                    success = false,
+                    message = "Lỗi: " + ex.Message
+                });
+            }
+        }
+
     }
 
     // ============ REQUEST MODELS ============
@@ -324,5 +427,18 @@ namespace WebSapaForestForStaff.Controllers
     {
         public List<UnitDTO> Units { get; set; }
         public List<WarehouseDTO> Warehouses { get; set; }
+    }
+
+    public class DeleteWarehouseRequest
+    {
+        public int WarehouseId { get; set; }
+    }
+    public class BatchDTO
+    {
+        public int BatchId { get; set; }
+        public string BatchCode { get; set; }
+        public string MaterialName { get; set; }
+        public decimal Quantity { get; set; }
+        public int WarehouseId { get; set; }
     }
 }

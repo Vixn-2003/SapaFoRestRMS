@@ -9,9 +9,6 @@ namespace BusinessAccessLayer.DTOs.ManagementCombo
     public class ComboItemDto
     {
         public int MenuItemId { get; set; }
-        public string Name { get; set; }
-        public string? ImageUrl { get; set; }
-        public decimal OriginalPrice { get; set; }
         public int Quantity { get; set; }
     }
 }

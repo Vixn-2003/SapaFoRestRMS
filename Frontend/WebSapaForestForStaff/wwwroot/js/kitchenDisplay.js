@@ -393,6 +393,15 @@ function getOrderQuantityTotals(order) {
 
     items.forEach(item => {
         const qty = getItemQuantity(item);
+
+        // Bỏ qua món đã hủy / trả (không tính vào tổng hoặc completed)
+        const status = (item.status || '').toLowerCase().trim();
+        const isCancelled = status.includes('cancelled') || status.includes('hủy') ||
+            status.includes('đã hủy') || status.includes('returned') || status.includes('trả');
+        if (isCancelled) {
+            return;
+        }
+
         totalQty += qty;
 
         if (isStatusReady(item.status) || isStatusDone(item.status)) {
@@ -1408,13 +1417,36 @@ function getItemWaitingScore(item) {
 // Create item card
 function createItemCard(item) {
     // Get all pending order detail IDs
-    const pendingOrderDetailIds = item.itemDetails
+    const pendingOrderDetailIds = (item.itemDetails || [])
         .filter(detail => detail.status === 'Pending' || !detail.status)
         .map(detail => detail.orderDetailId);
 
     // Get pending item details for batch selection
-    const pendingItemDetails = item.itemDetails
+    const pendingItemDetails = (item.itemDetails || [])
         .filter(detail => detail.status === 'Pending' || !detail.status);
+
+    // Calculate quantities by status (only Pending & Cooking; Late counts as Cooking)
+    let pendingQty = 0;
+    let cookingQty = 0;
+    
+    if (item.itemDetails && item.itemDetails.length > 0) {
+        item.itemDetails.forEach(detail => {
+            const status = (detail.status || 'Pending').toLowerCase().trim();
+            const qty = detail.quantity || 0;
+            
+            if (status.includes('pending') || status.includes('chờ')) {
+                pendingQty += qty;
+            } else if (
+                status.includes('cooking') ||
+                status.includes('nấu') ||
+                status.includes('chế biến') ||
+                status.includes('late') ||
+                status.includes('trễ')
+            ) {
+                cookingQty += qty;
+            }
+        });
+    }
 
     // Format timeCook display
     // Check if timeCook exists and is a valid number
@@ -1445,15 +1477,27 @@ function createItemCard(item) {
         itemDetails: pendingItemDetails
     };
 
+    // Build status summary HTML (only Pending & Cooking)
+    let statusSummaryHtml = '';
+    if (pendingQty > 0 || cookingQty > 0) {
+        statusSummaryHtml = '<div class="item-status-summary">';
+        if (pendingQty > 0) {
+            statusSummaryHtml += `<span class="status-badge status-pending">Chờ: ${pendingQty}</span>`;
+        }
+        if (cookingQty > 0) {
+            statusSummaryHtml += `<span class="status-badge status-cooking">Nấu: ${cookingQty}</span>`;
+        }
+        statusSummaryHtml += '</div>';
+    }
+
     return `
         <div class="item-card" data-menu-item-id="${item.menuItemId}">
-            <div class="item-header" style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="item-header">
                 <div class="item-name-large">
-                    ${item.menuItemName} x${item.totalQuantity}
+                    <span class="item-name-text">${item.menuItemName}</span>
+                    <span class="item-quantity-inline">x${item.totalQuantity}</span>
                 </div>
-                <div class="item-time-cook">
-                    Thời gian nấu: ${timeCookDisplay}
-                </div>
+                ${statusSummaryHtml}
             </div>
 
             <div class="item-card-actions" style="padding: 15px; text-align: center;">
@@ -1546,8 +1590,7 @@ function filterByItemStatus(status) {
         'Pending': 'filter-status-pending',
         'Cooking': 'filter-status-cooking',
         'Late': 'filter-status-late',
-        'Ready': 'filter-status-ready',
-        'Done': 'filter-status-done'
+        'Ready': 'filter-status-ready'
     };
 
     const activeButton = document.getElementById(buttonMap[status]);
@@ -3223,28 +3266,37 @@ function renderIngredientShortage(shortageList) {
                 ingredientName: item.ingredientName,
                 unitName: item.unitName || '',
                 totalShortage: 0,
-                totalRequired: 0,
-                totalReserved: 0,
                 affectedDishes: new Set(), // Set để tránh trùng lặp món
                 urgentCount: 0
             };
         }
-        
+
+        // Cộng dồn trực tiếp số lượng thiếu do backend tính sẵn
         ingredientSummary[key].totalShortage += item.shortageQuantity || 0;
-        ingredientSummary[key].totalRequired += item.requiredQuantity || 0;
-        ingredientSummary[key].totalReserved += item.reservedQuantity || 0;
+
         ingredientSummary[key].affectedDishes.add(item.menuItemName);
         if (item.isUrgent) {
             ingredientSummary[key].urgentCount++;
         }
     });
 
+    // Chỉ giữ lại nguyên liệu thực sự đang thiếu (> 0)
+    const filteredIngredients = Object.values(ingredientSummary).filter(ing => ing.totalShortage > 0);
+
+    // Nếu không còn nguyên liệu nào thiếu -> ẩn panel
+    if (filteredIngredients.length === 0) {
+        panel.style.display = 'none';
+        body.innerHTML = '<div class="text-center text-muted py-3">Không có nguyên liệu thiếu</div>';
+        countBadge.textContent = '0';
+        return;
+    }
+
     // Update count - số lượng nguyên liệu thiếu (không phải số món)
-    const uniqueIngredientCount = Object.keys(ingredientSummary).length;
+    const uniqueIngredientCount = filteredIngredients.length;
     countBadge.textContent = uniqueIngredientCount;
 
     // Sắp xếp: nguyên liệu có số lượng thiếu nhiều nhất trước, sau đó theo tên
-    const sortedIngredients = Object.values(ingredientSummary).sort((a, b) => {
+    const sortedIngredients = filteredIngredients.sort((a, b) => {
         if (b.totalShortage !== a.totalShortage) {
             return b.totalShortage - a.totalShortage; // Thiếu nhiều nhất trước
         }
@@ -3283,15 +3335,7 @@ function renderIngredientShortage(shortageList) {
                             <strong>${escapeHtml(ing.ingredientName)}</strong>${urgentBadge}
                         </div>
                         <div class="shortage-item-details" style="font-size: 13px; line-height: 1.6;">
-                            <div style="margin-bottom: 4px;">
-                                <span style="color: #6c757d;">Tổng cần:</span> 
-                                <strong>${formatNumber(ing.totalRequired)} ${ing.unitName}</strong>
-                            </div>
-                            <div style="margin-bottom: 4px;">
-                                <span style="color: #6c757d;">Đã reserve:</span> 
-                                <strong>${formatNumber(ing.totalReserved)} ${ing.unitName}</strong>
-                            </div>
-                            <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #e0e0e0;">
+                            <div style="margin-top: 6px;">
                                 <span style="color: #6c757d; font-size: 12px;">Ảnh hưởng:</span> 
                                 <span style="color: #495057; font-size: 12px;">${affectedDishesList.slice(0, 3).map(d => escapeHtml(d)).join(', ')}${affectedDishesList.length > 3 ? ` và ${affectedDishesList.length - 3} món khác` : ''}</span>
                             </div>

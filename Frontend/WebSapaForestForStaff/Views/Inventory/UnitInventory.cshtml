@@ -22,18 +22,15 @@
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
         min-height: 100vh;
-        padding: 20px;
     }
 
     /* Header */
     .wh-header {
-        text-align: center;
-        margin-bottom: 30px;
+       margin: 20px 30px;
     }
 
     .wh-header h1 {
-        font-size: 32px;
-        font-weight: 800;
+        font-size: 1.5rem;
         color: #0f172a;
         text-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
@@ -340,17 +337,6 @@
         color: #064e3b;
     }
 
-    .wh-abbreviation {
-        display: inline-block;
-        padding: 4px 10px;
-        background: #e2e8f0;
-        color: #334155;
-        border-radius: 6px;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
     /* View Button */
     .wh-view-btn {
         padding: 8px;
@@ -586,9 +572,6 @@
 
     /* Responsive */
     @@media (max-width: 768px) {
-        body.warehouse-unit-page {
-            padding: 15px;
-        }
 
         .wh-header h1 {
             font-size: 26px;
@@ -647,12 +630,373 @@
             gap: 4px;
             justify-content: center;
         }
+        /* Delete Button */
+        .wh-delete-btn {
+            padding: 8px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 4px;
+        }
+
+            .wh-delete-btn:hover {
+                background: #fee2e2;
+                transform: scale(1.1);
+            }
+
+            .wh-delete-btn svg {
+                width: 20px;
+                height: 20px;
+                color: #dc2626;
+            }
+
+            /* Toast Notification */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 350px;
+    max-width: 450px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+    transform: translateX(500px);
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 10000;
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+}
+
+.toast-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.toast-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.toast-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Success Style */
+.toast-notification.success .toast-icon {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.toast-notification.success .toast-icon svg {
+    color: #059669;
+}
+
+.toast-notification.success .toast-progress {
+    background: #059669;
+}
+
+/* Error Style */
+.toast-notification.error .toast-icon {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.toast-notification.error .toast-icon svg {
+    color: #dc2626;
+}
+
+.toast-notification.error .toast-progress {
+    background: #dc2626;
+}
+
+/* Warning Style */
+.toast-notification.warning .toast-icon {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.toast-notification.warning .toast-icon svg {
+    color: #f59e0b;
+}
+
+.toast-notification.warning .toast-progress {
+    background: #f59e0b;
+}
+
+/* Info Style */
+.toast-notification.info .toast-icon {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.toast-notification.info .toast-icon svg {
+    color: #2563eb;
+}
+
+.toast-notification.info .toast-progress {
+    background: #2563eb;
+}
+
+.toast-text {
+    flex: 1;
+}
+
+.toast-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.toast-message {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.toast-close {
+    padding: 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.toast-close:hover {
+    background: #f1f5f9;
+}
+
+.toast-close svg {
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+}
+
+.toast-progress {
+    height: 4px;
+    width: 100%;
+    animation: progress 3s linear;
+}
+
+@@keyframes progress {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* Mobile Responsive */
+@@media (max-width: 768px) {
+    .toast-notification {
+        min-width: calc(100% - 40px);
+        max-width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+    }
+}
+
+/* Confirm Dialog */
+.confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+.confirm-dialog {
+    background: white;
+    border-radius: 16px;
+    max-width: 480px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.4);
+    animation: confirmSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@@keyframes confirmSlideUp {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.confirm-header {
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.confirm-header.danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.confirm-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: white;
+}
+
+.confirm-icon svg {
+    width: 28px;
+    height: 28px;
+    color: #f59e0b;
+}
+
+.confirm-header.danger .confirm-icon svg {
+    color: #dc2626;
+}
+
+.confirm-header-text h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+}
+
+.confirm-header-text p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+}
+
+.confirm-body {
+    padding: 24px 28px;
+}
+
+.confirm-message {
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.confirm-note {
+    font-size: 13px;
+    color: #64748b;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border-left: 3px solid #f59e0b;
+    margin-top: 16px;
+}
+
+.confirm-note.danger {
+    border-left-color: #dc2626;
+    background: #fef2f2;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+    padding: 20px 28px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.confirm-btn {
+    flex: 1;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.confirm-btn-cancel {
+    background: white;
+    color: #475569;
+    border: 2px solid #cbd5e1;
+}
+
+.confirm-btn-cancel:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+}
+
+.confirm-btn-confirm {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.confirm-btn-confirm.danger {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.confirm-btn-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+}
+
+.confirm-btn-confirm.danger:hover {
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+/* Mobile Responsive */
+@@media (max-width: 768px) {
+    .confirm-dialog {
+        max-width: calc(100% - 40px);
+    }
+    
+    .confirm-actions {
+        flex-direction: column;
+    }
+    
+    .confirm-btn {
+        width: 100%;
+    }
+}
 
 </style>
 </head>
 <body class="warehouse-unit-page">
     <div class="wh-header">
-        <h1>Quản lý Kho & Đơn vị tính</h1>
+        <h1 style="font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 5px;">
+            Quản lý Kho & Đơn vị tính
+        </h1>
+        <p>Quản lý kho và các đơn vị tính cho các mặt hàng</p>
     </div>
 
     <div class="wh-container">
@@ -677,7 +1021,11 @@
                 <div class="wh-card-body">
                     <!-- Form thêm kho -->
                     <div id="warehouseForm" class="wh-form warehouse-form" style="display: none;">
-                        <input type="text" id="warehouseName" class="wh-input" placeholder="Nhập tên kho...">
+                        <input type="text" id="warehouseName" class="wh-input" placeholder="Nhập tên kho..." oninput="checkWarehouseName()">
+                        <!-- ✅ THÊM DÒNG NÀY -->
+                        <div id="warehouseNameError" class="error-message" style="display: none; color: #dc2626; font-size: 13px; margin-top: -8px; margin-bottom: 12px;">
+                            ⚠️ Tên kho đã tồn tại
+                        </div>
                         <div class="wh-form-actions">
                             <button class="wh-btn wh-btn-save" onclick="addWarehouse()">Lưu</button>
                             <button class="wh-btn wh-btn-cancel" onclick="hideWarehouseForm()">Hủy</button>
@@ -732,7 +1080,6 @@
                     <!-- Form thêm đơn vị -->
                     <div id="unitForm" class="wh-form unit-form" style="display: none;">
                         <input type="text" id="unitName" class="wh-input" placeholder="Tên đơn vị...">
-                        <input type="text" id="unitAbbr" class="wh-input" placeholder="Tên viết tắt...">
                         <select id="unitType" class="wh-select">
                             <option value="1">Số tự nhiên</option>
                             <option value="2">Số thập phân</option>
@@ -745,7 +1092,7 @@
 
                     <!-- Search -->
                     <div class="wh-search">
-                        <input type="text" id="unitSearch" class="wh-search-input" placeholder="Tìm kiếm theo tên hoặc viết tắt..." onkeyup="filterUnits()">
+                        <input type="text" id="unitSearch" class="wh-search-input" placeholder="Tìm kiếm theo tên..." onkeyup="filterUnits()">
                     </div>
 
                     <!-- Table -->
@@ -758,10 +1105,9 @@
                                         Tên
                                         <span class="sort-icon" id="unitSortIcon">▲</span>
                                     </th>
-                                    <th class="center">Viết tắt</th>
                                     <th class="center">Kiểu nhập</th>
-                                    <th class="center">SL NL</th>
-                                    <th class="center">Chi tiết</th>
+                                    <th class="center">SL Nguyên liệu</th>
+                                    <th class="center">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody id="unitTableBody">
@@ -770,40 +1116,6 @@
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Chi tiết Kho -->
-    <div id="warehouseModal" class="wh-modal-overlay" style="display: none;" onclick="closeWarehouseModal(event)">
-        <div class="wh-modal" onclick="event.stopPropagation()">
-            <div class="wh-modal-header warehouse-modal">
-                <h3 class="wh-modal-title" id="warehouseModalTitle">Chi tiết Kho</h3>
-                <button class="wh-modal-close" onclick="closeWarehouseModal()">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="wh-modal-body" id="warehouseModalBody">
-                <!-- Content will be inserted here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Chi tiết Đơn vị -->
-    <div id="unitModal" class="wh-modal-overlay" style="display: none;" onclick="closeUnitModal(event)">
-        <div class="wh-modal" onclick="event.stopPropagation()">
-            <div class="wh-modal-header unit-modal">
-                <h3 class="wh-modal-title" id="unitModalTitle">Chi tiết Đơn vị</h3>
-                <button class="wh-modal-close" onclick="closeUnitModal()">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="wh-modal-body" id="unitModalBody">
-                <!-- Content will be inserted here -->
             </div>
         </div>
     </div>
@@ -821,7 +1133,11 @@
             </div>
             <div class="wh-modal-body">
                 <input type="hidden" id="editWarehouseId">
-                <input type="text" id="editWarehouseName" class="wh-input" placeholder="Nhập tên kho...">
+                <input type="text" id="editWarehouseName" class="wh-input" placeholder="Nhập tên kho..." oninput="checkEditWarehouseName()">
+                <!-- ✅ THÊM DÒNG NÀY -->
+                <div id="editWarehouseNameError" class="error-message" style="display: none; color: #dc2626; font-size: 13px; margin-top: -8px; margin-bottom: 12px;">
+                     Tên kho đã tồn tại
+                </div>
                 <div class="wh-form-actions" style="margin-top: 16px;">
                     <button class="wh-btn wh-btn-save" onclick="updateWarehouse()">Cập nhật</button>
                     <button class="wh-btn wh-btn-cancel" onclick="closeEditWarehouseModal()">Hủy</button>
@@ -831,8 +1147,8 @@
     </div>
 
     <!-- Modal Chỉnh sửa Đơn vị -->
-    <div id="editUnitModal" class="wh-modal-overlay" style="display: none;" onclick="closeEditUnitModal(event)">
-        <div class="wh-modal" onclick="event.stopPropagation()">
+    <div id="editUnitModal" class="wh-modal-overlay" style="display: none;">
+        <div class="wh-modal" >
             <div class="wh-modal-header unit-modal">
                 <h3 class="wh-modal-title">Chỉnh sửa Đơn vị tính</h3>
                 <button class="wh-modal-close" onclick="closeEditUnitModal()">
@@ -844,7 +1160,6 @@
             <div class="wh-modal-body">
                 <input type="hidden" id="editUnitId">
                 <input type="text" id="editUnitName" class="wh-input" placeholder="Tên đơn vị...">
-                <input type="text" id="editUnitAbbr" class="wh-input" placeholder="Tên viết tắt...">
                 <select id="editUnitType" class="wh-select">
                     <option value="1">Số tự nhiên</option>
                     <option value="2">Số thập phân</option>
@@ -856,6 +1171,59 @@
             </div>
         </div>
     </div>
+    
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast-notification">
+        <div class="toast-content">
+            <div class="toast-icon" id="toastIcon"></div>
+            <div class="toast-text">
+                <div class="toast-title" id="toastTitle">Thông báo</div>
+                <div class="toast-message" id="toastMessage"></div>
+            </div>
+            <button class="toast-close" onclick="closeToast()">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="toast-progress" id="toastProgress"></div>
+    </div>
+
+    <!-- Confirm Dialog -->
+<div id="confirmDialog" class="confirm-overlay" style="display: none;">
+    <div class="confirm-dialog">
+        <div class="confirm-header" id="confirmHeader">
+            <div class="confirm-icon">
+                <svg id="confirmHeaderIcon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <div class="confirm-header-text">
+                <h3 id="confirmTitle">Xác nhận</h3>
+                <p id="confirmSubtitle">Vui lòng xác nhận hành động</p>
+            </div>
+        </div>
+        <div class="confirm-body">
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="confirm-note" id="confirmNote" style="display: none;"></div>
+        </div>
+        <div class="confirm-actions">
+            <button class="confirm-btn confirm-btn-cancel" onclick="closeConfirm()">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+                Hủy bỏ
+            </button>
+            <button class="confirm-btn confirm-btn-confirm" id="confirmButton">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span id="confirmButtonText">Xác nhận</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 
     <script>
         // ✅ Load dữ liệu từ server
@@ -864,17 +1232,16 @@
                 id = w.WarehouseId,
                 name = w.Name,
                 isActive = w.IsActive,
-                batches = new List<object>() // Tạm thời empty, cần API riêng để lấy batches
+                batchCount = w.BatchCount 
             })));
 
         let units = @Html.Raw(Json.Serialize(Model.Units.Select(u => new
             {
                 id = u.UnitId,
-                name = u.UnitName,
-                abbreviation = u.UnitName.Substring(0, Math.Min(3, u.UnitName.Length)), // Tạm thời lấy 3 ký tự đầu
+                name = u.UnitName,                
                 inputType = u.UnitType == WebSapaForestForStaff.DTOs.Inventory.UnitType.Integer ? "Số tự nhiên" : "Số thập phân",
                 unitTypeEnum = (int)u.UnitType,
-                materials = new List<object>() // Tạm thời empty, cần API riêng để lấy materials
+                ingredientCount = u.IngredientCount 
             })));
 
         let warehouseSortOrder = 'asc';
@@ -895,13 +1262,20 @@
         function hideWarehouseForm() {
             document.getElementById('warehouseForm').style.display = 'none';
             document.getElementById('warehouseName').value = '';
+            document.getElementById('warehouseNameError').style.display = 'none';
+            document.getElementById('warehouseName').style.borderColor = '#cbd5e1';
         }
 
         // ✅ Thêm kho mới qua API
         async function addWarehouse() {
             const name = document.getElementById('warehouseName').value.trim();
             if (!name) {
-                alert('Vui lòng nhập tên kho');
+                showWarning('Thiếu thông tin', 'Vui lòng nhập tên kho');
+                return;
+            }
+
+            if (!checkWarehouseName()) {
+                showWarning('Tên kho đã tồn tại. Vui lòng chọn tên khác.');
                 return;
             }
 
@@ -913,31 +1287,21 @@
                     },
                     body: JSON.stringify({
                         name: name,
-                        isActive: true
+                        isActive: true  // ✅ Mặc định true
                     })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(result.message);
-
-                    // ✅ Thêm vào array local
-                    warehouses.push({
-                        id: result.warehouse.warehouseId,
-                        name: result.warehouse.name,
-                        isActive: result.warehouse.isActive,
-                        batches: []
-                    });
-
-                    hideWarehouseForm();
-                    renderWarehouses();
+                    showSuccess('Thành công', result.message);
+                    window.location.reload();
                 } else {
-                    alert('Lỗi: ' + result.message);
+                    showSuccess('Thành công', result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Lỗi kết nối: ' + error.message);
+                showError('Lỗi kết nối: ' + error.message);
             }
         }
 
@@ -980,41 +1344,57 @@
             }
 
             tbody.innerHTML = filtered.map((w, index) => `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td><strong>${w.name}</strong></td>
-                        <td class="center">
-                            <span class="wh-badge warehouse-badge">${w.batches ? w.batches.length : 0}</span>
-                        </td>
-                                <td class="center">
-            <div class="wh-action-group">
-                <button class="wh-view-btn warehouse-view" onclick="showWarehouseDetail(${w.id})" title="Xem chi tiết">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                </button>
-                <button class="wh-edit-btn" onclick="showEditWarehouse(${w.id})" title="Chỉnh sửa">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                </button>
-            </div>
-        </td>
-                    </tr>
-                `).join('');
+            <tr>
+                <td>${index + 1}</td>
+                <td><strong>${w.name}</strong></td>
+                <td class="center">
+                    <span class="wh-badge warehouse-badge">${w.batchCount || 0}</span>
+                </td>
+                <td class="center">
+                    <div class="wh-action-group">
+                        <button class="wh-edit-btn" onclick="showEditWarehouse(${w.id})" title="Chỉnh sửa">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </button>
+                        <button class="wh-delete-btn" onclick="deleteWarehouse(${w.id}, '${w.name}')" title="Xóa">
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
         }
 
-        function showWarehouseDetail(id) {
+        async function showWarehouseDetail(id) {
             const warehouse = warehouses.find(w => w.id === id);
             if (!warehouse) return;
 
             document.getElementById('warehouseModalTitle').textContent = `Chi tiết: ${warehouse.name}`;
 
-            let content = '';
+            // ✅ Gọi API để lấy danh sách lô
+            try {
+                const response = await fetch(`/UnitInventory/GetBatchesByWarehouse?warehouseId=${id}`);
+                const result = await response.json();
 
-            if (!warehouse.batches || warehouse.batches.length === 0) {
-                content = `
+                let content = '';
+
+                if (result.success && result.batches && result.batches.length > 0) {
+                    content = result.batches.map((batch, index) => `
+                        <div class="wh-list-item">
+                            <div class="wh-list-number warehouse-num">${index + 1}</div>
+                            <div class="wh-list-content">
+                                <div class="wh-list-name">${batch.batchCode || 'Lô ' + batch.batchId}</div>
+                                <div class="wh-list-detail">
+                                    ${batch.materialName || 'N/A'} - Số lượng: ${batch.quantity || 0}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    content = `
                         <div class="wh-empty-state">
                             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
@@ -1022,26 +1402,24 @@
                             <p>Không có lô mặt hàng nào trong kho này</p>
                         </div>
                     `;
-            } else {
-                content = warehouse.batches.map((batch, index) => `
-                        <div class="wh-list-item">
-                            <div class="wh-list-number warehouse-num">${index + 1}</div>
-                            <div class="wh-list-content">
-                                <div class="wh-list-name">${batch.name}</div>
-                                <div class="wh-list-detail">Số lượng: ${batch.quantity}</div>
-                            </div>
-                        </div>
-                    `).join('');
-            }
+                }
 
-            document.getElementById('warehouseModalBody').innerHTML = content;
-            document.getElementById('warehouseModal').style.display = 'flex';
+                document.getElementById('warehouseModalBody').innerHTML = content;
+                document.getElementById('warehouseModal').style.display = 'flex';
+
+            } catch (error) {
+                console.error('Error loading batches:', error);
+                document.getElementById('warehouseModalBody').innerHTML = `
+                    <div class="wh-empty-state">
+                        <p style="color: #dc2626;">Lỗi tải dữ liệu: ${error.message}</p>
+                    </div>
+                `;
+                document.getElementById('warehouseModal').style.display = 'flex';
+            }
         }
 
-        function closeWarehouseModal(event) {
-            if (!event || event.target.id === 'warehouseModal') {
-                document.getElementById('warehouseModal').style.display = 'none';
-            }
+        function closeWarehouseModal() {
+            document.getElementById('warehouseModal').style.display = 'none';
         }
 
         // =============== UNIT FUNCTIONS ===============
@@ -1053,20 +1431,19 @@
         function hideUnitForm() {
             document.getElementById('unitForm').style.display = 'none';
             document.getElementById('unitName').value = '';
-            document.getElementById('unitAbbr').value = '';
-            document.getElementById('unitType').value = '1'; // Integer
+            document.getElementById('unitType').value = '1'; 
         }
 
         // ✅ Thêm đơn vị mới qua API
         async function addUnit() {
             const name = document.getElementById('unitName').value.trim();
-            const abbr = document.getElementById('unitAbbr').value.trim();
             const type = parseInt(document.getElementById('unitType').value);
 
-            if (!name || !abbr) {
-                alert('Vui lòng nhập đầy đủ thông tin');
+            if (!name) {
+                showWarning('Vui lòng nhập tên đơn vị');
                 return;
             }
+
 
             try {
                 const response = await fetch('/UnitInventory/AddUnit', {
@@ -1083,26 +1460,16 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(result.message);
-
-                    // ✅ Thêm vào array local
-                    units.push({
-                        id: result.unit.unitId,
-                        name: result.unit.unitName,
-                        abbreviation: abbr, // Backend không trả về abbreviation, tạm dùng input
-                        inputType: type === 1 ? 'Số tự nhiên' : 'Số thập phân',
-                        unitTypeEnum: type,
-                        materials: []
-                    });
+                    showSuccess(result.message);
 
                     hideUnitForm();
-                    renderUnits();
+                    window.location.reload();
                 } else {
-                    alert('Lỗi: ' + result.message);
+                    showError('Lỗi: ' + result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Lỗi kết nối: ' + error.message);
+                showError('Lỗi kết nối: ' + error.message);
             }
         }
 
@@ -1119,8 +1486,7 @@
         function renderUnits() {
             const searchTerm = document.getElementById('unitSearch').value.toLowerCase();
             let filtered = units.filter(u =>
-                u.name.toLowerCase().includes(searchTerm) ||
-                u.abbreviation.toLowerCase().includes(searchTerm)
+                u.name.toLowerCase().includes(searchTerm)
             );
 
             filtered.sort((a, b) => {
@@ -1135,89 +1501,41 @@
 
             if (filtered.length === 0) {
                 tbody.innerHTML = `
-                        <tr class="wh-empty-row">
-                            <td colspan="6">
-                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 50px; height: 50px; margin: 0 auto 10px; display: block; opacity: 0.3;">
-                                    <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                Không tìm thấy đơn vị tính nào
-                            </td>
-                        </tr>
-                    `;
+                    <tr class="wh-empty-row">
+                        <td colspan="5">  <!-- ✅ ĐỔI từ 6 thành 5 -->
+                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 50px; height: 50px; margin: 0 auto 10px; display: block; opacity: 0.3;">
+                                <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Không tìm thấy đơn vị tính nào
+                        </td>
+                    </tr>
+                `;
                 return;
             }
 
             tbody.innerHTML = filtered.map((u, index) => `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td><strong>${u.name}</strong></td>
-                        <td class="center">
-                            <span class="wh-abbreviation">${u.abbreviation}</span>
-                        </td>
-                        <td class="center">${u.inputType}</td>
-                        <td class="center">
-                            <span class="wh-badge unit-badge">${u.materials ? u.materials.length : 0}</span>
-                        </td>
-                                <td class="center">
-            <div class="wh-action-group">
-                <button class="wh-view-btn unit-view" onclick="showUnitDetail(${u.id})" title="Xem chi tiết">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                </button>
-                <button class="wh-edit-btn" onclick="showEditUnit(${u.id})" title="Chỉnh sửa">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                    </svg>
-                </button>
-            </div>
-        </td>
-                    </tr>
-                `).join('');
-        }
-
-        function showUnitDetail(id) {
-            const unit = units.find(u => u.id === id);
-            if (!unit) return;
-
-            document.getElementById('unitModalTitle').textContent = `Chi tiết: ${unit.name} (${unit.abbreviation})`;
-
-            let content = `
-                    <div class="wh-modal-info unit-info">
-                        <p><strong>Kiểu nhập:</strong> ${unit.inputType}</p>
-                    </div>
-                `;
-
-            if (!unit.materials || unit.materials.length === 0) {
-                content += `
-                        <div class="wh-empty-state">
-                            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                            </svg>
-                            <p>Chưa có mặt hàng nào sử dụng đơn vị này</p>
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${u.name}</strong></td>
+                    <td class="center">${u.inputType}</td>
+                    <td class="center">
+                        <span class="wh-badge unit-badge">${u.ingredientCount || 0}</span>  <!-- ✅ ĐỔI từ u.materials.length -->
+                    </td>
+                    <td class="center">
+                        <div class="wh-action-group">
+                            <!-- ✅ XÓA NÚT XEM CHI TIẾT -->
+                            <button class="wh-edit-btn" onclick="showEditUnit(${u.id})" title="Chỉnh sửa">
+                                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
                         </div>
-                    `;
-            } else {
-                content += unit.materials.map((material, index) => `
-                        <div class="wh-list-item">
-                            <div class="wh-list-number unit-num">${index + 1}</div>
-                            <div class="wh-list-content">
-                                <div class="wh-list-name">${material.name}</div>
-                            </div>
-                        </div>
-                    `).join('');
-            }
-
-            document.getElementById('unitModalBody').innerHTML = content;
-            document.getElementById('unitModal').style.display = 'flex';
+                    </td>
+                </tr>
+            `).join('');        
         }
 
-        function closeUnitModal(event) {
-            if (!event || event.target.id === 'unitModal') {
-                document.getElementById('unitModal').style.display = 'none';
-            }
-        }
+        
 
         // =============== EDIT WAREHOUSE FUNCTIONS ===============
         function showEditWarehouse(id) {
@@ -1241,7 +1559,12 @@
             const name = document.getElementById('editWarehouseName').value.trim();
 
             if (!name) {
-                alert('Vui lòng nhập tên kho');
+                showWarning('Vui lòng nhập tên kho');
+                return;
+            }
+
+            if (!checkEditWarehouseName()) {
+                showError('Tên kho đã tồn tại. Vui lòng chọn tên khác.');
                 return;
             }
 
@@ -1261,22 +1584,15 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(result.message);
-
-                    // Cập nhật local array
-                    const warehouse = warehouses.find(w => w.id === id);
-                    if (warehouse) {
-                        warehouse.name = name;
-                    }
-
+                    showSuccess(result.message);
                     closeEditWarehouseModal();
-                    renderWarehouses();
+                    window.location.reload();
                 } else {
-                    alert('Lỗi: ' + result.message);
+                    showError('Lỗi: ' + result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Lỗi kết nối: ' + error.message);
+                showError('Lỗi kết nối: ' + error.message);
             }
         }
 
@@ -1287,26 +1603,23 @@
 
             document.getElementById('editUnitId').value = unit.id;
             document.getElementById('editUnitName').value = unit.name;
-            document.getElementById('editUnitAbbr').value = unit.abbreviation;
             document.getElementById('editUnitType').value = unit.unitTypeEnum;
             document.getElementById('editUnitModal').style.display = 'flex';
             document.getElementById('editUnitName').focus();
         }
 
-        function closeEditUnitModal(event) {
-            if (!event || event.target.id === 'editUnitModal') {
-                document.getElementById('editUnitModal').style.display = 'none';
-            }
+        function closeEditUnitModal() {
+            document.getElementById('editUnitModal').style.display = 'none';
         }
+
 
         async function updateUnit() {
             const id = parseInt(document.getElementById('editUnitId').value);
             const name = document.getElementById('editUnitName').value.trim();
-            const abbr = document.getElementById('editUnitAbbr').value.trim();
             const type = parseInt(document.getElementById('editUnitType').value);
 
-            if (!name || !abbr) {
-                alert('Vui lòng nhập đầy đủ thông tin');
+            if (!name) {
+                showWarning('Vui lòng nhập tên đơn vị');
                 return;
             }
 
@@ -1326,38 +1639,395 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(result.message);
-
-                    // Cập nhật local array
-                    const unit = units.find(u => u.id === id);
-                    if (unit) {
-                        unit.name = name;
-                        unit.abbreviation = abbr;
-                        unit.unitTypeEnum = type;
-                        unit.inputType = type === 1 ? 'Số tự nhiên' : 'Số thập phân';
-                    }
-
+                    showSuccess(result.message);
                     closeEditUnitModal();
-                    renderUnits();
+                    window.location.reload();
                 } else {
-                    alert('Lỗi: ' + result.message);
+                    showError('Lỗi: ' + result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Lỗi kết nối: ' + error.message);
+                showError('Lỗi kết nối: ' + error.message);
             }
         }
 
 
-        // Close modals on ESC key
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                closeWarehouseModal();
-                closeUnitModal();
-                closeEditWarehouseModal();
-                closeEditUnitModal();
+
+        // ✅ THÊM HÀM KIỂM TRA TÊN KHO TRÙNG - FORM THÊM MỚI
+        function checkWarehouseName() {
+            const nameInput = document.getElementById('warehouseName');
+            const errorDiv = document.getElementById('warehouseNameError');
+            const name = nameInput.value.trim().toLowerCase();
+
+            if (!name) {
+                errorDiv.style.display = 'none';
+                return true;
             }
+
+            // Kiểm tra tên có trùng không (không phân biệt hoa thường)
+            const isDuplicate = warehouses.some(w => w.name.toLowerCase() === name);
+
+            if (isDuplicate) {
+                errorDiv.style.display = 'block';
+                nameInput.style.borderColor = '#dc2626';
+                return false;
+            } else {
+                errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                return true;
+            }
+        }
+
+        // ✅ THÊM HÀM KIỂM TRA TÊN KHO TRÙNG - FORM CHỈNH SỬA
+        function checkEditWarehouseName() {
+            const nameInput = document.getElementById('editWarehouseName');
+            const errorDiv = document.getElementById('editWarehouseNameError');
+            const currentId = parseInt(document.getElementById('editWarehouseId').value);
+            const name = nameInput.value.trim().toLowerCase();
+
+            if (!name) {
+                errorDiv.style.display = 'none';
+                return true;
+            }
+
+            // Kiểm tra tên có trùng với kho khác (loại trừ chính nó)
+            const isDuplicate = warehouses.some(w =>
+                w.id !== currentId && w.name.toLowerCase() === name
+            );
+
+            if (isDuplicate) {
+                errorDiv.style.display = 'block';
+                nameInput.style.borderColor = '#dc2626';
+                return false;
+            } else {
+                errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                return true;
+            }
+        }
+        
+
+
+        const TOAST_ICONS = {
+            success: `<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>`,
+            error: `<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>`,
+            warning: `<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                      </svg>`,
+            info: `<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                   </svg>`
+        };
+
+        let toastTimeout;
+
+        function showToast(type, title, message, duration = 3000) {
+            const toast = document.getElementById('toastNotification');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastTitle = document.getElementById('toastTitle');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastProgress = document.getElementById('toastProgress');
+
+            // Đặt lại classes
+            toast.className = `toast-notification ${type}`;
+
+            // Đặt nội dung
+            toastIcon.innerHTML = TOAST_ICONS[type];
+            toastTitle.textContent = title;
+            toastMessage.textContent = message;
+
+            // Clear timeout cũ nếu có
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+            }
+
+            // Hiển thị toast
+            setTimeout(() => toast.classList.add('show'), 10);
+
+            // Reset và chạy progress bar
+            toastProgress.style.animation = 'none';
+            setTimeout(() => {
+                toastProgress.style.animation = `progress ${duration}ms linear`;
+            }, 10);
+
+            // Tự động ẩn sau duration
+            toastTimeout = setTimeout(() => {
+                closeToast();
+            }, duration);
+        }
+
+        function closeToast() {
+            const toast = document.getElementById('toastNotification');
+            toast.classList.remove('show');
+
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+            }
+        }
+
+        // Các hàm tiện ích
+        function showSuccess(title, message) {
+            showToast('success', title, message);
+        }
+
+        function showError(title, message) {
+            showToast('error', title, message);
+        }
+
+        function showWarning(title, message) {
+            showToast('warning', title, message);
+        }
+
+        function showInfo(title, message) {
+            showToast('info', title, message);
+        }
+
+        // =============== CONFIRM DIALOG SYSTEM ===============
+let confirmCallback = null;
+
+function showConfirm(options) {
+    const {
+        title = 'Xác nhận',
+        subtitle = 'Vui lòng xác nhận hành động',
+        message = '',
+        note = '',
+        confirmText = 'Xác nhận',
+        isDanger = false,
+        onConfirm = () => {}
+    } = options;
+
+    const dialog = document.getElementById('confirmDialog');
+    const header = document.getElementById('confirmHeader');
+    const headerIcon = document.getElementById('confirmHeaderIcon');
+    const titleEl = document.getElementById('confirmTitle');
+    const subtitleEl = document.getElementById('confirmSubtitle');
+    const messageEl = document.getElementById('confirmMessage');
+    const noteEl = document.getElementById('confirmNote');
+    const confirmBtn = document.getElementById('confirmButton');
+    const confirmBtnText = document.getElementById('confirmButtonText');
+
+    // Set danger mode
+    if (isDanger) {
+        header.classList.add('danger');
+        noteEl.classList.add('danger');
+        confirmBtn.classList.add('danger');
+        headerIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>`;
+    } else {
+        header.classList.remove('danger');
+        noteEl.classList.remove('danger');
+        confirmBtn.classList.remove('danger');
+        headerIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>`;
+    }
+
+    // Set content
+    titleEl.textContent = title;
+    subtitleEl.textContent = subtitle;
+    messageEl.textContent = message;
+    confirmBtnText.textContent = confirmText;
+
+    if (note) {
+        noteEl.textContent = note;
+        noteEl.style.display = 'block';
+    } else {
+        noteEl.style.display = 'none';
+    }
+
+    // Set callback
+    confirmCallback = onConfirm;
+
+    // Show dialog
+    dialog.style.display = 'flex';
+}
+
+function closeConfirm() {
+    document.getElementById('confirmDialog').style.display = 'none';
+    confirmCallback = null;
+}
+
+function handleConfirm() {
+    if (confirmCallback) {
+        confirmCallback();
+    }
+    closeConfirm();
+}
+
+// Add event listener to confirm button
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmButton').addEventListener('click', handleConfirm);
+});
+
+// ✅ VÍ DỤ: Hàm addWarehouse với toast
+async function addWarehouse() {
+    const name = document.getElementById('warehouseName').value.trim();
+    if (!name) {
+        showWarning('Thiếu thông tin', 'Vui lòng nhập tên kho');
+        return;
+    }
+
+    if (!checkWarehouseName()) {
+        showError('Trùng lặp', 'Tên kho đã tồn tại. Vui lòng chọn tên khác.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/UnitInventory/AddWarehouse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, isActive: true })
         });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('Thành công', result.message);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showError('Lỗi', result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Lỗi kết nối', error.message);
+    }
+}
+
+// ✅ VÍ DỤ: Hàm addUnit với toast
+async function addUnit() {
+    const name = document.getElementById('unitName').value.trim();
+    const type = parseInt(document.getElementById('unitType').value);
+
+    if (!name) {
+        showWarning('Thiếu thông tin', 'Vui lòng nhập tên đơn vị');
+        return;
+    }
+
+    try {
+        const response = await fetch('/UnitInventory/AddUnit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ unitName: name, unitType: type })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('Thành công', result.message);
+            hideUnitForm();
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showError('Lỗi', result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Lỗi kết nối', error.message);
+    }
+}
+
+// ✅ VÍ DỤ: Hàm updateWarehouse với toast
+async function updateWarehouse() {
+    const id = parseInt(document.getElementById('editWarehouseId').value);
+    const name = document.getElementById('editWarehouseName').value.trim();
+
+    if (!name) {
+        showWarning('Thiếu thông tin', 'Vui lòng nhập tên kho');
+        return;
+    }
+
+    if (!checkEditWarehouseName()) {
+        showError('Trùng lặp', 'Tên kho đã tồn tại. Vui lòng chọn tên khác.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/UnitInventory/UpdateWarehouse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ warehouseId: id, name: name, isActive: true })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('Cập nhật thành công', result.message);
+            closeEditWarehouseModal();
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showError('Lỗi', result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Lỗi kết nối', error.message);
+    }
+}
+
+// ✅ VÍ DỤ: Hàm updateUnit với toast
+async function updateUnit() {
+    const id = parseInt(document.getElementById('editUnitId').value);
+    const name = document.getElementById('editUnitName').value.trim();
+    const type = parseInt(document.getElementById('editUnitType').value);
+
+    if (!name) {
+        showWarning('Thiếu thông tin', 'Vui lòng nhập tên đơn vị');
+        return;
+    }
+
+    try {
+        const response = await fetch('/UnitInventory/UpdateUnit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ unitId: id, unitName: name, unitType: type })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('Cập nhật thành công', result.message);
+            closeEditUnitModal();
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showError('Lỗi', result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Lỗi kết nối', error.message);
+    }
+}
+
+        // =============== DELETE WAREHOUSE FUNCTION ===============
+        async function deleteWarehouse(id, name) {
+            showConfirm({
+                title: 'Xác nhận xóa kho',
+                subtitle: 'Hành động này không thể hoàn tác',
+                message: `Bạn có chắc chắn muốn xóa kho "${name}"?`,
+                confirmText: 'Xóa kho',
+                isDanger: true,
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch('/UnitInventory/DeleteWarehouse', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ warehouseId: id })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showSuccess('Xóa thành công', result.message);
+                            setTimeout(() => window.location.reload(), 1500);
+                        } else {
+                            showError('Không thể xóa', result.message);
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showError('Lỗi kết nối', error.message);
+                    }
+                }
+            });
+        }
+
     </script>
 </body>
 </html>

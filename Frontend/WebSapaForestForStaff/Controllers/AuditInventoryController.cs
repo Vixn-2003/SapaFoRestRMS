@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using WebSapaForestForStaff.DTOs.Inventory;
+using WebSapaForestForStaff.Services;
 using static WebSapaForestForStaff.Controllers.ManagerIngredentController;
 
 namespace WebSapaForestForStaff.Controllers
@@ -9,11 +10,13 @@ namespace WebSapaForestForStaff.Controllers
     {
         private readonly HttpClient _httpClient;
         private readonly ILogger<AuditInventoryController> _logger;
+        private readonly IReportService _reportService;
 
-        public AuditInventoryController(HttpClient httpClient, ILogger<AuditInventoryController> logger)
+        public AuditInventoryController(HttpClient httpClient, ILogger<AuditInventoryController> logger, IReportService reportService)
         {
             _httpClient = httpClient;
             _logger = logger;
+            _reportService = reportService;
             _httpClient.BaseAddress = new Uri("https://localhost:7096/");
         }
 
@@ -38,6 +41,9 @@ namespace WebSapaForestForStaff.Controllers
                 var json = await response.Content.ReadAsStringAsync();
                 var audits = JsonConvert.DeserializeObject<List<AuditInventoryDTO>>(json)
                     ?? new List<AuditInventoryDTO>();
+
+                // ✅ SẮP XẾP THEO THỜI GIAN MỚI NHẤT (DESCENDING)
+                audits = audits.OrderByDescending(a => a.CreatedAt).ToList();
 
                 var model = new AuditInventoryPagedViewModel
                 {
@@ -120,6 +126,27 @@ namespace WebSapaForestForStaff.Controllers
             {
                 _logger.LogError(ex, $"Error confirming audit for ID: {id}");
                 return Json(new { success = false, message = "Có lỗi xảy ra: " + ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [Route("AuditInventory/ExportReportPdf")]
+        public async Task<IActionResult> ExportReportPdf([FromBody] AuditReportRequest request)
+        {
+            try
+            {
+                _logger.LogInformation($"Exporting audit report from {request.DateFrom} to {request.DateTo}");
+
+                var pdfBytes = await _reportService.GenerateAuditReportPdfAsync(request);
+
+                var fileName = $"BaoCaoKiemKe_{request.DateFrom:yyyyMMdd}_{request.DateTo:yyyyMMdd}.pdf";
+
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting audit report PDF");
+                return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
     }

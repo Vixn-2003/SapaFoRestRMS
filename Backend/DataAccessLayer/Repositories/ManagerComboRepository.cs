@@ -219,17 +219,20 @@ namespace DataAccessLayer.Repositories
         {
             return await _context.Combos
                 .Include(c => c.ComboItems)
-                .ThenInclude(ci => ci.MenuItem) // Include để lấy Tên và Giá gốc
+                .ThenInclude(ci => ci.MenuItem).ThenInclude(a=>a.Category)
                 .FirstOrDefaultAsync(c => c.ComboId == id);
         }
 
-        public async Task<List<MenuItem>> SearchMenuItemsAsync(string keyword)
+        public async Task<List<MenuItem>> GetMenuItemsByIdsAsync(List<int> menuItemIds)
         {
-            var query = _context.MenuItems.AsQueryable();
-            if (!string.IsNullOrEmpty(keyword))
-                query = query.Where(x => x.Name.Contains(keyword));
+            return await _context.MenuItems
+                .Where(x => menuItemIds.Contains(x.MenuItemId))
+                .ToListAsync();
+        }
 
-            return await query.Take(20).ToListAsync(); // Lấy tối đa 20 món
+        public IQueryable<MenuItem> QueryMenuItems()
+        {
+            return _context.MenuItems.Include(a=>a.Category).AsNoTracking();
         }
 
         public async Task UpdateComboAsync(Combo combo, List<ComboItem> newItems)
@@ -248,6 +251,25 @@ namespace DataAccessLayer.Repositories
             // 3. Update thông tin chung
             _context.Combos.Update(combo);
             await _context.SaveChangesAsync();
+        }
+
+        // Thêm combo mới
+        public async Task AddComboAsync(Combo combo, List<ComboItem> items)
+        {
+            // Gán danh sách ComboItem cho Combo
+            combo.ComboItems = items;
+
+            _context.Combos.Add(combo);
+            await _context.SaveChangesAsync();
+        }
+
+        //top item new
+        public async Task<List<MenuItem>> GetTop5NewMenuItemsAsync()
+        {
+            return await _context.MenuItems.Include(a=>a.Category)
+                                 .OrderByDescending(x => x.MenuItemId) 
+                                 .Take(5)
+                                 .ToListAsync();
         }
     }
 }

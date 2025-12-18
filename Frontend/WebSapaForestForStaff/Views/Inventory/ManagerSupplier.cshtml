@@ -26,13 +26,6 @@
     color: #1f2937; /* text-gray-800 */
 }
 
-.sm-max-width-area {
-    /* max-w-7xl mx-auto */
-    max-width: 1280px; /* 7xl */
-    margin-left: auto;
-    margin-right: auto;
-}
-
 /* ===== TYPOGRAPHY & HEADER ===== */
 .sm-space-y-6 > * + * {
     margin-top: 24px; /* space-y-6 */
@@ -1425,8 +1418,12 @@
     <div class="sm-page-wrapper">
         <div class="sm-max-width-area">
             <div class="sm-header-area">
-                <h1 class="sm-title">Quản lý Nhà cung cấp</h1>
-                <p class="sm-subtitle">Quản lý thông tin, lịch sử giao dịch và đánh giá nhà cung cấp</p>
+                <h1 class="sm-title" style="font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 5px;">
+                    Quản lý Nhà cung cấp
+                </h1>
+                <p class="sm-subtitle">Quản lý thông tin, lịch sử giao dịch</p>
             </div>
 
             <div id="sm-main-content">
@@ -2542,7 +2539,6 @@ function validatePhone(phone) {
                         <div class="sm-panel">
                             <div class="sm-products-panel-header">
                                 <h3 class="sm-panel-title">Danh mục mặt hàng cung cấp</h3>
-                                <button class="sm-table-action-btn">+ Thêm mặt hàng</button>
                             </div>
                             <table class="sm-table">
                                 <thead class="sm-table-thead">
