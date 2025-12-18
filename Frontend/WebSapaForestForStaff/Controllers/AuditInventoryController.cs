@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using WebSapaForestForStaff.DTOs.Inventory;
 using WebSapaForestForStaff.Services;
@@ -6,6 +7,7 @@ using static WebSapaForestForStaff.Controllers.ManagerIngredentController;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Inventory")]
     public class AuditInventoryController : Controller
     {
         private readonly HttpClient _httpClient;

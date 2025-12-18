@@ -251,20 +251,25 @@
     }
 
     /* Table */
-    .wh-table-wrapper {
-        overflow-x: auto;
-        border-radius: 10px;
-        border: 1px solid #cbd5e1;
-    }
+        .wh-table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+        }
 
     .wh-table {
         width: 100%;
         border-collapse: collapse;
     }
 
-    .wh-table thead {
-        background: #f1f5f9;
-    }
+            .wh-table thead {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background: #f1f5f9;
+            }
 
     .wh-table th {
         padding: 14px 16px;
@@ -987,6 +992,21 @@
     }
 }
 
+        .wh-btn-save:disabled,
+        .wh-btn-save.disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+            .wh-btn-save:disabled:hover,
+            .wh-btn-save.disabled:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
 </style>
 </head>
 <body class="warehouse-unit-page">
@@ -1079,7 +1099,10 @@
                 <div class="wh-card-body">
                     <!-- Form thêm đơn vị -->
                     <div id="unitForm" class="wh-form unit-form" style="display: none;">
-                        <input type="text" id="unitName" class="wh-input" placeholder="Tên đơn vị...">
+                        <input type="text" id="unitName" class="wh-input" placeholder="Tên đơn vị..." oninput="checkUnitName()">
+                        <div id="unitNameError" class="error-message" style="display: none; color: #dc2626; font-size: 13px; margin-top: -8px; margin-bottom: 12px;">
+                            Tên đơn vị tính đã tồn tại
+                        </div>
                         <select id="unitType" class="wh-select">
                             <option value="1">Số tự nhiên</option>
                             <option value="2">Số thập phân</option>
@@ -1148,7 +1171,7 @@
 
     <!-- Modal Chỉnh sửa Đơn vị -->
     <div id="editUnitModal" class="wh-modal-overlay" style="display: none;">
-        <div class="wh-modal" >
+        <div class="wh-modal">
             <div class="wh-modal-header unit-modal">
                 <h3 class="wh-modal-title">Chỉnh sửa Đơn vị tính</h3>
                 <button class="wh-modal-close" onclick="closeEditUnitModal()">
@@ -1159,7 +1182,11 @@
             </div>
             <div class="wh-modal-body">
                 <input type="hidden" id="editUnitId">
-                <input type="text" id="editUnitName" class="wh-input" placeholder="Tên đơn vị...">
+                <input type="text" id="editUnitName" class="wh-input" placeholder="Tên đơn vị..." oninput="checkEditUnitName()">
+                <!-- ✅ THÊM DÒNG NÀY -->
+                <div id="editUnitNameError" class="error-message" style="display: none; color: #dc2626; font-size: 13px; margin-top: -8px; margin-bottom: 12px;">
+                    ⚠️ Tên đơn vị tính đã tồn tại
+                </div>
                 <select id="editUnitType" class="wh-select">
                     <option value="1">Số tự nhiên</option>
                     <option value="2">Số thập phân</option>
@@ -1264,6 +1291,7 @@
             document.getElementById('warehouseName').value = '';
             document.getElementById('warehouseNameError').style.display = 'none';
             document.getElementById('warehouseName').style.borderColor = '#cbd5e1';
+            document.querySelector('#warehouseForm .wh-btn-save').disabled = false;
         }
 
         // ✅ Thêm kho mới qua API
@@ -1432,6 +1460,9 @@
             document.getElementById('unitForm').style.display = 'none';
             document.getElementById('unitName').value = '';
             document.getElementById('unitType').value = '1'; 
+            document.getElementById('unitNameError').style.display = 'none';
+            document.getElementById('unitName').style.borderColor = '#cbd5e1';
+            document.querySelector('#unitForm .wh-btn-save').disabled = false;
         }
 
         // ✅ Thêm đơn vị mới qua API
@@ -1440,36 +1471,35 @@
             const type = parseInt(document.getElementById('unitType').value);
 
             if (!name) {
-                showWarning('Vui lòng nhập tên đơn vị');
+                showWarning('Thiếu thông tin', 'Vui lòng nhập tên đơn vị');
                 return;
             }
 
+            // ✅ THÊM KIỂM TRA TRÙNG TÊN
+            if (!checkUnitName()) {
+                showError('Trùng lặp', 'Tên đơn vị tính đã tồn tại. Vui lòng chọn tên khác.');
+                return;
+            }
 
             try {
                 const response = await fetch('/UnitInventory/AddUnit', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        unitName: name,
-                        unitType: type
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ unitName: name, unitType: type })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    showSuccess(result.message);
-
+                    showSuccess('Thành công', result.message);
                     hideUnitForm();
-                    window.location.reload();
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    showError('Lỗi: ' + result.message);
+                    showError('Lỗi', result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showError('Lỗi kết nối: ' + error.message);
+                showError('Lỗi kết nối', error.message);
             }
         }
 
@@ -1551,6 +1581,7 @@
         function closeEditWarehouseModal(event) {
             if (!event || event.target.id === 'editWarehouseModal') {
                 document.getElementById('editWarehouseModal').style.display = 'none';
+                document.querySelector('#editWarehouseModal .wh-btn-save').disabled = false;
             }
         }
 
@@ -1610,6 +1641,10 @@
 
         function closeEditUnitModal() {
             document.getElementById('editUnitModal').style.display = 'none';
+            document.getElementById('editUnitNameError').style.display = 'none';
+            document.getElementById('editUnitName').style.borderColor = '#cbd5e1';
+            document.querySelector('#editUnitModal .wh-btn-save').disabled = false;
+
         }
 
 
@@ -1619,78 +1654,80 @@
             const type = parseInt(document.getElementById('editUnitType').value);
 
             if (!name) {
-                showWarning('Vui lòng nhập tên đơn vị');
+                showWarning('Thiếu thông tin', 'Vui lòng nhập tên đơn vị');
+                return;
+            }
+
+            // ✅ THÊM KIỂM TRA TRÙNG TÊN
+            if (!checkEditUnitName()) {
+                showError('Trùng lặp', 'Tên đơn vị tính đã tồn tại. Vui lòng chọn tên khác.');
                 return;
             }
 
             try {
                 const response = await fetch('/UnitInventory/UpdateUnit', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        unitId: id,
-                        unitName: name,
-                        unitType: type
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ unitId: id, unitName: name, unitType: type })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    showSuccess(result.message);
+                    showSuccess('Cập nhật thành công', result.message);
                     closeEditUnitModal();
-                    window.location.reload();
+                    setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    showError('Lỗi: ' + result.message);
+                    showError('Lỗi', result.message);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showError('Lỗi kết nối: ' + error.message);
+                showError('Lỗi kết nối', error.message);
             }
         }
 
-
-
-        // ✅ THÊM HÀM KIỂM TRA TÊN KHO TRÙNG - FORM THÊM MỚI
         function checkWarehouseName() {
             const nameInput = document.getElementById('warehouseName');
             const errorDiv = document.getElementById('warehouseNameError');
+            const saveBtn = document.querySelector('#warehouseForm .wh-btn-save');
             const name = nameInput.value.trim().toLowerCase();
 
             if (!name) {
                 errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false; 
                 return true;
             }
 
-            // Kiểm tra tên có trùng không (không phân biệt hoa thường)
             const isDuplicate = warehouses.some(w => w.name.toLowerCase() === name);
 
             if (isDuplicate) {
                 errorDiv.style.display = 'block';
                 nameInput.style.borderColor = '#dc2626';
+                saveBtn.disabled = true; 
                 return false;
             } else {
                 errorDiv.style.display = 'none';
                 nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false; 
                 return true;
             }
         }
 
-        // ✅ THÊM HÀM KIỂM TRA TÊN KHO TRÙNG - FORM CHỈNH SỬA
         function checkEditWarehouseName() {
             const nameInput = document.getElementById('editWarehouseName');
             const errorDiv = document.getElementById('editWarehouseNameError');
+            const saveBtn = document.querySelector('#editWarehouseModal .wh-btn-save');
             const currentId = parseInt(document.getElementById('editWarehouseId').value);
             const name = nameInput.value.trim().toLowerCase();
 
             if (!name) {
                 errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false;
                 return true;
             }
 
-            // Kiểm tra tên có trùng với kho khác (loại trừ chính nó)
             const isDuplicate = warehouses.some(w =>
                 w.id !== currentId && w.name.toLowerCase() === name
             );
@@ -1698,16 +1735,16 @@
             if (isDuplicate) {
                 errorDiv.style.display = 'block';
                 nameInput.style.borderColor = '#dc2626';
+                saveBtn.disabled = true; 
                 return false;
             } else {
                 errorDiv.style.display = 'none';
                 nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false; 
                 return true;
             }
         }
         
-
-
         const TOAST_ICONS = {
             success: `<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
@@ -2026,6 +2063,67 @@ async function updateUnit() {
                     }
                 }
             });
+        }
+
+
+        function checkUnitName() {
+            const nameInput = document.getElementById('unitName');
+            const errorDiv = document.getElementById('unitNameError');
+            const saveBtn = document.querySelector('#unitForm .wh-btn-save');
+            const name = nameInput.value.trim().toLowerCase();
+
+            if (!name) {
+                errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false; 
+                return true;
+            }
+
+            const isDuplicate = units.some(u => u.name.toLowerCase() === name);
+
+            if (isDuplicate) {
+                errorDiv.style.display = 'block';
+                nameInput.style.borderColor = '#dc2626';
+                saveBtn.disabled = true;
+                return false;
+            } else {
+                errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false; 
+                return true;
+            }
+        }
+
+
+        function checkEditUnitName() {
+            const nameInput = document.getElementById('editUnitName');
+            const errorDiv = document.getElementById('editUnitNameError');
+            const saveBtn = document.querySelector('#editUnitModal .wh-btn-save');
+            const currentId = parseInt(document.getElementById('editUnitId').value);
+            const name = nameInput.value.trim().toLowerCase();
+
+            if (!name) {
+                errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false; 
+                return true;
+            }
+
+            const isDuplicate = units.some(u =>
+                u.id !== currentId && u.name.toLowerCase() === name
+            );
+
+            if (isDuplicate) {
+                errorDiv.style.display = 'block';
+                nameInput.style.borderColor = '#dc2626';
+                saveBtn.disabled = true;
+                return false;
+            } else {
+                errorDiv.style.display = 'none';
+                nameInput.style.borderColor = '#cbd5e1';
+                saveBtn.disabled = false; 
+                return true;
+            }
         }
 
     </script>

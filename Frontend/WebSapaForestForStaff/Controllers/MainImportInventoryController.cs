@@ -8,10 +8,12 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.ComponentModel;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Inventory")]
     public class MainImportInventoryController : Controller
     {
         private readonly HttpClient _httpClient;
