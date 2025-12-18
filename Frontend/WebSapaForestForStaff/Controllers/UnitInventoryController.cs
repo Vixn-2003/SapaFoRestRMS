@@ -1,10 +1,12 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using WebSapaForestForStaff.DTOs.Inventory;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Inventory")]
     public class UnitInventoryController : Controller
     {
         private readonly HttpClient _httpClient;

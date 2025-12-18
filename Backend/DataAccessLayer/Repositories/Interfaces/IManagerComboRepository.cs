@@ -42,5 +42,6 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<Combo?> GetComboWithItemsAsync(int id);
         Task<List<MenuItem>> SearchMenuItemsAsync(string keyword);
         Task UpdateComboAsync(Combo combo, List<ComboItem> newItems);
+        Task ChangeStatusComboAsync(int idcombo, bool status);
     }
 }

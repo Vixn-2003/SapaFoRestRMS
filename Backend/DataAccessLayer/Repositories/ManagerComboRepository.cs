@@ -2,6 +2,7 @@
 using DataAccessLayer.Repositories.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
+using static Azure.Core.HttpHeader;
 
 namespace DataAccessLayer.Repositories
 {
@@ -248,6 +249,20 @@ namespace DataAccessLayer.Repositories
             // 3. Update thông tin chung
             _context.Combos.Update(combo);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task ChangeStatusComboAsync(int id ,bool status)
+        {
+            var existingCombo = await _context.Combos.Where(p => p.IsAvailable == true)
+                .FirstOrDefaultAsync(x => x.ComboId == id);
+            if (existingCombo != null)
+            {
+                existingCombo.IsAvailable = status;
+                _context.Combos.Update(existingCombo);
+                await _context.SaveChangesAsync();
+            }
+
+           
         }
     }
 }

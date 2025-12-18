@@ -1,4 +1,5 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http;
 using System.Security.Claims;
@@ -8,7 +9,7 @@ using WebSapaForestForStaff.Services;
 
 namespace WebSapaForestForStaff.Controllers
 {
-
+    [Authorize(Policy = "Position:Inventory")]
     public class ExportInventoryController : Controller
     {
         private readonly HttpClient _httpClient;
