@@ -17,7 +17,8 @@ namespace WebSapaForestForStaff.DTOs.ManagementCombo
         public decimal SellingPrice { get; set; }
         public bool IsAvailable { get; set; }
 
-        public string ImageUrl { get; set; }
+        public string? ImageUrl { get; set; }
+        public IFormFile? ImageFile { get; set; }
 
         // ====== ITEMS ======
         public List<ComboItemUpdateDTO> Items { get; set; } = new();

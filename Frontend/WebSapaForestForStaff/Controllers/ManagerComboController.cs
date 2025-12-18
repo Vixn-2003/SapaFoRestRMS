@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json; // Dùng cho ReadFromJsonAsync
 using WebSapaForestForStaff.DTOs.ManagementCombo;
@@ -183,52 +184,118 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        // POST: Xử lý lưu Edit
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, ComboEditDto model)
+        public async Task<IActionResult> Edit(int id)
         {
-            // ===== CALL API PUT =====
-            var json = JsonConvert.SerializeObject(model);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
             try
             {
-                var response = await _httpClient.PutAsync($"ManagerCombo/{id}", content);
-                var responseBody = await response.Content.ReadAsStringAsync();
+                using var formData = new MultipartFormDataContent();
+
+                // ✅ Lấy dữ liệu từ Request.Form
+                var comboId = Convert.ToInt32(Request.Form["ComboId"]);
+                var name = Request.Form["Name"].ToString();
+                var description = Request.Form["Description"].ToString();
+                var sellingPrice = Convert.ToDecimal(Request.Form["SellingPrice"]);
+
+                // ✅ Xử lý checkbox: nếu không có trong form = false, có = true
+                bool isAvailable = false;
+                if (Request.Form.ContainsKey("IsAvailable"))
+                {
+                    var checkboxValue = Request.Form["IsAvailable"].ToString();
+                    // Checkbox gửi "true" khi checked, không gửi gì khi unchecked
+                    isAvailable = checkboxValue.Contains("true", StringComparison.OrdinalIgnoreCase);
+                }
+
+                var imageUrl = Request.Form["ImageUrl"].ToString();
+
+                // ✅ DEBUG
+                System.Diagnostics.Debug.WriteLine($"=== EDIT COMBO DEBUG ===");
+                System.Diagnostics.Debug.WriteLine($"ComboId: {comboId}");
+                System.Diagnostics.Debug.WriteLine($"Name: {name}");
+                System.Diagnostics.Debug.WriteLine($"IsAvailable: {isAvailable}");
+                System.Diagnostics.Debug.WriteLine($"IsAvailable raw: {Request.Form["IsAvailable"]}");
+                System.Diagnostics.Debug.WriteLine($"Files count: {Request.Form.Files.Count}");
+
+                // ✅ Thêm các field vào FormData
+                formData.Add(new StringContent(comboId.ToString()), "ComboId");
+                formData.Add(new StringContent(name ?? ""), "Name");
+                formData.Add(new StringContent(description ?? ""), "Description");
+                formData.Add(new StringContent(sellingPrice.ToString()), "SellingPrice");
+                formData.Add(new StringContent(isAvailable.ToString().ToLower()), "IsAvailable");
+
+                // ✅ Gửi ImageUrl nếu không có file mới
+                if (Request.Form.Files.Count == 0 && !string.IsNullOrEmpty(imageUrl))
+                {
+                    formData.Add(new StringContent(imageUrl), "ImageUrl");
+                }
+
+                // ✅ Xử lý file ảnh
+                var imageFile = Request.Form.Files["ImageFile"];
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Image: {imageFile.FileName} ({imageFile.Length} bytes)");
+
+                    var fileContent = new StreamContent(imageFile.OpenReadStream());
+                    fileContent.Headers.ContentType = new MediaTypeHeaderValue(imageFile.ContentType);
+                    formData.Add(fileContent, "imageFile", imageFile.FileName);
+                }
+
+                // ✅ Thêm Items
+                int index = 0;
+                while (Request.Form.ContainsKey($"Items[{index}].MenuItemId"))
+                {
+                    var itemId = Request.Form[$"Items[{index}].MenuItemId"].ToString();
+                    var quantity = Request.Form[$"Items[{index}].Quantity"].ToString();
+
+                    formData.Add(new StringContent(itemId), $"Items[{index}].MenuItemId");
+                    formData.Add(new StringContent(quantity), $"Items[{index}].Quantity");
+
+                    index++;
+                }
+
+                // ✅ Gọi API
+                var response = await _httpClient.PutAsync($"ManagerCombo/{id}", formData);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    TempData["Success"] = "Cập nhật thành công!";
+                    TempData["Success"] = "✅ Cập nhật thành công!";
                     return RedirectToAction("Index");
                 }
 
-                // ===== HANDLE API ERRORS =====
+                var errorContent = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"❌ API Error: {errorContent}");
+
                 try
                 {
-                    // Parse lỗi từ BE
-                    var apiError = JsonConvert.DeserializeObject<ApiErrorResponse>(responseBody);
-                    ModelState.AddModelError("", apiError?.message ?? "Cập nhật thất bại.");
+                    var errorObj = JsonConvert.DeserializeObject<ApiErrorResponse>(errorContent);
+                    ModelState.AddModelError("", errorObj?.message ?? "Lỗi không xác định");
                 }
                 catch
                 {
-                    ModelState.AddModelError("", "Cập nhật thất bại.");
+                    ModelState.AddModelError("", errorContent);
                 }
-
-                // Load dữ liệu phụ trợ nếu cần (dropdown, etc.)
-                await LoadComboAuxData();
-                return View("EditCombo", model);
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", $"Có lỗi xảy ra: {ex.Message}");
-                await LoadComboAuxData();
-                return View("EditCombo", model);
+                System.Diagnostics.Debug.WriteLine($"❌ Exception: {ex.Message}");
+                ModelState.AddModelError("", $"❌ Lỗi: {ex.Message}");
             }
+
+            // ✅ Load lại form khi lỗi
+            var model = new ComboEditDto
+            {
+                ComboId = id,
+                Name = Request.Form["Name"],
+                Description = Request.Form["Description"],
+                SellingPrice = decimal.TryParse(Request.Form["SellingPrice"], out var sp) ? sp : 0,
+                IsAvailable = Request.Form["IsAvailable"].ToString().Contains("true", StringComparison.OrdinalIgnoreCase),
+                ImageUrl = Request.Form["ImageUrl"]
+            };
+
+            await LoadComboAuxData();
+            return View("EditCombo", model);
         }
-
-
 
         // ==========================================================
         // 2. TẠO MỚI COMBO (CREATE - GET & POST)
@@ -258,45 +325,137 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        // POST: Xử lý lưu Create
-        // POST: Create Combo
-        [HttpPost("Create")]
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(CreateComboDto model)
+        public async Task<IActionResult> Creates()
         {
-            if (!ModelState.IsValid)
-            {
-                await LoadComboAuxData();
-                return View("Create", model);
-            }
-
             try
             {
-                var json = JsonConvert.SerializeObject(model);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var formData = new MultipartFormDataContent();
 
-                var response = await _httpClient.PostAsync("ManagerCombo/CreateCombo", content);
+                // ✅ Lấy dữ liệu từ Request.Form
+                var name = Request.Form["Name"].ToString();
+                var description = Request.Form["Description"].ToString();
+                var sellingPrice = Convert.ToDecimal(Request.Form["SellingPrice"]);
+
+                // ✅ Xử lý checkbox IsAvailable
+                bool isAvailable = false;
+                if (Request.Form.ContainsKey("IsAvailable"))
+                {
+                    var checkboxValue = Request.Form["IsAvailable"].ToString();
+                    isAvailable = checkboxValue.Contains("true", StringComparison.OrdinalIgnoreCase);
+                }
+
+                // ✅ DEBUG
+                System.Diagnostics.Debug.WriteLine($"=== CREATE COMBO DEBUG ===");
+                System.Diagnostics.Debug.WriteLine($"Name: {name}");
+                System.Diagnostics.Debug.WriteLine($"SellingPrice: {sellingPrice}");
+                System.Diagnostics.Debug.WriteLine($"IsAvailable: {isAvailable}");
+
+                // ✅ Validate
+                if (string.IsNullOrEmpty(name))
+                {
+                    ModelState.AddModelError("", "Tên combo không được để trống");
+                    await LoadComboAuxData();
+                    return View("Create", new CreateComboDto());
+                }
+
+                // ✅ Thêm các field cơ bản vào FormData
+                formData.Add(new StringContent(name), "Name");
+                formData.Add(new StringContent(description ?? ""), "Description");
+                formData.Add(new StringContent(sellingPrice.ToString()), "SellingPrice");
+                formData.Add(new StringContent(isAvailable.ToString().ToLower()), "IsAvailable");
+
+                // ✅ Xử lý file ảnh
+                var imageFile = Request.Form.Files["ImageFile"];
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"📸 Image: {imageFile.FileName} ({imageFile.Length} bytes)");
+
+                    var fileContent = new StreamContent(imageFile.OpenReadStream());
+                    fileContent.Headers.ContentType = new MediaTypeHeaderValue(imageFile.ContentType);
+                    formData.Add(fileContent, "ImageFile", imageFile.FileName);
+                }
+
+                // ✅ XỬ LÝ ITEMS - GỬI THEO DẠNG FORM-DATA ARRAY
+                int index = 0;
+                int itemCount = 0;
+
+                // Đếm trước xem có bao nhiêu items
+                while (Request.Form.ContainsKey($"Items[{index}].MenuItemId"))
+                {
+                    var itemId = Request.Form[$"Items[{index}].MenuItemId"].ToString();
+                    var quantity = Request.Form[$"Items[{index}].Quantity"].ToString();
+
+                    // ✅ QUAN TRỌNG: Thêm vào formData theo đúng format ASP.NET Model Binding
+                    formData.Add(new StringContent(itemId), $"Items[{itemCount}].MenuItemId");
+                    formData.Add(new StringContent(quantity), $"Items[{itemCount}].Quantity");
+
+                    System.Diagnostics.Debug.WriteLine($"✅ Item {itemCount}: MenuItemId={itemId}, Quantity={quantity}");
+
+                    index++;
+                    itemCount++;
+                }
+
+                // ✅ Nếu không tìm thấy items, in ra debug
+                if (itemCount == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("❌ KHÔNG TÌM THẤY ITEMS!");
+                    System.Diagnostics.Debug.WriteLine("📋 Các keys trong Request.Form:");
+                    foreach (var key in Request.Form.Keys)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"   - {key} = {Request.Form[key]}");
+                    }
+
+                    ModelState.AddModelError("", "Combo phải có ít nhất 1 món ăn");
+                    await LoadComboAuxData();
+                    return View("Create", new CreateComboDto());
+                }
+
+                System.Diagnostics.Debug.WriteLine($"✅ Tổng số items: {itemCount}");
+
+                // ✅ Gọi API
+                var response = await _httpClient.PostAsync("ManagerCombo/CreateCombo", formData);
 
                 if (response.IsSuccessStatusCode)
                 {
-                    TempData["Success"] = "Tạo combo mới thành công!";
+                    TempData["Success"] = "✅ Tạo combo mới thành công!";
                     return RedirectToAction("Index");
                 }
 
-                // 🔥 Lấy lỗi từ BE
-                var error = await response.Content.ReadAsStringAsync();
-                ModelState.AddModelError("", error);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"❌ API Error: {response.StatusCode}");
+                System.Diagnostics.Debug.WriteLine($"Error content: {errorContent}");
 
+                try
+                {
+                    var errorObj = JsonConvert.DeserializeObject<ApiErrorResponse>(errorContent);
+                    ModelState.AddModelError("", errorObj?.message ?? "Lỗi không xác định");
+                }
+                catch
+                {
+                    ModelState.AddModelError("", errorContent);
+                }
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "Không thể kết nối tới server.");
+                System.Diagnostics.Debug.WriteLine($"❌ Exception: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                ModelState.AddModelError("", $"❌ Lỗi: {ex.Message}");
             }
 
+            // ✅ Nếu lỗi, load lại form
             await LoadComboAuxData();
+
+            var model = new CreateComboDto
+            {
+                Name = Request.Form["Name"],
+                Description = Request.Form["Description"],
+                SellingPrice = decimal.TryParse(Request.Form["SellingPrice"], out var sp) ? sp : 0,
+                IsAvailable = Request.Form["IsAvailable"].ToString().Contains("true", StringComparison.OrdinalIgnoreCase)
+            };
+
             return View("Create", model);
         }
-
-
     }
 }
