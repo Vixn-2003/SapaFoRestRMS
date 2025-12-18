@@ -1,0 +1,167 @@
+@model WebSapaForestForStaff.Models.Owner.OwnerDashboardViewModel
+@{
+    ViewData["Title"] = "Bảng điều khiển Chủ sở hữu";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+@section Styles {
+    <style>
+        .kpi-card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .kpi-card .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .kpi-card .kpi-label {
+            color: white;
+            font-size: 0.9rem;
+        }
+        .kpi-card .kpi-change {
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+        .kpi-change.positive { color: green; }
+        .kpi-change.negative { color: red; }
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            padding: 15px;
+        }
+    </style>
+}
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">📊 Bảng điều khiển Chủ sở hữu</h2>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+        </div>
+    }
+    else if (Model.HasData)
+    {
+        <!-- KPI Cards Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="kpi-card bg-primary text-white">
+                    <div class="kpi-label">Doanh Thu Hôm Nay</div>
+                    <div class="kpi-value">@Model.KpiCards.TodayRevenue.ToString("N0") đ</div>
+                    <div class="kpi-change @(Model.KpiCards.TodayRevenueChangePercent >= 0 ? "positive" : "negative")">
+                        <i class="fas fa-arrow-@(Model.KpiCards.TodayRevenueChangePercent >= 0 ? "up" : "down")"></i>
+                        @Math.Abs(Model.KpiCards.TodayRevenueChangePercent).ToString("N1")% so với hôm qua
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="kpi-card bg-success text-white">
+                    <div class="kpi-label">Doanh Thu Tháng Này</div>
+                    <div class="kpi-value">@Model.KpiCards.MonthlyRevenue.ToString("N0") đ</div>
+                    <div class="kpi-change @(Model.KpiCards.MonthlyRevenueChangePercent >= 0 ? "positive" : "negative")">
+                        <i class="fas fa-arrow-@(Model.KpiCards.MonthlyRevenueChangePercent >= 0 ? "up" : "down")"></i>
+                        @Math.Abs(Model.KpiCards.MonthlyRevenueChangePercent).ToString("N1")% so với tháng trước
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="kpi-card bg-info text-white">
+                    <div class="kpi-label">Tổng Đơn Hàng</div>
+                    <div class="kpi-value">@Model.KpiCards.TotalOrders</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="kpi-card bg-warning text-white">
+                    <div class="kpi-label">Khách Hàng Hoạt Động</div>
+                    <div class="kpi-value">@Model.KpiCards.ActiveCustomers</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="kpi-card bg-danger text-white">
+                    <div class="kpi-label">Cảnh Báo Kho</div>
+                    <div class="kpi-value">@(Model.KpiCards.LowStockAlertsCount + Model.KpiCards.NearExpiryAlertsCount)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i> Xu Hướng Doanh Thu (30 ngày)
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="revenueTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-exclamation-circle"></i> Phân Loại Cảnh Báo
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="alertsDonutChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-fire"></i> Top 10 Món Bán Chạy
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="topSellingChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-store"></i> So Sánh Chi Nhánh
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="branchComparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Embed data from ViewModel into JavaScript
+        var dashboardData = {
+            revenueTrend: @Html.Raw(Json.Serialize(Model.RevenueTrend)),
+            topSellingItems: @Html.Raw(Json.Serialize(Model.TopSellingItems)),
+            branchComparison: @Html.Raw(Json.Serialize(Model.BranchComparison)),
+            alertsSummary: @Html.Raw(Json.Serialize(Model.AlertsSummary))
+        };
+    </script>
+    <script src="~/js/owner-dashboard-charts.js"></script>
+}
+

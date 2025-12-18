@@ -1,0 +1,117 @@
+@model WebSapaForestForStaff.Models.UserManagement.UserEditViewModel
+
+@{
+    ViewData["Title"] = "Chỉnh sửa người dùng";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="row align-items-center">
+        <div class="col">
+            <h3 class="page-title">Chỉnh sửa người dùng</h3>
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Quản lý người dùng</a></li>
+                <li class="breadcrumb-item active">Chỉnh sửa</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Form -->
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Thông tin người dùng</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post" onsubmit="return confirm('Bạn có chắc muốn lưu thay đổi cho người dùng này?');">
+                    <input type="hidden" asp-for="UserId" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="FullName" class="control-label"></label>
+                                <input asp-for="FullName" class="form-control" />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Email" class="control-label"></label>
+                                <input asp-for="Email" class="form-control" type="email" readonly />
+                                <small class="form-text text-muted">Email không thể thay đổi</small>
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Phone" class="control-label"></label>
+                                <input asp-for="Phone" class="form-control" />
+                                <span asp-validation-for="Phone" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="RoleId" class="control-label"></label>
+                                <select asp-for="RoleId" class="form-control">
+                                <option value="">-- Chọn vai trò --</option>
+                                    @if (Model.AvailableRoles != null)
+                                    {
+                                        @foreach (var role in Model.AvailableRoles)
+                                        {
+                                            <option value="@role.RoleId">@role.RoleName</option>
+                                        }
+                                    }
+                                </select>
+                                <span asp-validation-for="RoleId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Status" class="control-label"></label>
+                                <select asp-for="Status" class="form-control">
+                                    <option value="0">Hoạt động</option>
+                                    <option value="1">Ngừng hoạt động</option>
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="AvatarUrl" class="control-label"></label>
+                                <input asp-for="AvatarUrl" class="form-control" />
+                                <span asp-validation-for="AvatarUrl" class="text-danger"></span>
+                                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                                {
+                                    <div class="mt-2">
+                                        <img src="@Model.AvatarUrl" alt="Avatar" class="img-thumbnail" style="max-width: 100px; max-height: 100px;" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group text-right">
+                        <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+                        <button type="submit" class="btn btn-primary">Cập nhật</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+

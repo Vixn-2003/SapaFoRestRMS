@@ -7,6 +7,10 @@
 
     Layout = "_LayoutManager";
 }
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
 <div class="container mt-4">
     <h2 class="mb-4 text-primary">✏️ Chỉnh sửa khu vực</h2>
     <hr />

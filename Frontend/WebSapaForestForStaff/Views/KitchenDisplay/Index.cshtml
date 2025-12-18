@@ -6,17 +6,80 @@
     <style>
         /* KDS Specific Styles */
         .kds-container {
-            background: #f5f7fa;
+            background: radial-gradient(circle at top left, #f5f7fa 0, #e9edf5 40%, #dde3f0 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 24px 28px 24px 28px;
+        }
+
+        /* SignalR Connection Status Banner */
+        .signalr-status-banner {
+            background: #ff9800;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        @@keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .kds-header {
-            background: white;
-            padding: 15px 20px;
-            border-radius: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, #f7fbff 60%, #eef5ff 100%);
+            padding: 18px 22px;
+            border-radius: 14px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+        }
+
+        .kds-header h2 {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #111827;
+        }
+
+        .kds-header p {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .kds-header .btn {
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 8px 16px;
+        }
+
+        .kds-header #btnShowRecentlyFulfilled {
+            background-color: #0ea5e9; /* cyan-500 */
+            border-color: #0ea5e9;
+            color: #ffffff;
+        }
+
+        .kds-header #btnShowRecentlyFulfilled:hover {
+            background-color: #0284c7;
+            border-color: #0284c7;
+        }
+
+        .kds-header .btn-outline-primary {
+            border-width: 1.5px;
+            color: #1d4ed8;
+            background-color: #e0edff;
+        }
+
+        .kds-header .btn-outline-primary:hover {
+            background-color: #1d4ed8;
+            color: #ffffff;
         }
 
         /* Ingredient Shortage Alert Panel */
@@ -109,18 +172,19 @@
 
         .kds-main-layout {
             display: flex;
-            gap: 20px;
-            min-height: calc(100vh - 200px);
+            gap: 22px;
+            min-height: calc(100vh - 210px);
         }
 
         .completed-orders-column {
-            width: 350px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
+            width: 360px;
+            background: #f9fffb;
+            border-radius: 14px;
+            padding: 16px 14px 18px 14px;
             overflow: visible;
-            transition: all 0.3s ease;
-            border: 2px solid #28a745;
+            transition: all 0.25s ease;
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            box-shadow: 0 16px 35px rgba(16, 185, 129, 0.18);
         }
 
         .completed-orders-column.hidden {
@@ -128,15 +192,16 @@
         }
 
         .completed-orders-header {
-            background: #28a745;
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
             color: white;
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            font-weight: bold;
+            padding: 10px 14px;
+            border-radius: 10px;
+            margin-bottom: 14px;
+            font-weight: 600;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 8px 18px rgba(34, 197, 94, 0.35);
         }
 
         .completed-orders-grid {
@@ -146,11 +211,11 @@
         }
 
         .completed-order-card {
-            background: #d4edda;
-            border: 2px solid #28a745;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: #ecfdf3;
+            border: 1px solid rgba(22, 163, 74, 0.4);
+            border-radius: 12px;
+            padding: 13px 13px 11px 13px;
+            box-shadow: 0 8px 20px rgba(22, 163, 74, 0.20);
         }
 
         .completed-order-card .order-header {
@@ -190,7 +255,7 @@
         .orders-grid {
             position: relative;
             width: 100%;
-            padding: 0 !important;
+            padding: 2px !important;
         }
         
         /* Masonry container */
@@ -540,17 +605,70 @@
 
         .item-header {
             display: flex;
-            justify-content: space-between;
-            align-items: start;
+            flex-direction: column;
+            gap: 12px;
             margin-bottom: 15px;
-            gap: 10px;
         }
 
         .item-name-large {
             font-size: 20px;
             font-weight: bold;
             color: #2c3e50;
-            flex: 1;
+            line-height: 1.4;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .item-name-text {
+            white-space: nowrap;
+        }
+
+        .item-quantity-inline {
+            color: #f97316;
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .item-status-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .status-badge.status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 2px solid #fbbf24;
+        }
+
+        .status-badge.status-cooking {
+            background-color: #dbeafe;
+            color: #1e40af;
+            border: 2px solid #3b82f6;
+        }
+
+        .status-badge.status-ready {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+
+        .status-badge.status-done {
+            background-color: #e5e7eb;
+            color: #374151;
+            border: 2px solid #9ca3af;
         }
 
         .item-details-list {
@@ -585,7 +703,20 @@
         }
 
         .filter-tabs .btn {
-            transition: all 0.3s;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 999px;
+            padding: 6px 14px;
+            color: #1f2933;
+            border-color: #cbd5e1;
+            background-color: #f8fafc;
+        }
+
+        .filter-tabs .btn:hover {
+            background-color: #e5edff;
+            border-color: #93c5fd;
+            color: #111827;
         }
 
         .filter-tabs .btn.active {
@@ -770,87 +901,75 @@
         }
 
         .order-modal-footer {
-            padding: 15px 10px;
+            padding: 15px 20px;
             border-top: 2px solid #e0e0e0;
             display: flex;
-            gap: 6px;
+            gap: 12px;
             justify-content: center;
             flex-wrap: nowrap;
-            overflow-x: auto;
-            min-width: 0;
-            flex-shrink: 0;
+            align-items: center;
         }
 
         .btn-modal {
-            padding: 10px 12px;
+            padding: 12px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 15px;
             transition: all 0.2s;
-            flex: 1 1 0;
-            min-width: 0;
+            flex: 1;
+            min-width: 120px;
+            max-width: 200px;
             white-space: nowrap;
             text-align: center;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         
-        /* Đặt min-width cụ thể cho từng nút để text hiển thị đầy đủ */
+        /* Nút Hủy - màu xám */
         .btn-modal-cancel {
-            flex: 0 0 auto;
-            min-width: 70px;
             background: #9e9e9e;
             color: white;
         }
 
         .btn-modal-cancel:hover {
             background: #757575;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
+        /* Nút Chọn tất cả - màu xám */
         .btn-modal-select-all {
-            flex: 0 0 auto;
-            min-width: 100px;
             background: #9e9e9e;
             color: white;
         }
 
         .btn-modal-select-all:hover {
             background: #757575;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
+        /* Nút Bắt đầu nấu - màu xanh nổi bật */
         .btn-modal-fire {
-            flex: 0 0 auto;
-            min-width: 115px;
-            background: #64b5f6;
+            background: #2196f3;
             color: white;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
         }
 
         .btn-modal-fire:hover {
-            background: #42a5f5;
+            background: #1976d2;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
         }
         
         .btn-modal-unfulfill {
-            flex: 0 0 auto;
-            min-width: 125px;
             background: #64b5f6;
             color: white;
         }
 
         .btn-modal-unfulfill:hover {
             background: #42a5f5;
-        }
-        
-        .btn-modal-fulfill {
-            flex: 0 0 auto;
-            min-width: 110px;
-            background: #1976d2;
-            color: white;
-        }
-
-        .btn-modal-fulfill:hover {
-            background: #1565c0;
         }
 
         .btn-modal:disabled {
@@ -969,6 +1088,19 @@
 
 <div class="kds-container">
     <!-- Header -->
+    <!-- SignalR Connection Status Banner -->
+    <div class="signalr-status-banner" id="signalrStatusBanner" style="display: none;">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+                <i class="mdi mdi-wifi-off" style="font-size: 20px; margin-right: 10px;"></i>
+                <span><strong>Mất kết nối real-time</strong> - Hệ thống đang tự động làm mới mỗi 15 giây</span>
+            </div>
+            <button class="btn btn-sm btn-outline-light" onclick="retrySignalRConnection()">
+                <i class="mdi mdi-refresh"></i> Thử lại
+            </button>
+        </div>
+    </div>
+
     <div class="kds-header">
         <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -992,8 +1124,11 @@
         <div class="shortage-alert-header">
             <div class="d-flex align-items-center">
                 <i class="mdi mdi-alert-circle" style="font-size: 24px; color: #dc3545; margin-right: 10px;"></i>
-                <h5 class="mb-0" style="color: #dc3545; font-weight: bold;">Cảnh báo: Thiếu nguyên liệu</h5>
-                <span class="badge bg-danger ms-2" id="shortageCount">0</span>
+                <div>
+                    <h5 class="mb-0" style="color: #dc3545; font-weight: bold;">Tổng quan nguyên liệu thiếu</h5>
+                    <small style="color: #856404; font-size: 12px;">Theo dõi và kiểm soát nguyên liệu thiếu cho tất cả món</small>
+                </div>
+                <span class="badge bg-danger ms-3" id="shortageCount" style="font-size: 16px; padding: 6px 12px;">0</span>
             </div>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleShortagePanel()">
                 <i class="mdi mdi-chevron-up" id="shortageToggleIcon"></i>
@@ -1034,9 +1169,6 @@
                 </button>
                 <button class="btn btn-sm btn-outline-success" id="filter-status-ready" onclick="filterByItemStatus('Ready')">
                     Sẵn sàng
-                </button>
-                <button class="btn btn-sm btn-outline-success" id="filter-status-done" onclick="filterByItemStatus('Done')" style="background-color: #4caf50; color: white; border-color: #4caf50;">
-                    Hoàn thành
                 </button>
             </div>
         </div>

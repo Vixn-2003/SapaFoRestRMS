@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using System.Security.Claims;
 using WebSapaForestForStaff.DTOs;
@@ -9,6 +10,7 @@ using WebSapaForestForStaff.DTOs.Payment;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Waiter")]
     public class DashboardTableController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;

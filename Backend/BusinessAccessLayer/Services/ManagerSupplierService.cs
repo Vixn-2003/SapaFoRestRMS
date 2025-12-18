@@ -72,7 +72,7 @@ namespace BusinessAccessLayer.Services
             }
         }
 
-        // ✅ IMPLEMENT UPDATE
+        //  IMPLEMENT UPDATE
         public async Task<bool> UpdateSupplier(int id, UpdateSupplierDTO dto)
         {
             try
@@ -101,7 +101,7 @@ namespace BusinessAccessLayer.Services
             }
         }
 
-        // ✅ IMPLEMENT CHECK CODE
+        //  IMPLEMENT CHECK CODE
         public async Task<bool> CheckCodeExists(string code)
         {
             return await _unitOfWork.Supplier.CheckCodeExistsAsync(code);

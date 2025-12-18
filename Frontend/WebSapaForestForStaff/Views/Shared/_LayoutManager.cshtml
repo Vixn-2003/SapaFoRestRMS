@@ -34,22 +34,26 @@
 <link href="~/css/vouchers.css" rel="stylesheet" />  
 @RenderSection("Styles", required: false)
 
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+          integrity="sha512-dymI6o..."
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
 
     <link rel="stylesheet" href="~/assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
     <link rel="stylesheet" type="text/css" href="~/assets/js/select.dataTables.min.css">
     <link rel="stylesheet" href="~/assets/css/style.css">
     <link rel="shortcut icon" href="~/assets/images/favicon.png" />
-    <!-- ✅ Toastr CSS -->
+    <!--  Toastr CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
 
-    <!-- ✅ jQuery + Toastr JS -->
+    <!--  jQuery + Toastr JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- ✅ Toastr config -->
+    <!--  Toastr config -->
     <script>
         toastr.options = {
             "closeButton": true,
@@ -59,7 +63,7 @@
             "extendedTimeOut": "1000"
         };
     </script>
-    <!-- ✅ CSS cố định layout, phần nội dung cuộn riêng -->
+    <!--  CSS cố định layout, phần nội dung cuộn riêng -->
     <style>
     * {
         margin: 0;
@@ -554,6 +558,56 @@
         border-color: #667eea !important;
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
     }
+        /* 1) Link trong sidebar luôn là 1 hàng flex */
+        .sidebar .nav .nav-item .nav-link {
+            display: flex !important;
+            align-items: center !important;
+        }
+
+            /* 2) Khung icon cố định => icon thẳng hàng */
+            .sidebar .nav .nav-item .nav-link .menu-icon {
+                width: 38px; /* bạn có thể chỉnh 34-42 */
+                height: 38px;
+                flex: 0 0 38px;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                margin-right: 10px;
+            }
+
+                /* 3) Ép icon cùng size + bỏ lệch do line-height */
+                .sidebar .nav .nav-item .nav-link .menu-icon i {
+                    font-size: 20px !important;
+                    line-height: 1 !important;
+                    display: block;
+                }
+
+            /* 4) Title chiếm phần còn lại */
+            .sidebar .nav .nav-item .nav-link .menu-title {
+                flex: 1 1 auto;
+            }
+
+            /* 5) Mũi tên luôn sát phải */
+            .sidebar .nav .nav-item .nav-link .menu-arrow {
+                margin-left: auto !important;
+            }
+
+        .sidebar {
+            width: 280px !important; /* thử 270-300 tuỳ bạn */
+        }
+        /* Quan trọng nhất để tránh bị cắt trong layout flex */
+        .main-panel,
+        .content-wrapper {
+            min-width: 0 !important;
+        }
+
+        /* Nếu nội dung rộng quá thì cho cuộn ngang thay vì bị khuyết */
+        .content-wrapper {
+            overflow-x: auto !important;
+            padding-right: 24px !important; /* chừa khoảng bên phải */
+            -webkit-overflow-scrolling: touch;
+        }
+
 </style>
 </head>
 
@@ -623,7 +677,7 @@
                     <li class="nav-item nav-category">Quản lý</li>
                     <li class="nav-item menu-items">
                         <a class="nav-link" asp-controller="ReservationStaff" asp-action="Index">
-                            <span class="menu-icon"><i class="mdi mdi-calendar-check"></i></span>
+                            <span class="menu-icon"><i class="mdi mdi-calendar-clock"></i></span>
                             <span class="menu-title"> Đơn Đặt bàn</span>
 
                             <i class="menu-arrow"></i>
@@ -638,16 +692,29 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#form-elements" aria-expanded="false" aria-controls="form-elements">
-                            <i class="menu-icon mdi mdi-card-text-outline"></i>
+                            <i class="menu-icon mdi mdi-account-group"></i>
                             <span class="menu-title">Quản lý Nhân Viên</span>
                             <i class="menu-arrow"></i>
                         </a>
-                       
+                        <div class="collapse" id="form-elements">
+                            <ul class="nav flex-column sub-menu">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="StaffManagement" asp-action="Index">
+                                        <i class="mdi mdi-format-list-bulleted me-1"></i>Danh sách nhân viên
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-controller="StaffManagement" asp-action="Create">
+                                        <i class="mdi mdi-account-plus me-1"></i>Thêm nhân viên mới
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </li>
                   
                     <li class="nav-item">
                         <a class="nav-link" data-bs-toggle="collapse" href="#charts" aria-expanded="false" aria-controls="charts">
-                            <i class="menu-icon mdi mdi-chart-line"></i>
+                            <i class="menu-icon mdi mdi-chart-bar"></i>
                             <span class="menu-title">Thống kê</span>
                             <i class="menu-arrow"></i>
                         </a>
@@ -670,29 +737,13 @@
             <li class="nav-item">
                 <a class="nav-link" href="/Ordertable">Quản lý mã QR</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="WaiterOrderTracking" asp-action="Index">
-                    <i class="mdi mdi-clipboard-check"></i> Tiến độ phục vụ
-                </a>
-            </li>
         </ul>
     </div>
 </li>
 <!-- Add this to your sidebar in _Layout.cshtml -->
 
 
-                    <li class="nav-item">
-                        <a class="nav-link" data-bs-toggle="collapse" href="#icons" aria-expanded="false" aria-controls="icons">
-                            <i class="menu-icon mdi mdi-layers-outline"></i>
-                            <span class="menu-title">Quản lý nhân viên</span>
-                            <i class="menu-arrow"></i>
-                        </a>
-                        <div class="collapse" id="icons">
-                            <ul class="nav flex-column sub-menu">
-                                <li class="nav-item"> <a class="nav-link" href="pages/icons/font-awesome.html">Font Awesome</a></li>
-                            </ul>
-                        </div>
-                    </li>
+                    
                     <li class="nav-item">
                         <a class="nav-link" asp-controller="ManagerCustomer" asp-action="Index">
                             <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
@@ -760,19 +811,19 @@
                     </li>
                     <li class="nav-item menu-items">
                         <a class="nav-link" asp-controller="SystemLogo" asp-action="Index">
-                            <span class="menu-icon"><i class="mdi mdi-table-chair"></i></span>
+                            <span class="menu-icon"><i class="mdi mdi-vector-square"></i></span>
                             <span class="menu-title">Quản Lý Logo </span>
                         </a>
                     </li>
                     <li class="nav-item menu-items">
                         <a class="nav-link" asp-controller="BrandBanner" asp-action="Index">
-                            <span class="menu-icon"><i class="mdi mdi-table-chair"></i></span>
+                            <span class="menu-icon"><i class="mdi mdi-image-size-select-large"></i></span>
                             <span class="menu-title">Quản Lý Banner </span>
                         </a>
                     </li>
                     <li class="nav-item menu-items">
                         <a class="nav-link" asp-controller="EventManage" asp-action="Index">
-                            <span class="menu-icon"><i class="mdi mdi-food"></i></span>
+                            <span class="menu-icon"><i class="mdi mdi-calendar-multiple"></i></span>
                             <span class="menu-title">Quản lý sự kiện </span>
                         </a>
                     </li>

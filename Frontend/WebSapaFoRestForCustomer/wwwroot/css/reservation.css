@@ -67,7 +67,7 @@
 
 /* Label form */
 .form-label {
-    color: #3e2723 !important;
+    color: #3e2723 important;
     font-weight: 600;
     margin-bottom: 0.5rem;
 }

@@ -26,6 +26,7 @@ namespace BusinessAccessLayer.Services
         private readonly IHubContext<ReservationHub> _hubContext;
         private readonly SapaFoRestRmsContext _context; // Cần DbContext để Save
         private readonly IInventoryIngredientService _inventoryService;
+        private readonly IKitchenDisplayService _kitchenDisplayService;
 
         // ⭐️ SỬA LỖI 1 & 2: Cập nhật Constructor
         public DashboardTableService(
@@ -34,7 +35,8 @@ namespace BusinessAccessLayer.Services
             IUnitOfWork unitOfWork,
             IHubContext<ReservationHub> hubContext,
             SapaFoRestRmsContext context,
-            IInventoryIngredientService inventoryService
+            IInventoryIngredientService inventoryService,
+            IKitchenDisplayService kitchenDisplayService
             )
         {
             _dashboardRepo = dashboardRepo;
@@ -43,6 +45,7 @@ namespace BusinessAccessLayer.Services
             _hubContext = hubContext;
             _context = context;
             _inventoryService = inventoryService;
+            _kitchenDisplayService = kitchenDisplayService;
         }
 
         public async Task<DashboardDataDto> GetDashboardDataAsync(string? areaName, int? floor, string? status, string? searchString, int page, int pageSize)
@@ -377,7 +380,7 @@ namespace BusinessAccessLayer.Services
         //        if (latestOrder != null)
         //        {
         //            screenDto.ActiveOrderId = latestOrder.OrderId;
-        //            // ✅ Đưa trạng thái order hiện tại ra FE để dùng cho flow waiter/cashier
+        //            //  Đưa trạng thái order hiện tại ra FE để dùng cho flow waiter/cashier
         //            // Chuẩn hoá về lowercase để so sánh đơn giản ở frontend
         //            screenDto.OrderStatus = latestOrder.Status?.ToLowerInvariant();
 
@@ -431,7 +434,7 @@ namespace BusinessAccessLayer.Services
         //        }
         //    }
 
-        //    // ✅ TÍNH TOÁN SỐ LƯỢNG MÓN THEO TRẠNG THÁI (Backend)
+        //    //  TÍNH TOÁN SỐ LƯỢNG MÓN THEO TRẠNG THÁI (Backend)
         //    screenDto.TotalQuantity = screenDto.OrderedItems.Sum(item => item.Quantity);
 
         //    foreach (var item in screenDto.OrderedItems)
@@ -714,7 +717,7 @@ namespace BusinessAccessLayer.Services
             }
             else
             {
-                // Không cho phép chỉnh sửa/thêm món nếu order đã xác nhận thanh toán hoặc đang chờ thanh toán
+                // Không cho phép chỉnh sửa/thêm món nếu order đã xác nhận/thanh toán (nhưng vẫn cho phép với trạng thái Completed do bếp hoàn tất)
                 var lockedStatuses = new[]
                 {
                     OrderStatusConstants.Confirmed,
@@ -722,7 +725,6 @@ namespace BusinessAccessLayer.Services
                     "WaitingForPayment",
                     "Processing",
                     OrderStatusConstants.Paid,
-                    "Completed",
                     "Success"
                 };
 
@@ -740,7 +742,19 @@ namespace BusinessAccessLayer.Services
                 {
                     // --- CASE ADD: THÊM MÓN MỚI ---
                     case "Add":
-                        Console.WriteLine(" [DEBUG] BẮT ĐẦU CASE ADD ");
+                        Console.WriteLine("--- [DEBUG] BẮT ĐẦU CASE ADD ---");
+
+                        // Nếu đơn hiện tại đã ở trạng thái Completed/Hoàn thành thì khi thêm món mới
+                        // ta coi như đơn "mở lại" cho bếp -> đưa trạng thái đơn về Pending
+                        if (!string.IsNullOrWhiteSpace(currentOrder.Status) &&
+                            (currentOrder.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                             currentOrder.Status.Equals("Hoàn thành", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            currentOrder.Status = "Pending";
+                            await _unitOfWork.Orders.UpdateAsync(currentOrder);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+
                         decimal price = 0;
 
                         // 1. Lấy giá
@@ -810,7 +824,7 @@ namespace BusinessAccessLayer.Services
 
                                 // Save lần 2
                                 await _dashboardRepo.SaveChangesAsync();
-                                Console.WriteLine("[DEBUG] Đã gọi SaveChangesAsync() cho OrderComboItems.");
+                                Console.WriteLine("[DEBUG]  Đã gọi SaveChangesAsync() cho OrderComboItems.");
                             }
                         }
                         else
@@ -825,6 +839,17 @@ namespace BusinessAccessLayer.Services
                         {
                             // Log warning nhưng không fail
                             Console.WriteLine($"Warning: Không thể reserve nguyên liệu cho OrderDetail {newDetail.OrderDetailId}: {reserveResult.message}");
+                        }
+
+                        //  Broadcast đơn mới đến màn hình bếp qua SignalR
+                        try
+                        {
+                            await NotifyKitchenNewOrderAsync(currentOrder.OrderId);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log error nhưng không fail việc thêm đơn
+                            Console.WriteLine($"Warning: Không thể broadcast đơn mới đến bếp: {ex.Message}");
                         }
 
                         break;
@@ -885,8 +910,21 @@ namespace BusinessAccessLayer.Services
 
                         if (itemToDelete != null && itemToDelete.Order.ReservationId == activeReservation.ReservationId)
                         {
-                            // Soft Delete: Đổi trạng thái
-                            itemToDelete.Status = "Cancelled";
+                            //  QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+                            // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
+                            // Phải gọi TRƯỚC khi set status = Cancelled để release có thể check status Pending/Cooking
+                            if (itemToDelete.MenuItem != null)
+                            {
+                                var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(itemToDelete.OrderDetailId);
+                                if (!releaseResult.success)
+                                {
+                                    // Log warning nhưng không fail việc hủy món
+                                    Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {itemToDelete.OrderDetailId}: {releaseResult.message}");
+                                }
+                            }
+
+                            // Soft Delete: Đổi trạng thái (SAU KHI đã release)
+                            itemToDelete.Status = "Cancelled"; // Hoặc "Cancelled" tùy DB
 
                             // GỌI HÀM UPDATE REPO
                             await _dashboardRepo.UpdateOrderDetailAsync(itemToDelete);
@@ -898,6 +936,31 @@ namespace BusinessAccessLayer.Services
 
             // BƯỚC 4: LƯU CÁC THAY ĐỔI CỦA MÓN ĂN
             await _dashboardRepo.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Broadcast đơn mới đến màn hình bếp qua SignalR
+        /// </summary>
+        private async Task NotifyKitchenNewOrderAsync(int orderId)
+        {
+            try
+            {
+                // Lấy order mới từ KitchenDisplayService
+                var activeOrders = await _kitchenDisplayService.GetActiveOrdersAsync();
+                var newOrder = activeOrders.FirstOrDefault(o => o.OrderId == orderId);
+
+                if (newOrder != null)
+                {
+                    // Gọi method broadcast trong KitchenDisplayService
+                    // Method này sẽ được implement trong KitchenDisplayService với IHubContext<KitchenHub>
+                    await _kitchenDisplayService.NotifyNewOrderAddedAsync(newOrder);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error nhưng không throw để không ảnh hưởng đến flow chính
+                Console.WriteLine($"Error notifying kitchen of new order {orderId}: {ex.Message}");
+            }
         }
     }
 

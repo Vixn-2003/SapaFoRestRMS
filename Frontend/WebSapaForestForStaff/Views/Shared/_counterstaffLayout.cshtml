@@ -110,9 +110,21 @@
 
             <!-- Menu chính -->
             <div class="top-menu">
+                @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
+                {
+                       <a href="/counter-staff/dashboard"
+                           class="menu-item @(currentController == "CounterStaffDashboard" && currentAction == "Index" ? "active" : "")">
+                        <i class="fa-solid fa-chart-line me-1"></i>Tổng quan
+                    </a>
+                }
+             
                 <a href="/DashboardTable/ListOrder" 
                    class="menu-item @(currentController == "DashboardTable" && currentAction == "ListOrder" ? "active" : "")">
                     Đơn đặt bàn
+                </a>
+                <a href="/WaiterOrderTracking/Index"
+                   class="menu-item @(currentController == "WaiterOrderTracking" ? "active" : "")">
+                    Tiến độ phục vụ
                 </a>
                 <a href="/DashboardTable/Index" 
                    class="menu-item @(currentController == "DashboardTable" && currentAction == "Index" ? "active" : "")">
@@ -125,12 +137,12 @@
                
                 @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
                 {
-                    <a asp-controller="ShiftManagement" 
+                    @* <a asp-controller="ShiftManagement" 
                        asp-action="Index" 
                        class="menu-item @(currentController == "ShiftManagement" ? "active" : "")">
                         <i class="fa-solid fa-calendar-check me-1"></i>
                         Quản lý Ca làm việc
-                    </a>
+                    </a> *@
                     <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" 
                        class="menu-item @(currentController == "CashierPaymentFlow" ? "active" : "")">
                         Danh sách order

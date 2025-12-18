@@ -102,6 +102,7 @@ namespace DataAccessLayer.Repositories
             existingItem.IsAvailable = menuItem.IsAvailable;
             existingItem.CourseType = menuItem.CourseType;
             existingItem.Description = menuItem.Description;
+            existingItem.BatchSize = menuItem.BatchSize;
             if (!string.IsNullOrWhiteSpace(menuItem.ImageUrl))
             {
                 // TH1: Có ảnh mới → cập nhật
@@ -117,8 +118,8 @@ namespace DataAccessLayer.Repositories
         public async Task<IEnumerable<Recipe>> GetRecipeByMenuItem(int id)
         {
             return await _context.Recipes
-                .Include(r => r.Ingredient)           // ✅ Include Ingredient
-                    .ThenInclude(i => i.Unit)         // ✅ Include Unit từ Ingredient      
+                .Include(r => r.Ingredient)           //  Include Ingredient
+                    .ThenInclude(i => i.Unit)         //  Include Unit từ Ingredient      
                 .Where(x => x.MenuItemId == id)
                 .ToListAsync();
         }

@@ -21,7 +21,7 @@ namespace DataAccessLayer.Repositories
 
         public async Task<IEnumerable<Unit>> GetAllUnits()
         {
-            var result = await _context.Units.ToListAsync();
+            var result = await _context.Units.Include(x => x.Ingredients).ToListAsync();
             return result;
         }
 
@@ -34,6 +34,31 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(u => u.UnitName == unitName);
 
             return unit?.UnitId ?? 0;
+        }
+
+        public async Task<bool> ExistsByNameAsync(string unitName, int? excludeId = null)
+        {
+            return await _context.Units.AnyAsync(u =>
+                u.UnitName == unitName &&
+                (!excludeId.HasValue || u.UnitId != excludeId));
+        }
+
+        public async Task AddAsync(Unit unit)
+        {
+            _context.Units.Add(unit);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(Unit unit)
+        {
+            _context.Units.Update(unit);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<Unit?> GetByIdAsync(int id)
+        {
+            return await _context.Units
+                .FirstOrDefaultAsync(u => u.UnitId == id);
         }
 
     }

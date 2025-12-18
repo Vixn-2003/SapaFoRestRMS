@@ -101,14 +101,14 @@ public class ReceiptService : IReceiptService
                     continue;
                 }
 
-                // ✅ LOGIC MỚI: Chỉ tính tiền món có Status = "Cooking", "Done", "Ready"
+                //  LOGIC MỚI: Chỉ tính tiền món có Status = "Cooking", "Done", "Ready"
                 // Không tính tiền món có Status = "Pending"
                 
                 // Danh sách status được phép thanh toán
                 var billableStatuses = new[] { "cooking", "done", "ready", "served", "đang chế biến", "đã xong", "sẵn sàng" };
                 bool isBillable = billableStatuses.Any(s => statusLower == s);
 
-                // ✅ XỬ LÝ COMBO: Nếu là combo, kiểm tra OrderComboItems
+                //  XỬ LÝ COMBO: Nếu là combo, kiểm tra OrderComboItems
                 if (od.ComboId.HasValue && od.OrderComboItems != null && od.OrderComboItems.Any())
                 {
                     // Bỏ qua các món đã bị hủy trong combo khi kiểm tra
@@ -162,7 +162,7 @@ public class ReceiptService : IReceiptService
             }
         }
         
-        // ✅ Làm tròn Subtotal lên mệnh giá 1000
+        //  Làm tròn Subtotal lên mệnh giá 1000
         subtotal = RoundUpToThousand(subtotal);
         
         // Tính VAT (10%) từ Subtotal đã làm tròn
@@ -429,7 +429,7 @@ public class ReceiptService : IReceiptService
 
         _logger.LogInformation("Finished generating receipt for order {OrderId}. File saved to {PdfPath} ({FileSize} bytes)", orderId, pdfPath, fileSize);
 
-        // ✅ Upload PDF to Cloudinary if service is available
+        //  Upload PDF to Cloudinary if service is available
         string? cloudinaryUrl = null;
         if (_cloudinaryService != null)
         {

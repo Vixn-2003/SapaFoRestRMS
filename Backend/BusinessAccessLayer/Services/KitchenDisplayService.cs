@@ -35,7 +35,7 @@ namespace BusinessAccessLayer.Services
                 var orderDetails = order.OrderDetails.ToList();
                 if (!orderDetails.Any()) continue;
 
-                // ✅ HIỂN THỊ TẤT CẢ: Bao gồm cả Ready và Done
+                //  HIỂN THỊ TẤT CẢ: Bao gồm cả Ready và Done
                 // Map OrderDetail (món lẻ + các món trong combo) sang KitchenOrderItemDto
                 var items = new List<KitchenOrderItemDto>();
 
@@ -158,32 +158,37 @@ namespace BusinessAccessLayer.Services
                     }
                 }
 
-                // ✅ THÊM: Filter by status nếu có
+                // ✅ ẨN HOÀN TOÀN các đơn đã Completed khỏi khu vực đơn đang xử lý trong bếp
+                // Đơn Completed chỉ hiển thị ở panel "Đơn vừa hoàn thành" bên trái (nếu bật), không hiển thị ở các filter trạng thái
+                var normalizedOrderStatus = (order.Status ?? string.Empty).Trim();
+                var isCompletedOrder =
+                    string.Equals(normalizedOrderStatus, "Completed", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(normalizedOrderStatus, "Hoàn thành", StringComparison.OrdinalIgnoreCase);
+
+                if (isCompletedOrder)
+                {
+                    // Đơn đã hoàn thành – không hiển thị trong khu vực đơn đang có trong bếp
+                    continue;
+                }
+
+                // ✅ Filter by status nếu có
                 if (!string.IsNullOrWhiteSpace(statusFilter))
                 {
                     items = items.Where(i => i.Status == statusFilter).ToList();
                 }
 
-                // ✅ THÊM: Sort items by course type (Khai vị -> Món chính -> Tráng miệng)
+                //  THÊM: Sort items by course type (Khai vị -> Món chính -> Tráng miệng)
                 items = SortItemsByCourseType(items);
 
-                // ✅ SỬA: Chỉ bỏ qua order nếu không có items nào (kể cả Done)
+                //  SỬA: Chỉ bỏ qua order nếu không có items nào (kể cả Done)
                 if (!items.Any())
                 {
                     continue;
                 }
 
-                // ✅ SỬA: Chỉ ẩn đơn nếu Order.Status = "Completed" (bếp phó đã xác nhận)
-                // Không ẩn khi tất cả món Ready/Done, để bếp phó có thể xác nhận bằng button
-                if (order.Status == "Completed" || order.Status == "Hoàn thành")
-                {
-                    // Đơn đã được bếp phó xác nhận hoàn thành, không hiển thị trong màn hình "Tất cả"
-                    continue;
-                }
-
                 var waitingMinutes = (int)((now - (order.CreatedAt ?? now)).TotalMinutes);
 
-                // ✅ Đếm các trạng thái (bao gồm cả Done)
+                //  Đếm các trạng thái (bao gồm cả Done)
                 var lateCount = items.Count(i => i.Status == "Late");
                 var readyCount = items.Count(i => i.Status == "Ready");
                 var doneCount = items.Count(i => i.Status == "Done");
@@ -198,7 +203,7 @@ namespace BusinessAccessLayer.Services
                     WaitingMinutes = waitingMinutes,
                     PriorityLevel = GetPriorityLevel(waitingMinutes),
                     TotalItems = items.Count,
-                    CompletedItems = readyCount + doneCount, // ✅ SỬA: Ready + Done = Completed
+                    CompletedItems = readyCount + doneCount, //  SỬA: Ready + Done = Completed
                     LateItems = lateCount,
                     ReadyItems = readyCount,
                     Items = items
@@ -258,13 +263,13 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // ✅ Nếu có OrderComboItemId, cập nhật OrderComboItem (món trong combo)
+                //  Nếu có OrderComboItemId, cập nhật OrderComboItem (món trong combo)
                 if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
                 {
                     return await UpdateOrderComboItemStatusAsync(request);
                 }
 
-                // ✅ Nếu không có OrderComboItemId, cập nhật OrderDetail (món lẻ)
+                //  Nếu không có OrderComboItemId, cập nhật OrderDetail (món lẻ)
                 var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
 
                 if (orderDetail == null)
@@ -276,7 +281,33 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // ✅ LOGIC MỚI: Nếu là combo và chưa có OrderComboItems, tự động tạo khi fire
+                //  A3: Kiểm tra order có bị hủy hoặc completed từ trạm khác không
+                var order = await _unitOfWork.Orders.GetByIdAsync(orderDetail.OrderId);
+                if (order == null)
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = false,
+                        Message = "Order đã thay đổi từ hệ thống. Vui lòng kiểm tra lại."
+                    };
+                }
+
+                if (order.Status == "Cancelled" || order.Status == "Hủy")
+                {
+                    return new StatusUpdateResponse
+                    {
+                        Success = false,
+                        Message = "Order đã thay đổi từ hệ thống. Đơn hàng đã bị hủy, vui lòng kiểm tra lại."
+                    };
+                }
+
+                if (order.Status == "Completed" || order.Status == "Hoàn thành")
+                {
+                    // Cho phép update item trong order completed (ví dụ: unfulfill)
+                    // Không block ở đây
+                }
+
+                //  LOGIC MỚI: Nếu là combo và chưa có OrderComboItems, tự động tạo khi fire
                 if (orderDetail.ComboId.HasValue && 
                     (orderDetail.OrderComboItems == null || !orderDetail.OrderComboItems.Any()))
                 {
@@ -348,27 +379,57 @@ namespace BusinessAccessLayer.Services
                             Message = $"Không thể chuyển từ trạng thái 'Chờ' sang '{newStatus}'. Phải chuyển sang 'Đang nấu' trước."
                         };
                     }
-                    // Lưu thời gian bắt đầu nấu
-                    orderDetail.StartedAt = DateTime.Now;
                     
-                    // ✅ LOGIC MỚI: Trừ nguyên liệu khi chuyển từ Pending sang Cooking
-                    // Chỉ consume cho món KitchenPrepared, không consume cho ConsumptionBased
-                    // Món ConsumptionBased sẽ được consume khi order status chuyển sang "paid"
-                    if (orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
+                    //  VALIDATION: Kiểm tra available quantity trước khi cho phép chuyển sang Cooking
+                    // Nếu available < 0 (thiếu nguyên liệu), không cho phép chuyển sang Cooking
+                    if (orderDetail.MenuItem != null)
                     {
-                        // Khi món chuyển sang Cooking → trừ nguyên liệu thật (consume từ QuantityReserved)
-                        var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
-                        if (!consumeResult.success)
+                        var recipes = await _unitOfWork.MenuItem.GetRecipeByMenuItem(orderDetail.MenuItem.MenuItemId);
+                        if (recipes.Any())
                         {
-                            return new StatusUpdateResponse
+                            var orderQuantity = orderDetail.Quantity;
+                            var shortageMessages = new List<string>();
+                            
+                            foreach (var recipe in recipes)
                             {
-                                Success = false,
-                                Message = consumeResult.message
-                            };
+                                if (recipe.Ingredient == null) continue;
+                                
+                                // Lấy tất cả batches (kể cả available <= 0) để kiểm tra available thực tế
+                                var allBatches = await _unitOfWork.InventoryIngredient.GetAllBatchesByIngredientAsync(recipe.IngredientId);
+                                
+                                // Tính available thực tế (có thể âm)
+                                var availableQuantity = allBatches.Sum(b => b.QuantityRemaining - b.QuantityReserved);
+                                
+                                // Tính số lượng cần cho món này
+                                var totalNeeded = recipe.QuantityNeeded * orderQuantity;
+                                
+                                // Nếu available < 0 hoặc available < totalNeeded, thì thiếu nguyên liệu
+                                if (availableQuantity < 0 || availableQuantity < totalNeeded)
+                                {
+                                    var shortage = totalNeeded - availableQuantity;
+                                    if (shortage > 0)
+                                    {
+                                        shortageMessages.Add($"{recipe.Ingredient.Name}: Thiếu {shortage} {recipe.Ingredient.Unit?.UnitName ?? ""}");
+                                    }
+                                }
+                            }
+                            
+                            // Nếu có nguyên liệu thiếu, không cho phép chuyển sang Cooking
+                            if (shortageMessages.Any())
+                            {
+                                return new StatusUpdateResponse
+                                {
+                                    Success = false,
+                                    Message = $"Không đủ nguyên liệu để nấu món này. {string.Join("; ", shortageMessages)}"
+                                };
+                            }
                         }
                     }
                     
-                    // ✅ Nếu là combo và đã có OrderComboItems, cập nhật status của tất cả món con sang Cooking
+                    // Lưu thời gian bắt đầu nấu
+                    orderDetail.StartedAt = DateTime.Now;
+                    
+                    //  Nếu là combo và đã có OrderComboItems, cập nhật status của tất cả món con sang Cooking
                     if (orderDetail.ComboId.HasValue && 
                         orderDetail.OrderComboItems != null && 
                         orderDetail.OrderComboItems.Any())
@@ -392,11 +453,24 @@ namespace BusinessAccessLayer.Services
                             Message = $"Không thể chuyển từ trạng thái '{currentStatus}' sang '{newStatus}'. Chỉ có thể chuyển sang 'Sẵn sàng' hoặc 'Hoàn thành'."
                         };
                     }
+                    // Khi rời Cooking/Late sang Ready/Done → consume nguyên liệu thật
+                    if (orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
+                    {
+                        var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
+                        if (!consumeResult.success)
+                        {
+                            return new StatusUpdateResponse
+                            {
+                                Success = false,
+                                Message = consumeResult.message
+                            };
+                        }
+                    }
+
                     // Nếu chuyển sang Ready, lưu thời gian
                     if (normalizedNewStatus == "Ready")
                     {
                         orderDetail.ReadyAt = DateTime.Now;
-                        // ✅ Đã consume nguyên liệu khi chuyển sang Cooking, Ready chỉ lưu thời gian
                     }
                 }
                 else if (normalizedCurrentStatus == "Ready")
@@ -503,6 +577,50 @@ namespace BusinessAccessLayer.Services
 
                 var totalQuantity = orderDetail.Quantity;
                 var cookingQuantity = request.Quantity;
+                
+                //  VALIDATION: Kiểm tra available quantity trước khi cho phép start cooking
+                if (orderDetail.MenuItem != null)
+                {
+                    var recipes = await _unitOfWork.MenuItem.GetRecipeByMenuItem(orderDetail.MenuItem.MenuItemId);
+                    if (recipes.Any())
+                    {
+                        var shortageMessages = new List<string>();
+                        
+                        foreach (var recipe in recipes)
+                        {
+                            if (recipe.Ingredient == null) continue;
+                            
+                            // Tính số lượng cần cho số lượng nấu
+                            var totalNeeded = recipe.QuantityNeeded * cookingQuantity;
+                            
+                            // Lấy tất cả batches (kể cả available <= 0) để kiểm tra available thực tế
+                            var allBatches = await _unitOfWork.InventoryIngredient.GetAllBatchesByIngredientAsync(recipe.IngredientId);
+                            
+                            // Tính available thực tế (có thể âm)
+                            var availableQuantity = allBatches.Sum(b => b.QuantityRemaining - b.QuantityReserved);
+                            
+                            // Nếu available < 0 hoặc available < totalNeeded, thì thiếu nguyên liệu
+                            if (availableQuantity < 0 || availableQuantity < totalNeeded)
+                            {
+                                var shortage = totalNeeded - availableQuantity;
+                                if (shortage > 0)
+                                {
+                                    shortageMessages.Add($"{recipe.Ingredient.Name}: Thiếu {shortage} {recipe.Ingredient.Unit?.UnitName ?? ""}");
+                                }
+                            }
+                        }
+                        
+                        // Nếu có nguyên liệu thiếu, không cho phép start cooking
+                        if (shortageMessages.Any())
+                        {
+                            return new StatusUpdateResponse
+                            {
+                                Success = false,
+                                Message = $"Không đủ nguyên liệu để nấu món này. {string.Join("; ", shortageMessages)}"
+                            };
+                        }
+                    }
+                }
 
                 if (cookingQuantity <= 0 || cookingQuantity > totalQuantity)
                 {
@@ -513,26 +631,11 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Nếu số lượng nấu = tổng số lượng, update status và trừ nguyên liệu
+                // Nếu số lượng nấu = tổng số lượng, update status (chưa consume, sẽ consume khi chuyển Ready)
                 if (cookingQuantity == totalQuantity)
                 {
                     orderDetail.Status = "Cooking";
                     orderDetail.StartedAt = DateTime.Now;
-
-                    // ✅ LOGIC MỚI: Trừ nguyên liệu khi chuyển sang Cooking
-                    // Chỉ consume cho món KitchenPrepared, không consume cho ConsumptionBased
-                    if (orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
-                    {
-                        var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
-                        if (!consumeResult.success)
-                        {
-                            return new StatusUpdateResponse
-                            {
-                                Success = false,
-                                Message = consumeResult.message
-                            };
-                        }
-                    }
 
                     await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
                     await _unitOfWork.SaveChangesAsync();
@@ -593,29 +696,9 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // ✅ LOGIC MỚI: Chuyển sang Cooking và trừ nguyên liệu ngay
+                //  LOGIC MỚI: Chuyển sang Cooking (consume sẽ diễn ra khi chuyển sang Ready/Done)
                 newOrderDetail.Status = "Cooking";
                 newOrderDetail.StartedAt = DateTime.Now;
-
-                // ✅ Trừ nguyên liệu khi chuyển sang Cooking
-                // Chỉ consume cho món KitchenPrepared, không consume cho ConsumptionBased
-                if (newOrderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
-                {
-                    var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(newOrderDetail.OrderDetailId);
-                    if (!consumeResult.success)
-                    {
-                        // Rollback: xóa order detail mới
-                        await _unitOfWork.OrderDetails.DeleteAsync(newOrderDetail.OrderDetailId);
-                        await _unitOfWork.OrderDetails.UpdateAsync(orderDetail); // Cập nhật lại orderDetail gốc
-                        await _unitOfWork.SaveChangesAsync();
-                        
-                        return new StatusUpdateResponse
-                        {
-                            Success = false,
-                            Message = consumeResult.message
-                        };
-                    }
-                }
 
                 await _unitOfWork.OrderDetails.UpdateAsync(newOrderDetail);
                 await _unitOfWork.SaveChangesAsync();
@@ -681,7 +764,8 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // ✅ SỬA: Kiểm tra tất cả món đều Ready hoặc Done (bao gồm cả OrderComboItems)
+                // ✅ SỬA: Kiểm tra tất cả món còn "đang phục vụ" đều Ready hoặc Done (bao gồm cả OrderComboItems)
+                // Bỏ qua các món đã hủy / trả (Cancelled / Returned)
                 var allItemsReadyOrDone = true;
                 
                 foreach (var od in order.OrderDetails)
@@ -692,6 +776,15 @@ namespace BusinessAccessLayer.Services
                         foreach (var oci in od.OrderComboItems)
                         {
                             var status = (oci.Status ?? "Pending").Trim();
+
+                            // Bỏ qua món con đã hủy / trả
+                            var statusLower = status.ToLowerInvariant();
+                            if (statusLower.Contains("cancelled") || statusLower.Contains("hủy") ||
+                                statusLower.Contains("returned") || statusLower.Contains("trả"))
+                            {
+                                continue;
+                            }
+
                             if (status != "Ready" && status != "Sẵn sàng" && 
                                 status != "Done" && status != "Hoàn thành" && status != "Xong")
                             {
@@ -705,6 +798,15 @@ namespace BusinessAccessLayer.Services
                     else if (od.MenuItemId.HasValue)
                     {
                         var status = (od.Status ?? "Pending").Trim();
+
+                        // Bỏ qua món đã hủy / trả
+                        var statusLower = status.ToLowerInvariant();
+                        if (statusLower.Contains("cancelled") || statusLower.Contains("hủy") ||
+                            statusLower.Contains("returned") || statusLower.Contains("trả"))
+                        {
+                            continue;
+                        }
+
                         if (status != "Ready" && status != "Sẵn sàng" && 
                             status != "Done" && status != "Hoàn thành" && status != "Xong")
                         {
@@ -723,7 +825,8 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Update order status
+                // ✅ Giữ lại logic cũ: sau khi bếp phó ấn "Sẵn sàng", chuyển trạng thái đơn sang "Completed"
+                // để thể hiện đơn đã được hoàn tất ở phía bếp.
                 order.Status = "Completed";
 
                 await _unitOfWork.Orders.UpdateAsync(order);
@@ -765,7 +868,7 @@ namespace BusinessAccessLayer.Services
             {
                 foreach (var orderDetail in order.OrderDetails)
                 {
-                    // ✅ XỬ LÝ COMBO: Nếu có OrderComboItems, lấy từng món con
+                    //  XỬ LÝ COMBO: Nếu có OrderComboItems, lấy từng món con
                     if (orderDetail.ComboId.HasValue && 
                         orderDetail.OrderComboItems != null && 
                         orderDetail.OrderComboItems.Any())
@@ -784,7 +887,7 @@ namespace BusinessAccessLayer.Services
 
                             var comboItemStatus = orderComboItem.Status ?? "Pending";
                             
-                            // ✅ THÊM: Filter by status nếu có
+                            //  THÊM: Filter by status nếu có
                             if (!string.IsNullOrWhiteSpace(statusFilter) && comboItemStatus != statusFilter)
                             {
                                 continue;
@@ -793,19 +896,19 @@ namespace BusinessAccessLayer.Services
                             allItems.Add((order, orderDetail, mi, orderComboItem));
                         }
                     }
-                    // ✅ MÓN LẺ: Xử lý OrderDetail trực tiếp
+                    //  MÓN LẺ: Xử lý OrderDetail trực tiếp
                     else if (orderDetail.MenuItem != null)
                     {
-                        // ✅ HIỂN THỊ TẤT CẢ: Bao gồm cả Ready và Done
+                        //  HIỂN THỊ TẤT CẢ: Bao gồm cả Ready và Done
                         var status = (orderDetail.Status ?? "Pending").Trim();
                         
-                        // ✅ THÊM: Filter by status nếu có
+                        //  THÊM: Filter by status nếu có
                         if (!string.IsNullOrWhiteSpace(statusFilter) && status != statusFilter)
                         {
                             continue;
                         }
                         
-                        // ✅ Lấy tất cả các status (Pending, Cooking, Late, Ready, Done)
+                        //  Lấy tất cả các status (Pending, Cooking, Late, Ready, Done)
                         // Chỉ lấy món có BillingType = 0 hoặc 2 (không lấy 1 - ConsumptionBased)
                         if (orderDetail.MenuItem.BillingType == ItemBillingType.Unspecified || 
                             orderDetail.MenuItem.BillingType == ItemBillingType.KitchenPrepared)
@@ -1130,7 +1233,7 @@ namespace BusinessAccessLayer.Services
             {
                 foreach (var orderDetail in order.OrderDetails)
                 {
-                    // ✅ XỬ LÝ COMBO: Nếu có OrderComboItems, lấy từng món con
+                    //  XỬ LÝ COMBO: Nếu có OrderComboItems, lấy từng món con
                     if (orderDetail.ComboId.HasValue && 
                         orderDetail.OrderComboItems != null && 
                         orderDetail.OrderComboItems.Any())
@@ -1203,7 +1306,7 @@ namespace BusinessAccessLayer.Services
                             }
                         }
                     }
-                    // ✅ MÓN LẺ: Xử lý OrderDetail trực tiếp
+                    //  MÓN LẺ: Xử lý OrderDetail trực tiếp
                     else if (orderDetail.MenuItem != null && orderDetail.MenuItem.Category != null)
                     {
                         // Lọc theo category
@@ -1220,7 +1323,7 @@ namespace BusinessAccessLayer.Services
                             continue; // Bỏ qua Done items
                         }
                         
-                        // ✅ Chỉ lấy món có BillingType = 0 hoặc 2
+                        //  Chỉ lấy món có BillingType = 0 hoặc 2
                         if (orderDetail.MenuItem.BillingType != ItemBillingType.Unspecified && 
                             orderDetail.MenuItem.BillingType != ItemBillingType.KitchenPrepared)
                         {
@@ -1346,7 +1449,7 @@ namespace BusinessAccessLayer.Services
         /// </summary>
         public async Task<List<KitchenOrderCardDto>> GetRecentlyFulfilledOrdersAsync(int minutesAgo = 10)
         {
-            // Lấy các orders có ít nhất một item Done
+            // Lấy các orders có ít nhất một item đã hoàn tất phục vụ (Ready hoặc Done)
             // Không filter theo thời gian vì không có CompletedAt field
             // Chỉ lấy các order đang active hoặc completed (không lấy orders quá cũ đã thanh toán)
             var orders = await _unitOfWork.Orders.GetRecentlyFulfilledOrdersAsync(minutesAgo);
@@ -1356,24 +1459,27 @@ namespace BusinessAccessLayer.Services
 
             foreach (var order in orders)
             {
-                // Lấy tất cả items Done trong order này
+                // Lấy tất cả items đã hoàn tất trong order này (Ready hoặc Done)
                 var doneItems = order.OrderDetails
-                    .Where(od => od.Status == "Done")
+                    .Where(od =>
+                        string.Equals(NormalizeStatus(od.Status ?? string.Empty), "Done", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(NormalizeStatus(od.Status ?? string.Empty), "Ready", StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
+                // Nếu không có món Ready/Done (chỉ toàn Cancelled) thì bỏ qua
                 if (!doneItems.Any()) continue;
 
-                // Chỉ hiển thị order nếu TẤT CẢ các món đều hoàn thành
-                var allItemsDone = order.OrderDetails.All(od =>
-                {
-                    var status = (od.Status ?? string.Empty).Trim();
-                    var normalizedStatus = NormalizeStatus(status);
-                    return normalizedStatus == "Done";
-                });
+                // Bắt buộc trạng thái đơn phải là Completed / Hoàn thành
+                var orderStatus = (order.Status ?? string.Empty).Trim();
+                var orderStatusLower = orderStatus.ToLowerInvariant();
+                var isCompletedOrder =
+                    orderStatusLower == "completed" ||
+                    orderStatusLower == "hoàn thành" ||
+                    orderStatusLower.Contains("completed") ||
+                    orderStatusLower.Contains("hoàn thành");
 
-                if (!allItemsDone)
+                if (!isCompletedOrder)
                 {
-                    // Nếu còn món chưa hoàn thành, bỏ qua order này
                     continue;
                 }
 
@@ -1413,7 +1519,7 @@ namespace BusinessAccessLayer.Services
         }
 
         /// <summary>
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         public async Task<StatusUpdateResponse> RecallOrderDetailAsync(RecallOrderDetailRequest request)
         {
@@ -1505,7 +1611,6 @@ namespace BusinessAccessLayer.Services
         private static readonly HashSet<string> KitchenManagedOrderStatuses = new(StringComparer.OrdinalIgnoreCase)
         {
             "Pending",
-            "Processing",
             "Preparing",
             "Cooking",
             "Ready",
@@ -1553,7 +1658,7 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Chỉ cho phép các transition hợp lý, KHÔNG can thiệp inventory
+                // Chỉ cho phép các transition hợp lý. Với combo cũng cần kiểm tra thiếu nguyên liệu trước khi cho nấu.
                 if (normalizedCurrentStatus == "Pending")
                 {
                     if (normalizedNewStatus != "Cooking")
@@ -1564,6 +1669,45 @@ namespace BusinessAccessLayer.Services
                             Message = $"Không thể chuyển từ trạng thái 'Chờ' sang '{newStatus}'. Phải chuyển sang 'Đang nấu' trước."
                         };
                     }
+                    //  Kiểm tra thiếu nguyên liệu cho món combo trước khi cho phép Cooking
+                    if (orderComboItem.MenuItem != null)
+                    {
+                        var recipes = await _unitOfWork.MenuItem.GetRecipeByMenuItem(orderComboItem.MenuItemId);
+                        if (recipes.Any())
+                        {
+                            var shortageMessages = new List<string>();
+
+                            foreach (var recipe in recipes)
+                            {
+                                if (recipe.Ingredient == null) continue;
+
+                                // Lấy tất cả batches (kể cả available <= 0) để kiểm tra available thực tế
+                                var allBatches = await _unitOfWork.InventoryIngredient.GetAllBatchesByIngredientAsync(recipe.IngredientId);
+                                var availableQuantity = allBatches.Sum(b => b.QuantityRemaining - b.QuantityReserved);
+
+                                var totalNeeded = recipe.QuantityNeeded * orderComboItem.Quantity;
+
+                                if (availableQuantity < 0 || availableQuantity < totalNeeded)
+                                {
+                                    var shortage = totalNeeded - availableQuantity;
+                                    if (shortage > 0)
+                                    {
+                                        shortageMessages.Add($"{recipe.Ingredient.Name}: Thiếu {shortage} {recipe.Ingredient.Unit?.UnitName ?? ""}");
+                                    }
+                                }
+                            }
+
+                            if (shortageMessages.Any())
+                            {
+                                return new StatusUpdateResponse
+                                {
+                                    Success = false,
+                                    Message = $"Không đủ nguyên liệu để nấu món trong combo. {string.Join("; ", shortageMessages)}"
+                                };
+                            }
+                        }
+                    }
+
                     orderComboItem.StartedAt = DateTime.Now;
                 }
                 else if (normalizedCurrentStatus == "Cooking" || normalizedCurrentStatus == "Late")
@@ -2045,6 +2189,81 @@ namespace BusinessAccessLayer.Services
                 Console.WriteLine($"Error getting order detail for print: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Broadcast đơn mới đến tất cả màn hình bếp qua SignalR
+        /// Method này sẽ được gọi từ Controller với IHubContext<KitchenHub>
+        /// </summary>
+        public async Task NotifyNewOrderAddedAsync(KitchenOrderCardDto order)
+        {
+            // Method này chỉ là placeholder
+            // Thực sự broadcast sẽ được thực hiện từ Controller layer với IHubContext<KitchenHub>
+            // Để tránh dependency từ BusinessAccessLayer đến API layer
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Batch start cooking/update status cho nhiều món trong một lần để giảm số lượng call từ KDS
+        /// </summary>
+        public async Task<BatchCookResponse> BatchStartCookingAsync(BatchCookRequest request)
+        {
+            var response = new BatchCookResponse();
+
+            foreach (var item in request.Items)
+            {
+                var result = new BatchCookItemResult
+                {
+                    OrderDetailId = item.OrderDetailId,
+                    OrderComboItemId = item.OrderComboItemId
+                };
+
+                try
+                {
+                    // Nếu có OrderComboItemId → update status trực tiếp sang Cooking
+                    if (item.OrderComboItemId.HasValue && item.OrderComboItemId.Value > 0)
+                    {
+                        var updateResp = await UpdateItemStatusAsync(new UpdateItemStatusRequest
+                        {
+                            OrderDetailId = item.OrderDetailId,
+                            OrderComboItemId = item.OrderComboItemId,
+                            NewStatus = "Cooking",
+                            UserId = request.UserId
+                        });
+
+                        result.Success = updateResp.Success;
+                        result.Message = updateResp.Message;
+                    }
+                    else
+                    {
+                        // Món lẻ: sử dụng luồng start-cooking-with-quantity để xử lý split nếu cần
+                        var cookResp = await StartCookingWithQuantityAsync(new StartCookingWithQuantityRequest
+                        {
+                            OrderDetailId = item.OrderDetailId,
+                            Quantity = item.Quantity > 0 ? item.Quantity : 1,
+                            UserId = request.UserId
+                        });
+
+                        result.Success = cookResp.Success;
+                        result.Message = cookResp.Message;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.Success = false;
+                    result.Message = ex.Message;
+                }
+
+                response.Items.Add(result);
+            }
+
+            // Tổng hợp kết quả
+            response.Success = response.Items.All(i => i.Success);
+            response.Message = response.Success
+                ? "Batch cooking thành công"
+                : "Một số món không thể bắt đầu nấu";
+
+            return response;
         }
     }
 }

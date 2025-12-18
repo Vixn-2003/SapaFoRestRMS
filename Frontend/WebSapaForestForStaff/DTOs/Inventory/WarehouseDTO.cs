@@ -7,5 +7,7 @@
         public string Name { get; set; } = null!;
 
         public bool IsActive { get; set; } = true;
+
+        public int BatchCount { get; set; }
     }
 }

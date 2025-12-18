@@ -577,8 +577,8 @@ namespace BusinessAccessLayer.Services
 
         public async Task<bool> CancelOrderItemAsync(int orderDetailId)
         {
-            // 1. Lấy thông tin món + Kèm theo OrderComboItems
-            var item = await _context.OrderDetails.AsNoTracking()
+            // 1. Lấy thông tin món + Kèm theo OrderComboItems (WITH TRACKING để có thể update)
+            var item = await _context.OrderDetails
                 .Include(od => od.Order)
                 .Include(od => od.OrderComboItems)
                 .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
@@ -588,23 +588,31 @@ namespace BusinessAccessLayer.Services
                 throw new Exception("Không tìm thấy món ăn.");
             }
 
-            // 2. KIỂM TRA TRẠNG THÁI MÓN CHA
-            if (item.Status != "Pending")
+            // 2. KIỂM TRA TRẠNG THÁI MÓN CHA - cho phép hủy khi Pending hoặc Cooking
+            if (item.Status != "Pending" && item.Status != "Cooking")
             {
-                throw new Exception("Món ăn đang được chế biến hoặc đã phục vụ, không thể hủy.");
+                throw new Exception("Chỉ có thể hủy món đang chờ hoặc đang nấu. Vui lòng kiểm tra trạng thái món.");
             }
 
 
             if (item.OrderComboItems != null && item.OrderComboItems.Any())
             {
-                // Kiểm tra xem có bất kỳ món con nào đã "Done" (hoặc đang nấu dở "Cooking") hay không
+                // Kiểm tra xem có bất kỳ món con nào đã "Done" hay "Served" hay không
                 // Lưu ý: Hãy đảm bảo chữ "Done" khớp chính xác với DB của bạn (ví dụ: "Done", "Cooked", "Served")
-                bool hasCookedItem = item.OrderComboItems.Any(c => c.Status == "Done" || c.Status == "Served" || c.Status == "Cooking");
+                bool hasCookedItem = item.OrderComboItems.Any(c => c.Status == "Done" || c.Status == "Served");
 
                 if (hasCookedItem)
                 {
                     throw new Exception("Đã có món trong combo được nấu xong nên sẽ không hủy được. Vui lòng chờ !");
                 }
+            }
+
+            //  QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC khi cập nhật status
+            // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
+            var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
+            if (!releaseResult.success)
+            {
+                Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món: {releaseResult.message}");
             }
 
             // 3. Cập nhật trạng thái món Cha
@@ -631,14 +639,7 @@ namespace BusinessAccessLayer.Services
                 if (item.Order.TotalAmount < 0) item.Order.TotalAmount = 0;
             }
 
-            // 6. Hoàn trả nguyên liệu kho
-            var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
-            if (!releaseResult.success)
-            {
-                Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món: {releaseResult.message}");
-            }
-
-            // 7. Lưu thay đổi
+            // 6. Lưu thay đổi
             await _context.SaveChangesAsync();
 
             return true;

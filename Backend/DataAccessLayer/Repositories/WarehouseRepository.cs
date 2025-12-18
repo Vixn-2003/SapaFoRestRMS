@@ -18,14 +18,50 @@ namespace DataAccessLayer.Repositories
         {
             _context = context;
         }
-        public Task AddAsync(Warehouse entity)
+        public async Task AddAsync(Warehouse entity)
         {
-            throw new NotImplementedException();
+            if (entity == null)
+            {
+                throw new ArgumentNullException(nameof(entity));
+            }
+
+            // Validate dữ liệu
+            if (string.IsNullOrWhiteSpace(entity.Name))
+            {
+                throw new ArgumentException("Tên kho không được để trống", nameof(entity.Name));
+            }
+
+            // Thêm vào DbContext (giả sử bạn đang dùng Entity Framework)
+            await _context.Warehouses.AddAsync(entity);
+
+            // Lưu thay đổi vào database
+            await _context.SaveChangesAsync();
         }
 
-        public Task DeleteAsync(int id)
+        public async Task<bool> DeleteWarehousesAsync(int id)
         {
-            throw new NotImplementedException();
+            // Tìm warehouse theo id
+            var warehouse = await _context.Warehouses.FindAsync(id);
+
+            // Kiểm tra tồn tại
+            if (warehouse == null)
+            {
+                throw new KeyNotFoundException($"Không tìm thấy kho với ID: {id}");
+            }
+
+            // Kiểm tra đã bị xóa trước đó chưa
+            if (!warehouse.IsActive)
+            {
+                throw new InvalidOperationException($"Kho với ID {id} đã bị xóa trước đó");
+            }
+
+            // Xóa mềm - chỉ set IsActive = false
+            warehouse.IsActive = false;
+
+            // Cập nhật vào database
+            _context.Warehouses.Update(warehouse);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<IEnumerable<Warehouse>> GetAllAsync()
@@ -55,9 +91,25 @@ namespace DataAccessLayer.Repositories
             throw new NotImplementedException();
         }
 
-        public Task UpdateAsync(Warehouse entity)
+        public async Task<bool> UpdateWarehouseAsync(Warehouse entity)
         {
-            throw new NotImplementedException();
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            var existingWarehouse = await _context.Warehouses
+                .FirstOrDefaultAsync(w => w.WarehouseId == entity.WarehouseId);
+
+            if (existingWarehouse == null)
+                throw new InvalidOperationException($"Warehouse with ID {entity.WarehouseId} not found.");
+
+            // Cập nhật các thuộc tính
+            existingWarehouse.Name = entity.Name;
+            existingWarehouse.IsActive = entity.IsActive;
+
+            _context.Warehouses.Update(existingWarehouse);
+            await _context.SaveChangesAsync();
+
+            return true;
         }
 
         public async Task<IEnumerable<InventoryBatch>> GetBatchesByWarehouseIdAsync(int warehouseId)
@@ -71,6 +123,35 @@ namespace DataAccessLayer.Repositories
                 .Where(b => b.WarehouseId == warehouseId && b.IsActive)
                 .OrderByDescending(b => b.CreatedAt)
                 .ToListAsync();
+        }
+
+        public Task UpdateAsync(Warehouse entity)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<bool> AddWarehouseAsync(Warehouse warehouse)
+        {
+            if (warehouse == null)
+                throw new ArgumentNullException(nameof(warehouse));
+
+            // Kiểm tra tên warehouse đã tồn tại chưa
+            var existingWarehouse = await _context.Warehouses
+                .FirstOrDefaultAsync(w => w.Name == warehouse.Name);
+
+            if (existingWarehouse != null)
+                throw new InvalidOperationException($"Warehouse with name '{warehouse.Name}' already exists.");
+            warehouse.IsActive = true;
+
+            await _context.Warehouses.AddAsync(warehouse);
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
+        public Task DeleteAsync(int id)
+        {
+            throw new NotImplementedException();
         }
     }
 }

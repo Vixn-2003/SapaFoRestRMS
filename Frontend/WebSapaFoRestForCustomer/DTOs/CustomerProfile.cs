@@ -2,12 +2,15 @@ namespace WebSapaFoRestForCustomer.DTOs
 {
     public class CustomerProfile
     {
-        public int UserId { get; set; }
-        public string FullName { get; set; } = null!;
-        public string Email { get; set; } = null!;
-        public string Phone { get; set; } = null!;
-        public int LoyaltyPoints { get; set; }
-        public string? Notes { get; set; }
+        public int CustomerId { get; set; }
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+        public string? AvatarUrl { get; set; }
+        public decimal? LoyaltyPoints { get; set; }
+        public string? VipLevel { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }
 

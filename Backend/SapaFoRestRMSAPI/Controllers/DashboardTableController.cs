@@ -2,21 +2,32 @@
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using SapaFoRestRMSAPI.Hubs;
 using static BusinessAccessLayer.Services.Interfaces.IDashboardTableService;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = "Position:Waiter")]
     public class DashboardTableController : ControllerBase
     {
         private readonly IDashboardTableService _dashboardTableService;
+        private readonly IKitchenDisplayService _kitchenDisplayService;
+        private readonly IHubContext<KitchenHub> _kitchenHubContext;
 
-        public DashboardTableController(IDashboardTableService dashboardTableService)
+        public DashboardTableController(
+            IDashboardTableService dashboardTableService,
+            IKitchenDisplayService kitchenDisplayService,
+            IHubContext<KitchenHub> kitchenHubContext)
         {
             _dashboardTableService = dashboardTableService;
+            _kitchenDisplayService = kitchenDisplayService;
+            _kitchenHubContext = kitchenHubContext;
         }
 
 
@@ -141,6 +152,36 @@ namespace SapaFoRestRMSAPI.Controllers
             try
             {
                 await _dashboardTableService.SaveOrderChangesAsync(request);
+
+                //  Broadcast đơn mới đến màn hình bếp nếu có món mới được thêm
+                var hasNewItems = request.Items.Any(item => item.Action == "Add");
+                if (hasNewItems)
+                {
+                    try
+                    {
+                        // Lấy order mới từ KitchenDisplayService
+                        var activeOrders = await _kitchenDisplayService.GetActiveOrdersAsync();
+                        
+                        // Lấy order mới nhất (theo CreatedAt) - đơn vừa được thêm sẽ là mới nhất
+                        // Hoặc có thể lấy tất cả orders mới trong vài giây gần đây
+                        var recentOrders = activeOrders
+                            .Where(o => o.CreatedAt >= DateTime.Now.AddMinutes(-1)) // Orders trong 1 phút gần đây
+                            .OrderByDescending(o => o.CreatedAt)
+                            .ToList();
+
+                        // Broadcast tất cả orders mới
+                        foreach (var newOrder in recentOrders)
+                        {
+                            await _kitchenHubContext.Clients.All.SendAsync("NewOrderReceived", newOrder);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error nhưng không fail request
+                        Console.WriteLine($"Warning: Không thể broadcast đơn mới đến bếp: {ex.Message}");
+                    }
+                }
+
                 return Ok(new { success = true, message = "Lưu thành công!" });
             }
             catch (Exception ex)

@@ -34,6 +34,11 @@
     <!-- Plugin css for this page -->
     <link rel="stylesheet" href="~/assets/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
     <link rel="stylesheet" type="text/css" href="~/assets/js/select.dataTables.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+          integrity="sha512-dymI6o..."
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <!-- End plugin css for this page -->
     <!-- inject:css -->
     <link rel="stylesheet" href="~/assets/css/style.css">
@@ -115,49 +120,46 @@
             <!-- Sidebar -->
             <nav class="sidebar sidebar-offcanvas" id="sidebar">
                 <ul class="nav">
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Admin" asp-action="Index">
-                            <i class="mdi mdi-grid-large menu-icon"></i>
-                            <span class="menu-title">Tổng quan</span>
-                        </a>
-                    </li>
-                    <li class="nav-item nav-category">Quản trị hệ thống</li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Users" asp-action="Index">
-                            <i class="menu-icon mdi mdi-account-multiple"></i>
-                            <span class="menu-title">Người dùng & Vai trò</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Positions" asp-action="Index">
-                            <i class="menu-icon mdi mdi-briefcase"></i>
-                            <span class="menu-title">Vị trí công việc</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="SystemLogo" asp-action="Index">
-                            <i class="menu-icon mdi mdi-image"></i>
-                            <span class="menu-title">Logo & Thương hiệu</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="ManagerMenu" asp-action="Index">
-                            <i class="menu-icon mdi mdi-food"></i>
-                            <span class="menu-title">Thực đơn & Giá</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="BrandBanner" asp-action="Index">
-                            <i class="menu-icon mdi mdi-bullhorn"></i>
-                            <span class="menu-title">Khuyến mãi</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" asp-controller="Menu" asp-action="DashboardManager">
-                            <i class="menu-icon mdi mdi-chart-line"></i>
-                            <span class="menu-title">Báo cáo</span>
-                        </a>
-                    </li>
+                    @if (User.IsInRole("Owner"))
+                    {
+                        <!-- Owner Dashboard -->
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="OwnerDashboard" asp-action="Index">
+                                <i class="fas fa-th-large menu-icon"></i>
+                                <span class="menu-title">Tổng quan</span>
+                            </a>
+                        </li>
+                        <li class="nav-item nav-category">Quản lý Owner</li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="OwnerRevenue" asp-action="Index">
+                                <i class="menu-icon mdi mdi-cash-multiple"></i>
+                                <span class="menu-title">Quản lý Doanh thu</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="OwnerWarehouseAlert" asp-action="Index">
+                                <i class="menu-icon mdi mdi-alert-circle"></i>
+                                <span class="menu-title">Cảnh báo Kho hàng</span>
+                            </a>
+                        </li>
+                    }
+                    else if (User.IsInRole("Admin"))
+                    {
+                        <!-- Admin Dashboard -->
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Admin" asp-action="Index">
+                                <i class="fas fa-th-large menu-icon"></i>
+                                <span class="menu-title">Tổng quan</span>
+                            </a>
+                        </li>
+                        <li class="nav-item nav-category">Quản trị hệ thống</li>
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="AdminUserManagement" asp-action="Index">
+                                <i class="menu-icon fas fa-users"></i>
+                                <span class="menu-title">Người dùng & Vai trò</span>
+                            </a>
+                        </li>
+                    }
                 </ul>
             </nav>
             <!-- Content -->

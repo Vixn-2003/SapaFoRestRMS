@@ -65,7 +65,7 @@ namespace BusinessAccessLayer.Services
         Task<List<KitchenOrderCardDto>> GetRecentlyFulfilledOrdersAsync(int minutesAgo = 10);
 
         /// <summary>
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         Task<StatusUpdateResponse> RecallOrderDetailAsync(RecallOrderDetailRequest request);
 
@@ -78,5 +78,15 @@ namespace BusinessAccessLayer.Services
         /// Lấy thông tin order detail để in ticket khi hoàn thành món
         /// </summary>
         Task<PrintItemTicketDto?> GetOrderDetailForPrintAsync(int orderDetailId, int? orderComboItemId);
+
+        /// <summary>
+        /// Broadcast đơn mới đến tất cả màn hình bếp qua SignalR
+        /// </summary>
+        Task NotifyNewOrderAddedAsync(KitchenOrderCardDto order);
+
+        /// <summary>
+        /// Batch start cooking/update status cho nhiều món trong một lần
+        /// </summary>
+        Task<BatchCookResponse> BatchStartCookingAsync(BatchCookRequest request);
     }
 }

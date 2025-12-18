@@ -386,7 +386,7 @@ namespace SapaFoRestRMSAPI.Services
                 context.Orders.RemoveRange(oldOrders);
 
                 await context.SaveChangesAsync();
-                Console.WriteLine("✅ Previous pending orders removed.");
+                Console.WriteLine(" Previous pending orders removed.");
             }
             else
             {
@@ -457,7 +457,7 @@ namespace SapaFoRestRMSAPI.Services
                 await context.SaveChangesAsync();
 
                 table = sampleTable;
-                Console.WriteLine("✅ Created sample area and table (B01).");
+                Console.WriteLine(" Created sample area and table (B01).");
             }
 
             // Create or get a reservation for the table
@@ -523,7 +523,7 @@ namespace SapaFoRestRMSAPI.Services
                     .Take(10)
                     .ToListAsync();
 
-                Console.WriteLine("✅ Created sample menu items for cashier workflow.");
+                Console.WriteLine(" Created sample menu items for cashier workflow.");
             }
 
             // 3. Seed Combos with ComboItems
@@ -627,7 +627,7 @@ namespace SapaFoRestRMSAPI.Services
                 };
                 await context.Tables.AddAsync(table2);
                 await context.SaveChangesAsync();
-                Console.WriteLine("✅ Created table B02 for Order 3.");
+                Console.WriteLine(" Created table B02 for Order 3.");
             }
 
             var reservation2 = new Reservation
@@ -664,7 +664,7 @@ namespace SapaFoRestRMSAPI.Services
             await context.Orders.AddAsync(order3);
             await context.SaveChangesAsync();
             ordersCreated++;
-            Console.WriteLine("✅ Created Order 3 (waiting-confirmation).");
+            Console.WriteLine(" Created Order 3 (waiting-confirmation).");
 
             // Add simple items for Order 3
             var order3Details = new List<OrderDetail>
@@ -711,7 +711,7 @@ namespace SapaFoRestRMSAPI.Services
             await context.Orders.AddAsync(order4);
             await context.SaveChangesAsync();
             ordersCreated++;
-            Console.WriteLine("✅ Created Order 4 (confirmed with combo).");
+            Console.WriteLine(" Created Order 4 (confirmed with combo).");
 
             var order4Details = new List<OrderDetail>
             {
@@ -748,7 +748,7 @@ namespace SapaFoRestRMSAPI.Services
             await context.Orders.AddAsync(order5);
             await context.SaveChangesAsync();
             ordersCreated++;
-            Console.WriteLine("✅ Created Order 5 (paid).");
+            Console.WriteLine(" Created Order 5 (paid).");
 
             var order5Details = new List<OrderDetail>
             {
@@ -808,7 +808,7 @@ namespace SapaFoRestRMSAPI.Services
             await context.Orders.AddAsync(order6);
             await context.SaveChangesAsync();
             ordersCreated++;
-            Console.WriteLine("✅ Created Order 6 (waiting-confirmation, many items).");
+            Console.WriteLine(" Created Order 6 (waiting-confirmation, many items).");
 
             var order6Details = new List<OrderDetail>();
             for (int i = 0; i < Math.Min(5, menuItems.Count); i++)
@@ -846,7 +846,7 @@ namespace SapaFoRestRMSAPI.Services
             await context.Orders.AddAsync(order7);
             await context.SaveChangesAsync();
             ordersCreated++;
-            Console.WriteLine("✅ Created Order 7 (old paid order).");
+            Console.WriteLine(" Created Order 7 (old paid order).");
 
             var order7Details = new List<OrderDetail>
             {
@@ -886,7 +886,7 @@ namespace SapaFoRestRMSAPI.Services
             await context.Orders.AddAsync(order8);
             await context.SaveChangesAsync();
             ordersCreated++;
-            Console.WriteLine("✅ Created Order 8 (processing with combo for kitchen test).");
+            Console.WriteLine(" Created Order 8 (processing with combo for kitchen test).");
 
             // Dòng combo cho Order 8
             var order8Detail = new OrderDetail
@@ -1055,7 +1055,7 @@ namespace SapaFoRestRMSAPI.Services
                     await context.Areas.AddAsync(area);
                     await context.SaveChangesAsync();
                     areasCreated++;
-                    Console.WriteLine($"✅ Created area: {areaData.AreaName}");
+                    Console.WriteLine($" Created area: {areaData.AreaName}");
                 }
                 else
                 {
@@ -1128,7 +1128,7 @@ namespace SapaFoRestRMSAPI.Services
                     await context.MenuCategories.AddAsync(newCat);
                     await context.SaveChangesAsync();
                     categoryMap[cat.Name] = newCat.CategoryId;
-                    Console.WriteLine($"✅ Created category: {cat.Name}");
+                    Console.WriteLine($" Created category: {cat.Name}");
                 }
                 else
                 {
@@ -1273,7 +1273,7 @@ namespace SapaFoRestRMSAPI.Services
                 Console.WriteLine("");
 
                 Console.WriteLine("════════════════════════════════════════════════════════");
-                Console.WriteLine("  ✅ ALL DATA SEEDED SUCCESSFULLY!");
+                Console.WriteLine("   ALL DATA SEEDED SUCCESSFULLY!");
                 Console.WriteLine("════════════════════════════════════════════════════════");
                 Console.WriteLine("");
                 Console.WriteLine("📊 Database Summary:");

@@ -215,7 +215,7 @@ GetPendingRequestsForStaffAsync(string? sort, int pageIndex, int pageSize)
             var query = _context.AssistanceRequests
                 .Include(r => r.Table)
                     .ThenInclude(t => t.Area)
-                // ✅ CHỈ LỌC THEO STATUS (Bỏ lọc thời gian)
+                //  CHỈ LỌC THEO STATUS (Bỏ lọc thời gian)
                 .Where(r => r.Status == "Pending")
                 .AsNoTracking();
 

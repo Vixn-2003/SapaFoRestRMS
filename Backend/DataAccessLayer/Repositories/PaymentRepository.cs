@@ -87,7 +87,7 @@ public class PaymentRepository : IPaymentRepository
                     .ThenInclude(rt => rt.Table)
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.Staff)
-            // ✅ FIX: Include Reservation.Customer.User để có thể fallback khi Order.Customer.User null
+            //  FIX: Include Reservation.Customer.User để có thể fallback khi Order.Customer.User null
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.Customer)
                     .ThenInclude(c => c!.User)
@@ -154,7 +154,7 @@ public class PaymentRepository : IPaymentRepository
                     .ThenInclude(rt => rt.Table)
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.Staff)
-            // ✅ FIX: Include Reservation.Customer.User để có thể fallback khi Order.Customer.User null
+            //  FIX: Include Reservation.Customer.User để có thể fallback khi Order.Customer.User null
             .Include(o => o.Reservation)
                 .ThenInclude(r => r.Customer)
                     .ThenInclude(c => c!.User)
@@ -233,6 +233,16 @@ public class PaymentRepository : IPaymentRepository
             .Include(od => od.Combo)
             .Include(od => od.Order)
             .FirstOrDefaultAsync(od => od.OrderDetailId == orderDetailId);
+    }
+
+    public async Task<IEnumerable<Transaction>> GetAllTransactionsAsync()
+    {
+        return await _context.Set<Transaction>()
+            .Include(t => t.Order)
+                .ThenInclude(o => o.Customer)
+            .Include(t => t.ConfirmedByUser)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
     }
 }
 

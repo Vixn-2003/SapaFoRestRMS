@@ -24,13 +24,162 @@
         }).format(amount);
     }
 
-    function showToast(message, type = 'info') {
-        if (typeof toastr !== 'undefined') {
-            toastr[type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'](message);
-        } else {
-            alert(message);
+    function showToast(message, type = 'error') {
+        const errorContainer = document.getElementById('modal-error-message');
+        const errorText = document.getElementById('modal-error-text');
+
+        if (!errorContainer || !errorText) {
+            // Fallback to global toast container if modal error elements not found
+            if (typeof toastr !== 'undefined') {
+                toastr[type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'](message);
+            } else {
+                alert(message);
+            }
+            return;
+        }
+
+        // Set error message text
+        errorText.textContent = message;
+
+        // Show error container
+        errorContainer.classList.remove('d-none');
+
+        // Update alert styling based on type
+        const alert = errorContainer.querySelector('.alert');
+        if (alert) {
+            // Remove all alert classes first
+            alert.classList.remove('alert-danger', 'alert-success', 'alert-warning', 'alert-info');
+
+            // Add appropriate class based on type
+            const alertClass = type === 'error' ? 'alert-danger' :
+                              type === 'success' ? 'alert-success' :
+                              type === 'warning' ? 'alert-warning' : 'alert-info';
+            alert.classList.add(alertClass);
+        }
+
+        // Auto hide after 8 seconds (longer than toast for better UX)
+        setTimeout(() => {
+            hideErrorMessage();
+        }, 8000);
+    }
+
+    function hideErrorMessage() {
+        const errorContainer = document.getElementById('modal-error-message');
+        if (errorContainer) {
+            errorContainer.classList.add('d-none');
         }
     }
+
+    // Split bill specific error handling
+    function showSplitPartError(partIndex, field, message) {
+        const errorDiv = document.getElementById(`${field}Error_${partIndex}`);
+        const input = document.getElementById(`${field === 'cash' ? 'cashReceived' : 'splitPartAmount'}_${partIndex}`);
+        const inputGroup = input ? input.closest('.input-group') : null;
+
+        if (errorDiv) {
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        if (input) {
+            input.classList.add('is-invalid');
+        }
+
+        if (inputGroup) {
+            inputGroup.classList.add('is-invalid');
+        }
+    }
+
+    function clearSplitPartError(partIndex, field) {
+        const errorDiv = document.getElementById(`${field}Error_${partIndex}`);
+        const input = document.getElementById(`${field === 'cash' ? 'cashReceived' : 'splitPartAmount'}_${partIndex}`);
+        const inputGroup = input ? input.closest('.input-group') : null;
+
+        if (errorDiv) {
+            errorDiv.textContent = '';
+            errorDiv.classList.remove('show');
+        }
+
+        if (input) {
+            input.classList.remove('is-invalid');
+        }
+
+        if (inputGroup) {
+            inputGroup.classList.remove('is-invalid');
+        }
+    }
+
+    function clearAllSplitPartErrors() {
+        splitParts.forEach((_, index) => {
+            clearSplitPartError(index, 'cash');
+            clearSplitPartError(index, 'amount');
+        });
+    }
+
+    // QR Code generation functions (adapted from Payment.cshtml)
+    function generateVietQrUrl(bank, account, amount, addInfo) {
+        return `https://img.vietqr.io/image/${bank}-${account}-compact.png`
+            + `?amount=${amount}`
+            + `&addInfo=${encodeURIComponent(addInfo)}`;
+    }
+
+    window.showSplitPartQR = function (partIndex) {
+        const qrPreview = document.getElementById(`qrPreview_${partIndex}`);
+        const generateBtn = document.getElementById(`qrGenerateBtn_${partIndex}`);
+
+        if (qrPreview && generateBtn) {
+            qrPreview.classList.remove('d-none');
+            generateBtn.style.display = 'none';
+            generateSplitPartQR(partIndex);
+        }
+    };
+
+    window.hideSplitPartQR = function (partIndex) {
+        const qrPreview = document.getElementById(`qrPreview_${partIndex}`);
+        const generateBtn = document.getElementById(`qrGenerateBtn_${partIndex}`);
+
+        if (qrPreview && generateBtn) {
+            qrPreview.classList.add('d-none');
+            generateBtn.style.display = 'block';
+        }
+    };
+
+    window.generateSplitPartQR = function (partIndex) {
+        const part = splitParts[partIndex];
+        if (!part || part.paymentMethod !== 'QRBankTransfer') return;
+
+        const loadingDiv = document.getElementById(`qrLoading_${partIndex}`);
+        const contentDiv = document.getElementById(`qrContent_${partIndex}`);
+        const generateBtn = document.querySelector(`#qrPreview_${partIndex} .btn-outline-primary`);
+
+        // Show loading
+        loadingDiv.classList.remove('d-none');
+        contentDiv.classList.add('d-none');
+        if (generateBtn) generateBtn.disabled = true;
+
+        setTimeout(() => {
+            // Hide loading, show content
+            loadingDiv.classList.add('d-none');
+            contentDiv.classList.remove('d-none');
+            if (generateBtn) generateBtn.disabled = false;
+
+            // Generate QR details
+            const qrAmount = part.amount;
+            const orderCode = currentOrderData?.orderCode || `ORD-${currentOrderId}`;
+            const transactionCode = `TXN-SPLIT-${Date.now()}-${partIndex}`;
+            const bank = "MB";
+            const account = "0397604824";
+            const addInfo = `RMS#${orderCode}-P${part.partNumber}`;
+
+            const qrUrl = generateVietQrUrl(bank, account, qrAmount, addInfo);
+
+            // Update UI elements
+            document.getElementById(`qrAmount_${partIndex}`).textContent = `Số tiền: ${formatCurrency(qrAmount)}`;
+            document.getElementById(`qrDescription_${partIndex}`).textContent = addInfo;
+            document.getElementById(`qrTransactionCode_${partIndex}`).textContent = transactionCode;
+            document.getElementById(`qrImage_${partIndex}`).src = qrUrl;
+        }, 800); // Slightly longer delay for better UX
+    };
 
     window.openSplitBill = function (orderId, orderData) {
         currentOrderId = orderId;
@@ -46,6 +195,15 @@
         document.getElementById('numberOfParts').value = 2;
         document.getElementById('splitNotes').value = '';
         document.getElementById('splitTotalValidation').classList.add('d-none');
+
+        // Clear any existing modal error message
+        const errorContainer = document.getElementById('modal-error-message');
+        if (errorContainer) {
+            errorContainer.classList.add('d-none');
+        }
+
+        // Clear all split part errors
+        clearAllSplitPartErrors();
 
         // Initialize with equal split
         changeSplitType();
@@ -125,8 +283,8 @@
                                 <strong>Số tiền thanh toán</strong>
                             </label>
                             <div class="input-group input-group-sm">
-                                <input type="number" 
-                                       class="form-control" 
+                                <input type="number"
+                                       class="form-control"
                                        id="splitPartAmount_${index}"
                                        value="${part.amount.toFixed(0)}"
                                        min="0"
@@ -136,6 +294,7 @@
                                        oninput="updateSplitPartAmountInput(${index}, this)">
                                 <span class="input-group-text">₫</span>
                             </div>
+                            <div class="split-part-error" id="amountError_${index}"></div>
                             <small class="text-muted">Số tiền cần thanh toán cho phần này</small>
                         </div>
                     ` : ''}
@@ -154,8 +313,9 @@
                             <div class="col-md-6">
                                 <label class="form-label small">Số tiền nhận được</label>
                                 <div class="input-group input-group-sm">
-                                    <input type="number" 
-                                           class="form-control" 
+                                    <input type="number"
+                                           class="form-control"
+                                           id="cashReceived_${index}"
                                            value="${part.amountReceived || ''}"
                                            min="0"
                                            step="1000"
@@ -164,6 +324,7 @@
                                            oninput="updateAmountReceivedInput(${index}, this)">
                                     <span class="input-group-text">₫</span>
                                 </div>
+                                <div class="split-part-error" id="cashError_${index}"></div>
                             </div>
                         ` : ''}
                     </div>
@@ -172,9 +333,45 @@
                             <small>Tiền thối: ${formatCurrency(part.amountReceived - part.amount)}</small>
                         </div>
                     ` : ''}
+
+                    ${part.paymentMethod === 'QRBankTransfer' ? `
+                        <div class="qr-preview-section mt-2 d-none" id="qrPreview_${index}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted fw-bold">Mã QR thanh toán</small>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="hideSplitPartQR(${index})">
+                                    <i class="bi bi-x me-1"></i>Ẩn QR
+                                </button>
+                            </div>
+                            <div class="qr-loading text-center d-none" id="qrLoading_${index}">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Đang tạo...</span>
+                                </div>
+                                <small class="text-muted d-block mt-1">Đang tạo mã QR...</small>
+                            </div>
+                            <div class="qr-content d-none" id="qrContent_${index}">
+                                <div class="text-center">
+                                    <img id="qrImage_${index}" class="img-fluid mb-2" style="max-width: 150px; max-height: 150px;" alt="QR Code">
+                                    <div class="qr-info">
+                                        <small class="d-block fw-bold text-primary" id="qrAmount_${index}"></small>
+                                        <small class="d-block text-muted" id="qrDescription_${index}"></small>
+                                        <small class="d-block text-muted font-monospace" id="qrTransactionCode_${index}"></small>
+                                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="generateSplitPartQR(${index})">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>Tạo lại QR
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2" id="qrGenerateBtn_${index}" ${part.paymentMethod === 'QRBankTransfer' ? '' : 'style="display:none;"'}>
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="showSplitPartQR(${index})">
+                                <i class="bi bi-qr-code me-1"></i>Hiển thị mã QR thanh toán
+                            </button>
+                        </div>
+                    ` : ''}
+
                     <div class="mt-2">
-                        <input type="text" 
-                               class="form-control form-control-sm" 
+                        <input type="text"
+                               class="form-control form-control-sm"
                                placeholder="Ghi chú (tùy chọn)"
                                value="${part.notes}"
                                onchange="updateSplitPart(${index}, 'notes', this.value)">
@@ -206,7 +403,38 @@
 
     window.updateSplitPart = function (index, field, value, shouldRender = true) {
         if (splitParts[index]) {
+            const oldPaymentMethod = splitParts[index].paymentMethod;
             splitParts[index][field] = value;
+
+            // Special handling for payment method changes
+            if (field === 'paymentMethod') {
+                // Show/hide QR generate button
+                const qrGenerateBtn = document.getElementById(`qrGenerateBtn_${index}`);
+                if (qrGenerateBtn) {
+                    qrGenerateBtn.style.display = value === 'QRBankTransfer' ? 'block' : 'none';
+                }
+
+                // Hide QR preview when switching away from QR
+                if (value !== 'QRBankTransfer' && oldPaymentMethod === 'QRBankTransfer') {
+                    hideSplitPartQR(index);
+                }
+
+                // Clear cash received when switching away from Cash
+                if (value !== 'Cash' && oldPaymentMethod === 'Cash') {
+                    splitParts[index].amountReceived = null;
+                    clearSplitPartError(index, 'cash');
+                }
+            }
+
+            // Update QR when amount changes for QR payment method
+            if (field === 'amount' && splitParts[index].paymentMethod === 'QRBankTransfer') {
+                // Only regenerate if QR is already visible
+                const qrContent = document.getElementById(`qrContent_${index}`);
+                if (qrContent && !qrContent.classList.contains('d-none')) {
+                    setTimeout(() => generateSplitPartQR(index), 200);
+                }
+            }
+
             // Only re-render if explicitly requested and not updating amount/amountReceived during input
             if (shouldRender && field !== 'amount' && field !== 'amountReceived') {
                 renderSplitParts();
@@ -220,6 +448,8 @@
         if (splitParts[index] && inputElement) {
             const newAmount = parseFloat(inputElement.value) || null;
             splitParts[index].amountReceived = newAmount;
+            // Clear error when user starts typing
+            clearSplitPartError(index, 'cash');
             // Only validate, don't re-render to avoid losing focus
             validateSplitTotal();
         }
@@ -230,6 +460,8 @@
         if (splitParts[index] && inputElement) {
             const newAmount = parseFloat(inputElement.value) || null;
             splitParts[index].amountReceived = newAmount;
+            // Clear error when user changes value
+            clearSplitPartError(index, 'cash');
             validateSplitTotal();
             // Re-render to update UI (after user finishes editing)
             renderSplitParts();
@@ -242,6 +474,8 @@
             const newAmount = parseFloat(inputElement.value) || 0;
             if (newAmount >= 0) {
                 splitParts[index].amount = newAmount;
+                // Clear error when user starts typing
+                clearSplitPartError(index, 'amount');
                 // Only validate, don't re-render to avoid losing focus
                 validateSplitTotal();
             }
@@ -254,6 +488,8 @@
             const newAmount = parseFloat(inputElement.value) || 0;
             if (newAmount >= 0) {
                 splitParts[index].amount = newAmount;
+                // Clear error when user changes value
+                clearSplitPartError(index, 'amount');
                 validateSplitTotal();
                 // Re-render to update UI (after user finishes editing)
                 renderSplitParts();
@@ -341,10 +577,36 @@
         const confirmBtn = document.getElementById('confirmSplitBillBtn');
         
         try {
+            // Clear all previous errors
+            clearAllSplitPartErrors();
+
             // Validate từng phần: với tiền mặt cần nhập số tiền khách đưa >= số tiền phải trả
-            const invalidCash = splitParts.find(p => p.paymentMethod === 'Cash' && (!p.amountReceived || p.amountReceived < p.amount));
-            if (invalidCash) {
-                showToast(`Phần ${invalidCash.partNumber}: Vui lòng nhập số tiền khách đưa và phải lớn hơn hoặc bằng số tiền cần thu.`, 'error');
+            let hasErrors = false;
+            let firstErrorIndex = -1;
+
+            splitParts.forEach((part, index) => {
+                if (part.paymentMethod === 'Cash') {
+                    if (!part.amountReceived) {
+                        showSplitPartError(index, 'cash', 'Vui lòng nhập số tiền khách đưa');
+                        hasErrors = true;
+                        if (firstErrorIndex === -1) firstErrorIndex = index;
+                    } else if (part.amountReceived < part.amount) {
+                        showSplitPartError(index, 'cash', `Số tiền khách đưa (${formatCurrency(part.amountReceived)}) nhỏ hơn số tiền cần thu (${formatCurrency(part.amount)})`);
+                        hasErrors = true;
+                        if (firstErrorIndex === -1) firstErrorIndex = index;
+                    }
+                }
+            });
+
+            if (hasErrors) {
+                // Focus vào input đầu tiên có lỗi
+                if (firstErrorIndex !== -1) {
+                    const errorInput = document.getElementById(`cashReceived_${firstErrorIndex}`);
+                    if (errorInput) {
+                        errorInput.focus();
+                        errorInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
                 return;
             }
 
@@ -369,11 +631,32 @@
             document.getElementById('splitBillForm').submit();
         } catch (error) {
             console.error('Error processing split bill:', error);
-            showToast(error.message || 'Lỗi khi chia hóa đơn. Vui lòng thử lại.', 'error');
+            // Show system error in modal footer (not field-specific)
+            const errorMessage = error.message || 'Lỗi khi chia hóa đơn. Vui lòng thử lại.';
+            showToast(errorMessage, 'error');
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn';
         }
     };
+
+    // Initialize error message close functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const errorContainer = document.getElementById('modal-error-message');
+        if (errorContainer) {
+            const closeBtn = errorContainer.querySelector('.btn-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', hideErrorMessage);
+            }
+
+            // Also handle Bootstrap alert dismiss
+            const alert = errorContainer.querySelector('.alert');
+            if (alert && typeof bootstrap !== 'undefined') {
+                alert.addEventListener('closed.bs.alert', function() {
+                    errorContainer.classList.add('d-none');
+                });
+            }
+        }
+    });
 
     // Export
     window.SplitBill = {
@@ -387,7 +670,10 @@
         addSplitPart,
         increaseParts,
         decreaseParts,
-        confirmSplitBill
+        confirmSplitBill,
+        showSplitPartQR,
+        hideSplitPartQR,
+        generateSplitPartQR
     };
 })();
 

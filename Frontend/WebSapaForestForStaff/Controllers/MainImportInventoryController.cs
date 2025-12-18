@@ -70,7 +70,7 @@ namespace WebSapaForestForStaff.Controllers
         {
             try
             {
-                // ✅ THÊM: Validation
+                //  THÊM: Validation
                 if (request == null)
                 {
                     return BadRequest(new { message = "Request không hợp lệ" });
@@ -81,7 +81,7 @@ namespace WebSapaForestForStaff.Controllers
                     return BadRequest(new { message = "Không có đơn hàng nào" });
                 }
 
-                // ✅ THÊM: Log để debug
+                //  THÊM: Log để debug
                 Console.WriteLine($"📥 Received {request.Orders.Count} orders");
                 Console.WriteLine($"📅 Date range: {request.DateFrom} - {request.DateTo}");
 
@@ -120,7 +120,7 @@ namespace WebSapaForestForStaff.Controllers
             }
             catch (Exception ex)
             {
-                // ✅ THÊM: Log chi tiết lỗi
+                //  THÊM: Log chi tiết lỗi
                 Console.WriteLine($"❌ Error in GenerateReport: {ex.Message}");
                 Console.WriteLine($"❌ StackTrace: {ex.StackTrace}");
                 return BadRequest(new { message = ex.Message, detail = ex.StackTrace });

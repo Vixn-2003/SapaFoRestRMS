@@ -3,6 +3,7 @@ using BusinessAccessLayer.DTOs.Inventory;
 using BusinessAccessLayer.DTOs.Manager;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,5 +47,35 @@ namespace BusinessAccessLayer.Services
             var batches = await _unitOfWork.Warehouse.GetBatchesByWarehouseIdAsync(warehouseId);
             return _mapper.Map<IEnumerable<InventoryBatchDTO>>(batches);
         }
+
+        public async Task<bool> UpdateWarehouseAsync(int id, WarehouseDTO dto)
+        {
+            var warehouse = await _unitOfWork.Warehouse.GetByIdAsync(id);
+            if (warehouse != null) {
+                warehouse.Name = dto.Name;
+                var result = await _unitOfWork.Warehouse.UpdateWarehouseAsync(warehouse);
+                return result;  
+            }
+            return false;
+        }
+
+        public async Task<bool> CreateWarehouseAsync(WarehouseDTO dto)
+        {
+            var warehouse = new Warehouse
+            {
+                Name = dto.Name.Trim()
+            };
+
+            var result = await _unitOfWork.Warehouse.AddWarehouseAsync(warehouse);
+
+            return result;
+        }
+
+        public async Task<bool> DeleteWarehouseAsync(int id)
+        {
+            var result = await _unitOfWork.Warehouse.DeleteWarehousesAsync(id);
+            return result;
+        }
     }
 }
+    

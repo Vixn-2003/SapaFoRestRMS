@@ -13,11 +13,35 @@ body, html {
 }
 
 /* =============== CONTAINER =============== */
-.login-container {  
+.login-container {
     display: flex;
+    flex-direction: column;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 60px;
+}
+
+/* =============== LOGO SECTION =============== */
+.logo-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    flex-shrink: 0;
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+/* =============== LOGIN SECTION =============== */
+.login-section {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0 20px;
+    width: 100%;
 }
 
 /* =============== LEFT SECTION =============== */
@@ -47,24 +71,35 @@ body, html {
 }
 
 .login-box {
-    width: 420px;
+    width: 600px;
     background-color: #fff;
     padding: 40px 50px;
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
+    .login-box .welcome-header {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 35px;
+        flex-wrap: wrap;
+    }
+
     .login-box h2 {
         font-size: 26px;
         color: #333;
         font-weight: 600;
+        margin: 0;
+        display: inline-block;
     }
 
     .login-box h3 {
         font-size: 28px;
         color: var(--primary-500, #FF6B6B);
         font-weight: 800;
-        margin-bottom: 35px;
+        margin: 0;
+        display: inline-block;
     }
 
     .login-box h3 span {
@@ -153,17 +188,22 @@ label {
 /* =============== RESPONSIVE =============== */
 @media (max-width: 992px) {
     .login-container {
-        flex-direction: column;
         height: auto;
+        min-height: 100vh;
+        padding: 20px 0;
     }
 
-    .left-section {
-        display: none;
+    .logo-section {
+        padding: 0 20px 20px 20px;
     }
 
-    .right-section {
-        width: 100%;
-        padding: 50px 20px;
+    .logo-section img {
+        height: 120px;
+    }
+
+    .login-section {
+        padding: 0 20px;
+        align-items: center;
     }
 
     .login-box {

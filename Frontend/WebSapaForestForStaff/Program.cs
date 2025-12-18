@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
 using WebSapaForestForStaff.Controllers;
 using WebSapaForestForStaff.Hubs;
 using WebSapaForestForStaff.Services;
@@ -36,7 +37,29 @@ builder.Services.AddHttpClient<IProfileApiService, ProfileApiService>();
 builder.Services.AddHttpClient<IPositionApiService, PositionApiService>();
 builder.Services.AddHttpClient<IPaymentApiService, PaymentApiService>();
 builder.Services.AddHttpClient<IShiftManagementApiService, ShiftManagementApiService>();
+builder.Services.AddHttpClient<ICustomerManagementApiService, CustomerManagementApiService>();
+builder.Services.AddHttpClient<IStaffManagementApiService, StaffManagementApiService>();
 
+// Manager Customer API Service
+builder.Services.AddHttpClient<ICustomerManagementApiService, CustomerManagementApiService>();
+
+// Owner Dashboard API Services
+builder.Services.AddHttpClient<IOwnerDashboardApiService, OwnerDashboardApiService>();
+builder.Services.AddHttpClient<IOwnerRevenueApiService, OwnerRevenueApiService>();
+builder.Services.AddHttpClient<IOwnerWarehouseAlertApiService, OwnerWarehouseAlertApiService>();
+builder.Services.AddScoped<ExportReportService>();
+builder.Services.AddScoped<IReportService, ReportService>();
+
+builder.Services.AddScoped<IngredientReportService>();
+
+
+// Counter Staff Dashboard API Services
+builder.Services.AddHttpClient<ICounterStaffDashboardApiService, CounterStaffDashboardApiService>();
+builder.Services.AddHttpClient<ICounterStaffOrderApiService, CounterStaffOrderApiService>();
+builder.Services.AddHttpClient<ICounterTransactionApiService, CounterTransactionApiService>();
+
+// Admin Dashboard API Services
+builder.Services.AddHttpClient<IAdminDashboardApiService, AdminDashboardApiService>();
 
 // Keep backward compatibility with old ApiService (can be removed after migration)
 builder.Services.AddHttpClient<ApiService>();
@@ -65,6 +88,40 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Manager", p => p.RequireRole("Manager", "Admin", "Owner"));
     options.AddPolicy("Staff", p => p.RequireRole("Staff", "Manager", "Admin", "Owner"));
     options.AddPolicy("Customer", p => p.RequireRole("Customer"));
+
+    bool HasManagementRole(ClaimsPrincipal user) =>
+        user.IsInRole("Owner") || user.IsInRole("Admin") || user.IsInRole("Manager");
+
+    bool HasPositionClaim(ClaimsPrincipal user, int positionId)
+    {
+        var positionValue = positionId.ToString();
+        var hasSingle = user.Claims.Any(c =>
+            string.Equals(c.Type, "PositionId", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(c.Value, positionValue, StringComparison.OrdinalIgnoreCase));
+
+        var hasFromList = user.Claims.Any(c =>
+            string.Equals(c.Type, "PositionIds", StringComparison.OrdinalIgnoreCase) &&
+            c.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Any(v => string.Equals(v.Trim(), positionValue, StringComparison.OrdinalIgnoreCase)));
+
+        return hasSingle || hasFromList;
+    }
+
+    options.AddPolicy("Position:Waiter", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 1))));
+
+    options.AddPolicy("Position:Cashier", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 2))));
+
+    options.AddPolicy("Position:Kitchen", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 3))));
+
+    options.AddPolicy("Position:Inventory", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole("Staff") && HasPositionClaim(ctx.User, 4))));
 });
 
 builder.Services.AddSignalR();

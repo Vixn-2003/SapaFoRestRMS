@@ -10,6 +10,9 @@ namespace DataAccessLayer.Repositories.Interfaces
     public interface IWarehouseRepository : IRepository<Warehouse>
     {
         Task<int> GetIdByStringAsync(string warehouse);
+        Task<bool> UpdateWarehouseAsync(Warehouse warehouse);
+        Task<bool> AddWarehouseAsync(Warehouse warehouse);
+        Task<bool> DeleteWarehousesAsync(int id);
 
         Task<IEnumerable<InventoryBatch>> GetBatchesByWarehouseIdAsync(int warehouseId);
     }

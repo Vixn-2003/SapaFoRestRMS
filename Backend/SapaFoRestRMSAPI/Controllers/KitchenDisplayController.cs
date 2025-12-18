@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.DTOs.Kitchen;
@@ -8,6 +9,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Policy = "Position:Kitchen")]
     public class KitchenDisplayController : ControllerBase
     {
         private readonly IKitchenDisplayService _kitchenService;
@@ -310,7 +312,7 @@ namespace SapaFoRestRMSAPI.Controllers
 
         /// <summary>
         /// POST: api/KitchenDisplay/recall-order-detail
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         [HttpPost("recall-order-detail")]
         public async Task<IActionResult> RecallOrderDetail([FromBody] RecallOrderDetailRequest request)
@@ -365,6 +367,35 @@ namespace SapaFoRestRMSAPI.Controllers
                     success = true, 
                     data = orderDetail 
                 });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/batch-cook
+        /// Gom nhiều hành động bắt đầu nấu vào một call để giảm số lượng fetch từ frontend
+        /// </summary>
+        [HttpPost("batch-cook")]
+        public async Task<IActionResult> BatchCook([FromBody] BatchCookRequest request)
+        {
+            try
+            {
+                if (request.Items == null || !request.Items.Any())
+                {
+                    return BadRequest(new { success = false, message = "Danh sách món trống" });
+                }
+
+                var result = await _kitchenService.BatchStartCookingAsync(request);
+
+                if (!result.Success)
+                {
+                    return Ok(new { success = false, message = result.Message, items = result.Items });
+                }
+
+                return Ok(new { success = true, message = result.Message, items = result.Items });
             }
             catch (Exception ex)
             {
