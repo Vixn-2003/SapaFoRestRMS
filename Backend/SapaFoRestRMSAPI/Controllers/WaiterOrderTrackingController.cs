@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using BusinessAccessLayer.DTOs.Waiter;
 using BusinessAccessLayer.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
+using SapaFoRestRMSAPI.Hubs;
+using BusinessAccessLayer.DTOs;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -9,10 +12,12 @@ namespace SapaFoRestRMSAPI.Controllers
     public class WaiterOrderTrackingController : ControllerBase
     {
         private readonly IWaiterOrderTrackingService _service;
+        private readonly IHubContext<KitchenHub> _kitchenHubContext;
 
-        public WaiterOrderTrackingController(IWaiterOrderTrackingService service)
+        public WaiterOrderTrackingController(IWaiterOrderTrackingService service, IHubContext<KitchenHub> kitchenHubContext)
         {
             _service = service;
+            _kitchenHubContext = kitchenHubContext;
         }
 
         /// <summary>
@@ -99,6 +104,24 @@ namespace SapaFoRestRMSAPI.Controllers
                 var result = await _service.MarkAsServedAsync(request);
                 if (result.Success)
                 {
+                    // Broadcast real-time update qua SignalR để KitchenDisplay & Waiter khác cập nhật
+                    try
+                    {
+                        await _kitchenHubContext.Clients.All.SendAsync("ItemStatusChanged", new KitchenStatusChangeNotification
+                        {
+                            OrderId = 0,
+                            OrderDetailId = request.OrderDetailId,
+                            NewStatus = "Done",
+                            Timestamp = DateTime.Now,
+                            ChangedBy = "Waiter"
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        // Không chặn response nếu SignalR lỗi
+                        Console.WriteLine($"SignalR ItemStatusChanged error (MarkAsServed): {ex.Message}");
+                    }
+
                     return Ok(result);
                 }
                 return BadRequest(result);
