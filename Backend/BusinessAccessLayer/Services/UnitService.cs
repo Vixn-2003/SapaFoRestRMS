@@ -33,5 +33,46 @@ namespace BusinessAccessLayer.Services
             var result = await _unitOfWork.UnitRepository.GetIdUnitByString(unitName);
             return result;
         }
+
+
+        public async Task<UnitDTO> CreateAsync(UnitDTO dto)
+        {
+            if (await _unitOfWork.UnitRepository.ExistsByNameAsync(dto.UnitName))
+                throw new InvalidOperationException("Unit name already exists");
+
+            // 🔁 Mapping DTO → Entity
+            var unit = new Unit
+            {
+                UnitName = dto.UnitName,
+                UnitType = dto.UnitType
+            };
+
+            await _unitOfWork.UnitRepository.AddAsync(unit);
+
+            // 🔁 Mapping Entity → DTO
+            return new UnitDTO
+            {
+                UnitId = unit.UnitId,
+                UnitName = unit.UnitName,
+                UnitType = unit.UnitType
+            };
+        }
+
+        // ============ UPDATE ============
+        public async Task UpdateAsync(int id, UnitDTO dto)
+        {
+            var unit = await _unitOfWork.UnitRepository.GetByIdAsync(id);
+            if (unit == null)
+                throw new InvalidOperationException("Unit not found");
+
+            if (await _unitOfWork.UnitRepository.ExistsByNameAsync(dto.UnitName, id))
+                throw new InvalidOperationException("Unit name already exists");
+
+            // 🔁 Mapping DTO → Entity
+            unit.UnitName = dto.UnitName;
+            unit.UnitType = dto.UnitType;
+
+            await _unitOfWork.UnitRepository.UpdateAsync(unit);
+        }
     }
 }

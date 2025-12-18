@@ -15,9 +15,12 @@
                             <h4 class="mb-0" style="color:red">@combo.ComboName</h4>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="h5 text-warning mb-0">@combo.Price.ToString("N0") đ</span>
-                                <button class="btn btn-sm btn-outline-primary" onclick="editCombo(@combo.ComboId)">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-controller="ManagerCombo"
+                                   asp-action="EditCombo"
+                                   asp-route-id="@combo.ComboId">
                                     <i class="mdi mdi-pencil"></i>
-                                </button>
+                                </a>
                             </div>
                         </div>
                         <h7 style="font-size:12px">Các món có trong combo: </h7>
@@ -63,3 +66,4 @@
         </nav>
     }
 </div>
+

@@ -1,5 +1,6 @@
 ﻿using BusinessAccessLayer.DTOs.ManagementCombo;
 using BusinessAccessLayer.DTOs.Manager;
+using DomainAccessLayer.Models;
 using static BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo;
 using ComboDetailDto = BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo.ComboDetailDto;
 using MenuItemDto = BusinessAccessLayer.DTOs.ManagementCombo.UpdateDtosCombo.MenuItemDto;
@@ -25,9 +26,15 @@ namespace BusinessAccessLayer.Services.Interfaces
   );
         Task<ComboDetailDto> GetComboByIdAsync(int id);
 
-        Task UpdateComboAsync(int id, UpdateComboRequest request);
         Task<ComboDetailDto> GetByIdAsync(int id);
-        Task<List<MenuItemDto>> SearchMenuAsync(string keyword);
+        Task<PagedResult<MenuItemDto>> SearchAsync(
+                string? keyword,
+                string? categoryName,
+                int pageIndex);
         Task UpdateAsync(int id, UpdateComboDto request);
+        Task AddComboAsync(CreateComboDto request);
+
+        Task<List<MenuItemDto>> GetTop5NewMenuItemsAsync();
+
     }
 }

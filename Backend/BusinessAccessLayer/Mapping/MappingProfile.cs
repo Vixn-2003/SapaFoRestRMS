@@ -192,7 +192,10 @@ namespace BusinessAccessLayer.Mapping
 
 
             CreateMap<Transaction, TransactionDto>();
-            CreateMap<Unit, UnitDTO>();
+            CreateMap<Unit, UnitDTO>()
+    .ForMember(dest => dest.IngredientCount,
+        opt => opt.MapFrom(src => src.Ingredients != null ? src.Ingredients.Count : 0));
+
 
 
             CreateMap<Supplier, SupplierListDto>()

@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using System.Security.Claims;
 using System.Text;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.DTOs.Inventory;
+using WebSapaForestForStaff.Services;
 
 namespace WebSapaForestForStaff.Controllers
 {
@@ -14,11 +16,13 @@ namespace WebSapaForestForStaff.Controllers
     {
 
         private readonly HttpClient _httpClient;
+        private readonly IngredientReportService _reportService;
 
-        public ManagerIngredentController(HttpClient httpClient)
+        public ManagerIngredentController(HttpClient httpClient, IngredientReportService reportService)
         {
             _httpClient = httpClient;
             _httpClient.BaseAddress = new Uri("https://localhost:7096/");
+            _reportService = reportService;
         }
 
         public async Task<IActionResult> DisplayIngredent()
@@ -510,6 +514,227 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-       
+        [HttpPost]
+        [Route("api/Ingredient/ExportReport")]
+        public async Task<IActionResult> ExportIngredientReport([FromBody] IngredientReportRequest request)
+        {
+            try
+            {
+                // Lấy thông tin người dùng từ Claims
+                var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Nhân viên kho";
+                var userPosition = User.FindFirst("Positions")?.Value ?? "Nhân viên kho";
+
+                // Lấy dữ liệu từ API
+                var response = await _httpClient.GetAsync("api/InventoryIngredient");
+                if (!response.IsSuccessStatusCode)
+                {
+                    return BadRequest("Không thể lấy dữ liệu mặt hàng");
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var allIngredients = JsonConvert.DeserializeObject<List<InventoryIngredientDTO>>(content)
+                    ?? new List<InventoryIngredientDTO>();
+
+                // Lấy thông tin kho
+                var warehouseResponse = await _httpClient.GetAsync("api/Warehouse");
+                List<dynamic> warehouses = new List<dynamic>();
+
+                if (warehouseResponse.IsSuccessStatusCode)
+                {
+                    var warehouseContent = await warehouseResponse.Content.ReadAsStringAsync();
+                    warehouses = JsonConvert.DeserializeObject<List<dynamic>>(warehouseContent) ?? new List<dynamic>();
+                }
+
+                // Xác định khoảng thời gian
+                DateTime fromDate, toDate;
+                switch (request.Period)
+                {
+                    case "today":
+                        fromDate = DateTime.Today;
+                        toDate = DateTime.Today.AddDays(1).AddSeconds(-1);
+                        break;
+                    case "7days":
+                        fromDate = DateTime.Today.AddDays(-7);
+                        toDate = DateTime.Today.AddDays(1).AddSeconds(-1);
+                        break;
+                    case "30days":
+                        fromDate = DateTime.Today.AddDays(-30);
+                        toDate = DateTime.Today.AddDays(1).AddSeconds(-1);
+                        break;
+                    default:
+                        fromDate = DateTime.Today;
+                        toDate = DateTime.Today.AddDays(1).AddSeconds(-1);
+                        break;
+                }
+
+                // ✅ LẤY DANH SÁCH BATCH CHO TẤT CẢ MẶT HÀNG
+                // ✅ LẤY DANH SÁCH BATCH CHO TẤT CẢ MẶT HÀNG
+                foreach (var ingredient in allIngredients)
+                {
+                    try
+                    {
+                        var batchResponse = await _httpClient.GetAsync($"api/InventoryIngredient/BatchIngredient/{ingredient.IngredientId}");
+                        if (batchResponse.IsSuccessStatusCode)
+                        {
+                            var batchJson = await batchResponse.Content.ReadAsStringAsync();
+                            var batches = JsonConvert.DeserializeObject<List<BatchIngredientDTO>>(batchJson);
+
+                            if (batches != null)
+                            {
+                                ingredient.Batches = batches.Select(b => new InventoryBatchDTO
+                                {
+                                    BatchId = b.BatchId,
+                                    QuantityRemaining = b.QuantityRemaining,
+                                    ExpiryDate = b.ExpiryDate,
+                                    CreatedAt = b.CreatedAt,
+                                    IsActive = b.IsActive,
+                                    StockTransactions = new List<StockTransactionDTO>() // Tạm thời empty
+                                }).ToList();
+                            }
+                            else
+                            {
+                                ingredient.Batches = new List<InventoryBatchDTO>();
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        ingredient.Batches = new List<InventoryBatchDTO>();
+                    }
+                }
+
+                // Tạo báo cáo
+                var reportData = new IngredientReportDTO
+                {
+                    FromDate = fromDate,
+                    ToDate = toDate,
+                    CreatedBy = userName,
+                    TotalIngredients = allIngredients.Count,
+                    TotalBatches = allIngredients.Sum(i => i.Batches.Count),
+                    TotalWarehouses = warehouses.Count,
+
+                    // Đếm cảnh báo
+                    OutOfStockCount = allIngredients.Count(i => i.TotalQuantity == 0),
+                    LowStockCount = allIngredients.Count(i => i.IsLowStock),
+                    BelowReorderCount = allIngredients.Count(i => i.IsBelowReorderLevel),
+                    UrgentRestockCount = allIngredients.Count(i => i.NeedUrgentRestock),
+                    ExpiredBatchCount = allIngredients.Sum(i => i.ExpiredBatchCount),
+                    ExpiringSoonBatchCount = allIngredients.Sum(i => i.ExpiringSoonBatchCount),
+
+                    // Danh sách cảnh báo - HẾT HÀNG
+                    OutOfStockItems = allIngredients
+                        .Where(i => i.TotalQuantity == 0)
+                        .Select(i => new IngredientAlertDTO
+                        {
+                            IngredientCode = i.IngredientCode,
+                            IngredientName = i.Name,
+                            Unit = i.Unit?.UnitName ?? "",
+                            CurrentQuantity = i.TotalQuantity
+                        })
+                        .ToList(),
+
+                    // SẮP HẾT HÀNG
+                    LowStockItems = allIngredients
+                        .Where(i => i.IsLowStock && i.TotalQuantity > 0)
+                        .Select(i => new IngredientAlertDTO
+                        {
+                            IngredientCode = i.IngredientCode,
+                            IngredientName = i.Name,
+                            Unit = i.Unit?.UnitName ?? "",
+                            CurrentQuantity = i.TotalQuantity,
+                            ReorderLevel = i.ReorderLevel
+                        })
+                        .ToList(),
+
+                    // CẦN NHẬP GẤP
+                    UrgentRestockItems = allIngredients
+                        .Where(i => i.NeedUrgentRestock)
+                        .Select(i => new IngredientAlertDTO
+                        {
+                            IngredientCode = i.IngredientCode,
+                            IngredientName = i.Name,
+                            Unit = i.Unit?.UnitName ?? "",
+                            CurrentQuantity = i.TotalQuantity,
+                            QuantityExcludingExpired = i.QuantityExcludingExpired,
+                            ReorderLevel = i.ReorderLevel
+                        })
+                        .ToList(),
+
+                    // LÔ HẾT HẠN
+                    ExpiredBatches = allIngredients
+                        .SelectMany(i => i.Batches
+                            .Where(b => b.ExpiryDate.HasValue &&
+                                       b.ExpiryDate.Value.ToDateTime(TimeOnly.MinValue) < DateTime.Today &&
+                                       b.QuantityRemaining > 0)
+                            .Select(b => new BatchAlertDTO
+                            {
+                                BatchCode = $"BATCH-{b.BatchId}",
+                                IngredientName = i.Name,
+                                Unit = i.Unit?.UnitName ?? "",
+                                QuantityRemaining = b.QuantityRemaining,
+                                ImportDate = b.CreatedAt,
+                                ExpiryDate = b.ExpiryDate?.ToDateTime(TimeOnly.MinValue),
+                                WarehouseName = "Kho chính"
+                            }))
+                        .OrderBy(b => b.ExpiryDate)
+                        .ToList(),
+
+                    // LÔ SẮP HẾT HẠN (< 7 ngày)
+                    ExpiringSoonBatches = allIngredients
+                        .SelectMany(i => i.Batches
+                            .Where(b => b.ExpiryDate.HasValue &&
+                                       b.ExpiryDate.Value.ToDateTime(TimeOnly.MinValue) >= DateTime.Today &&
+                                       (b.ExpiryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays <= 7 &&
+                                       b.QuantityRemaining > 0)
+                            .Select(b => new BatchAlertDTO
+                            {
+                                BatchCode = $"BATCH-{b.BatchId}",
+                                IngredientName = i.Name,
+                                Unit = i.Unit?.UnitName ?? "",
+                                QuantityRemaining = b.QuantityRemaining,
+                                ImportDate = b.CreatedAt,
+                                ExpiryDate = b.ExpiryDate?.ToDateTime(TimeOnly.MinValue),
+                                WarehouseName = "Kho chính",
+                                DaysLeft = (int)(b.ExpiryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays
+                            }))
+                        .OrderBy(b => b.DaysLeft)
+                        .ToList(),
+
+                    // TẤT CẢ MẶT HÀNG
+                    AllIngredients = allIngredients
+                        .OrderBy(i => i.IngredientCode)
+                        .Select(i => new IngredientDetailDTO
+                        {
+                            IngredientCode = i.IngredientCode,
+                            IngredientName = i.Name,
+                            Unit = i.Unit?.UnitName ?? "",
+                            TotalQuantity = i.TotalQuantity,
+                            ReorderLevel = i.ReorderLevel,
+                            Status = i.Status,
+                            StatusText = i.StatusText
+                        })
+                        .ToList()
+                };
+
+                // Tạo PDF
+                var pdfBytes = _reportService.GenerateIngredientReport(reportData);
+
+                var fileName = $"BaoCaoMatHang_{fromDate:ddMMyyyy}_{toDate:ddMMyyyy}.pdf";
+                return File(pdfBytes, "application/pdf", fileName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error generating report: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return StatusCode(500, $"Lỗi khi tạo báo cáo: {ex.Message}");
+            }
+
+        }
+            public class IngredientReportRequest
+        {
+            public string Period { get; set; } = "today";
+        }
     }
-}
+ }
+
+

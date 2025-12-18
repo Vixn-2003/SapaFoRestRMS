@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Net.Http.Json;
 using WebSapaForestForStaff.DTOs.TableManage;
@@ -6,6 +7,7 @@ using WebSapaForestForStaff.Models;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class TableManageController : Controller
     {
         private readonly HttpClient _client;
