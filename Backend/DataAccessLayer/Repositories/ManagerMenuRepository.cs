@@ -93,7 +93,7 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(x => x.MenuItemId == menuItem.MenuItemId);
 
             if (existingItem == null)
-                return false; // Không tìm thấy item để cập nhật
+                return false; 
 
             // Cập nhật các thuộc tính
             existingItem.Name = menuItem.Name;

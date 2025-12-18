@@ -136,7 +136,7 @@ namespace DataAccessLayer.Repositories
                 throw new ArgumentNullException(nameof(warehouse));
 
             // Kiểm tra tên warehouse đã tồn tại chưa
-            var existingWarehouse = await _context.Warehouses
+            var existingWarehouse = await _context.Warehouses.Where(x => x.IsActive == true)
                 .FirstOrDefaultAsync(w => w.Name == warehouse.Name);
 
             if (existingWarehouse != null)

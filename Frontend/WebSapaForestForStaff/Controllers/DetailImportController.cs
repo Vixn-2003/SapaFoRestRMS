@@ -7,6 +7,7 @@ using WebSapaForestForStaff.DTOs;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Inventory")]
     [Route("[controller]")]
     public class DetailImportController : Controller
     {

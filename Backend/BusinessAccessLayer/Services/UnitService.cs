@@ -63,10 +63,10 @@ namespace BusinessAccessLayer.Services
         {
             var unit = await _unitOfWork.UnitRepository.GetByIdAsync(id);
             if (unit == null)
-                throw new InvalidOperationException("Unit not found");
+                throw new InvalidOperationException("Không tìm thấy đơn vị tính");
 
             if (await _unitOfWork.UnitRepository.ExistsByNameAsync(dto.UnitName, id))
-                throw new InvalidOperationException("Unit name already exists");
+                throw new InvalidOperationException("Đơn vị tính đã tồn tại");
 
             // 🔁 Mapping DTO → Entity
             unit.UnitName = dto.UnitName;

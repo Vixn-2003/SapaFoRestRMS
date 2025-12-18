@@ -1025,6 +1025,56 @@
 
     // Set API base URL
     window.API_BASE_URL = window.API_BASE_URL || '@ViewBag.ApiBaseUrl' || 'https://localhost:7096/api';
+    // Base URL cho SignalR hub (tái sử dụng kitchenHub)
+    window.SIGNALR_HUB_URL = window.SIGNALR_HUB_URL || (window.API_BASE_URL.replace('/api', '') + '/kitchenHub');
+
+    // ===== SignalR cho WaiterOrderTracking =====
+    let waiterSignalRConnection = null;
+
+    async function initializeWaiterSignalR() {
+        if (waiterSignalRConnection && waiterSignalRConnection.state !== signalR.HubConnectionState.Disconnected) {
+            return;
+        }
+
+        try {
+            waiterSignalRConnection = new signalR.HubConnectionBuilder()
+                .withUrl(window.SIGNALR_HUB_URL, {
+                    skipNegotiation: true,
+                    transport: signalR.HttpTransportType.WebSockets
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            // Khi món trong bếp đổi trạng thái -> reload lại dữ liệu waiter
+            waiterSignalRConnection.on('ItemStatusChanged', async function () {
+                try {
+                    await reloadOrders();
+                } catch (e) {
+                    console.error('Error reloading orders from SignalR:', e);
+                }
+            });
+
+            waiterSignalRConnection.on('OrderCompleted', async function () {
+                try {
+                    await reloadOrders();
+                } catch (e) {
+                    console.error('Error reloading orders from SignalR (OrderCompleted):', e);
+                }
+            });
+
+            await waiterSignalRConnection.start();
+            console.log('WaiterOrderTracking SignalR connected.');
+        } catch (error) {
+            console.error('Error initializing WaiterOrderTracking SignalR:', error);
+        }
+    }
+
+    // Khởi tạo SignalR sau khi trang load xong
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.signalR && window.SIGNALR_HUB_URL) {
+            initializeWaiterSignalR();
+        }
+    });
 
     // Store selected table IDs
     let selectedTableIds = [];
