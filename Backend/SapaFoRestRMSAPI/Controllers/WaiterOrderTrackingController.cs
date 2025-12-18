@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
 using BusinessAccessLayer.DTOs.Waiter;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
@@ -123,6 +122,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     }
 
                     return Ok(result);
+                   
                 }
                 return BadRequest(result);
             }

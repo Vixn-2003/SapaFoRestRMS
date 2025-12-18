@@ -336,6 +336,19 @@ namespace SapaFoRestRMSAPI.Controllers
 
             return Ok(new { message = "reservation created", reservationId = reservation.ReservationId });
         }
+
+        [HttpGet("active/{tableId}")]
+        public async Task<IActionResult> GetActiveReservation(int tableId)
+        {
+            var reservationId = await _reservationService.GetActiveReservationIdByTableAsync(tableId);
+
+            if (reservationId == null)
+            {
+                return NotFound(new { message = "Bàn này hiện chưa có khách Check-in." });
+            }
+
+            return Ok(new { reservationId = reservationId });
+        }
     }
 
     public class OtpInfo
