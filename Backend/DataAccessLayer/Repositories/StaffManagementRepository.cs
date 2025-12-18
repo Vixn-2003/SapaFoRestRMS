@@ -172,7 +172,7 @@ namespace DataAccessLayer.Repositories
         }
 
         /// <summary>
-        /// Deactivate staff (soft delete)
+        /// Deactivate staff (set inactive status)
         /// </summary>
         public async Task<bool> DeactivateStaffAsync(int staffId, string? reason, CancellationToken ct = default)
         {
@@ -183,13 +183,35 @@ namespace DataAccessLayer.Repositories
             if (staff == null || staff.User == null)
                 return false;
 
-            // Soft delete: set status to inactive
-            staff.Status = 0; // Inactive
+            // Mark staff as inactive (0 = Active, 1 = Inactive)
+            staff.Status = 1;
 
-            // Mark user as deleted (soft delete)
-            staff.User.IsDeleted = true;
-            staff.User.DeletedAt = DateTime.UtcNow;
-            // Note: DeletedBy should be set by service layer
+            // Keep user record (do NOT soft-delete). Just mark user as inactive as well.
+            staff.User.Status = 1;
+            staff.User.ModifiedAt = DateTime.UtcNow;
+
+            _context.Staffs.Update(staff);
+            await _context.SaveChangesAsync(ct);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Change staff status (0 = Active, 1 = Inactive)
+        /// </summary>
+        public async Task<bool> ChangeStaffStatusAsync(int staffId, int status, CancellationToken ct = default)
+        {
+            var staff = await _context.Staffs
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.StaffId == staffId &&
+                                         (s.User == null || s.User.IsDeleted != true), ct);
+
+            if (staff == null || staff.User == null)
+                return false;
+
+            staff.Status = status;
+            staff.User.Status = status;
+            staff.User.ModifiedAt = DateTime.UtcNow;
 
             _context.Staffs.Update(staff);
             await _context.SaveChangesAsync(ct);

@@ -84,7 +84,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "An error occurred while retrieving staff list.",
+                    message = "Đã xảy ra lỗi khi tải danh sách nhân viên.",
                     error = ex.Message
                 });
             }
@@ -106,7 +106,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     return NotFound(new
                     {
                         success = false,
-                        message = "Staff not found or has been deleted."
+                        message = "Không tìm thấy nhân viên hoặc nhân viên đã bị xóa."
                     });
                 }
 
@@ -121,7 +121,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "An error occurred while retrieving staff details.",
+                    message = "Đã xảy ra lỗi khi tải chi tiết nhân viên.",
                     error = ex.Message
                 });
             }
@@ -143,7 +143,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Invalid request data.",
+                        message = "Dữ liệu gửi lên không hợp lệ.",
                         errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
                     });
                 }
@@ -155,7 +155,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     return Unauthorized(new
                     {
                         success = false,
-                        message = "Manager authentication failed."
+                        message = "Xác thực quản lý thất bại."
                     });
                 }
 
@@ -190,7 +190,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "An error occurred while creating staff.",
+                    message = "Đã xảy ra lỗi khi tạo nhân viên.",
                     error = ex.Message
                 });
             }
@@ -223,7 +223,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Invalid request data.",
+                        message = "Dữ liệu gửi lên không hợp lệ.",
                         errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
                     });
                 }
@@ -235,7 +235,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     return Unauthorized(new
                     {
                         success = false,
-                        message = "Manager authentication failed."
+                        message = "Xác thực quản lý thất bại."
                     });
                 }
 
@@ -269,7 +269,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "An error occurred while updating staff.",
+                    message = "Đã xảy ra lỗi khi cập nhật nhân viên.",
                     error = ex.Message
                 });
             }
@@ -302,7 +302,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     return BadRequest(new
                     {
                         success = false,
-                        message = "Invalid request data.",
+                        message = "Dữ liệu gửi lên không hợp lệ.",
                         errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
                     });
                 }
@@ -314,7 +314,7 @@ namespace SapaFoRestRMSAPI.Controllers
                     return Unauthorized(new
                     {
                         success = false,
-                        message = "Manager authentication failed."
+                        message = "Xác thực quản lý thất bại."
                     });
                 }
 
@@ -348,7 +348,62 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "An error occurred while deactivating staff.",
+                    message = "Đã xảy ra lỗi khi ngừng hoạt động nhân viên.",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Change Staff Status (0 = Active, 1 = Inactive)
+        /// PUT: api/StaffManagement/{id}/status/{status}
+        /// </summary>
+        [HttpPut("{id}/status/{status:int}")]
+        public async Task<IActionResult> ChangeStatus(int id, int status, CancellationToken ct = default)
+        {
+            try
+            {
+                // Get manager ID from claims
+                var managerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(managerIdClaim, out var managerId))
+                {
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        message = "Xác thực quản lý thất bại."
+                    });
+                }
+
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+                var (success, message) = await _staffManagementService.ChangeStatusAsync(
+                    staffId: id,
+                    status: status,
+                    modifiedBy: managerId,
+                    ipAddress: ipAddress,
+                    ct: ct);
+
+                if (!success)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = message
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Đã xảy ra lỗi khi thay đổi trạng thái nhân viên.",
                     error = ex.Message
                 });
             }
@@ -376,7 +431,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "An error occurred while retrieving positions.",
+                    message = "Đã xảy ra lỗi khi tải danh sách chức vụ.",
                     error = ex.Message
                 });
             }

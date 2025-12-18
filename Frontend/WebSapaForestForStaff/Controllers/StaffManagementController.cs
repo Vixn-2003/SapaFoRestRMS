@@ -32,10 +32,21 @@ namespace WebSapaForestForStaff.Controllers
         /// GET: /StaffManagement/Index
         /// </summary>
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            // Pure view rendering - no data loading here
-            // JavaScript will call GetStaffList AJAX endpoint
+            // Load positions for dropdown filter
+            try
+            {
+                var (success, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                ViewBag.AvailablePositions = success ? (positions ?? new List<PositionDto>()) : new List<PositionDto>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading positions for staff index filter");
+                ViewBag.AvailablePositions = new List<PositionDto>();
+            }
+
+            // JavaScript will call GetStaffList AJAX endpoint to load staff data
             return View();
         }
 
@@ -44,10 +55,13 @@ namespace WebSapaForestForStaff.Controllers
         /// POST: /StaffManagement/GetStaffList
         /// </summary>
         [HttpPost]
+        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> GetStaffList([FromBody] StaffFilterDto filter)
         {
             try
             {
+                _logger.LogInformation("GetStaffList called with filter: {@Filter}", filter);
+                
                 // Validate and normalize filter
                 filter ??= new StaffFilterDto();
                 filter.Page = filter.Page > 0 ? filter.Page : 1;
@@ -56,9 +70,14 @@ namespace WebSapaForestForStaff.Controllers
                 filter.SortDirection = string.IsNullOrWhiteSpace(filter.SortDirection) ? "desc" : filter.SortDirection;
 
                 var (success, data, message) = await _staffApiService.GetStaffListAsync(filter);
+                
+                _logger.LogInformation("API Service returned: Success={Success}, DataCount={DataCount}, Message={Message}", 
+                    success, data?.Data?.Count ?? 0, message);
 
                 if (!success || data == null)
                 {
+                    _logger.LogWarning("Failed to get staff list. Success={Success}, Data={Data}, Message={Message}", 
+                        success, data != null, message);
                     return Ok(new
                     {
                         success = false,
@@ -143,6 +162,24 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
+                // Upload avatar if provided
+                string? avatarUrl = null;
+                if (viewModel.AvatarFile != null && viewModel.AvatarFile.Length > 0)
+                {
+                    try
+                    {
+                        avatarUrl = await UploadAvatarAsync(viewModel.AvatarFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error uploading avatar");
+                        ModelState.AddModelError("AvatarFile", "Lỗi khi upload ảnh. Vui lòng thử lại.");
+                        var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                        viewModel.AvailablePositions = positions ?? new List<PositionDto>();
+                        return View(viewModel);
+                    }
+                }
+                
                 // Always set RoleId to Staff (4) for new staff
                 // BaseSalary is calculated from selected positions on client side
                 var dto = new StaffCreateDto
@@ -152,11 +189,10 @@ namespace WebSapaForestForStaff.Controllers
                     Phone = viewModel.Phone,
                     BaseSalary = viewModel.BaseSalary, // From selected position
                     HireDate = viewModel.HireDate,
-                    DepartmentId = viewModel.DepartmentId > 0 ? viewModel.DepartmentId : 1, // Default to 1
                     PositionId = viewModel.PositionId, // Single position only
                     RoleId = 4, // Always Staff
                     Password = viewModel.Password,
-                    AvatarUrl = viewModel.AvatarUrl
+                    AvatarUrl = avatarUrl ?? viewModel.AvatarUrl
                 };
 
                 var (success, staffId, message) = await _staffApiService.CreateStaffAsync(dto);
@@ -249,6 +285,24 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
+                // Upload avatar if provided
+                string? avatarUrl = viewModel.AvatarUrl; // Keep existing URL by default
+                if (viewModel.AvatarFile != null && viewModel.AvatarFile.Length > 0)
+                {
+                    try
+                    {
+                        avatarUrl = await UploadAvatarAsync(viewModel.AvatarFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error uploading avatar");
+                        ModelState.AddModelError("AvatarFile", "Lỗi khi upload ảnh. Vui lòng thử lại.");
+                        var (_, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                        viewModel.AvailablePositions = positions ?? new List<PositionDto>();
+                        return View(viewModel);
+                    }
+                }
+                
                 var dto = new StaffUpdateDto
                 {
                     StaffId = viewModel.StaffId,
@@ -257,7 +311,7 @@ namespace WebSapaForestForStaff.Controllers
                     BaseSalary = viewModel.BaseSalary,
                     Status = viewModel.Status,
                     PositionId = viewModel.PositionId, // Single position only
-                    AvatarUrl = viewModel.AvatarUrl
+                    AvatarUrl = avatarUrl
                 };
 
                 var (success, message) = await _staffApiService.UpdateStaffAsync(id, dto);
@@ -308,5 +362,136 @@ namespace WebSapaForestForStaff.Controllers
                 return Ok(new { success = false, message = "Đã xảy ra lỗi khi ngừng hoạt động nhân viên" });
             }
         }
+
+        /// <summary>
+        /// Activate Staff (AJAX endpoint)
+        /// POST: /StaffManagement/Activate
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Activate([FromBody] ActivateStaffRequest request)
+        {
+            try
+            {
+                if (request == null || request.StaffId <= 0)
+                {
+                    return Ok(new { success = false, message = "Dữ liệu không hợp lệ" });
+                }
+
+                // Call API to change status to Active (0)
+                var (success, message) = await _staffApiService.ChangeStaffStatusAsync(request.StaffId, 0);
+
+                return Ok(new { success, message = message ?? (success ? "Kích hoạt nhân viên thành công" : "Lỗi khi kích hoạt nhân viên") });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error activating staff {StaffId}", request?.StaffId);
+                return Ok(new { success = false, message = "Đã xảy ra lỗi khi kích hoạt nhân viên" });
+            }
+        }
+
+        /// <summary>
+        /// Reset Staff Password (AJAX endpoint)
+        /// POST: /StaffManagement/ResetPassword
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                if (request == null || request.StaffId <= 0)
+                {
+                    return Ok(new { success = false, message = "Dữ liệu không hợp lệ" });
+                }
+
+                var (success, message) = await _staffApiService.ResetStaffPasswordAsync(request.StaffId);
+
+                return Ok(new { success, message = message ?? (success ? "Reset mật khẩu thành công. Email đã được gửi." : "Lỗi khi reset mật khẩu") });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password for staff {StaffId}", request?.StaffId);
+                return Ok(new { success = false, message = "Đã xảy ra lỗi khi reset mật khẩu" });
+            }
+        }
+
+        /// <summary>
+        /// Staff Details
+        /// GET: /StaffManagement/Details/{id}
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            try
+            {
+                var (success, staffDetail, message) = await _staffApiService.GetStaffDetailAsync(id);
+
+                if (!success || staffDetail == null)
+                {
+                    TempData["ErrorMessage"] = message ?? "Không tìm thấy thông tin nhân viên";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                return View(staffDetail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading staff details for ID {StaffId}", id);
+                TempData["ErrorMessage"] = "Lỗi khi tải thông tin nhân viên";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        /// <summary>
+        /// Upload avatar to Cloudinary
+        /// </summary>
+        private async Task<string> UploadAvatarAsync(IFormFile file)
+        {
+            // Cloudinary configuration
+            var cloudName = "dqn7os3pr"; // TODO: Move to configuration
+            var uploadPreset = "ml_default"; // TODO: Move to configuration
+
+            using var stream = file.OpenReadStream();
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new StreamContent(stream);
+            
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.FileName);
+            content.Add(new StringContent(uploadPreset), "upload_preset");
+            content.Add(new StringContent("staff_avatars"), "folder");
+
+            using var client = new HttpClient();
+            var response = await client.PostAsync($"https://api.cloudinary.com/v1_1/{cloudName}/image/upload", content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Cloudinary upload failed: {StatusCode}, {Content}", response.StatusCode, errorContent);
+                throw new Exception("Failed to upload avatar to Cloudinary");
+            }
+
+            var result = await response.Content.ReadAsStringAsync();
+            var jsonDoc = System.Text.Json.JsonDocument.Parse(result);
+            var secureUrl = jsonDoc.RootElement.GetProperty("secure_url").GetString();
+            
+            return secureUrl ?? throw new Exception("No secure_url in Cloudinary response");
+        }
+    }
+
+    /// <summary>
+    /// DTO for activate staff request
+    /// </summary>
+    public class ActivateStaffRequest
+    {
+        public int StaffId { get; set; }
+    }
+
+    /// <summary>
+    /// DTO for reset password request
+    /// </summary>
+    public class ResetPasswordRequest
+    {
+        public int StaffId { get; set; }
     }
 }

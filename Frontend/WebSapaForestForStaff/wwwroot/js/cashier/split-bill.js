@@ -185,10 +185,34 @@
         currentOrderId = orderId;
         currentOrderData = orderData;
 
+        // ✅ FIX: Tính lại Total nếu Total = 0 hoặc không có
+        // Công thức: Total = Subtotal + Vat + ServiceFee - Discount - DepositAmount (nếu DepositPaid = true)
+        let totalAmount = orderData.total || 0;
+        if (totalAmount === 0 || !totalAmount) {
+            const subtotal = orderData.subtotal || 0;
+            const vat = orderData.vat || 0;
+            const serviceFee = orderData.serviceFee || 0;
+            const discount = orderData.discount || 0;
+            const depositAmount = (orderData.depositPaid && orderData.depositAmount) ? orderData.depositAmount : 0;
+            
+            // Tính totalBeforeDeposit
+            const totalBeforeDeposit = subtotal + vat + serviceFee - discount;
+            
+            // Nếu deposit > totalBeforeDeposit thì total = 0, ngược lại = totalBeforeDeposit - depositAmount
+            if (depositAmount > 0 && depositAmount > totalBeforeDeposit) {
+                totalAmount = 0;
+            } else {
+                totalAmount = totalBeforeDeposit - depositAmount;
+            }
+            
+            // Cập nhật lại orderData để dùng cho các tính toán sau
+            currentOrderData.total = totalAmount;
+        }
+
         // Populate modal
         document.getElementById('splitOrderCode').textContent = orderData.orderCode || `ORD-${orderId}`;
         document.getElementById('splitTableNumber').textContent = orderData.tableNumber || '-';
-        document.getElementById('splitTotalAmount').textContent = formatCurrency(orderData.total || 0);
+        document.getElementById('splitTotalAmount').textContent = formatCurrency(totalAmount);
 
         // Reset
         splitParts = [];
@@ -303,6 +327,7 @@
                         <div class="col-md-6">
                             <label class="form-label small">Phương thức thanh toán</label>
                             <select class="form-select form-select-sm" 
+                                    id="splitPaymentMethod_${index}"
                                     onchange="updateSplitPart(${index}, 'paymentMethod', this.value)">
                                 <option value="Cash" ${part.paymentMethod === 'Cash' ? 'selected' : ''}>Tiền mặt</option>
                                 <option value="QRBankTransfer" ${part.paymentMethod === 'QRBankTransfer' ? 'selected' : ''}>Chuyển khoản QR</option>
@@ -372,6 +397,7 @@
                     <div class="mt-2">
                         <input type="text"
                                class="form-control form-control-sm"
+                               id="splitNotes_${index}"
                                placeholder="Ghi chú (tùy chọn)"
                                value="${part.notes}"
                                onchange="updateSplitPart(${index}, 'notes', this.value)">
@@ -577,6 +603,19 @@
         const confirmBtn = document.getElementById('confirmSplitBillBtn');
         
         try {
+            // ✅ FIX: Validate splitParts có data không
+            if (!splitParts || splitParts.length === 0) {
+                showToast('Chưa có phần nào được chia. Vui lòng chọn cách chia hóa đơn.', 'error');
+                return;
+            }
+
+            // ✅ FIX: Validate currentOrderData có total không
+            const totalAmount = currentOrderData?.total || 0;
+            if (totalAmount <= 0) {
+                showToast('Tổng hóa đơn không hợp lệ. Vui lòng tải lại trang.', 'error');
+                return;
+            }
+
             // Clear all previous errors
             clearAllSplitPartErrors();
 
@@ -585,6 +624,13 @@
             let firstErrorIndex = -1;
 
             splitParts.forEach((part, index) => {
+                // ✅ FIX: Validate amount > 0
+                if (!part.amount || part.amount <= 0) {
+                    showSplitPartError(index, 'amount', 'Số tiền phải lớn hơn 0');
+                    hasErrors = true;
+                    if (firstErrorIndex === -1) firstErrorIndex = index;
+                }
+
                 if (part.paymentMethod === 'Cash') {
                     if (!part.amountReceived) {
                         showSplitPartError(index, 'cash', 'Vui lòng nhập số tiền khách đưa');
@@ -601,12 +647,64 @@
             if (hasErrors) {
                 // Focus vào input đầu tiên có lỗi
                 if (firstErrorIndex !== -1) {
-                    const errorInput = document.getElementById(`cashReceived_${firstErrorIndex}`);
+                    const errorInput = document.getElementById(`cashReceived_${firstErrorIndex}`) || 
+                                      document.getElementById(`splitPartAmount_${firstErrorIndex}`);
                     if (errorInput) {
                         errorInput.focus();
                         errorInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }
+                return;
+            }
+
+            // ✅ FIX: Đọc lại data từ DOM để đảm bảo sync (quan trọng cho custom split)
+            const syncPartsFromDOM = () => {
+                const partsListContainer = document.getElementById('splitPartsList');
+                if (!partsListContainer) return;
+
+                const partCards = partsListContainer.querySelectorAll('.card');
+                partCards.forEach((card, index) => {
+                    if (!splitParts[index]) return;
+
+                    // Đọc payment method từ select trong card này
+                    const paymentMethodSelect = card.querySelector(`#splitPaymentMethod_${index}`) || 
+                                                card.querySelector('select[onchange*="paymentMethod"]');
+                    if (paymentMethodSelect) {
+                        splitParts[index].paymentMethod = paymentMethodSelect.value;
+                    }
+
+                    // Đọc amount từ input (nếu là custom split)
+                    const amountInput = card.querySelector(`#splitPartAmount_${index}`);
+                    if (amountInput) {
+                        const amount = parseFloat(amountInput.value) || 0;
+                        if (amount > 0) {
+                            splitParts[index].amount = amount;
+                        }
+                    }
+
+                    // Đọc amountReceived từ input (nếu là Cash)
+                    const cashReceivedInput = card.querySelector(`#cashReceived_${index}`);
+                    if (cashReceivedInput) {
+                        const amountReceived = parseFloat(cashReceivedInput.value) || null;
+                        splitParts[index].amountReceived = amountReceived;
+                    }
+
+                    // Đọc notes từ input trong card này
+                    const notesInput = card.querySelector(`#splitNotes_${index}`) || 
+                                      card.querySelector('input[onchange*="notes"]');
+                    if (notesInput) {
+                        splitParts[index].notes = notesInput.value || '';
+                    }
+                });
+            };
+
+            // Sync data từ DOM trước khi submit
+            syncPartsFromDOM();
+
+            // ✅ FIX: Validate tổng các phần = tổng hóa đơn (double check)
+            const partsTotal = splitParts.reduce((sum, p) => sum + (p.amount || 0), 0);
+            if (Math.abs(partsTotal - totalAmount) > 0.01) {
+                showToast(`Tổng các phần (${formatCurrency(partsTotal)}) không khớp với tổng hóa đơn (${formatCurrency(totalAmount)}). Vui lòng kiểm tra lại.`, 'error');
                 return;
             }
 
@@ -619,14 +717,30 @@
                 paymentMethod: p.paymentMethod,
                 amount: p.amount,
                 amountReceived: p.amountReceived,
-                notes: p.notes
+                notes: p.notes || ''
             }));
+
+            // ✅ FIX: Debug log để kiểm tra data
+            console.log('[SplitBill] Submitting:', {
+                orderId: currentOrderId,
+                totalAmount: totalAmount,
+                partsTotal: partsTotal,
+                partsCount: partsData.length,
+                partsData: partsData
+            });
 
             // Fill form and submit
             document.getElementById('splitBillOrderId').value = currentOrderId;
             document.getElementById('splitBillPartsJson').value = JSON.stringify(partsData);
             document.getElementById('splitBillNotes').value = notes || '';
-            
+
+            // Set processing state for result modal
+            sessionStorage.setItem('splitBillProcessing', 'true');
+            sessionStorage.setItem('splitBillOrderId', currentOrderId);
+
+            // Show loading modal
+            showSplitBillLoadingModal();
+
             // Submit form
             document.getElementById('splitBillForm').submit();
         } catch (error) {
@@ -636,6 +750,77 @@
             showToast(errorMessage, 'error');
             confirmBtn.disabled = false;
             confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn';
+        }
+    };
+
+    function showSplitBillLoadingModal() {
+        const modal = new bootstrap.Modal(document.getElementById('splitBillLoadingModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        modal.show();
+    }
+
+    function hideSplitBillLoadingModal() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('splitBillLoadingModal'));
+        if (modal) {
+            modal.hide();
+        }
+    }
+
+    function showSplitBillResultModal(success, message, redirectUrl = null) {
+        const resultModal = document.getElementById('splitBillResultModal');
+        const resultIcon = document.getElementById('splitBillResultIcon');
+        const resultTitle = document.getElementById('splitBillResultTitle');
+        const resultMessage = document.getElementById('splitBillResultMessage');
+        const resultBtn = document.getElementById('splitBillResultBtn');
+
+        // Set result content
+        if (success) {
+            resultIcon.innerHTML = '<i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>';
+            resultTitle.textContent = 'Thành công';
+            resultBtn.textContent = 'Xem hóa đơn';
+            resultBtn.className = 'btn btn-success';
+            resultBtn.onclick = function() {
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                } else {
+                    window.location.href = `/cashier-flow/receipt/${currentOrderId}`;
+                }
+            };
+        } else {
+            resultIcon.innerHTML = '<i class="bi bi-x-circle-fill text-danger" style="font-size: 3rem;"></i>';
+            resultTitle.textContent = 'Thất bại';
+            resultBtn.textContent = 'Đóng';
+            resultBtn.className = 'btn btn-secondary';
+            resultBtn.onclick = function() {
+                closeSplitBillResultModal();
+            };
+        }
+
+        resultMessage.textContent = message || '';
+
+        const modal = new bootstrap.Modal(resultModal);
+        modal.show();
+    }
+
+    window.closeSplitBillResultModal = function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('splitBillResultModal'));
+        if (modal) {
+            modal.hide();
+        }
+        // Clear processing state
+        sessionStorage.removeItem('splitBillProcessing');
+        sessionStorage.removeItem('splitBillOrderId');
+
+        // Re-enable confirm button if split bill modal is still open
+        const splitBillModal = bootstrap.Modal.getInstance(document.getElementById('splitBillModal'));
+        if (splitBillModal) {
+            const confirmBtn = document.getElementById('confirmSplitBillBtn');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn';
+            }
         }
     };
 
@@ -656,7 +841,51 @@
                 });
             }
         }
+
+        // Check for split bill processing result
+        checkSplitBillResult();
     });
+
+    function checkSplitBillResult() {
+        // Check if we just processed a split bill
+        const wasProcessing = sessionStorage.getItem('splitBillProcessing');
+        if (wasProcessing === 'true') {
+            // Clear processing state
+            sessionStorage.removeItem('splitBillProcessing');
+
+            // Check for success/error messages from TempData
+            const successMessage = getTempDataMessage('SuccessMessage');
+            const errorMessage = getTempDataMessage('ErrorMessage');
+
+            if (successMessage) {
+                // Find redirect URL from success message or construct it
+                const orderId = sessionStorage.getItem('splitBillOrderId') || currentOrderId;
+                const redirectUrl = orderId ? `/cashier-flow/receipt/${orderId}` : null;
+                showSplitBillResultModal(true, successMessage, redirectUrl);
+            } else if (errorMessage) {
+                showSplitBillResultModal(false, errorMessage);
+            }
+
+            // Clear stored orderId
+            sessionStorage.removeItem('splitBillOrderId');
+        }
+    }
+
+    function getTempDataMessage(key) {
+        // Try to get TempData messages from various sources
+        // This is a simplified approach - in reality, TempData is server-side only
+        // We'll check for success/error indicators in the page
+        const alerts = document.querySelectorAll('.alert');
+        for (let alert of alerts) {
+            if (key === 'SuccessMessage' && alert.classList.contains('alert-success')) {
+                return alert.textContent.trim();
+            }
+            if (key === 'ErrorMessage' && alert.classList.contains('alert-danger')) {
+                return alert.textContent.trim();
+            }
+        }
+        return null;
+    }
 
     // Export
     window.SplitBill = {

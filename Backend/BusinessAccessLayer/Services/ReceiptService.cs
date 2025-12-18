@@ -186,7 +186,7 @@ public class ReceiptService : IReceiptService
         
         // Get confirmed by user
         var confirmedBy = latestTransaction?.ConfirmedByUser?.FullName ?? "N/A";
-        var paidAt = latestTransaction?.CompletedAt ?? order.CreatedAt ?? DateTime.UtcNow;
+        var paidAt = latestTransaction?.CompletedAt ?? order.CreatedAt ?? DateTime.Now;
 
         // Get table number
         var tableNumber = order.Reservation?.ReservationTables?.FirstOrDefault()?.Table?.TableNumber?.ToString() ?? "N/A";

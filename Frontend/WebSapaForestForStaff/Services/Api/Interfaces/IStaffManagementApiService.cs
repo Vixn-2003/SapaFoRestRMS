@@ -40,6 +40,16 @@ namespace WebSapaForestForStaff.Services.Api.Interfaces
         /// Get active positions for dropdown
         /// </summary>
         Task<(bool Success, List<PositionDto>? Data, string? Message)> GetActivePositionsAsync();
+
+        /// <summary>
+        /// Change staff status (Activate/Deactivate)
+        /// </summary>
+        Task<(bool Success, string? Message)> ChangeStaffStatusAsync(int staffId, int status);
+
+        /// <summary>
+        /// Reset staff password
+        /// </summary>
+        Task<(bool Success, string? Message)> ResetStaffPasswordAsync(int staffId);
     }
 
     /// <summary>
