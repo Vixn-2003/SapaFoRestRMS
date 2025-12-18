@@ -9,8 +9,8 @@ namespace WebSapaForestForStaff.DTOs.ManagementCombo
     public class MenuItemDto
     {
         public int MenuItemId { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public decimal Price { get; set; }
+        public string MenuItemName { get; set; } = string.Empty;
+        public decimal OriginalPrice { get; set; }
         public string? ImageUrl { get; set; }
         public string? CategoryName { get; set; } // Map từ MenuCategories
         public bool IsAvailable { get; set; }

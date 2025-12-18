@@ -7,21 +7,19 @@ using System.Threading.Tasks;
 
 namespace WebSapaForestForStaff.DTOs.ManagementCombo
 {
-    public class CreateComboRequest
+  
+    public class CreateComboDto
     {
-        [Required(ErrorMessage = "Tên combo không được để trống")]
+        [Required]
         public string Name { get; set; }
-
-        public string? Description { get; set; }
-
-        public string? ImageUrl { get; set; }
-
         [Required]
         [Range(0, double.MaxValue, ErrorMessage = "Giá bán phải lớn hơn 0")]
-        public decimal ActualPrice { get; set; } // Giá bán thực tế (nhập tay)
-
+        public decimal SellingPrice { get; set; }
+        public string Description { get; set; }
+        public bool IsAvailable { get; set; }
+        public string ImageUrl { get; set; }
         [Required]
         [MinLength(1, ErrorMessage = "Combo phải có ít nhất 1 món")]
-        public List<ComboItemInputDto> Items { get; set; }
+        public List<ComboItemInput> Items { get; set; } = new();
     }
 }

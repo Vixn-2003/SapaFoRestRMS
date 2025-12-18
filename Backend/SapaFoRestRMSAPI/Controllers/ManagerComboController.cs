@@ -42,12 +42,12 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(result);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateCombo([FromBody] CreateComboRequest request)
-        {
-            await _managerComboService.CreateComboAsync(request);
-            return Ok(new { message = "Combo created successfully" });
-        }
+        //[HttpPost]
+        //public async Task<IActionResult> CreateCombo([FromBody] CreateComboRequest request)
+        //{
+        //    await _managerComboService.CreateComboAsync(request);
+        //    return Ok(new { message = "Combo created successfully" });
+        //}
 
         [HttpGet("top-sellers")]
         public async Task<IActionResult> GetTopSellers([FromQuery] string type) // type = "menu" or "combo"
@@ -117,45 +117,6 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(overview);
         }
 
-        [HttpGet("GetComboBy/{id}")]
-        public async Task<IActionResult> GetComboDetail(int id)
-        {
-            try
-            {
-                // Hàm này trả về ComboDetailDto chuẩn chỉnh
-                var result = await _managerComboService.GetComboByIdAsync(id);
-                return Ok(result);
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-        }
-
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> UpdateCombo(int id, [FromBody] UpdateComboRequest request)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(ModelState);
-        //    }
-
-        //    try
-        //    {
-        //        await _managerComboService.UpdateComboAsync(id, request);
-        //        return Ok(new { message = "Cập nhật Combo thành công!" });
-        //    }
-        //    catch (KeyNotFoundException ex)
-        //    {
-        //        return NotFound(new { message = ex.Message });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        // Log error
-        //        return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-        //    }
-        //}
-
         // GET: api/combos/5
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
@@ -166,18 +127,89 @@ namespace SapaFoRestRMSAPI.Controllers
 
         // GET: api/combos/menu?keyword=abc
         [HttpGet("AllMenu")]
-        public async Task<IActionResult> GetMenu([FromQuery] string keyword = "")
+        public async Task<IActionResult> Get(
+    [FromQuery] string? keyword,
+    [FromQuery] string? categoryName,
+    [FromQuery] int pageIndex = 1)
         {
-            var result = await _managerComboService.SearchMenuAsync(keyword);
-            return Ok(result);
+            try
+            {
+                var result = await _managerComboService.SearchAsync(keyword, categoryName, pageIndex);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
+
 
         // PUT: api/combos/5
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateComboDto request)
         {
-            await _managerComboService.UpdateAsync(id, request);
-            return Ok(new { message = "Updated successfully" });
+            try
+            {
+                await _managerComboService.UpdateAsync(id, request);
+
+                return Ok(new { message = "Cập nhật combo thành công" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    errorCode = "COMBO_IN_USE_OR_UNAVAILABLE_ITEM",
+                    message = ex.Message
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    errorCode = "INVALID_REQUEST",
+                    message = ex.Message
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    errorCode = "COMBO_NOT_FOUND",
+                    message = ex.Message
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    errorCode = "INTERNAL_SERVER_ERROR",
+                    message = "Có lỗi xảy ra, vui lòng thử lại"
+                });
+            }
         }
+
+
+
+        [HttpPost("CreateCombo")]
+        public async Task<IActionResult> Create([FromBody] CreateComboDto request)
+        {
+            await _managerComboService.AddComboAsync(request);
+            return Ok(new { message = "Created successfully" });
+        }
+
+        [HttpGet("Top_Item_new")]
+        public async Task<IActionResult> TopItemNew()
+        {
+            try
+            {
+                var top5 = await _managerComboService.GetTop5NewMenuItemsAsync();
+                return Ok(top5);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, stack = ex.StackTrace });
+            }
+        }
+
     }
 }

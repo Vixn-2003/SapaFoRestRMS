@@ -18,6 +18,9 @@ namespace BusinessAccessLayer.DTOs.ManagementCombo
             public bool IsAvailable { get; set; }
             public string ImageUrl { get; set; }
             public List<ComboItemDto> Items { get; set; } = new List<ComboItemDto>();
+
+            public decimal TotalPrice => Items?.Sum(x => x.Quantity * x.OriginalPrice) ?? 0m;
+
         }
 
         // DTO của từng món trong Combo
@@ -27,6 +30,10 @@ namespace BusinessAccessLayer.DTOs.ManagementCombo
             public string MenuItemName { get; set; }
             public decimal OriginalPrice { get; set; } // Giá gốc món lẻ
             public int Quantity { get; set; }
+            public string ImageUrl { get; set; }
+
+            public string CategoryName { get; set; }
+
         }
 
         // DTO nhận dữ liệu Cập nhật từ Client gửi lên
@@ -37,7 +44,6 @@ namespace BusinessAccessLayer.DTOs.ManagementCombo
             public string Description { get; set; }
             public bool IsAvailable { get; set; }
             public string ImageUrl { get; set; }
-            // Chỉ cần ID và Số lượng để lưu xuống DB
             public List<ComboItemInput> Items { get; set; }
         }
 
@@ -51,8 +57,10 @@ namespace BusinessAccessLayer.DTOs.ManagementCombo
         public class MenuItemDto
         {
             public int MenuItemId { get; set; }
-            public string Name { get; set; }
-            public decimal Price { get; set; }
+            public string MenuItemName { get; set; }
+            public decimal OriginalPrice { get; set; }
+            public string ImageURL { get; set; }
+            public string CategoryName { get; set; }
         }
     }
 }
