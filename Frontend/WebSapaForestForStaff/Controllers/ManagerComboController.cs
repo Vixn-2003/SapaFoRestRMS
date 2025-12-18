@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Net.Http;
 using System.Text;
@@ -7,6 +8,7 @@ using WebSapaForestForStaff.DTOs.ManagementCombo;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class ManagerComboController : Controller
     {
         private readonly HttpClient _httpClient;

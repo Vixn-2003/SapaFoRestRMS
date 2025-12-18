@@ -140,7 +140,8 @@ namespace WebSapaForestForStaff.Controllers
                 var dto = new CustomerVipUpdateDto
                 {
                     CustomerId = customerId,
-                    IsVip = isVip
+                    IsVip = isVip,
+                    IsManualOverride = true // Manager can override VIP criteria
                 };
                 var (success, message) = await _customerManagementApiService.UpdateVipStatusAsync(dto);
 
@@ -154,14 +155,13 @@ namespace WebSapaForestForStaff.Controllers
                 }
 
                 return RedirectToAction(nameof(Index));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating VIP status for customer {CustomerId}", customerId);
-            TempData["ErrorMessage"] = "Đã xảy ra lỗi khi cập nhật trạng thái VIP.";
-            return RedirectToAction(nameof(Index));
-        }
-            return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating VIP status for customer {CustomerId}", customerId);
+                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi cập nhật trạng thái VIP.";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         [HttpPost]

@@ -63,7 +63,22 @@ namespace BusinessAccessLayer.Services
                 throw new ArgumentNullException(nameof(formUpdateMenuDTO), "Dữ liệu cập nhật không được để trống.");
 
             try
-            {
+            {               
+                if (formUpdateMenuDTO.IsAvailable == false)
+                {
+                    var listCombo = await _unitOfWork.Combo.GetManagerAllCombos();
+                    foreach (var combo in listCombo)
+                    {
+                        foreach(var c in combo.ComboItems)
+                        {
+                            if(c.MenuItemId == formUpdateMenuDTO.MenuItemId)
+                            {
+                                await _unitOfWork.Combo.ChangeStatusComboAsync(c.ComboId, false);
+                            }
+                        }
+                    }
+                }
+
                 var mapping = _mapper.Map<MenuItem>(formUpdateMenuDTO);
                 var result = await _unitOfWork.MenuItem.ManagerUpdateMenu(mapping);
 

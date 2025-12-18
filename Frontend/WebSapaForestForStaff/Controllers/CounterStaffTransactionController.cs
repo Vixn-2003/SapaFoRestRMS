@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -10,6 +11,9 @@ namespace WebSapaForestForStaff.Controllers
     /// <summary>
     /// MVC Controller cho Counter Staff Transaction History - UC124
     /// </summary>
+    /// 
+    [Authorize(Policy = "Position:Cashier")]
+
     [Route("counter-staff/transactions")]
     public class CounterStaffTransactionController : Controller
     {

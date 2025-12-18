@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Threading.Tasks;
@@ -10,6 +11,9 @@ namespace WebSapaForestForStaff.Controllers
     /// MVC Controller cho Counter Staff Order List - UC123
     /// Reuse OrderSelection.cshtml
     /// </summary>
+    /// 
+    [Authorize(Policy = "Position:Cashier")]
+
     [Route("counter-staff/orders")]
     public class CounterStaffOrderController : Controller
     {

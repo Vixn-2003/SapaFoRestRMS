@@ -39,9 +39,21 @@ namespace BusinessAccessLayer.Services
             // Filter by payment method if specified
             if (!string.IsNullOrEmpty(request.PaymentMethod) && request.PaymentMethod != "ALL")
             {
-                filteredTransactions = filteredTransactions
-                    .Where(t => t.PaymentMethod.Equals(request.PaymentMethod, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                if (request.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase))
+                {
+                    // QR in system is stored as "QRBankTransfer"
+                    filteredTransactions = filteredTransactions
+                        .Where(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
+                                   t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
+                                   t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+                else
+                {
+                    filteredTransactions = filteredTransactions
+                        .Where(t => t.PaymentMethod.Equals(request.PaymentMethod, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
             }
 
             // TODO: Filter by branch when multi-branch is implemented
@@ -71,7 +83,9 @@ namespace BusinessAccessLayer.Services
                 .Sum(t => t.Amount);
 
             var qrRevenue = transactions
-                .Where(t => t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase))
+                .Where(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
+                           t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
+                           t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase))
                 .Sum(t => t.Amount);
 
             var combinedRevenue = transactions
@@ -132,7 +146,9 @@ namespace BusinessAccessLayer.Services
                 .ToList();
 
             var qrTransactions = transactions
-                .Where(t => t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase))
+                .Where(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
+                           t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
+                           t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             var combinedTransactions = transactions

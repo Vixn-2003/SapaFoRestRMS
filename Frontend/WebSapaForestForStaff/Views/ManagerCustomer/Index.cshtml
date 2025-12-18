@@ -53,7 +53,7 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <div class="rounded-circle bg-warning bg-opacity-10 p-3">
+                        <div class="rounded-circle  bg-opacity-10 p-3">
                             <i class="fas fa-crown text-warning" style="font-size: 24px;"></i>
                         </div>
                     </div>
@@ -72,7 +72,7 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <div class="rounded-circle bg-info bg-opacity-10 p-3">
+                        <div class="rounded-circle  bg-opacity-10 p-3">
                             <i class="fas fa-user text-info" style="font-size: 24px;"></i>
                         </div>
                     </div>
@@ -91,7 +91,7 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <div class="rounded-circle bg-success bg-opacity-10 p-3">
+                        <div class="rounded-circle  bg-opacity-10 p-3">
                             <i class="fas fa-star text-success" style="font-size: 24px;"></i>
                         </div>
                     </div>
@@ -112,7 +112,7 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+                        <div class="rounded-circle  bg-opacity-10 p-3">
                             <i class="fas fa-chart-line text-primary" style="font-size: 24px;"></i>
                         </div>
                     </div>
@@ -130,7 +130,7 @@
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="flex-shrink-0">
-                        <div class="rounded-circle bg-danger bg-opacity-10 p-3">
+                        <div class="rounded-circle bg-opacity-10 p-3">
                             <i class="fas fa-trophy text-danger" style="font-size: 24px;"></i>
                         </div>
                     </div>
@@ -439,10 +439,11 @@
                         <strong>Lưu ý:</strong> Thay đổi trạng thái VIP sẽ ảnh hưởng đến quyền lợi và ưu đãi của khách hàng.
                     </small>
                 </div>
+                <input type="hidden" name="__RequestVerificationToken" value="@antiToken" />
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-warning" id="confirmVipUpdate">Xác nhận</button>
+                <button type="button" class="btn btn-warning" id="confirmVipUpdate" onclick="confirmVipUpdate()">Xác nhận</button>
             </div>
         </div>
     </div>
@@ -641,24 +642,23 @@
         confirmBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin me-1"></i>Đang xử lý...';
         confirmBtn.disabled = true;
 
-        fetch('/ManagerCustomer/UpdateVip', {
+        fetch('/ManagerCustomer/UpdateCustomerVip', {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Reload page to show updated data
+        .then(response => {
+            if (response.ok) {
+                // Controller returns RedirectToAction, so just reload the page
                 window.location.reload();
             } else {
-                alert('Lỗi: ' + (data.message || 'Không thể cập nhật trạng thái VIP'));
-                confirmBtn.innerHTML = originalText;
-                confirmBtn.disabled = false;
+                return response.text().then(text => {
+                    throw new Error(text || 'Không thể cập nhật trạng thái VIP');
+                });
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Đã xảy ra lỗi khi cập nhật trạng thái VIP');
+            alert('Đã xảy ra lỗi khi cập nhật trạng thái VIP: ' + error.message);
             confirmBtn.innerHTML = originalText;
             confirmBtn.disabled = false;
         });

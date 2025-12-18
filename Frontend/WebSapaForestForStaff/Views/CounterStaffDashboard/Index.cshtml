@@ -1,5 +1,6 @@
 @model WebSapaForestForStaff.ViewModels.CounterStaff.CounterStaffDashboardViewModel
 @using WebSapaForestForStaff.Controllers
+@using WebSapaForestForStaff.DTOs.CounterStaff
 
 @{
     ViewData["Title"] = "Bảng điều khiển Nhân viên quầy";
@@ -155,18 +156,31 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         // Revenue Chart Data (embedded from Model)
-        const revenueData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard.RevenueChart));
-        const orderData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard.OrderChart));
+        @{
+            var jsonOptions = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            };
+        }
+        const revenueData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard?.RevenueChart ?? new List<HourlyRevenuePoint>(), jsonOptions));
+        const orderData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Dashboard?.OrderChart ?? new List<HourlyOrderPoint>(), jsonOptions));
+
+        // Debug: Log data to console
+        console.log('Revenue Data:', revenueData);
+        console.log('Order Data:', orderData);
 
         // Revenue Trend Chart
-        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-        new Chart(revenueCtx, {
+        const revenueCtx = document.getElementById('revenueChart');
+        if (!revenueCtx) {
+            console.error('Revenue chart canvas not found');
+        } else {
+        new Chart(revenueCtx.getContext('2d'), {
             type: 'line',
             data: {
-                labels: revenueData.map(d => `${d.hour}:00`),
+                labels: revenueData.filter(d => d.hour >= 8 && d.hour <= 22).map(d => `${d.hour}:00`),
                 datasets: [{
                     label: 'Doanh thu (₫)',
-                    data: revenueData.map(d => d.revenue),
+                    data: revenueData.filter(d => d.hour >= 8 && d.hour <= 22).map(d => d.revenue),
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     tension: 0.4,
@@ -201,16 +215,20 @@
                 }
             }
         });
+        }
 
         // Order Count Chart
-        const orderCtx = document.getElementById('orderChart').getContext('2d');
-        new Chart(orderCtx, {
+        const orderCtx = document.getElementById('orderChart');
+        if (!orderCtx) {
+            console.error('Order chart canvas not found');
+        } else {
+        new Chart(orderCtx.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: orderData.map(d => `${d.hour}:00`),
+                labels: orderData.filter(d => d.hour >= 8 && d.hour <= 22).map(d => `${d.hour}:00`),
                 datasets: [{
                     label: 'Số đơn hàng',
-                    data: orderData.map(d => d.orderCount),
+                    data: orderData.filter(d => d.hour >= 8 && d.hour <= 22).map(d => d.orderCount),
                     backgroundColor: 'rgba(255, 159, 64, 0.6)',
                     borderColor: 'rgb(255, 159, 64)',
                     borderWidth: 1
@@ -235,6 +253,7 @@
                 }
             }
         });
+        }
     </script>
 }
 

@@ -58,6 +58,11 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<bool> DeactivateStaffAsync(int staffId, string? reason, CancellationToken ct = default);
 
         /// <summary>
+        /// Change staff status (0 = Active, 1 = Inactive)
+        /// </summary>
+        Task<bool> ChangeStaffStatusAsync(int staffId, int status, CancellationToken ct = default);
+
+        /// <summary>
         /// Check if staff exists and is not deleted
         /// </summary>
         Task<bool> StaffExistsAsync(int staffId, CancellationToken ct = default);

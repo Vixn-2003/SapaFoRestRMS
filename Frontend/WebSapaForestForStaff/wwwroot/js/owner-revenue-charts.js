@@ -94,22 +94,19 @@
         new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: ['Tiền Mặt', 'QR Code', 'Kết Hợp'],
+                labels: ['Tiền Mặt', 'QR Code'],
                 datasets: [{
                     data: [
                         breakdown.cashAmount || 0,
-                        breakdown.qrAmount || 0,
-                        breakdown.combinedAmount || 0
+                        breakdown.qrAmount || 0
                     ],
                     backgroundColor: [
                         'rgba(40, 167, 69, 0.8)',
-                        'rgba(23, 162, 184, 0.8)',
-                        'rgba(255, 193, 7, 0.8)'
+                        'rgba(23, 162, 184, 0.8)'
                     ],
                     borderColor: [
                         'rgb(40, 167, 69)',
-                        'rgb(23, 162, 184)',
-                        'rgb(255, 193, 7)'
+                        'rgb(23, 162, 184)'
                     ],
                     borderWidth: 2
                 }]
@@ -127,8 +124,7 @@
                                 const label = context.label || '';
                                 const value = context.parsed || 0;
                                 const count = context.dataIndex === 0 ? breakdown.cashCount :
-                                             context.dataIndex === 1 ? breakdown.qrCount :
-                                             breakdown.combinedCount;
+                                             breakdown.qrCount;
                                 return [
                                     label + ': ' + formatCurrency(value),
                                     'Số giao dịch: ' + count

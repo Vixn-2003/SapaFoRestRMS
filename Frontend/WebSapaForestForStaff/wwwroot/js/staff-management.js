@@ -57,7 +57,7 @@ const StaffManagement = {
         // Read current filter values from DOM
         this.state.filters = {
             searchKeyword: $('#searchKeyword').val().trim(),
-            position: $('#positionFilter').val().trim(),
+            position: ($('#positionFilter').val() || '').toString().trim(),
             status: $('#statusFilter').val() ? parseInt($('#statusFilter').val()) : null,
             sortBy: $('#sortBy').val() || 'HireDate',
             sortDirection: $('#sortDirection').val() || 'desc'
@@ -95,6 +95,8 @@ const StaffManagement = {
         };
 
         try {
+            console.log('📤 Sending request to get staff list...', requestData);
+            
             const response = await $.ajax({
                 url: '/StaffManagement/GetStaffList',
                 type: 'POST',
@@ -102,22 +104,27 @@ const StaffManagement = {
                 data: JSON.stringify(requestData)
             });
 
+            console.log('📥 Received response:', response);
             this.state.isLoading = false;
 
             // Normalize response
             const normalizedData = this.normalizeApiResponse(response);
+            console.log('✅ Normalized data:', normalizedData);
 
             if (normalizedData.success) {
                 this.state.totalCount = normalizedData.totalCount;
                 this.state.totalPages = normalizedData.totalPages;
                 this.renderStaffTable(normalizedData.data);
                 this.renderPagination();
+                console.log('✨ Rendered table successfully!');
             } else {
+                console.error('❌ Response indicates failure:', normalizedData.message);
                 this.showError(normalizedData.message || 'Không thể tải danh sách nhân viên');
             }
         } catch (error) {
             this.state.isLoading = false;
-            console.error('Error loading staff list:', error);
+            console.error('❌ Error loading staff list:', error);
+            console.error('Error details:', error.responseText || error.message);
             this.showError('Đã xảy ra lỗi khi tải danh sách nhân viên. Vui lòng thử lại.');
         }
     },
@@ -233,18 +240,30 @@ const StaffManagement = {
                 <td>${hireDate}</td>
                 <td class="text-right">
                     <div class="dropdown dropdown-action">
-                        <a href="#" class="action-icon dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                        <a href="#" class="action-icon dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-ellipsis-v"></i>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-right">
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <a class="dropdown-item" href="/StaffManagement/Details/${staff.staffId}">
+                                <i class="far fa-eye text-info m-r-5"></i> Xem chi tiết
+                            </a>
                             <a class="dropdown-item" href="/StaffManagement/Edit/${staff.staffId}">
-                                <i class="fas fa-edit m-r-5"></i> Chỉnh sửa
+                                <i class="fas fa-edit text-warning m-r-5"></i> Chỉnh sửa
                             </a>
-                            ${staff.status === 0 ? ` 
+                            <div class="dropdown-divider"></div>
+                            ${staff.status === 0 ? `
                             <a class="dropdown-item" href="#" data-action="deactivate" data-staff-id="${staff.staffId}" data-staff-name="${fullName}">
-                                <i class="fas fa-ban m-r-5"></i> Ngừng hoạt động
+                                <i class="fas fa-ban text-danger m-r-5"></i> Ngừng hoạt động
                             </a>
-                            ` : ''}
+                            ` : `
+                            <a class="dropdown-item" href="#" data-action="activate" data-staff-id="${staff.staffId}" data-staff-name="${fullName}">
+                                <i class="fas fa-check-circle text-success m-r-5"></i> Kích hoạt lại
+                            </a>
+                            `}
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" data-action="reset-password" data-staff-id="${staff.staffId}" data-staff-name="${fullName}">
+                                <i class="fas fa-key text-primary m-r-5"></i> Reset mật khẩu
+                            </a>
                         </div>
                     </div>
                 </td>
@@ -428,6 +447,81 @@ const StaffDeactivate = {
 };
 
 // ============================================================================
+// ACTIVATE STAFF MODULE
+// ============================================================================
+const StaffActivate = {
+    /**
+     * Activate staff
+     */
+    async activate(staffId, staffName) {
+        if (!confirm(`Bạn có chắc chắn muốn kích hoạt lại nhân viên "${staffName}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await $.ajax({
+                url: '/StaffManagement/Activate',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                data: JSON.stringify({
+                    staffId: staffId
+                })
+            });
+
+            if (response.success) {
+                toastr.success(response.message || 'Kích hoạt nhân viên thành công');
+                StaffManagement.loadStaffList(); // Reload current page
+            } else {
+                toastr.error(response.message || 'Không thể kích hoạt nhân viên');
+            }
+        } catch (error) {
+            console.error('Error activating staff:', error);
+            toastr.error('Đã xảy ra lỗi khi kích hoạt nhân viên');
+        }
+    }
+};
+
+// ============================================================================
+// RESET PASSWORD MODULE
+// ============================================================================
+const StaffResetPassword = {
+    /**
+     * Reset staff password
+     */
+    async reset(staffId, staffName) {
+        if (!confirm(`Bạn có chắc chắn muốn reset mật khẩu cho nhân viên "${staffName}"?\n\nMật khẩu mới sẽ được gửi qua email.`)) {
+            return;
+        }
+
+        try {
+            const response = await $.ajax({
+                url: '/StaffManagement/ResetPassword',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                data: JSON.stringify({
+                    staffId: staffId
+                })
+            });
+
+            if (response.success) {
+                toastr.success(response.message || 'Reset mật khẩu thành công. Email đã được gửi.');
+            } else {
+                toastr.error(response.message || 'Không thể reset mật khẩu');
+            }
+        } catch (error) {
+            console.error('Error resetting password:', error);
+            toastr.error('Đã xảy ra lỗi khi reset mật khẩu');
+        }
+    }
+};
+
+// ============================================================================
 // INITIALIZATION
 // ============================================================================
 $(document).ready(function () {
@@ -440,6 +534,22 @@ $(document).ready(function () {
         const staffId = $(this).data('staff-id');
         const staffName = $(this).data('staff-name');
         StaffDeactivate.open(staffId, staffName);
+    });
+
+    // Event delegation for activate buttons
+    $(document).on('click', 'a[data-action="activate"]', function (e) {
+        e.preventDefault();
+        const staffId = $(this).data('staff-id');
+        const staffName = $(this).data('staff-name');
+        StaffActivate.activate(staffId, staffName);
+    });
+
+    // Event delegation for reset password buttons
+    $(document).on('click', 'a[data-action="reset-password"]', function (e) {
+        e.preventDefault();
+        const staffId = $(this).data('staff-id');
+        const staffName = $(this).data('staff-name');
+        StaffResetPassword.reset(staffId, staffName);
     });
 
     // Deactivate modal submit button
