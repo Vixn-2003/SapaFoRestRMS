@@ -705,6 +705,7 @@ namespace BusinessAccessLayer.Services
                 currentOrder = new Order
                 {
                     ReservationId = activeReservation.ReservationId,
+                    CustomerId = activeReservation.CustomerId, // ✅ Set CustomerId từ reservation
                     CreatedAt = DateTime.Now,
                     TotalAmount = 0,    // Tạm tính là 0
                     Status = "Pending",  // Trạng thái chờ,
