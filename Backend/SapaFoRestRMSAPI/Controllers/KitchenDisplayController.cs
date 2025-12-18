@@ -14,7 +14,7 @@ namespace SapaFoRestRMSAPI.Controllers
     {
         private readonly IKitchenDisplayService _kitchenService;
         private readonly IHubContext<KitchenHub> _hubContext;
-        private readonly IHubContext<TableHub> _tableHubContext;     
+        private readonly IHubContext<TableHub> _tableHubContext; // Thêm biến này
         public KitchenDisplayController(
             IKitchenDisplayService kitchenService,
             IHubContext<KitchenHub> hubContext,
@@ -93,10 +93,13 @@ namespace SapaFoRestRMSAPI.Controllers
                     ChangedBy = $"User {request.UserId}"
                 });
 
-                if (response.TableId > 0)
+                if (response.ReservationId > 0)
                 {
-                    await _tableHubContext.Clients.Group($"Table_{response.TableId}")
-                        .SendAsync("ReceiveOrderStatusUpdate", request.OrderDetailId, request.NewStatus);
+                    await _tableHubContext.Clients.Group($"Reservation_{response.ReservationId}")
+                        .SendAsync("ReceiveItemStatusUpdate",
+                            request.OrderDetailId,
+                            request.OrderComboItemId,
+                            request.NewStatus);
                 }
                 return Ok(response);
             }
@@ -409,5 +412,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+
     }
 }

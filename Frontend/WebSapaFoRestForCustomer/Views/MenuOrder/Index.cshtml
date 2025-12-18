@@ -41,6 +41,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <link rel="stylesheet" href="~/css/menu-order.css" />
     <link rel="stylesheet" href="~/css/OrderGuest.css" />
     <script>
@@ -279,5 +280,97 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="~/js/menu-order.js" asp-append-version="true"></script>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+
+            // --- 1. CẤU HÌNH ---
+            const API_BASE_URL = "https://localhost:7096"; // Đổi port API của bạn
+            const HUB_URL = `${API_BASE_URL}/tableHub`;
+
+            // Định nghĩa map trạng thái để đổi màu và chữ (Khớp với CSS của bạn)
+            const statusMap = {
+                "Pending":  { text: "Chờ xác nhận", class: "status-pending" },
+                "Cooking":  { text: "Đang nấu",     class: "status-cooking" },
+                "Ready":    { text: "Đã xong",      class: "status-ready" },
+                "Served":   { text: "Đã phục vụ",   class: "status-served" },
+                "Canceled": { text: "Đã hủy",       class: "status-canceled" }
+            };
+
+            // --- 2. KẾT NỐI SIGNALR ---
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl(HUB_URL)
+                .withAutomaticReconnect()
+                .build();
+
+            async function startSignalR() {
+                // Lấy tableId từ URL (Ví dụ: /Menu/Index?tableId=5)
+                const urlParams = new URLSearchParams(window.location.search);
+                const tableId = urlParams.get('tableId');
+
+                if (!tableId) return;
+
+                try {
+                    // A. Gọi API "hỏi đường" lấy ReservationId
+                    const res = await fetch(`${API_BASE_URL}/api/reservation/active/${tableId}`);
+                    if (!res.ok) return; // Chưa check-in thì thôi
+
+                    const data = await res.json();
+                    const reservationId = data.reservationId;
+
+                    // B. Start & Join Group
+                    await connection.start();
+                    console.log("SignalR Connected!");
+
+                    await connection.invoke("JoinGroup", "Reservation_" + reservationId);
+                    console.log(`Đã tham gia nhóm theo dõi đơn: Reservation_${reservationId}`);
+
+                } catch (err) {
+                    console.error("SignalR Error:", err);
+                    setTimeout(startSignalR, 5000); // Thử lại sau 5s
+                }
+            }
+
+            // --- 3. LẮNG NGHE SỰ KIỆN TỪ BẾP ---
+            connection.on("ReceiveItemStatusUpdate", (orderDetailId, newStatus) => {
+                console.log(`Cập nhật món ${orderDetailId}: ${newStatus}`);
+
+                updateItemUI(orderDetailId, newStatus);
+            });
+
+            // --- 4. HÀM CẬP NHẬT GIAO DIỆN ---
+            function updateItemUI(id, status) {
+                // Tìm cái thẻ div cha có data-orderdetailid = id
+                const itemRow = document.querySelector(`.order-status-item[data-orderdetailid='${id}']`);
+
+                if (!itemRow) return; // Không tìm thấy món thì bỏ qua
+
+                // A. Cập nhật Badge (Màu và Chữ)
+                const badge = itemRow.querySelector('.status-badge');
+                if (badge) {
+                    const map = statusMap[status] || { text: status, class: "status-unknown" };
+
+                    badge.innerText = map.text;
+
+                    // Xóa hết class cũ đi và gán class mới
+                    badge.className = `status-badge ${map.class}`;
+                }
+
+                // B. Xử lý nút Hủy (Ẩn đi nếu không còn là Pending)
+                const cancelBtn = itemRow.querySelector('.btn-cancel-item');
+                if (cancelBtn) {
+                    if (status !== 'Pending') {
+                        // Nếu bếp đã nấu (Cooking/Ready...) thì xóa nút hủy
+                        cancelBtn.remove();
+                        // Hoặc ẩn: cancelBtn.style.display = 'none';
+                        alert(`Món ăn đã chuyển sang trạng thái "${statusMap[status].text}", bạn không thể hủy nữa.`);
+                    }
+                }
+            }
+
+            // Chạy
+            startSignalR();
+        });
+    </script>
 </body>
-</html>

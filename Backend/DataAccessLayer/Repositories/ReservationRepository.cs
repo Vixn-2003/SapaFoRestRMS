@@ -193,5 +193,18 @@ namespace DataAccessLayer.Repositories
         {
             await _context.SaveChangesAsync();
         }
+
+        public async Task<Reservation?> GetActiveByTableIdAsync(int tableId)
+        {
+            return await _context.Reservations
+                .Include(r => r.ReservationTables)
+                .Where(r =>
+                    r.ReservationTables.Any(rt => rt.TableId == tableId)
+                    && r.Status == "Guest Seated"
+                )
+                .OrderByDescending(r => r.ReservationDate)
+                .FirstOrDefaultAsync();
+        }
+
     }
 }
