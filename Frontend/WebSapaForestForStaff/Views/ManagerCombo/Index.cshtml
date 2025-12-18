@@ -14,6 +14,73 @@
     var overview = ViewBag.Overview;
     var period = ViewBag.Period as string;
 }
+<style>
+
+    .toast-container {
+        z-index: 9999 !important;
+        top: 20px !important;
+        right: 20px !important;
+    }
+
+    .toast {
+        min-width: 350px !important;
+        max-width: 500px !important;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+        border-radius: 8px !important;
+        animation: slideInRight 0.3s ease-out !important;
+    }
+
+    .toast-body {
+        font-size: 15px !important;
+        font-weight: 500 !important;
+        padding: 16px !important;
+        line-height: 1.5 !important;
+    }
+
+    .toast .btn-close {
+        font-size: 14px !important;
+        opacity: 0.8 !important;
+    }
+
+    .toast .btn-close:hover {
+        opacity: 1 !important;
+    }
+
+    .text-bg-success {
+        background-color: #28a745 !important;
+    }
+
+    .text-bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    @@keyframes slideInRight {
+        from {
+            transform: translateX(100%) !important;
+            opacity: 0 !important;
+        }
+        to {
+            transform: translateX(0) !important;
+            opacity: 1 !important;
+        }
+    }
+
+    /* Responsive cho mobile */
+    @@media (max-width: 576px) {
+        .toast-container {
+            left: 10px !important;
+            right: 10px !important;
+            top: 10px !important;
+        }
+
+        .toast {
+            min-width: auto !important;
+            max-width: 100% !important;
+        }
+    }
+
+</style>
+
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
 @* Toast container *@

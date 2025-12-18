@@ -144,7 +144,9 @@
                     <form asp-action="Edit"
                           asp-controller="ManagerCombo"
                           asp-route-id="@Model.ComboId"
-                          method="post" id="frmEditCombo">
+                          method="post"
+                          id="frmEditCombo"
+                          enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
                         <!-- Thông báo thành công -->
                         @if (TempData["Success"] != null)
@@ -162,11 +164,28 @@
 
                         <div class="mb-3 text-center">
                             <div class="position-relative d-inline-block w-100">
-                                <img id="comboImagePreview" src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "/images/default-food.png" : Model.ImageUrl)"
-                                     class="img-thumbnail shadow-sm w-100" style="height: 160px; object-fit: cover; border-radius: 8px;" />
+                                <!-- Ảnh hiện tại -->
+                                <img id="comboImagePreview"
+                                     src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "/images/default-food.png" : Model.ImageUrl)"
+                                     class="img-thumbnail shadow-sm w-100"
+                                     style="height: 160px; object-fit: cover; border-radius: 8px;" />
+
+                                <!-- Nút chọn ảnh mới -->
                                 <div class="mt-2">
-                                    <input asp-for="ImageUrl" class="form-control form-control-sm" placeholder="URL Hình ảnh" onchange="document.getElementById('comboImagePreview').src = this.value || '/images/default-food.png'" />
+                                    <label for="imageFileInputEdit" class="btn btn-sm btn-outline-warning w-100">
+                                        <i class="mdi mdi-camera-plus"></i> Thay đổi ảnh
+                                    </label>
+                                    <input type="file"
+                                           id="imageFileInputEdit"
+                                           name="ImageFile"
+                                           accept="image/*"
+                                           class="d-none"
+                                           onchange="previewImageEdit(event)" />
+                                    <small class="text-muted d-block mt-1">Chọn ảnh mới để thay đổi (tối đa 5MB)</small>
                                 </div>
+
+                                <!-- Hidden field lưu URL ảnh cũ -->
+                                <input type="hidden" asp-for="ImageUrl" />
                             </div>
                         </div>
                         <div class="mb-3">
@@ -212,8 +231,6 @@
                                        value="true"
                                        onchange="updateStatusText(this)" />
 
-                                <!--  BẮT BUỘC: đảm bảo gửi false khi uncheck -->
-                                <input type="hidden" name="IsAvailable" value="false" />
                             </div>
 
                             <!-- Trạng thái (bên phải) -->
@@ -895,6 +912,27 @@
             });
         }
 
+        function previewImageEdit(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Kiểm tra kích thước
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File quá lớn! Vui lòng chọn ảnh nhỏ hơn 5MB.');
+                event.target.value = '';
+                return;
+            }
+
+            // ✅ DEBUG: In ra để kiểm tra
+            console.log("📸 Image selected:", file.name, file.size, "bytes");
+
+            // Preview ảnh
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('comboImagePreview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
           
     </script>
 }
