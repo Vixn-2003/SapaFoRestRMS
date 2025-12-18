@@ -87,6 +87,8 @@ namespace BusinessAccessLayer.DTOs.Kitchen
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
         public KitchenOrderItemDto? UpdatedItem { get; set; }
+
+        public int ReservationId { get; set; }
     }
 
     /// <summary>
