@@ -20,7 +20,7 @@ namespace SapaFoRestRMSAPI.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = "Position:Cashier")]
+//[Authorize(Policy = "Position:Cashier")]
 public class PaymentController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
