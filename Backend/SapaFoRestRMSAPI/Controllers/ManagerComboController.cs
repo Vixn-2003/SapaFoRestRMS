@@ -148,9 +148,47 @@ namespace SapaFoRestRMSAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateComboDto request)
         {
-            await _managerComboService.UpdateAsync(id, request);
-            return Ok(new { message = "Updated successfully" });
+            try
+            {
+                await _managerComboService.UpdateAsync(id, request);
+
+                return Ok(new { message = "Cập nhật combo thành công" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new
+                {
+                    errorCode = "COMBO_IN_USE_OR_UNAVAILABLE_ITEM",
+                    message = ex.Message
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    errorCode = "INVALID_REQUEST",
+                    message = ex.Message
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    errorCode = "COMBO_NOT_FOUND",
+                    message = ex.Message
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new
+                {
+                    errorCode = "INTERNAL_SERVER_ERROR",
+                    message = "Có lỗi xảy ra, vui lòng thử lại"
+                });
+            }
         }
+
+
 
         [HttpPost("CreateCombo")]
         public async Task<IActionResult> Create([FromBody] CreateComboDto request)

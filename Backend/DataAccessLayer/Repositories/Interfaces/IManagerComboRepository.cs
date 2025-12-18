@@ -40,6 +40,7 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task<Combo?> GetComboByIdWithItemsAsync(int comboId);
 
         Task<Combo?> GetComboWithItemsAsync(int id);
+        Task<List<MenuItem>> GetMenuItemsByIdsAsync(List<int> menuItemIds);
         IQueryable<MenuItem> QueryMenuItems();
         Task UpdateComboAsync(Combo combo, List<ComboItem> newItems);
         Task AddComboAsync(Combo combo, List<ComboItem> items);

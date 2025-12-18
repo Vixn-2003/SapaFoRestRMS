@@ -226,7 +226,7 @@ namespace BusinessAccessLayer.Services
                     Price = comboItem.MenuItem.Price, // Giá gốc 1 món
                     ImageUrl = comboItem.MenuItem.ImageUrl,
                     Quantity = comboItem.Quantity,     // Số lượng (Lấy từ bảng trung gian)
-                    CategoryName =comboItem.MenuItem.Category.CategoryName
+                    CategoryName = comboItem.MenuItem.Category.CategoryName
                 });
             }
 
@@ -237,15 +237,15 @@ namespace BusinessAccessLayer.Services
                 Name = comboEntity.Name,
                 ImageUrl = comboEntity.ImageUrl,
                 // Mapping giá
-                SellingPrice = comboEntity.Price,       
-                OriginalPrice = calculatedOriginalPrice, 
+                SellingPrice = comboEntity.Price,
+                OriginalPrice = calculatedOriginalPrice,
 
                 // SavingsAmount tự động tính trong class DTO (Original - Selling)
 
                 Items = itemDtos
             };
         }
-       
+
 
         // Thêm combo
         public async Task AddComboAsync(CreateComboDto request)
@@ -321,7 +321,7 @@ namespace BusinessAccessLayer.Services
 
             IQueryable<MenuItem> query = _repo.QueryMenuItems();
 
-            query = query.Include(x => x.Category);
+            query = query.Include(x => x.Category).Where(a => a.IsAvailable == true);
 
             if (!string.IsNullOrWhiteSpace(keyword))
                 query = query.Where(x => x.Name.Contains(keyword));
@@ -358,32 +358,61 @@ namespace BusinessAccessLayer.Services
         public async Task UpdateAsync(int id, UpdateComboDto request)
         {
             if (request.Items == null || !request.Items.Any())
-                throw new ArgumentException("Combo must have at least one item.");
+                throw new ArgumentException("Combo phải có ít nhất 1 món.");
 
             if (request.Items.Count == 1 && request.Items[0].Quantity < 2)
-            {
-                throw new ArgumentException("Combo chỉ có 1 món ăn thì quantity phải ≥ 2.");
-            }
+                throw new ArgumentException("Combo chỉ có 1 món thì quantity phải ≥ 2.");
 
-            // Nếu combo >= 2 món, chỉ cần quantity ≥ 1
             foreach (var item in request.Items)
             {
                 if (item.Quantity < 1)
-                    throw new ArgumentException($"Item với MenuItemId {item.MenuItemId} phải có quantity ≥ 1.");
+                    throw new ArgumentException(
+                        $"Item với MenuItemId {item.MenuItemId} phải có quantity ≥ 1.");
             }
 
-
+            // Lấy combo kèm items
             var entity = await _repo.GetComboWithItemsAsync(id);
-            if (entity == null) throw new KeyNotFoundException("Combo not found");
+            if (entity == null)
+                throw new KeyNotFoundException("Combo không tồn tại");
 
-            // Map Header
+            // ====== 1. Kiểm tra combo đang được dùng trong order ======
+            var inUse = entity.OrderDetails
+                .Any(od => od.Status == "Ready" || od.Status == "Pending" || od.Status == "Cooking");
+
+            if (inUse)
+            {
+                throw new InvalidOperationException(
+                    "Không thể cập nhật combo vì combo đang được sử dụng trong các đơn hàng."
+                );
+            }
+
+            // ====== 2. Kiểm tra nếu bật combo thì tất cả món phải available ======
+            if (request.IsAvailable == true)
+            {
+                var menuItemIds = request.Items.Select(x => x.MenuItemId).Distinct().ToList();
+                var menuItems = await _repo.GetMenuItemsByIdsAsync(menuItemIds);
+
+                var unavailableItems = menuItems
+                    .Where(x => x.IsAvailable != true) 
+                    .ToList();
+
+                if (unavailableItems.Any())
+                {
+                    var itemNames = string.Join(", ", unavailableItems.Select(x => x.Name));
+                    throw new InvalidOperationException(
+                        $"Không thể bật combo vì các món sau đang ngừng bán: {itemNames}"
+                    );
+                }
+            }
+
+            // ====== 3. Map header ======
             entity.Name = request.Name;
             entity.Price = request.SellingPrice;
             entity.Description = request.Description;
             entity.IsAvailable = request.IsAvailable;
             entity.ImageUrl = request.ImageUrl;
 
-            // Map Items
+            // ====== 4. Map items ======
             var newItems = request.Items.Select(x => new ComboItem
             {
                 MenuItemId = x.MenuItemId,
@@ -392,6 +421,8 @@ namespace BusinessAccessLayer.Services
 
             await _repo.UpdateComboAsync(entity, newItems);
         }
+
+
 
         Task<ComboDetailDto> IManagerComboService.GetComboByIdAsync(int id)
         {

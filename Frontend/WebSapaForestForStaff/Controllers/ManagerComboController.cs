@@ -16,6 +16,11 @@ namespace WebSapaForestForStaff.Controllers
             _httpClient = httpClientFactory.CreateClient();
             _httpClient.BaseAddress = new Uri("https://localhost:7096/api/");
         }
+        public class ApiErrorResponse
+        {
+            public string errorCode { get; set; } = string.Empty;
+            public string message { get; set; } = string.Empty;
+        }
 
         // ==========================================================
         // 1. HÀM HỖ TRỢ (HELPERS)
@@ -182,35 +187,47 @@ namespace WebSapaForestForStaff.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, ComboEditDto model)
         {
-            // ===== VALIDATE =====
-            if (model.Items == null || !model.Items.Any())
-                ModelState.AddModelError("", "Combo phải có ít nhất 1 món.");
-
-            if (model.Items.Any(i => i.Quantity < 2))
-                ModelState.AddModelError("", "Mỗi món phải có số lượng ≥ 2.");
-
-            if (!ModelState.IsValid)
-            {
-                await LoadComboAuxData();
-                return View("EditCombo", model);
-            }
-
             // ===== CALL API PUT =====
             var json = JsonConvert.SerializeObject(model);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PutAsync($"ManagerCombo/{id}", content);
-
-            if (response.IsSuccessStatusCode)
+            try
             {
-                TempData["Success"] = "Cập nhật thành công!";
-                return RedirectToAction("Index");
-            }
+                var response = await _httpClient.PutAsync($"ManagerCombo/{id}", content);
+                var responseBody = await response.Content.ReadAsStringAsync();
 
-            ModelState.AddModelError("", "Cập nhật thất bại.");
-            await LoadComboAuxData();
-            return View("EditCombo", model);
+                if (response.IsSuccessStatusCode)
+                {
+                    TempData["Success"] = "Cập nhật thành công!";
+                    return RedirectToAction("Index");
+                }
+
+                // ===== HANDLE API ERRORS =====
+                try
+                {
+                    // Parse lỗi từ BE
+                    var apiError = JsonConvert.DeserializeObject<ApiErrorResponse>(responseBody);
+                    ModelState.AddModelError("", apiError?.message ?? "Cập nhật thất bại.");
+                }
+                catch
+                {
+                    ModelState.AddModelError("", "Cập nhật thất bại.");
+                }
+
+                // Load dữ liệu phụ trợ nếu cần (dropdown, etc.)
+                await LoadComboAuxData();
+                return View("EditCombo", model);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError("", $"Có lỗi xảy ra: {ex.Message}");
+                await LoadComboAuxData();
+                return View("EditCombo", model);
+            }
         }
+
+
+
         // ==========================================================
         // 2. TẠO MỚI COMBO (CREATE - GET & POST)
         // ==========================================================
@@ -267,6 +284,7 @@ namespace WebSapaForestForStaff.Controllers
                 // 🔥 Lấy lỗi từ BE
                 var error = await response.Content.ReadAsStringAsync();
                 ModelState.AddModelError("", error);
+
             }
             catch (Exception ex)
             {

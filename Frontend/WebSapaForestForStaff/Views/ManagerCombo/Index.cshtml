@@ -16,6 +16,34 @@
 }
 <!-- Tailwind CSS CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
+@* Toast container *@
+<div aria-live="polite" aria-atomic="true" class="position-relative">
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body text-white">
+                        @TempData["Success"]
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body text-white">
+                        @TempData["Error"]
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
 
 <div id="comboApp" class="bg-gray-50 p-6" style="min-height: calc(100vh - 200px);">
     <div style="max-width: 1400px; margin: 0 auto;">
@@ -281,4 +309,13 @@
 
             window.loadPage = (pageIndex) => loadCombos(pageIndex);
         });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'))
+            var toastList = toastElList.map(function (toastEl) {
+                return new bootstrap.Toast(toastEl, { delay: 3000 }) // 3 giây tự ẩn
+            });
+            toastList.forEach(toast => toast.show());
+        });
+
     </script>

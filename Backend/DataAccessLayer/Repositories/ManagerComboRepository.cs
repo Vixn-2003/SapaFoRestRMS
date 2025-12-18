@@ -223,6 +223,13 @@ namespace DataAccessLayer.Repositories
                 .FirstOrDefaultAsync(c => c.ComboId == id);
         }
 
+        public async Task<List<MenuItem>> GetMenuItemsByIdsAsync(List<int> menuItemIds)
+        {
+            return await _context.MenuItems
+                .Where(x => menuItemIds.Contains(x.MenuItemId))
+                .ToListAsync();
+        }
+
         public IQueryable<MenuItem> QueryMenuItems()
         {
             return _context.MenuItems.Include(a=>a.Category).AsNoTracking();

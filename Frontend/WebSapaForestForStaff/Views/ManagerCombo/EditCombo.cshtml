@@ -144,12 +144,20 @@
                     <form asp-action="Edit"
                           asp-controller="ManagerCombo"
                           asp-route-id="@Model.ComboId"
-                          method="post">
+                          method="post" id="frmEditCombo">
                         @Html.AntiForgeryToken()
-                        <div asp-validation-summary="All"
-                             class="alert alert-danger small">
-                        </div>
+                        <!-- Thông báo thành công -->
+                        @if (TempData["Success"] != null)
+                        {
+                            <div class="alert alert-success" role="alert">
+                                @TempData["Success"]
+                            </div>
+                        }
+
+                        <div asp-validation-summary="All" class="alert alert-danger small"></div>
                         <input type="hidden" asp-for="ComboId" />
+                        <div id="jsValidationErrors" class="alert alert-danger d-none"></div>
+
                         <div id="hiddenItemsContainer" class="d-none"></div>
 
                         <div class="mb-3 text-center">
@@ -204,7 +212,7 @@
                                        value="true"
                                        onchange="updateStatusText(this)" />
 
-                                <!-- 🔥 BẮT BUỘC: đảm bảo gửi false khi uncheck -->
+                                <!--  BẮT BUỘC: đảm bảo gửi false khi uncheck -->
                                 <input type="hidden" name="IsAvailable" value="false" />
                             </div>
 
@@ -346,63 +354,123 @@
         window.topDishesList = @Html.Raw(Json.Serialize(ViewBag.TopDishes)) || [];
 
         // --- 1. KHỞI TẠO (ON LOAD) ---
-        document.addEventListener("DOMContentLoaded", function() {
-            console.log("✅ Edit Page Loaded");
+                   document.addEventListener("DOMContentLoaded", function() {
+            console.log("🚀 Edit Page Loaded - Script Active");
 
-            // Render giao diện menu bên phải
-            renderCategories();
-            renderMainMenu(window.allDishesList);
-            renderTopMenu();
-            renderPagination();
-            
-            // 🔥 QUAN TRỌNG: Tính toán lại tổng tiền của các món ĐÃ CÓ từ Database
-            updateTotals();
+            // --- 1. KHỞI TẠO GIAO DIỆN ---
+            // (Giữ lại các hàm render của bạn)
+            if(typeof renderCategories === 'function') renderCategories();
+            if(typeof renderMainMenu === 'function' && window.allDishesList) renderMainMenu(window.allDishesList);
+            if(typeof renderTopMenu === 'function') renderTopMenu();
+            if(typeof renderPagination === 'function') renderPagination();
+            if(typeof updateTotals === 'function') updateTotals();
 
-            // Gán sự kiện xóa cho các món (bao gồm cả món cũ và món mới thêm)
+            // --- 2. XỬ LÝ XÓA MÓN ---
             const selectedContainer = document.getElementById('selectedDishes');
-            selectedContainer.addEventListener('click', function(e) {
-                // Xử lý nút xóa
-                const btnRemove = e.target.closest('.remove-dish');
-                if (btnRemove) {
-                    const card = btnRemove.closest('.dish-item');
-                    if(card){
-                        card.classList.add('animate__animated', 'animate__fadeOutRight');
-                        setTimeout(() => {
-                            card.remove();
-                            updateTotals();
-                        }, 300);
+            if (selectedContainer) {
+                selectedContainer.addEventListener('click', function(e) {
+                    const btnRemove = e.target.closest('.remove-dish');
+                    if (btnRemove) {
+                        const card = btnRemove.closest('.dish-item');
+                        if (card) {
+                            card.classList.add('animate__animated', 'animate__fadeOutRight');
+                            setTimeout(() => {
+                                card.remove();
+                                if(typeof updateTotals === 'function') updateTotals();
+                            }, 300);
+                        }
                     }
-                    return;
-                }
-            });
+                });
+            }
 
-            // Tìm kiếm (Debounce)
-            let timeout = null;
+            // --- 3. XỬ LÝ TÌM KIẾM ---
             const searchInput = document.getElementById('searchDish');
-            if(searchInput){
+            if (searchInput) {
+                let timeout = null;
                 searchInput.addEventListener('input', function(e) {
                     clearTimeout(timeout);
                     timeout = setTimeout(() => {
-                        currentFilter.keyword = e.target.value;
-                        loadPage(1); // Reset về trang 1 khi tìm kiếm
+                        if(window.currentFilter) window.currentFilter.keyword = e.target.value;
+                        if(typeof loadPage === 'function') loadPage(1);
                     }, 300);
                 });
             }
 
-            // Cập nhật khi sửa giá bán
+            // --- 4. CẬP NHẬT GIÁ BÁN ---
             const sellingPriceInput = document.getElementById('sellingPrice');
-            if(sellingPriceInput){
-                sellingPriceInput.addEventListener('input', updateTotals);
+            if (sellingPriceInput) {
+                sellingPriceInput.addEventListener('input', function() {
+                     if(typeof updateTotals === 'function') updateTotals();
+                });
             }
 
-            // Xử lý Submit Form (Gộp chung logic re-index)
-            const form = document.getElementById('createComboForm'); // Đảm bảo <form> của bạn có id này
-            if(form){
-                form.addEventListener('submit', function(e) {
-                    // Re-index lại toàn bộ mảng Items[...] để ModelBinder nhận đúng
-                    reindexItems(); 
-                    console.log("✅ Data reindexed for submit");
+            // ============================================================
+            // 🔥 5. XỬ LÝ SUBMIT FORM (ĐOẠN QUAN TRỌNG NHẤT) 🔥
+            // ============================================================
+            const form = document.getElementById('frmEditCombo'); // Lấy đúng ID form
+            const errorContainer = document.getElementById('jsValidationErrors');
+
+            if (form) {
+                console.log("✅ Đã tìm thấy Form 'frmEditCombo'. Sẵn sàng xử lý!");
+
+                 form.addEventListener('submit', function(e) {
+        // Reset lỗi cũ
+        errorContainer.innerHTML = '';
+        errorContainer.classList.add('d-none');
+
+        // A. Tìm các món đang hiển thị bên phải
+        const uiItems = document.querySelectorAll('#selectedDishes .dish-item');
+
+        // Nếu không có món nào -> Chặn submit và hiển thị lỗi
+        if (uiItems.length === 0) {
+            e.preventDefault();
+            errorContainer.innerHTML = "⚠️ Combo phải có ít nhất 1 món ăn!";
+            errorContainer.classList.remove('d-none');
+            return;
+        }
+
+        // B. Tìm cái thùng chứa input ẩn
+        const hiddenContainer = document.getElementById('hiddenItemsContainer');
+        if (!hiddenContainer) {
+            e.preventDefault();
+            errorContainer.innerHTML = "❌ LỖI CODE: Không tìm thấy div id='hiddenItemsContainer' trong form!";
+            errorContainer.classList.remove('d-none');
+            return;
+        }
+
+                    // C. Xóa sạch dữ liệu cũ trong thùng chứa
+                    hiddenContainer.innerHTML = '';
+
+                    // D. Tạo input mới từ danh sách hiển thị và nhét vào thùng
+                    console.log(`🔄 Đang đóng gói ${uiItems.length} món...`);
+
+                    uiItems.forEach((row, index) => {
+                        const id = row.dataset.id;
+                        // Lấy số lượng (nếu không tìm thấy input thì mặc định là 1)
+                        const qtyInput = row.querySelector('.qty-input');
+                        const qty = qtyInput ? qtyInput.value : 1;
+
+                        // 1. Tạo Input ID: name="Items[0].MenuItemId"
+                        const inputId = document.createElement('input');
+                        inputId.type = 'hidden';
+                        inputId.name = `Items[${index}].MenuItemId`; // Quan trọng: Index phải liên tục 0,1,2...
+                        inputId.value = id;
+                        hiddenContainer.appendChild(inputId);
+
+                        // 2. Tạo Input Quantity: name="Items[0].Quantity"
+                        const inputQty = document.createElement('input');
+                        inputQty.type = 'hidden';
+                        inputQty.name = `Items[${index}].Quantity`;
+                        inputQty.value = qty;
+                        hiddenContainer.appendChild(inputQty);
+                    });
+
+                    // E. KHÔNG GỌI e.preventDefault() Ở ĐÂY NỮA
+                    // Để form tự động submit tiếp với dữ liệu mới vừa nhét vào hiddenContainer
+                    console.log("🚀 Đã đóng gói xong. Form đang gửi về server...");
                 });
+            } else {
+                console.error("❌ LỖI: Không tìm thấy thẻ <form id='frmEditCombo'>. Kiểm tra lại file HTML!");
             }
         });
 
@@ -792,5 +860,41 @@
                 statusText.className = "badge bg-secondary";
             }
         }
+
+
+
+
+         const form = document.getElementById('createComboForm');
+
+        form.addEventListener('submit', function () {
+
+            const hiddenContainer = document.getElementById('hiddenItemsContainer');
+            hiddenContainer.innerHTML = ''; // clear cũ
+
+            // Clone toàn bộ Items từ cột 3
+            document.querySelectorAll('#selectedDishes input[name^="Items"]').forEach(input => {
+                hiddenContainer.appendChild(input.cloneNode(true));
+            });
+
+            // Re-index cho chuẩn ModelBinder
+            reindexHiddenItems();
+        });
+        function reindexHiddenItems() {
+            const rows = document.querySelectorAll('#hiddenItemsContainer .dish-item, #hiddenItemsContainer input');
+
+            let index = 0;
+            let currentGroup = {};
+
+            document.querySelectorAll('#hiddenItemsContainer input[name^="Items"]').forEach(input => {
+                input.name = input.name.replace(/Items\[\d+\]/, `Items[${index}]`);
+
+                // tăng index khi gặp Quantity (1 món = 1 group)
+                if (input.name.endsWith('.Quantity')) {
+                    index++;
+                }
+            });
+        }
+
+          
     </script>
 }
