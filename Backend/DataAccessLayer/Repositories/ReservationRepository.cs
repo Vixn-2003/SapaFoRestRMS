@@ -84,6 +84,7 @@ namespace DataAccessLayer.Repositories
     var data = await query
         .OrderByDescending(r => r.ReservationDate)
         .ThenBy(r => r.ReservationTime)
+        .ThenByDescending(r => r.Customer.IsVip)
         .ThenByDescending(r => r.Customer.LoyaltyPoints ?? 0)
         .Skip((page - 1) * pageSize)
         .Take(pageSize)

@@ -1,5 +1,6 @@
 ﻿using BusinessAccessLayer.DTOs;
 using BusinessAccessLayer.DTOs.Inventory;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Text;
@@ -8,6 +9,7 @@ using WebSapaForestForStaff.Models;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class ManagerMenuController : Controller
     {
         private readonly HttpClient _httpClient;
