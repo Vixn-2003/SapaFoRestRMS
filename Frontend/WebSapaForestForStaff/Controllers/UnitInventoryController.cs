@@ -141,7 +141,7 @@ namespace WebSapaForestForStaff.Controllers
                     return Json(new
                     {
                         success = false,
-                        message = $"Lỗi từ API: {content}"
+                        message = $"{content}"
                     });
                 }
             }
@@ -340,7 +340,7 @@ namespace WebSapaForestForStaff.Controllers
                     return Json(new
                     {
                         success = false,
-                        message = $"Lỗi từ API: {content}"
+                        message = $"{content}"
                     });
                 }
             }
