@@ -44,7 +44,10 @@ namespace DataAccessLayer.Repositories
                         .ThenInclude(od => od.MenuItem)
                 .Include(c => c.Orders.Where(o => o.Status == "Completed" || o.Status == "Paid"))
                     .ThenInclude(o => o.Payments)
+                .Include(c => c.Orders.Where(o => o.Status == "Completed" || o.Status == "Paid"))
+                    .ThenInclude(o => o.Transactions)
                 .Include(c => c.Reservations)
+                    .ThenInclude(r => r.ReservationDeposits)
                 .FirstOrDefaultAsync(c => c.CustomerId == customerId && 
                                         (c.User == null || c.User.IsDeleted != true), ct);
         }
@@ -67,6 +70,10 @@ namespace DataAccessLayer.Repositories
                 .Include(c => c.User)
                 .Include(c => c.Orders.Where(o => o.Status == "Completed" || o.Status == "Paid"))
                     .ThenInclude(o => o.Payments)
+                .Include(c => c.Orders.Where(o => o.Status == "Completed" || o.Status == "Paid"))
+                    .ThenInclude(o => o.Transactions)
+                .Include(c => c.Reservations)
+                    .ThenInclude(r => r.ReservationDeposits)
                 .Where(c => c.User != null && c.User.IsDeleted != true)
                 .AsQueryable();
 
