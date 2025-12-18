@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using BusinessAccessLayer.DTOs.Waiter;
 using BusinessAccessLayer.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using SapaFoRestRMSAPI.Hubs;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
@@ -9,10 +11,11 @@ namespace SapaFoRestRMSAPI.Controllers
     public class WaiterOrderTrackingController : ControllerBase
     {
         private readonly IWaiterOrderTrackingService _service;
-
-        public WaiterOrderTrackingController(IWaiterOrderTrackingService service)
+        private readonly IHubContext<TableHub> _tableHubContext; // Inject Hub Khách
+        public WaiterOrderTrackingController(IWaiterOrderTrackingService service, IHubContext<TableHub> hubContext)
         {
             _service = service;
+            _tableHubContext = hubContext;
         }
 
         /// <summary>
@@ -100,6 +103,15 @@ namespace SapaFoRestRMSAPI.Controllers
                 if (result.Success)
                 {
                     return Ok(result);
+                    int tableId = result.TableId; // Lấy từ kết quả xử lý
+
+                    if (tableId > 0)
+                    {
+                        // Gửi tín hiệu cho khách: Món này đã lên bàn
+                        await _tableHubContext.Clients.Group($"Table_{tableId}")
+                            .SendAsync("ReceiveOrderStatusUpdate", request.OrderDetailId, "Served");
+                        // Hoặc status là "Đã phục vụ" tùy enum của bạn
+                    }
                 }
                 return BadRequest(result);
             }

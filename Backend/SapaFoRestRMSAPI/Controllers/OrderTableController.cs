@@ -207,7 +207,7 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        //Hủy món ăn nhưng chỉ dc trong 2 phút sau khi đặt
+        //Hủy món ăn
         [HttpPost("CancelItem/{orderDetailId}")]
         public async Task<IActionResult> CancelOrderItem(int orderDetailId)
         {

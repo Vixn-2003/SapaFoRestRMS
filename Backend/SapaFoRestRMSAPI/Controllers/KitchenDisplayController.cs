@@ -14,13 +14,15 @@ namespace SapaFoRestRMSAPI.Controllers
     {
         private readonly IKitchenDisplayService _kitchenService;
         private readonly IHubContext<KitchenHub> _hubContext;
-
+        private readonly IHubContext<TableHub> _tableHubContext;     
         public KitchenDisplayController(
             IKitchenDisplayService kitchenService,
-            IHubContext<KitchenHub> hubContext)
+            IHubContext<KitchenHub> hubContext,
+            IHubContext<TableHub> tableHubContext)
         {
             _kitchenService = kitchenService;
             _hubContext = hubContext;
+            _tableHubContext = tableHubContext;
         }
 
         /// <summary>
@@ -91,6 +93,11 @@ namespace SapaFoRestRMSAPI.Controllers
                     ChangedBy = $"User {request.UserId}"
                 });
 
+                if (response.TableId > 0)
+                {
+                    await _tableHubContext.Clients.Group($"Table_{response.TableId}")
+                        .SendAsync("ReceiveOrderStatusUpdate", request.OrderDetailId, request.NewStatus);
+                }
                 return Ok(response);
             }
             catch (Exception ex)

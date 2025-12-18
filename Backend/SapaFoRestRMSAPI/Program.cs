@@ -490,7 +490,7 @@ app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<KitchenHub>("/kitchenHub");
-
+app.MapHub<TableHub>("/tableHub");
 
 app.MapHub<ReservationHub>("/reservationHub");
 app.MapHub<RestaurantHub>("/restaurantHub");
