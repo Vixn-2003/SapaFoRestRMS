@@ -10,7 +10,7 @@ using WebSapaForestForStaff.DTOs.Payment;
 
 namespace WebSapaForestForStaff.Controllers
 {
-    [Authorize(Policy = "Position:Waiter")]
+    [Authorize(Policy = "Position:WaiterOrCashier")]
     public class DashboardTableController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;

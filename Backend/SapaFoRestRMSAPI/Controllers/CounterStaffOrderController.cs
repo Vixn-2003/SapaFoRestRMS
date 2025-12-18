@@ -14,7 +14,7 @@ namespace SapaFoRestRMSAPI.Controllers
     /// </summary>
     [ApiController]
     [Route("api/counter/orders")]
-    [Authorize(Roles = "Owner,Manager,Staff")]
+
     public class CounterStaffOrderController : ControllerBase
     {
         private readonly ICounterStaffOrderService _orderService;

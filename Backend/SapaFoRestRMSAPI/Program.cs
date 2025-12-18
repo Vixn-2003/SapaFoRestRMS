@@ -504,7 +504,7 @@ using (var scope = app.Services.CreateScope())
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
-    await DataSeeder.SeedPositionsAsync(ctx);
+    //await DataSeeder.SeedPositionsAsync(ctx);
     //await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
     //await DataSeeder.SeedTestCustomerAsync(ctx);
     //await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
