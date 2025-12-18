@@ -590,10 +590,17 @@
         function openSplitBillModal() {
             // Use SplitBill module (wwwroot/js/split-bill.js)
             if (window.SplitBill && typeof window.SplitBill.openSplitBill === 'function') {
+                // ✅ FIX: Truyền đầy đủ thông tin để tính Total nếu cần
                 window.SplitBill.openSplitBill(window.PaymentCore.orderContext.OrderId, {
                     orderCode: window.PaymentCore.orderContext.OrderCode,
                     tableNumber: window.PaymentCore.orderContext.Tables,
-                    total: window.PaymentCore.orderContext.Total
+                    total: window.PaymentCore.orderContext.Total || 0,
+                    subtotal: window.PaymentCore.orderContext.Subtotal || 0,
+                    vat: window.PaymentCore.orderContext.Vat || 0,
+                    serviceFee: window.PaymentCore.orderContext.ServiceFee || 0,
+                    discount: window.PaymentCore.orderContext.Discount || 0,
+                    depositAmount: window.PaymentCore.orderContext.DepositAmount || 0,
+                    depositPaid: window.PaymentCore.orderContext.DepositPaid || false
                 });
             } else {
                 if (window.PaymentCore) {
