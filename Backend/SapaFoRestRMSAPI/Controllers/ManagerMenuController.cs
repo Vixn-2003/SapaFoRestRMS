@@ -179,8 +179,8 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error creating menu: {ex.Message}");
-                Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+                Console.WriteLine($" Error creating menu: {ex.Message}");
+                Console.WriteLine($" Stack trace: {ex.StackTrace}");
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }

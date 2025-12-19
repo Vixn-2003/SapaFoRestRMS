@@ -33,7 +33,7 @@ namespace WebSapaForestForStaff.Controllers
                 {
                     var jsonMenu = await responseMenu.Content.ReadAsStringAsync();
 
-                    // ✅ Debug: In ra JSON để kiểm tra
+
                     System.Diagnostics.Debug.WriteLine("JSON Response: " + jsonMenu);
 
                     var settings = new JsonSerializerSettings
@@ -42,13 +42,10 @@ namespace WebSapaForestForStaff.Controllers
                         NullValueHandling = NullValueHandling.Ignore
                     };
 
-                    // ✅ ĐÚNG: Deserialize vào ApiResponse wrapper
                     var apiResponse = JsonConvert.DeserializeObject<ApiResponse<List<MenuItemDTO>>>(jsonMenu, settings);
 
-                    // ✅ Lấy data từ wrapper
                     var productsMenu = apiResponse?.Data ?? new List<MenuItemDTO>();
 
-                    // ✅ Debug: Kiểm tra số lượng items
                     System.Diagnostics.Debug.WriteLine($"Total items loaded: {productsMenu.Count}");
 
                     return View("~/Views/Menu/ManagerMenu.cshtml", productsMenu);
@@ -68,7 +65,7 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
-        [HttpGet] // ✅ THÊM DÒNG NÀY
+        [HttpGet]
         public async Task<ActionResult> ManagerEditMenu(int id)
         {
             var response = await _httpClient.GetAsync($"/api/ManagerMenu/{id}");
@@ -127,9 +124,9 @@ namespace WebSapaForestForStaff.Controllers
                 {
                     ProductsMenu = new ManagerMenuDTO
                     {
-                        IsAvailable = true, // ✅ Mặc định "Đang phục vụ"
-                        BillingType = (ItemBillingType)2,    // ✅ Mặc định "Cần chế biến"
-                        IsAds = false       // ✅ Mặc định không hiển thị trang chính
+                        IsAvailable = true, 
+                        BillingType = (ItemBillingType)2,   
+                        IsAds = false    
                     },
                     ProductsCategory = category ?? new(),
                     Ingredient = ingredient ?? new(),
@@ -179,7 +176,7 @@ namespace WebSapaForestForStaff.Controllers
                 }
 
                 var billingType = Convert.ToInt32(Request.Form["ProductsMenu.BillingType"]);
-                var isAds = Convert.ToBoolean(Request.Form["ProductsMenu.IsAds"]); // ✅ ĐỔI THÀNH ToBoolean
+                var isAds = Convert.ToBoolean(Request.Form["ProductsMenu.IsAds"]); 
 
                 // ✅ Validate
                 if (string.IsNullOrEmpty(name))
