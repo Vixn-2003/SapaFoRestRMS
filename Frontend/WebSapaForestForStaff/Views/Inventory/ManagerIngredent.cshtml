@@ -4394,14 +4394,31 @@ function closeAlert() {
     let currentAuditBatch = null;
 
     // Mock user data - TODO: thay bằng session data thật
+    // ✅ Lấy thông tin user từ Claims (xử lý tiếng Việt)
     const currentUserData = {
-        userId: '@userId',
-        name: '@userName',
-        email: '@userEmail',
-        role: '@userRole',
-        position: '@userPosition',
-        phone: '@userPhone'
+        userId: '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value',
+        name: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? ""))'),
+        email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value',
+        role: '@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value',
+        position: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst("Positions")?.Value ?? "Nhân viên kho"))'),
+        phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value'
     };
+
+    // ✅ Xử lý position nếu là JSON array
+    (function () {
+        try {
+            const positions = JSON.parse(currentUserData.position);
+            if (Array.isArray(positions) && positions.length > 0) {
+                currentUserData.position = positions[0]; // Lấy position đầu tiên
+            }
+        } catch (e) {
+            // Nếu không phải JSON, giữ nguyên string
+            console.log('Position is a simple string:', currentUserData.position);
+        }
+    })();
+
+    // ✅ Log để kiểm tra
+    console.log('✅ Current User Data:', currentUserData);
 
     function toggleAuditButtons() {
         showAuditColumnFlag = !showAuditColumnFlag;
@@ -4729,13 +4746,26 @@ function closeAlert() {
         const placeholder = document.getElementById('confirmerPlaceholder');
 
         if (checked) {
-            // ✅ LẤY THÔNG TIN TỪ currentUserData (đã có từ Claims)
-            document.getElementById('confirmerName').value = currentUserData.name;
-            document.getElementById('confirmerPosition').value = currentUserData.position;
+            // ✅ Kiểm tra xem có dữ liệu user không
+            if (!currentUserData || !currentUserData.userId) {
+                showToast('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại!', 'error');
+                document.getElementById('useMyInfo').checked = false;
+                return;
+            }
+
+            // ✅ Điền thông tin từ currentUserData
+            document.getElementById('confirmerName').value = currentUserData.name || '';
+            document.getElementById('confirmerPosition').value = currentUserData.position || '';
             document.getElementById('confirmerPhone').value = currentUserData.phone || '';
 
             form.style.display = 'block';
             placeholder.style.display = 'none';
+
+            console.log(' Filled confirmer info:', {
+                name: currentUserData.name,
+                position: currentUserData.position,
+                phone: currentUserData.phone
+            });
         } else {
             document.getElementById('confirmerName').value = '';
             document.getElementById('confirmerPosition').value = '';
