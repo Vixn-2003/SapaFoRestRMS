@@ -1055,7 +1055,7 @@ $(document).ready(function () {
 
             // 3. Gửi AJAX (Giữ nguyên code của bạn)
             $.ajax({
-                url: apiBaseUrl + '/api/OrderTable/SubmitOrder',
+                url: apiBaseUrl + '/OrderTable/SubmitOrder',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(orderData),
@@ -1202,7 +1202,7 @@ $(document).ready(function () {
 
             // Gọi API hủy món
             $.ajax({
-                url: apiBaseUrl + '/api/OrderTable/CancelItem/' + orderDetailId,
+                url: apiBaseUrl + '/OrderTable/CancelItem/' + orderDetailId,
                 type: 'POST',
                 success: function (response) {
                     showMobileToast('Đã hủy món thành công!', 'success');
