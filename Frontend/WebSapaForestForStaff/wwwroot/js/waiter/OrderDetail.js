@@ -37,6 +37,9 @@ try {
 // ================================
 // Render Cart
 // ================================
+// ================================
+// Render Cart (ĐÃ SỬA LỖI)
+// ================================
 function renderCart() {
     var $container = $('#cartContainer');
     $container.empty();
@@ -52,48 +55,50 @@ function renderCart() {
         visibleItems.forEach(function (item) {
             var realIndex = cartItems.indexOf(item);
 
-            // Trạng thái
-            var isCancelled = item.status === "Cancelled" || item.status === "Đã hủy";
-            var isProcessing = item.status === "Cooking" || item.status === "Đang chế biến" || item.status === "Ready";
-            var isFinished = item.status === "Done" || item.status === "Served" || item.status === "Đã xong";
-            var isPending = item.status === "Pending" || item.status === "Đã gửi";
+            // --- 1. CHUẨN HÓA STATUS ---
+            var s = (item.status || "").toString().trim().toLowerCase();
+            var isCancelled = (s === "cancelled" || s === "cancel" || s === "đã hủy");
 
+            // --- SỬA LẠI KHÚC NÀY: BỎ 'PENDING' RA KHỎI DANH SÁCH KHÓA ---
+            // Chỉ khóa khi Bếp đang làm (Cooking) hoặc Đã xong (Done)
+            // Pending (Đã gửi) vẫn được coi là "Mở" để sửa
+            var lockedList = ["cooking", "done", "served", "ready", "processing", "đang chế biến", "đã xong"];
+
+            // Biến kiểm tra khóa
+            var isLocked = lockedList.includes(s) || isCancelled;
+
+            // --- 2. TÍNH TIỀN ---
             var lineTotal = item.price * item.quantity;
             if (!isCancelled) {
                 grandTotal += lineTotal;
                 totalQty += item.quantity;
             }
 
-            // Status badge
+            // --- 3. HIỂN THỊ BADGE (GIỮ NGUYÊN) ---
             var statusHtml = '';
             var itemClass = '';
 
-            if (item.isNew)
-                statusHtml = '<span class="badge bg-success" style="font-size:10px;">Mới</span>';
-            else if (item.isDirty)
-                statusHtml = '<span class="badge bg-warning text-dark" style="font-size:10px;">Chưa lưu</span>';
+            if (s === "pending" || s === "đã gửi")
+                statusHtml = '<span class="badge bg-primary" style="font-size:10px;">ĐÃ GỬI</span>';
+            else if (['cooking', 'processing', 'ready', 'đang chế biến'].includes(s))
+                statusHtml = '<span class="badge-processing">CHẾ BIẾN</span>';
+            else if (['done', 'served', 'đã xong'].includes(s))
+                statusHtml = '<span class="badge-finished">ĐÃ XONG</span>';
             else if (isCancelled) {
                 statusHtml = '<span class="badge-cancelled">ĐÃ HỦY</span>';
                 itemClass = 'item-cancelled';
             }
-            else if (isPending)
-                statusHtml = '<span class="badge bg-primary" style="font-size:10px;">ĐÃ GỬI</span>';
-            else if (isProcessing)
-                statusHtml = '<span class="badge-processing">CHẾ BIẾN</span>';
-            else if (isFinished)
-                statusHtml = '<span class="badge-finished">ĐÃ XONG</span>';
-            else
-                statusHtml = '<span class="text-muted bg-light border px-2 rounded" style="font-size:10px;">' + item.status + '</span>';
+            else {
+                statusHtml = '<span class="badge bg-success" style="font-size:10px;">Mới</span>';
+            }
 
             var priceStr = lineTotal.toLocaleString('vi-VN');
             var unitPriceStr = item.price.toLocaleString('vi-VN');
 
-            // ================================
-            // Buttons — Hiển thị khi chưa Cancelled và chưa Finished
-            // ================================
+            // --- 4. ACTION BUTTONS ---
+            // Pending vẫn hiện nút xóa/note vì !isLocked = true
             var actionBtns = '';
-
-            if (!isCancelled && !isFinished) {
+            if (!isLocked) {
                 var hasNote = item.note && item.note.trim().length > 0;
                 var iconNoteClass = hasNote ? "text-warning" : "text-secondary";
 
@@ -101,107 +106,81 @@ function renderCart() {
                     <button class="btn-note btn btn-link ${iconNoteClass} p-0 me-3" title="Ghi chú">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                `;
-
-                actionBtns += `
                     <button class="btn-delete btn btn-link text-danger p-0" title="Xóa">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 `;
             }
 
-            // ================================
-            // Note — Finished chỉ đọc, còn lại có thể chỉnh
-            // ================================
+            // --- 5. NOTE AREA ---
             var noteHtml = '';
             if (!isCancelled) {
                 var noteContent = item.note || '';
-
-                // Nếu đã Finished → chỉ hiển thị readonly
-                if (isFinished) {
+                if (isLocked) {
                     if (noteContent.trim() !== '') {
-                        noteHtml = `
-                            <div class="text-muted fst-italic small mt-1" style="font-size:11px;">
-                                <i class="fa-solid fa-note-sticky me-1"></i>${noteContent}
-                            </div>`;
+                        noteHtml = `<div class="text-muted fst-italic small mt-1" style="font-size:11px;"><i class="fa-solid fa-note-sticky me-1"></i>${noteContent}</div>`;
                     }
-                }
-                else {
-                    // Chưa Finished → cho phép chỉnh sửa
+                } else {
                     var noteDisplay = noteContent.trim().length > 0 ? 'block' : 'none';
                     noteHtml = `
                         <div class="note-box" data-index="${realIndex}" style="display:${noteDisplay}; margin-top:5px;">
-                            <textarea class="note-input form-control" rows="1" placeholder="Ghi chú cho bếp...">${noteContent}</textarea>
+                            <textarea class="note-input form-control" rows="1" placeholder="Ghi chú...">${noteContent}</textarea>
                         </div>`;
                 }
             }
 
-            // ================================
-            // Controls (Qty)
-            // ================================
+            // --- 6. CONTROLS HTML (Nút cộng trừ) ---
             var controlsHtml = '';
 
-            if (!isCancelled) {
-                if (isFinished) {
-                    // Đã xong → Chỉ hiển thị số lượng
-                    controlsHtml = `
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <div class="fw-bold text-success" style="font-size:13px;">SL: ${item.quantity}</div>
-                            <div class="text-muted small" style="font-size:10px;">
-                                ${unitPriceStr} x ${item.quantity} = <strong>${priceStr}</strong>
-                            </div>
-                        </div>`;
-                }
-                else {
-                    // Chưa Finished → Cho phép chỉnh số lượng
-                    controlsHtml = `
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <div class="qty-control" data-index="${realIndex}">
-                                <button class="btn-minus btn btn-sm btn-outline-secondary">
-                                    <i class="fa-solid fa-minus"></i>
-                                </button>
-                                <span class="qty-val">${item.quantity}</span>
-                                <button class="btn-plus btn btn-sm btn-outline-secondary">
-                                    <i class="fa-solid fa-plus"></i>
-                                </button>
-                            </div>
-                            <div class="text-muted small" style="font-size:10px;">
-                                ${unitPriceStr} x ${item.quantity} = <strong>${priceStr}</strong>
-                            </div>
-                        </div>`;
-                }
+            // NẾU KHÔNG KHÓA (Tức là Mới hoặc Pending) -> HIỆN NÚT
+            if (!isLocked) {
+                controlsHtml = `
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="qty-control" data-index="${realIndex}">
+                            <button class="btn-minus btn btn-sm btn-outline-secondary"><i class="fa-solid fa-minus"></i></button>
+                            <span class="qty-val fw-bold mx-2">${item.quantity}</span>
+                            <button class="btn-plus btn btn-sm btn-outline-secondary"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="text-muted small" style="font-size:10px;">
+                            ${unitPriceStr} x ${item.quantity} = <strong>${priceStr}</strong>
+                        </div>
+                    </div>`;
+            } else {
+                // ĐÃ KHÓA (Cooking/Done) -> CHỈ HIỆN TEXT
+                controlsHtml = `
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <div class="fw-bold text-success" style="font-size:13px;">SL: ${item.quantity}</div>
+                        <div class="text-muted small" style="font-size:10px;">
+                            ${unitPriceStr} x ${item.quantity} = <strong>${priceStr}</strong>
+                        </div>
+                    </div>`;
             }
 
-            // ================================
-            // Compose HTML
-            // ================================
+            // --- 7. RENDER ---
             var html = `
-                <div class="cart-item ${itemClass}" data-index="${realIndex}">
+                <div class="cart-item ${itemClass} border-bottom pb-2 mb-2" data-index="${realIndex}">
                     <div class="d-flex justify-content-between align-items-start">
-                        <div class="item-name" style="flex:1">${item.name}</div>
+                        <div class="item-name fw-bold" style="flex:1; font-size:14px;">${item.name}</div>
                         <div>${statusHtml}</div>
                     </div>
-
                     <div class="d-flex justify-content-end mt-1 mb-1">${actionBtns}</div>
-
                     ${noteHtml}
                     ${controlsHtml}
                 </div>
             `;
-
             $container.append(html);
         });
     }
 
-    // Footer update
+    // Update Footer
     $('#lblTotalQty').text(totalQty);
     $('#lblSubTotal').text(grandTotal.toLocaleString('vi-VN') + ' đ');
     $('#lblGrandTotal').text(grandTotal.toLocaleString('vi-VN') + ' đ');
 
-    // Hiển thị nút "Lưu Order" chỉ khi có thay đổi VÀ order chưa Confirmed
+    // Button Save
     var hasChanges = cartItems.some(x => x.isNew || x.isDirty || x.isDeleted);
-    var isOrderConfirmed = orderStatus && orderStatus.toLowerCase() === 'confirmed';
-    
+    var isOrderConfirmed = (typeof orderStatus !== 'undefined' && orderStatus) ? orderStatus.toLowerCase() === 'confirmed' : false;
+
     if (hasChanges && !isOrderConfirmed) $('.btn-save-order').show();
     else $('.btn-save-order').hide();
 }

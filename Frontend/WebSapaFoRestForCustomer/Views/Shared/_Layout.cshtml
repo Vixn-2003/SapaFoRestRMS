@@ -124,6 +124,94 @@
                     color: #FFD54F;
                 }
 
+        /* User dropdown và login button styling */
+        .navbar-custom .user-dropdown-toggle {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            color: #FAF3E0 !important;
+            border: 2px solid #FAF3E0;
+            border-radius: 25px;
+            background-color: transparent;
+            transition: all 0.3s;
+            padding: 0.375rem 0.75rem;
+        }
+
+            .navbar-custom .user-dropdown-toggle:hover {
+                background-color: #FFD54F;
+                border-color: #FFD54F;
+                color: #2E7D32 !important;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+            .navbar-custom .user-dropdown-toggle:focus {
+                box-shadow: 0 0 0 0.2rem rgba(255, 213, 79, 0.25);
+            }
+
+        .navbar-custom .login-btn-custom {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            color: #FAF3E0 !important;
+            border: 2px solid #FAF3E0;
+            border-radius: 25px;
+            background-color: transparent;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+
+            .navbar-custom .login-btn-custom:hover {
+                background-color: #FFD54F;
+                border-color: #FFD54F;
+                color: #2E7D32 !important;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
+
+            .navbar-custom .login-btn-custom:focus {
+                box-shadow: 0 0 0 0.2rem rgba(255, 213, 79, 0.25);
+            }
+
+        /* Avatar styling trong dropdown */
+        .navbar-custom .user-avatar {
+            width: 32px;
+            height: 32px;
+            object-fit: cover;
+            border: 2px solid #FFD54F;
+            transition: all 0.3s;
+        }
+
+        .navbar-custom .user-dropdown-toggle:hover .user-avatar {
+            border-color: #2E7D32;
+            transform: scale(1.05);
+        }
+
+        /* Dropdown menu styling */
+        .navbar-custom .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            margin-top: 0.5rem;
+        }
+
+            .navbar-custom .dropdown-menu .dropdown-item {
+                font-family: 'Playfair Display', serif;
+                font-weight: 500;
+                color: #2E7D32;
+                padding: 0.75rem 1rem;
+                transition: all 0.3s;
+            }
+
+                .navbar-custom .dropdown-menu .dropdown-item:hover {
+                    background-color: #FFD54F;
+                    color: #2E7D32;
+                    transform: translateX(5px);
+                }
+
+                .navbar-custom .dropdown-menu .dropdown-item i {
+                    margin-right: 0.5rem;
+                    width: 16px;
+                }
+
         /* BỎ HOÀN TOÀN BACKGROUND XANH LÁ CÂY CỦA MODAL */
         #reservationModal .modal-content {
             background: transparent !important;
@@ -157,9 +245,7 @@
                 <div class="collapse navbar-collapse" id="mainNavbar">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">Trang Chủ</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Menu" asp-action="Index">Thực Đơn</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="About" asp-action="Index">Giới thiệu</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Contact" asp-action="Index">Ưu Đãi</a></li>
+                       
                         <li class="nav-item">
                             @if (User.Identity?.IsAuthenticated == true)
                             {
@@ -178,7 +264,7 @@
                     </ul>
                     <div class="d-flex align-items-center">
                         <div class="me-3 hotline">
-                            📞 <a href="tel:0123456789" class="text-decoration-none hotline">Hotline: 0123 456 789</a>
+                            📞 <a href="tel:0123456789" class="text-decoration-none hotline">Hotline: 0397604824</a>
                         </div>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
@@ -186,11 +272,10 @@
                                 ?? Context.Session.GetString("AvatarUrl")
                                 ?? Url.Content("~/images/default-avatar.png");
                             <div class="dropdown me-2">
-                                <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                                <button class="btn user-dropdown-toggle dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
                                     <img src="@avatarUrl"
                                          alt="Avatar"
-                                         class="rounded-circle"
-                                         style="width:28px;height:28px;object-fit:cover;border:2px solid rgba(255,255,255,0.7);" />
+                                         class="rounded-circle user-avatar" />
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><hr class="dropdown-divider"></li>
@@ -200,10 +285,11 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
-                                            <button type="submit" class="btn btn-link dropdown-item p-0 m-0">
-                                                <i class="bi bi-person-lines-fill"></i> Đăng xuất
-                                            </button>
+                                        <button type="button" class="dropdown-item w-100 text-start border-0 bg-transparent" onclick="document.getElementById('logoutForm').submit();">
+                                            <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                        </button>
+                                        <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" class="d-none">
+                                            @Html.AntiForgeryToken()
                                         </form>
                                     </li>
                                 </ul>
@@ -211,7 +297,7 @@
                         }
                         else
                         {
-                            <button type="button" class="btn btn-outline-light me-2" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <button type="button" class="btn login-btn-custom me-2" data-bs-toggle="modal" data-bs-target="#loginModal">
                                 <i class="bi bi-box-arrow-in-right"></i> Đăng nhập
                             </button>
                         }
@@ -233,7 +319,7 @@
 
                 <div class="modal-body">
 
-                    <!-- Thông báo -->
+                    <!--     báo -->
                     <div class="alert alert-info d-flex align-items-center login-alert" role="alert">
                         <i class="bi bi-info-circle me-2"></i>
                         <span>Đăng nhập để xem lịch sử đặt bàn.</span>
@@ -309,18 +395,18 @@
                         <img id="footerLogo" src="~/images/logo.png" alt="Rừng Xanh Sapa" style="height:80px;" class="me-2" />
                         <span class="fw-bold">Rừng Xanh Sapa</span>
                     </a>
-                    <a class="btn btn-outline-warning rounded-pill px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#reservationModal">Đặt bàn</a>
+                    <a b-gtnwbi0re1="" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#reservationModal" style="
+    font-family: 'Playfair Display', serif;
+">Đặt bàn</a>
                 </div>
                 <div class="col-md-3 mb-4 mb-md-0">
                     <ul class="list-unstyled text-white">
                         <li><a class="text-decoration-none text-white-50" asp-controller="Menu" asp-action="Index">Trang Chủ</a></li>
-                        <li><a class="text-decoration-none text-white-50" asp-controller="Branch" asp-action="Index">Thực Đơn</a></li>
-                        <li><a class="text-decoration-none text-white-50" asp-controller="Promotion" asp-action="Index">Giới Thiệu </a></li>
-                        <li><a class="text-decoration-none text-white-50" asp-controller="Contact" asp-action="Index">Ưu Đãi </a></li>
+                     
                     </ul>
                 </div>
                 <div class="col-md-3 mb-4 mb-md-0 text-white">
-                    <p class="mb-1">Hotline: <span class="text-warning fw-bold">0123 456 789</span></p>
+                    <p class="mb-1">Hotline: <span class="text-warning fw-bold"></span></p>
                     <p class="mb-0">
                         Email: <a href="mailto:rungxanhsapa@gmail.com" class="text-warning text-decoration-none">rungxanhsapa@gmail.com</a>
                     </p>
