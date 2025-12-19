@@ -457,7 +457,8 @@ builder.Services.AddCors(options =>
     {
         // Đọc từ appsettings.json hoặc appsettings.Development.json
         var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>() 
-            ?? new[] { "http://localhost:5123" }; // Fallback mặc định nếu không có config
+            ?? new[] { "http://localhost:5123"
+           }; // Fallback mặc định nếu không có config
 
         // Log để dễ debug
         Console.WriteLine("🔒 CORS Allowed Origins:");

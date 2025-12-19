@@ -454,8 +454,13 @@ namespace BusinessAccessLayer.Services
                             Message = $"Không thể chuyển từ trạng thái '{currentStatus}' sang '{newStatus}'. Chỉ có thể chuyển sang 'Sẵn sàng' hoặc 'Hoàn thành'."
                         };
                     }
-                    // Khi rời Cooking/Late sang Ready/Done → consume nguyên liệu thật
-                    if (orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
+                    
+                    // ✅ KIỂM TRA: Nếu ReadyAt đã có giá trị → món đã từng Ready/Done (đã consume inventory)
+                    // → Không consume lại để tránh trừ nguyên liệu 2 lần khi recall
+                    var hasBeenConsumed = orderDetail.ReadyAt.HasValue;
+                    
+                    // Khi rời Cooking/Late sang Ready/Done → consume nguyên liệu thật (chỉ nếu chưa consume)
+                    if (!hasBeenConsumed && orderDetail.MenuItem?.BillingType != ItemBillingType.ConsumptionBased)
                     {
                         var consumeResult = await _inventoryService.ConsumeReservedBatchesForOrderDetailAsync(request.OrderDetailId);
                         if (!consumeResult.success)
@@ -468,8 +473,8 @@ namespace BusinessAccessLayer.Services
                         }
                     }
 
-                    // Nếu chuyển sang Ready, lưu thời gian
-                    if (normalizedNewStatus == "Ready")
+                    // Nếu chuyển sang Ready, lưu thời gian (hoặc giữ nguyên nếu đã có)
+                    if (normalizedNewStatus == "Ready" && !orderDetail.ReadyAt.HasValue)
                     {
                         orderDetail.ReadyAt = DateTime.Now;
                     }
@@ -504,6 +509,8 @@ namespace BusinessAccessLayer.Services
                         };
                     }
                     // Reset StartedAt khi quay lại Cooking
+                    // ✅ Reset ReadyAt = null để đánh dấu cần consume lại inventory khi chuyển sang Ready
+                    // (Khác với Recall: Recall giữ nguyên ReadyAt để không consume lại)
                     orderDetail.StartedAt = DateTime.Now;
                     orderDetail.ReadyAt = null;
                 }
@@ -1559,6 +1566,10 @@ namespace BusinessAccessLayer.Services
 
                 // Khôi phục về trạng thái "Pending"
                 orderDetail.Status = "Pending";
+                
+                // ✅ QUAN TRỌNG: Giữ nguyên ReadyAt để đánh dấu đã consume inventory
+                // Khi chuyển lại từ Cooking → Ready, sẽ check ReadyAt.HasValue để không consume lại
+                // (Không reset ReadyAt = null như khi Done → Cooking)
 
                 // Đảm bảo Order quay lại trạng thái có thể quản lý
                 if (orderDetail.OrderId != null)
