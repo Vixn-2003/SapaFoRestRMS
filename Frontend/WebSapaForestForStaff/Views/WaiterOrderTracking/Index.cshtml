@@ -747,11 +747,31 @@
                                         var isCooking = itemStatusLower.Contains("cooking") || itemStatusLower.Contains("chế biến") || itemStatusLower.Contains("đang nấu");
                                         var isReadyStatus = itemStatusLower.Contains("ready") || itemStatusLower.Contains("sẵn sàng");
                                         var isConsumptionBased = item.BillingType.HasValue && item.BillingType.Value == 1;
-                                        var canConfirmQuantity = item.CanConfirmQuantity || (isConsumptionBased && !isDone);
+                                        // Chỉ hiển thị button xác nhận số lượng cho món ConsumptionBased (BillingType = 1) và chưa Done
+                                        // Đảm bảo cả CanConfirmQuantity từ backend và isConsumptionBased đều phải true
+                                        var canConfirmQuantity = isConsumptionBased && !isDone && item.CanConfirmQuantity;
+                                        
+                                        // Debug: Log để kiểm tra giá trị BillingType
+                                        @* @if (item.MenuItemName.Contains("Rượu táo mèo"))
+                                        {
+                                            <script>
+                                                console.log('Item: @item.MenuItemName', {
+                                                    OrderDetailId: @item.OrderDetailId,
+                                                    BillingType: @(item.BillingType.HasValue ? item.BillingType.Value.ToString() : "null"),
+                                                    CanConfirmQuantity: @item.CanConfirmQuantity.ToString().ToLower(),
+                                                    isConsumptionBased: @isConsumptionBased.ToString().ToLower(),
+                                                    isDone: @isDone.ToString().ToLower(),
+                                                    canConfirmQuantity: @canConfirmQuantity.ToString().ToLower()
+                                                });
+                                            </script>
+                                        } *@
                                     }
                                     <div class="item-row @(isReady ? "ready" : "") @(item.IsUrgent ? "urgent" : "")"
                                          data-item-id="@item.OrderDetailId"
-                                         data-combo-item-id="@(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0)">
+                                         data-combo-item-id="@(item.OrderComboItemId.HasValue ? item.OrderComboItemId.Value : 0)"
+                                         data-billing-type="@(item.BillingType.HasValue ? item.BillingType.Value.ToString() : "")"
+                                         data-quantity="@item.Quantity"
+                                         data-quantity-used="@(item.QuantityUsed ?? item.Quantity)">
                                         <div class="item-info">
                                             <div class="item-name">
                                                 <span class="item-quantity">x@(item.Quantity)</span>
@@ -826,19 +846,38 @@
                                                 var quantityInputId = $"quantity_{item.OrderDetailId}_{(item.OrderComboItemId ?? 0)}";
                                                 var comboItemId = item.OrderComboItemId ?? 0;
                                                 var menuItemNameEscaped = item.MenuItemName.Replace("'", "\\'");
+                                                var currentQuantity = item.QuantityUsed ?? item.Quantity;
+                                                var isInCombo = item.OrderComboItemId.HasValue && item.OrderComboItemId.Value > 0;
+                                                
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <input type="number" 
-                                                           id="@quantityInputId" 
-                                                           class="form-control" 
-                                                           style="width: 80px; text-align: center;" 
-                                                           value="@(item.QuantityUsed ?? item.Quantity)" 
-                                                           min="1" 
-                                                           onchange="updateConsumptionQuantity(@item.OrderDetailId, @comboItemId, this.value)" />
-                                                    <button class="btn-pickup" style="background: #10b981; border-color: #10b981; flex: 1;" 
-                                                            onclick="event.stopPropagation(); confirmConsumptionQuantity(@item.OrderDetailId, @comboItemId, '@menuItemNameEscaped')">
-                                                        <i class="fas fa-check-circle"></i>
-                                                        XÁC NHẬN
-                                                    </button>
+                                                    @if (isInCombo)
+                                                    {
+                                                        <!-- Món trong combo: CHỈ hiển thị số lượng, KHÔNG cho phép chỉnh sửa -->
+                                                        <span class="form-control" style="width: 80px; text-align: center; background-color: #f3f4f6; border-color: #d1d5db; color: #6b7280;">
+                                                            @currentQuantity
+                                                        </span>
+                                                        <button class="btn-pickup" style="background: #10b981; border-color: #10b981; flex: 1;" 
+                                                                onclick="event.stopPropagation(); openConfirmConsumptionQuantityModal(@item.OrderDetailId, @comboItemId, '@menuItemNameEscaped', @currentQuantity, @item.Quantity, @(item.QuantityUsed ?? 0))">
+                                                            <i class="fas fa-check-circle"></i>
+                                                            XÁC NHẬN
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <!-- Món lẻ: Cho phép tăng/giảm số lượng -->
+                                                        <input type="number" 
+                                                               id="@quantityInputId" 
+                                                               class="form-control" 
+                                                               style="width: 80px; text-align: center;" 
+                                                               value="@currentQuantity" 
+                                                               min="1" 
+                                                               onchange="updateConsumptionQuantity(@item.OrderDetailId, @comboItemId, this.value)" />
+                                                        <button class="btn-pickup" style="background: #10b981; border-color: #10b981; flex: 1;" 
+                                                                onclick="event.stopPropagation(); openConfirmConsumptionQuantityModal(@item.OrderDetailId, @comboItemId, '@menuItemNameEscaped', @currentQuantity, @item.Quantity, @(item.QuantityUsed ?? 0))">
+                                                            <i class="fas fa-check-circle"></i>
+                                                            XÁC NHẬN
+                                                        </button>
+                                                    }
                                                 </div>
                                             }
                                             
@@ -1241,9 +1280,19 @@
                 // Re-render orders
                 renderOrders(result.data.orderGroups || []);
                 
-                // Apply status filter if active
-                const activeFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'all';
-                filterOrders(activeFilter);
+                // Re-initialize Bootstrap tooltips và các event handlers sau khi render lại
+                // Đảm bảo CSS được áp dụng đúng
+                requestAnimationFrame(() => {
+                    // Apply status filter if active
+                    const activeFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'all';
+                    filterOrders(activeFilter);
+                    
+                    // Force reflow để đảm bảo CSS được áp dụng
+                    const grid = document.getElementById('ordersGrid');
+                    if (grid) {
+                        grid.offsetHeight; // Trigger reflow
+                    }
+                });
             }
         } catch (error) {
             console.error('Error reloading orders:', error);
@@ -1316,11 +1365,17 @@
                     const statusText = getStatusTextFromJS(item.status);
                     const isWaitingLong = (item.waitingMinutes || 0) > 60;
                     const isConsumptionBased = item.billingType === 1 || item.billingType === "1";
-                    const canConfirmQuantity = item.canConfirmQuantity || (isConsumptionBased && !isDone);
+                    // Chỉ hiển thị button xác nhận số lượng cho món ConsumptionBased (BillingType = 1)
+                    const canConfirmQuantity = item.canConfirmQuantity && isConsumptionBased && !isDone;
                     
                     html += `
                         <div class="item-row-wrapper" data-item-status="${item.status || ''}" data-is-done="${isDone ? "true" : "false"}">
-                            <div class="item-row">
+                            <div class="item-row" 
+                                 data-item-id="${item.orderDetailId}"
+                                 data-combo-item-id="${item.orderComboItemId || 0}"
+                                 data-billing-type="${item.billingType || ''}"
+                                 data-quantity="${item.quantity || 1}"
+                                 data-quantity-used="${item.quantityUsed || item.quantity || 1}">
                                 <div class="item-info">
                                     <div class="item-name">${escapeHtml(item.menuItemName || 'N/A')} x${item.quantity || 1}</div>
                                     ${item.notes ? `<div class="item-notes"><strong>Ghi chú:</strong> ${escapeHtml(item.notes)}</div>` : ''}
@@ -1338,17 +1393,25 @@
                                     <div class="action-buttons-row">
                                         ${item.canCancel ? `<button class="btn-action-item btn-cancel" onclick="cancelItem(${item.orderDetailId}, ${item.orderComboItemId || 0})">Hủy</button>` : ''}
                                         ${item.canRequestUrgent ? `<button class="btn-action-item btn-urgent" onclick="requestUrgent(${item.orderDetailId}, ${item.orderComboItemId || 0}, ${item.isUrgent ? 'true' : 'false'})">${item.isUrgent ? 'Hủy gấp' : 'Làm gấp'}</button>` : ''}
-                                        ${(item.canConfirmQuantity || (item.billingType === 1 && !isDone)) ? `
+                                        ${(item.canConfirmQuantity && isConsumptionBased && !isDone) ? `
                                             <div style="display: flex; align-items: center; gap: 8px;">
-                                                <input type="number" 
-                                                       id="quantity_${item.orderDetailId}_${item.orderComboItemId || 0}" 
-                                                       class="form-control" 
-                                                       style="width: 80px; text-align: center; padding: 4px 8px;" 
-                                                       value="${item.quantityUsed || item.quantity || 1}" 
-                                                       min="1" 
-                                                       onchange="updateConsumptionQuantity(${item.orderDetailId}, ${item.orderComboItemId || 0}, this.value)" />
+                                                ${(item.orderComboItemId && item.orderComboItemId > 0) ? `
+                                                    <!-- Món trong combo: CHỈ hiển thị số lượng, KHÔNG cho phép chỉnh sửa -->
+                                                    <span style="width: 80px; text-align: center; background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; padding: 6px 12px; color: #6b7280; font-weight: 500;">
+                                                        ${item.quantityUsed || item.quantity || 1}
+                                                    </span>
+                                                ` : `
+                                                    <!-- Món lẻ: Cho phép tăng/giảm số lượng -->
+                                                    <input type="number" 
+                                                           id="quantity_${item.orderDetailId}_${item.orderComboItemId || 0}" 
+                                                           class="form-control" 
+                                                           style="width: 80px; text-align: center; padding: 4px 8px;" 
+                                                           value="${item.quantityUsed || item.quantity || 1}" 
+                                                           min="1" 
+                                                           onchange="updateConsumptionQuantity(${item.orderDetailId}, ${item.orderComboItemId || 0}, this.value)" />
+                                                `}
                                                 <button class="btn-action-item btn-pickup" style="background: #10b981; border-color: #10b981; flex: 1;" 
-                                                        onclick="confirmConsumptionQuantity(${item.orderDetailId}, ${item.orderComboItemId || 0}, '${(item.menuItemName || '').replace(/'/g, "\\'")}')">
+                                                        onclick="openConfirmConsumptionQuantityModal(${item.orderDetailId}, ${item.orderComboItemId || 0}, '${(item.menuItemName || '').replace(/'/g, "\\'")}', ${item.quantityUsed || item.quantity || 1}, ${item.quantity || 1}, ${item.quantityUsed || 0})">
                                                     Xác nhận
                                                 </button>
                                             </div>
@@ -1369,7 +1432,14 @@
             `;
         });
         
-        grid.innerHTML = html;
+        // Sử dụng requestAnimationFrame để đảm bảo CSS được áp dụng đúng sau khi render
+        requestAnimationFrame(() => {
+            grid.innerHTML = html;
+            
+            // Force reflow sau khi set innerHTML để đảm bảo CSS được áp dụng
+            // Điều này giúp trình duyệt tính toán lại layout và áp dụng CSS
+            void grid.offsetHeight;
+        });
     }
 
     function getStatusClassFromJS(status) {

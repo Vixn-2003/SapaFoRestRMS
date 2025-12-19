@@ -1,6 +1,114 @@
-@SapaFoRestRMSAPI_HostAddress = http://localhost:5180
+@SapaFoRestRMSAPI_HostAddress = https://localhost:7096
 
 GET {{SapaFoRestRMSAPI_HostAddress}}/weatherforecast/
 Accept: application/json
+
+###
+
+# ==================== AUTHENTICATION ====================
+
+### Owner Login
+POST {{SapaFoRestRMSAPI_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner@sapforest.com",
+  "password": "Owner123!"
+}
+
+###
+
+# ==================== REVENUE FILTER API ====================
+
+### Test Revenue Filter API (Owner Role Required)
+POST {{SapaFoRestRMSAPI_HostAddress}}/api/owner/revenue/filter
+Content-Type: application/json
+Authorization: Bearer {{owner_token}}
+
+{
+  "startDate": "2025-12-9T10:22:53.472Z",
+  "endDate": "2025-12-19T10:22:53.472Z",
+  "branchName": "string",
+  "paymentMethod": "string"
+}
+
+###
+
+### Test Revenue Filter with ALL filters
+POST {{SapaFoRestRMSAPI_HostAddress}}/api/owner/revenue/filter
+Content-Type: application/json
+Authorization: Bearer {{owner_token}}
+
+{
+  "startDate": "2025-12-01T00:00:00.000Z",
+  "endDate": "2025-12-31T23:59:59.999Z",
+  "branchName": "ALL",
+  "paymentMethod": "ALL"
+}
+
+###
+
+### Test Revenue Filter with Cash only
+POST {{SapaFoRestRMSAPI_HostAddress}}/api/owner/revenue/filter
+Content-Type: application/json
+Authorization: Bearer {{owner_token}}
+
+{
+  "startDate": "2025-12-01T00:00:00.000Z",
+  "endDate": "2025-12-31T23:59:59.999Z",
+  "branchName": "ALL",
+  "paymentMethod": "Cash"
+}
+
+###
+
+### Test Revenue Filter with QR only
+POST {{SapaFoRestRMSAPI_HostAddress}}/api/owner/revenue/filter
+Content-Type: application/json
+Authorization: Bearer {{owner_token}}
+
+{
+  "startDate": "2025-12-01T00:00:00.000Z",
+  "endDate": "2025-12-31T23:59:59.999Z",
+  "branchName": "ALL",
+  "paymentMethod": "QR"
+}
+
+###
+
+### Test Revenue Filter with Combined payment only (Optimized Database Filtering)
+POST {{SapaFoRestRMSAPI_HostAddress}}/api/owner/revenue/filter
+Content-Type: application/json
+Authorization: Bearer {{owner_token}}
+
+{
+  "startDate": "2025-12-01T00:00:00.000Z",
+  "endDate": "2025-12-31T23:59:59.999Z",
+  "branchName": "ALL",
+  "paymentMethod": "Combined"
+}
+
+###
+
+### Test Revenue Filter with specific date range (Database-level filtering)
+POST {{SapaFoRestRMSAPI_HostAddress}}/api/owner/revenue/filter
+Content-Type: application/json
+Authorization: Bearer {{owner_token}}
+
+{
+  "startDate": "2025-12-10T00:00:00.000Z",
+  "endDate": "2025-12-15T23:59:59.999Z",
+  "branchName": "ALL",
+  "paymentMethod": "ALL"
+}
+
+###
+
+# ==================== REVENUE SUMMARY API ====================
+
+### Test Revenue Summary API (30 days)
+GET {{SapaFoRestRMSAPI_HostAddress}}/api/owner/revenue/summary
+Content-Type: application/json
+Authorization: Bearer {{owner_token}}
 
 ###

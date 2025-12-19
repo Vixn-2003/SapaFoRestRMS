@@ -198,6 +198,14 @@ namespace WebSapaForestForStaff.Controllers
 
                 System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Order found: {request.OrderId}, TotalAmount: {order.TotalAmount}, Status: {order.Status}");
 
+                // ✅ FIX: Validate TotalAmount trước khi xác nhận
+                if (order.TotalAmount <= 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ConfirmQrPayment] Invalid TotalAmount: {order.TotalAmount}");
+                    TempData["ErrorMessage"] = "Tổng tiền đơn hàng không hợp lệ. Vui lòng kiểm tra lại đơn hàng.";
+                    return RedirectToAction(nameof(Payment), new { id = request.OrderId });
+                }
+
                 var confirmRequest = new PaymentConfirmRequest
                 {
                     OrderId = request.OrderId,

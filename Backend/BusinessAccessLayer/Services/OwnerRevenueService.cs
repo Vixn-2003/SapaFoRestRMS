@@ -27,46 +27,26 @@ namespace BusinessAccessLayer.Services
             var endDate = request.EndDate ?? DateTime.Today;
             var startDate = request.StartDate ?? endDate.AddDays(-30);
 
-            var transactions = await _unitOfWork.Payments.GetAllTransactionsAsync();
+            // Get filtered transactions directly from database (optimized)
+            var filteredTransactions = await _unitOfWork.Payments.GetFilteredTransactionsAsync(
+                startDate, endDate, request.PaymentMethod, request.BranchName);
+
+            // Convert to list for processing
+            var transactionsList = filteredTransactions.ToList();
+
+            // Get orders only for the filtered transactions to build details
+            var orderIds = transactionsList.Select(t => t.OrderId).Distinct().ToList();
             var orders = await _unitOfWork.Orders.GetAllAsync();
+            var relevantOrders = orders.Where(o => orderIds.Contains(o.OrderId)).ToList();
 
-            // Filter transactions
-            var filteredTransactions = transactions
-                .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
-                .Where(t => t.CompletedAt.Value.Date >= startDate.Date && t.CompletedAt.Value.Date <= endDate.Date)
-                .ToList();
-
-            // Filter by payment method if specified
-            if (!string.IsNullOrEmpty(request.PaymentMethod) && request.PaymentMethod != "ALL")
-            {
-                if (request.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase))
-                {
-                    // QR in system is stored as "QRBankTransfer"
-                    filteredTransactions = filteredTransactions
-                        .Where(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
-                                   t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
-                                   t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                }
-                else
-                {
-                    filteredTransactions = filteredTransactions
-                        .Where(t => t.PaymentMethod.Equals(request.PaymentMethod, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                }
-            }
-
-            // TODO: Filter by branch when multi-branch is implemented
-            // For now, ignore branch filter
-
-            // Build response
+            // Build response using optimized filtered data
             var response = new RevenueResponseDto
             {
-                Summary = BuildSummary(filteredTransactions),
-                Details = BuildDetails(filteredTransactions, orders),
-                TrendData = BuildTrendData(filteredTransactions),
-                PaymentBreakdown = BuildPaymentBreakdown(filteredTransactions),
-                BranchComparison = await BuildBranchComparisonAsync(filteredTransactions)
+                Summary = BuildSummary(transactionsList),
+                Details = BuildDetails(transactionsList, relevantOrders),
+                TrendData = BuildTrendData(transactionsList),
+                PaymentBreakdown = BuildPaymentBreakdown(transactionsList),
+                BranchComparison = await BuildBranchComparisonAsync(transactionsList)
             };
 
             return response;
