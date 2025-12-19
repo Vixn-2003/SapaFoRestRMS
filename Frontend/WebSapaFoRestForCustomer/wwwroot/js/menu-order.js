@@ -434,9 +434,118 @@ $(document).ready(function () {
     // === 5. LOGIC LỌC/SEARCH AJAX ===
 
     // === THAY THẾ TOÀN BỘ HÀM NÀY ===
+//    function renderMenu(menuItems) {
+
+
+//        const categories = {};
+//        menuItems.forEach(item => {
+//            if (!item || typeof item.menuItemId === 'undefined') return;
+//            const categoryName = item.categoryName || "Khác";
+//            if (!categories[categoryName]) { categories[categoryName] = []; }
+//            categories[categoryName].push(item);
+//        });
+
+//        const sortedCategoryNames = Object.keys(categories).sort();
+
+//        // (MỚI) Đặt giới hạn hiển thị ra 5 món
+//        const initialShowCount = 5;
+
+//        sortedCategoryNames.forEach(categoryName => {
+//            let categoryTitleHtml = `<h3 class="category-title">${categoryName}</h3>`;
+//            // (MỚI) Thêm data-show-count
+//            let categoryListHtml = `<div class="menu-item-list mt-3" data-show-count="${initialShowCount}">`;
+
+//            const itemsInCategory = categories[categoryName];
+
+//            itemsInCategory.forEach((item, index) => { // (MỚI) Lấy index
+//                const menuItemId = item.menuItemId;
+//                const itemName = item.name || 'Chưa có tên';
+//                const itemPrice = typeof item.price === 'number' ? item.price : 0;
+//                const imageUrl = item.imageUrl || 'https://via.placeholder.com/100';
+
+//                // Lấy lại thông tin "Đã gọi" (như cũ)
+//                let orderedQty = 0, processingQty = 0;
+//                if (Array.isArray(initialOrderedItems)) {
+//                    initialOrderedItems.forEach(orderedItem => {
+//                        if (orderedItem && orderedItem.menuItemId === menuItemId) {
+//                            const qty = typeof orderedItem.quantity === 'number' ? orderedItem.quantity : (typeof orderedItem.Quantity === 'number' ? orderedItem.Quantity : 0);
+//                            orderedQty += qty;
+//                            if (orderedItem.status === "Đang chế biến") { processingQty += qty; }
+//                        }
+//                    });
+//                }
+//                let detailsHtml = '';
+//                if (orderedQty > 0) { detailsHtml += `<span class="item-ordered text-success">Đã gọi: ${orderedQty}</span>`; }
+//                //if (processingQty > 0) { detailsHtml += `<span class="status-processing-text">Đang chế biến: ${processingQty}</span>`; }
+
+//                // (MỚI) Thêm class và style nếu item vượt quá giới hạn
+//                const isHiddenClass = (index >= initialShowCount) ? "menu-item-hidden" : "";
+//                const style = (index >= initialShowCount) ? "display: none;" : "";
+//                // Nếu đã gọi >=1 → bôi viền xanh
+//                const borderStyle = (orderedQty > 0)
+//                    ? "border: 1px solid #28a745;"
+//                    : "border: 1px solid #e0e0e0;";
+
+//                // Dòng trạng thái "Đã gọi"
+//                const orderedLabel = (orderedQty > 0)
+//                    ? `<span class="badge text-white" style="background:#28a745; font-size:10px; margin-left:6px;">Đã gọi: ${orderedQty}</span>`
+//                    : "";
+
+//                categoryListHtml += `
+//<div class="menu-item-card ${isHiddenClass}" 
+//     style="${style} ${borderStyle}; border-radius:10px; padding:10px;">
+
+//    <!-- Ảnh click được -->
+//    <img src="${imageUrl}" class="btn-details" alt="${itemName}" 
+//         data-item-id="${menuItemId}" style="cursor:pointer;" />
+
+//    <div class="details">
+//        <!-- Tên món click được -->
+//        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+//            <h5 class="btn-details" style="margin:0; font-size:1rem;" 
+//                data-item-id="${menuItemId}">
+//                ${itemName}
+//            </h5>
+
+//            ${orderedQty > 0
+//                        ? `<span class="badge text-white" 
+//                     style="background:#28a745; font-size:11px; padding:4px 8px;font-weight:normal;">
+//                        Đã gọi: ${orderedQty}
+//                   </span>`
+//                        : ""
+//                    }
+//        </div>
+
+//        <p style="margin:4px 0;">${itemPrice.toLocaleString('vi-VN')} VNĐ</p>
+//    </div>
+
+//    <div class="actions">
+//        <button class="btn-order btn-add-to-cart "
+//                data-item-id="${menuItemId}"
+//                data-item-name="${itemName}"
+//                data-item-price="${itemPrice}"
+//                data-item-image="${imageUrl}">
+//        <i class="fas fa-shopping-cart" style="margin-right:5px;"></i> Gọi món
+//        </button>
+//    </div>
+//</div>`;
+//;
+
+
+//            });
+
+//            // (MỚI) Thêm nút "Hiển thị thêm" nếu cần
+//            if (itemsInCategory.length > initialShowCount) {
+//                categoryListHtml += '<a href="#" class="btn-show-more text-center d-block mt-2 text-decoration-none fw-bold" style="color: var(--brand-gold);">Hiển thị thêm...</a>';
+//            }
+
+//            categoryListHtml += '</div>'; // Đóng .menu-item-list
+
+//            // Thêm cả tiêu đề và danh sách vào container
+//            $menuListContainer.append(categoryTitleHtml + categoryListHtml);
+//        });
+//    }
     function renderMenu(menuItems) {
-
-
         const categories = {};
         menuItems.forEach(item => {
             if (!item || typeof item.menuItemId === 'undefined') return;
@@ -447,23 +556,34 @@ $(document).ready(function () {
 
         const sortedCategoryNames = Object.keys(categories).sort();
 
-        // (MỚI) Đặt giới hạn hiển thị ra 5 món
+        // Giới hạn hiển thị ban đầu
         const initialShowCount = 5;
 
         sortedCategoryNames.forEach(categoryName => {
             let categoryTitleHtml = `<h3 class="category-title">${categoryName}</h3>`;
-            // (MỚI) Thêm data-show-count
             let categoryListHtml = `<div class="menu-item-list mt-3" data-show-count="${initialShowCount}">`;
 
             const itemsInCategory = categories[categoryName];
 
-            itemsInCategory.forEach((item, index) => { // (MỚI) Lấy index
+            itemsInCategory.forEach((item, index) => {
                 const menuItemId = item.menuItemId;
                 const itemName = item.name || 'Chưa có tên';
                 const itemPrice = typeof item.price === 'number' ? item.price : 0;
                 const imageUrl = item.imageUrl || 'https://via.placeholder.com/100';
 
-                // Lấy lại thông tin "Đã gọi" (như cũ)
+                // === (MỚI) KIỂM TRA IS ADS ===
+                // Lưu ý: Kiểm tra cả viết hoa/thường tùy vào cách API trả về (thường là camelCase 'isAds')
+                const isAds = item.isAds === true || item.IsAds === true;
+
+                // === (MỚI) TẠO HTML CHO NHÃN BÁN CHẠY ===
+                const adsBadgeHtml = isAds
+                    ? `<div style="position: absolute; top: 0; left: 0; background: linear-gradient(90deg, #ff4b2b, #ff416c); color: white; padding: 2px 8px; font-size: 11px; font-weight: bold; border-top-left-radius: 10px; border-bottom-right-radius: 10px; z-index: 10; box-shadow: 2px 2px 5px rgba(0,0,0,0.2);">
+                    🔥 Món bán chạy
+                   </div>`
+                    : '';
+                // ===============================
+
+                // Xử lý số lượng đã gọi (Code cũ)
                 let orderedQty = 0, processingQty = 0;
                 if (Array.isArray(initialOrderedItems)) {
                     initialOrderedItems.forEach(orderedItem => {
@@ -474,78 +594,60 @@ $(document).ready(function () {
                         }
                     });
                 }
-                let detailsHtml = '';
-                if (orderedQty > 0) { detailsHtml += `<span class="item-ordered text-success">Đã gọi: ${orderedQty}</span>`; }
-                //if (processingQty > 0) { detailsHtml += `<span class="status-processing-text">Đang chế biến: ${processingQty}</span>`; }
 
-                // (MỚI) Thêm class và style nếu item vượt quá giới hạn
                 const isHiddenClass = (index >= initialShowCount) ? "menu-item-hidden" : "";
                 const style = (index >= initialShowCount) ? "display: none;" : "";
-                // Nếu đã gọi >=1 → bôi viền xanh
+
+                // Border style (Code cũ)
                 const borderStyle = (orderedQty > 0)
                     ? "border: 1px solid #28a745;"
                     : "border: 1px solid #e0e0e0;";
 
-                // Dòng trạng thái "Đã gọi"
-                const orderedLabel = (orderedQty > 0)
-                    ? `<span class="badge text-white" style="background:#28a745; font-size:10px; margin-left:6px;">Đã gọi: ${orderedQty}</span>`
-                    : "";
-
                 categoryListHtml += `
-<div class="menu-item-card ${isHiddenClass}" 
-     style="${style} ${borderStyle}; border-radius:10px; padding:10px;">
+            <div class="menu-item-card ${isHiddenClass}" 
+                 style="${style} ${borderStyle}; border-radius:10px; padding:10px; position: relative; overflow: hidden;"> 
+                 ${adsBadgeHtml} <img src="${imageUrl}" class="btn-details" alt="${itemName}" 
+                     data-item-id="${menuItemId}" style="cursor:pointer;" />
 
-    <!-- Ảnh click được -->
-    <img src="${imageUrl}" class="btn-details" alt="${itemName}" 
-         data-item-id="${menuItemId}" style="cursor:pointer;" />
+                <div class="details">
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                        <h5 class="btn-details" style="margin:0; font-size:1rem;" 
+                            data-item-id="${menuItemId}">
+                            ${itemName}
+                        </h5>
 
-    <div class="details">
-        <!-- Tên món click được -->
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-            <h5 class="btn-details" style="margin:0; font-size:1rem;" 
-                data-item-id="${menuItemId}">
-                ${itemName}
-            </h5>
-
-            ${orderedQty > 0
+                        ${orderedQty > 0
                         ? `<span class="badge text-white" 
-                     style="background:#28a745; font-size:11px; padding:4px 8px;font-weight:normal;">
-                        Đã gọi: ${orderedQty}
-                   </span>`
+                                 style="background:#28a745; font-size:11px; padding:4px 8px;font-weight:normal;">
+                                    Đã gọi: ${orderedQty}
+                               </span>`
                         : ""
                     }
-        </div>
+                    </div>
 
-        <p style="margin:4px 0;">${itemPrice.toLocaleString('vi-VN')} VNĐ</p>
-    </div>
+                    <p style="margin:4px 0;">${itemPrice.toLocaleString('vi-VN')} VNĐ</p>
+                </div>
 
-    <div class="actions">
-        <button class="btn-order btn-add-to-cart "
-                data-item-id="${menuItemId}"
-                data-item-name="${itemName}"
-                data-item-price="${itemPrice}"
-                data-item-image="${imageUrl}">
-        <i class="fas fa-shopping-cart" style="margin-right:5px;"></i> Gọi món
-        </button>
-    </div>
-</div>`;
-;
-
-
+                <div class="actions">
+                    <button class="btn-order btn-add-to-cart "
+                            data-item-id="${menuItemId}"
+                            data-item-name="${itemName}"
+                            data-item-price="${itemPrice}"
+                            data-item-image="${imageUrl}">
+                    <i class="fas fa-shopping-cart" style="margin-right:5px;"></i> Gọi món
+                    </button>
+                </div>
+            </div>`;
             });
 
-            // (MỚI) Thêm nút "Hiển thị thêm" nếu cần
             if (itemsInCategory.length > initialShowCount) {
                 categoryListHtml += '<a href="#" class="btn-show-more text-center d-block mt-2 text-decoration-none fw-bold" style="color: var(--brand-gold);">Hiển thị thêm...</a>';
             }
 
-            categoryListHtml += '</div>'; // Đóng .menu-item-list
-
-            // Thêm cả tiêu đề và danh sách vào container
+            categoryListHtml += '</div>';
             $menuListContainer.append(categoryTitleHtml + categoryListHtml);
         });
     }
-
 
     function renderCombos(combos) {
         let categoryTitleHtml = '<h3 class="category-title">Combos & Ưu Đãi</h3>';

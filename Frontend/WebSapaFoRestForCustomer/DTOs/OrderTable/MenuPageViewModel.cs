@@ -10,5 +10,7 @@ namespace WebSapaFoRestForCustomer.DTOs.OrderTable
         public string TableNumber { get; set; }
         public string AreaName { get; set; }
         public int? Floor { get; set; }
+        public bool? IsAds { get; set; }
+
     }
 }
