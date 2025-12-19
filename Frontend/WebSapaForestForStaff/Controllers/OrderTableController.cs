@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering; // <-- THÊM
 using System.Net; // <-- THÊM
 using System.Text; // <-- THÊM
@@ -9,6 +10,8 @@ using WebSapaFoRestForStaff.DTOs.OrderTable;
 
 namespace WebSapaFoRestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:WaiterOrCashier")]
+
     public class OrderTableController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
