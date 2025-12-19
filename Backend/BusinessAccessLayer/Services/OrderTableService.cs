@@ -354,26 +354,54 @@ namespace BusinessAccessLayer.Services
         }
 
         // === SỬA HÀM NÀY ===
+        //  private async Task<IEnumerable<MenuItemDto>> BuildMenuDtoForReservation(
+        //Reservation reservation,
+        //int? categoryId,
+        //string? searchString)
+        //  {
+        //      // 1. Gọi Repository đã được lọc
+        //      var menuItems = await _orderTableRepository.GetAvailableMenuWithCategoryAsync(categoryId, searchString);
+
+        //      // 2. Code cũ của bạn
+        //      var orderedItems = reservation.Orders
+        //       .SelectMany(o => o.OrderDetails)
+
+        //       // === THÊM DÒNG NÀY ĐỂ LỌC BỎ COMBO ===
+        //       .Where(od => od.MenuItemId.HasValue) // Chỉ lấy các chi tiết là MÓN ĂN
+        //                                            // ===================================
+
+        //       .GroupBy(od => od.MenuItemId.Value) // Giờ có thể dùng .Value an toàn
+        //       .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
+
+        //      // 3. Trả về DTO (Giữ nguyên)
+        //      return menuItems.Select(m => new MenuItemDto
+        //      {
+        //          MenuItemId = m.MenuItemId,
+        //          Name = m.Name,
+        //          CategoryName = m.Category?.CategoryName ?? "",
+        //          Price = m.Price,
+        //          ImageUrl = m.ImageUrl,
+        //          IsAvailable = m.IsAvailable,
+        //          Quantity = orderedItems.ContainsKey(m.MenuItemId) ? orderedItems[m.MenuItemId] : 0
+        //      }).ToList();
+        //  }
+
         private async Task<IEnumerable<MenuItemDto>> BuildMenuDtoForReservation(
-      Reservation reservation,
-      int? categoryId,
-      string? searchString)
+    Reservation reservation,
+    int? categoryId,
+    string? searchString)
         {
             // 1. Gọi Repository đã được lọc
             var menuItems = await _orderTableRepository.GetAvailableMenuWithCategoryAsync(categoryId, searchString);
 
-            // 2. Code cũ của bạn
+            // 2. Code cũ của bạn (Tính toán số lượng đã đặt)
             var orderedItems = reservation.Orders
-             .SelectMany(o => o.OrderDetails)
+               .SelectMany(o => o.OrderDetails)
+               .Where(od => od.MenuItemId.HasValue) // Lọc bỏ Combo
+               .GroupBy(od => od.MenuItemId.Value)
+               .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
 
-             // === THÊM DÒNG NÀY ĐỂ LỌC BỎ COMBO ===
-             .Where(od => od.MenuItemId.HasValue) // Chỉ lấy các chi tiết là MÓN ĂN
-                                                  // ===================================
-
-             .GroupBy(od => od.MenuItemId.Value) // Giờ có thể dùng .Value an toàn
-             .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
-
-            // 3. Trả về DTO (Giữ nguyên)
+            // 3. Trả về DTO và SẮP XẾP LẠI
             return menuItems.Select(m => new MenuItemDto
             {
                 MenuItemId = m.MenuItemId,
@@ -382,9 +410,18 @@ namespace BusinessAccessLayer.Services
                 Price = m.Price,
                 ImageUrl = m.ImageUrl,
                 IsAvailable = m.IsAvailable,
+                IsAds = m.IsAds,
                 Quantity = orderedItems.ContainsKey(m.MenuItemId) ? orderedItems[m.MenuItemId] : 0
-            }).ToList();
+            })
+      
+            .OrderByDescending(dto => dto.IsAds.GetValueOrDefault())
+            .ThenBy(dto => dto.Name)
+
+            .ToList();
         }
+
+
+
         public async Task<List<string>> GetAreaNamesAsync()
         {
             return await _orderTableRepository.GetDistinctAreaNamesAsync();
@@ -1030,6 +1067,8 @@ namespace BusinessAccessLayer.Services
 
             // Số lượng món đã gọi cho bàn này (0 nếu chưa gọi)
             public int Quantity { get; set; }
+
+            public bool? IsAds { get; set; }
 
             // Tổng tiền tạm tính cho món này (Price * Quantity)
             public decimal Total => Price * Quantity;
