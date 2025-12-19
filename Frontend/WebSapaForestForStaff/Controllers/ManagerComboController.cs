@@ -36,7 +36,7 @@ namespace WebSapaForestForStaff.Controllers
             try
             {
                 // A. Lấy tất cả menu (để hiện trong modal chọn món)
-                var allMenuResponse = await _httpClient.GetAsync("ManagerCombo/AllMenu?pageSize=100");
+                var allMenuResponse = await _httpClient.GetAsync("ManagerCombo/AllMenu");
                 if (allMenuResponse.IsSuccessStatusCode)
                 {
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -49,7 +49,7 @@ namespace WebSapaForestForStaff.Controllers
                 }
 
                 // B. Lấy Top món (Gợi ý)
-                var topResponse = await _httpClient.GetAsync("ManagerCombo/Top_Item_new");
+                var topResponse = await _httpClient.GetAsync("ManagerCombo/top5new");
                 if (topResponse.IsSuccessStatusCode)
                 {
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -209,7 +209,7 @@ namespace WebSapaForestForStaff.Controllers
 
                 var imageUrl = Request.Form["ImageUrl"].ToString();
 
-                // ✅ DEBUG
+                //  DEBUG
                 System.Diagnostics.Debug.WriteLine($"=== EDIT COMBO DEBUG ===");
                 System.Diagnostics.Debug.WriteLine($"ComboId: {comboId}");
                 System.Diagnostics.Debug.WriteLine($"Name: {name}");
@@ -217,14 +217,14 @@ namespace WebSapaForestForStaff.Controllers
                 System.Diagnostics.Debug.WriteLine($"IsAvailable raw: {Request.Form["IsAvailable"]}");
                 System.Diagnostics.Debug.WriteLine($"Files count: {Request.Form.Files.Count}");
 
-                // ✅ Thêm các field vào FormData
+                //  Thêm các field vào FormData
                 formData.Add(new StringContent(comboId.ToString()), "ComboId");
                 formData.Add(new StringContent(name ?? ""), "Name");
                 formData.Add(new StringContent(description ?? ""), "Description");
                 formData.Add(new StringContent(sellingPrice.ToString()), "SellingPrice");
                 formData.Add(new StringContent(isAvailable.ToString().ToLower()), "IsAvailable");
 
-                // ✅ Gửi ImageUrl nếu không có file mới
+                //  Gửi ImageUrl nếu không có file mới
                 if (Request.Form.Files.Count == 0 && !string.IsNullOrEmpty(imageUrl))
                 {
                     formData.Add(new StringContent(imageUrl), "ImageUrl");
@@ -259,12 +259,12 @@ namespace WebSapaForestForStaff.Controllers
 
                 if (response.IsSuccessStatusCode)
                 {
-                    TempData["Success"] = "✅ Cập nhật thành công!";
+                    TempData["Success"] = " Cập nhật thành công!";
                     return RedirectToAction("Index");
                 }
 
                 var errorContent = await response.Content.ReadAsStringAsync();
-                System.Diagnostics.Debug.WriteLine($"❌ API Error: {errorContent}");
+                System.Diagnostics.Debug.WriteLine($" API Error: {errorContent}");
 
                 try
                 {
@@ -278,8 +278,8 @@ namespace WebSapaForestForStaff.Controllers
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"❌ Exception: {ex.Message}");
-                ModelState.AddModelError("", $"❌ Lỗi: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($" Exception: {ex.Message}");
+                ModelState.AddModelError("", $" Lỗi: {ex.Message}");
             }
 
             // ✅ Load lại form khi lỗi

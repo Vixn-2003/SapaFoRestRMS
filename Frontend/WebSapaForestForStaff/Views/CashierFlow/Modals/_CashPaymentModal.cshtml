@@ -61,6 +61,18 @@
                     </div>
                 </div>
 
+                <div id="cashPaymentValidation" class="alert alert-warning d-none">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>
+                            <strong>⚠️ Số tiền chưa đủ!</strong>
+                            <p class="mb-0 mt-1">Tổng tiền: <span id="cashRequiredAmount">0 ₫</span>, Nhận được: <span id="cashReceivedAmount">0 ₫</span></p>
+                            <p class="mb-0">Còn thiếu: <span class="text-danger fw-bold" id="cashMissingAmount">0 ₫</span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Legacy support - keep for backward compatibility -->
                 <div id="underpaidWarning" class="alert alert-warning d-none">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>

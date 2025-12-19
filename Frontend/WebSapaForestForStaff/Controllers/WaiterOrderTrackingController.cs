@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using WebSapaForestForStaff.DTOs.Waiter;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Waiter")]
+
     public class WaiterOrderTrackingController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
