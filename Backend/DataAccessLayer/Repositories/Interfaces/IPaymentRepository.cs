@@ -76,5 +76,10 @@ public interface IPaymentRepository : IRepository<Order>
     /// Lấy tất cả transactions (cho Owner Revenue/Dashboard)
     /// </summary>
     Task<IEnumerable<Transaction>> GetAllTransactionsAsync();
+
+    /// <summary>
+    /// Lấy transactions đã lọc theo date range và payment method (cho Revenue filtering)
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetFilteredTransactionsAsync(DateTime startDate, DateTime endDate, string? paymentMethod = null, string? branchName = null);
 }
 

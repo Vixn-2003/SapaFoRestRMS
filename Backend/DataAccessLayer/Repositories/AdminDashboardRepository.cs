@@ -42,13 +42,25 @@ namespace DataAccessLayer.Repositories
 
         public async Task<Dictionary<string, int>> GetUsersByRoleAsync()
         {
-            var userRoles = await _context.Users
-                .Where(u => u.RoleId != null)
-                .GroupBy(u => u.Role.RoleName)
-                .Select(g => new { RoleName = g.Key, Count = g.Count() })
-                .ToListAsync();
+            try
+            {
+                var userRoles = await _context.Users
+                    .Where(u => u.RoleId != null)
+                    .GroupBy(u => u.Role != null ? u.Role.RoleName : "Unknown")
+                    .Select(g => new { RoleName = g.Key ?? "Unknown", Count = g.Count() })
+                    .ToListAsync();
 
-            return userRoles.ToDictionary(x => x.RoleName ?? "Unknown", x => x.Count);
+                // Handle potential duplicate keys by summing counts
+                return userRoles
+                    .GroupBy(x => x.RoleName)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
+            }
+            catch (Exception ex)
+            {
+                // Return empty dictionary as fallback
+                Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
+                return new Dictionary<string, int>();
+            }
         }
 
         // ========== SYSTEM ACTIVITY ==========
@@ -215,50 +227,74 @@ namespace DataAccessLayer.Repositories
         // ========== WAREHOUSE ALERTS ==========
         public async Task<int> GetLowStockCountAsync()
         {
-            // Lấy tất cả ingredients có ReorderLevel
-            var ingredients = await _context.Ingredients
-                .Include(i => i.InventoryBatches)
-                .Where(i => i.ReorderLevel.HasValue && i.ReorderLevel.Value > 0)
-                .ToListAsync();
-
-            // Đếm số ingredients có tổng available < ReorderLevel
-            int lowStockCount = 0;
-            foreach (var ingredient in ingredients)
+            try
             {
-                // Tính tổng available = tổng QuantityRemaining - tổng QuantityReserved
-                var totalAvailable = ingredient.InventoryBatches.Sum(b => b.QuantityRemaining - b.QuantityReserved);
-                
-                // Nếu available <= ReorderLevel thì coi là low stock
-                if (totalAvailable <= ingredient.ReorderLevel.Value)
-                {
-                    lowStockCount++;
-                }
-            }
+                // Lấy tất cả ingredients có ReorderLevel
+                var ingredients = await _context.Ingredients
+                    .Include(i => i.InventoryBatches)
+                    .Where(i => i.ReorderLevel.HasValue && i.ReorderLevel.Value > 0)
+                    .ToListAsync();
 
-            return lowStockCount;
+                // Đếm số ingredients có tổng available < ReorderLevel
+                int lowStockCount = 0;
+                foreach (var ingredient in ingredients)
+                {
+                    // Tính tổng available = tổng QuantityRemaining - tổng QuantityReserved
+                    var totalAvailable = ingredient.InventoryBatches?.Sum(b => b.QuantityRemaining - b.QuantityReserved) ?? 0;
+
+                    // Nếu available <= ReorderLevel thì coi là low stock
+                    if (totalAvailable <= ingredient.ReorderLevel.Value)
+                    {
+                        lowStockCount++;
+                    }
+                }
+
+                return lowStockCount;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetLowStockCountAsync: {ex.Message}");
+                return 0;
+            }
         }
 
         public async Task<int> GetExpiredIngredientsCountAsync()
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            try
+            {
+                var today = DateOnly.FromDateTime(DateTime.Today);
 
-            return await _context.InventoryBatches
-                .Where(b => b.ExpiryDate.HasValue && b.ExpiryDate.Value < today)
-                .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
-                .CountAsync();
+                return await _context.InventoryBatches
+                    .Where(b => b.ExpiryDate.HasValue && b.ExpiryDate.Value < today)
+                    .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
+                    .CountAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetExpiredIngredientsCountAsync: {ex.Message}");
+                return 0;
+            }
         }
 
         public async Task<int> GetNearExpiryIngredientsCountAsync()
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            var sevenDaysLater = today.AddDays(7);
+            try
+            {
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var sevenDaysLater = today.AddDays(7);
 
-            return await _context.InventoryBatches
-                .Where(b => b.ExpiryDate.HasValue &&
-                            b.ExpiryDate.Value >= today &&
-                            b.ExpiryDate.Value <= sevenDaysLater)
-                .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
-                .CountAsync();
+                return await _context.InventoryBatches
+                    .Where(b => b.ExpiryDate.HasValue &&
+                                b.ExpiryDate.Value >= today &&
+                                b.ExpiryDate.Value <= sevenDaysLater)
+                    .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
+                    .CountAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetNearExpiryIngredientsCountAsync: {ex.Message}");
+                return 0;
+            }
         }
 
         // ========== TOP ANALYTICS ==========
