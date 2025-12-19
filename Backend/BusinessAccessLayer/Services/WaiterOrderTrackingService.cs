@@ -97,7 +97,14 @@ namespace BusinessAccessLayer.Services
                     
                     //  Món ConsumptionBased có thể xác nhận số lượng ngay (không cần chờ Ready)
                     // Món KitchenPrepared chỉ có thể xác nhận khi đã Ready
+                    // Đảm bảo chỉ set true khi thực sự là ConsumptionBased
                     var canConfirmQuantity = isConsumptionBased && !isDone;
+                    
+                    // Debug logging
+                    if (orderDetail.MenuItem != null)
+                    {
+                        Console.WriteLine($"[WaiterOrderTracking] OrderDetailId: {orderDetail.OrderDetailId}, MenuItem: {orderDetail.MenuItem.Name}, BillingType: {orderDetail.MenuItem.BillingType}, isConsumptionBased: {isConsumptionBased}, canConfirmQuantity: {canConfirmQuantity}");
+                    }
                     
                     // Kiểm tra xem order detail này có phải đã được tách từ order detail gốc không
                     // Nếu có StartedAt và CreatedAt gần nhau (trong vòng 5 phút), có thể đã được tách
@@ -151,6 +158,12 @@ namespace BusinessAccessLayer.Services
                             //  Món ConsumptionBased có thể xác nhận số lượng ngay (không cần chờ Ready)
                             var isComboItemConsumptionBased = mi?.BillingType == DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased;
                             var canConfirmComboQuantity = isComboItemConsumptionBased && !comboIsDone;
+                            
+                            // Debug logging cho combo items
+                            if (mi != null)
+                            {
+                                Console.WriteLine($"[WaiterOrderTracking] ComboItem - OrderDetailId: {orderDetail.OrderDetailId}, OrderComboItemId: {orderComboItem.OrderComboItemId}, MenuItem: {mi.Name}, BillingType: {mi.BillingType}, isComboItemConsumptionBased: {isComboItemConsumptionBased}, canConfirmComboQuantity: {canConfirmComboQuantity}");
+                            }
 
                             var comboItem = new OrderTrackingItemDto
                             {
@@ -391,6 +404,87 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
+                // ✅ XỬ LÝ COMBO: Nếu có OrderComboItemId → đang hủy món lẻ trong combo
+                if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
+                {
+                    // Load tất cả OrderComboItems của combo này
+                    var allComboItems = await _unitOfWork.OrderComboItems.GetByOrderDetailIdAsync(request.OrderDetailId);
+                    
+                    if (allComboItems == null || !allComboItems.Any())
+                    {
+                        return new CancelOrderDetailResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy các món trong combo"
+                        };
+                    }
+
+                    // Kiểm tra xem có món nào trong combo đã nấu/sẵn sàng/hoàn thành không
+                    bool hasCookedItem = false;
+                    foreach (var comboItem in allComboItems)
+                    {
+                        var comboItemStatus = (comboItem.Status ?? "Pending").Trim();
+                        var normalizedComboStatus = NormalizeStatus(comboItemStatus);
+                        
+                        // Nếu có món đã Cooking, Ready, hoặc Done → không cho hủy
+                        if (normalizedComboStatus == "Cooking" || 
+                            normalizedComboStatus == "Ready" || 
+                            normalizedComboStatus == "Done")
+                        {
+                            hasCookedItem = true;
+                            break;
+                        }
+                    }
+
+                    if (hasCookedItem)
+                    {
+                        return new CancelOrderDetailResponse
+                        {
+                            Success = false,
+                            Message = "Đã có món trong combo được nấu/sẵn sàng/hoàn thành, không thể hủy. Vui lòng sử dụng chức năng 'Trả món'"
+                        };
+                    }
+
+                    // ✅ Nếu chưa có món nào nấu (tất cả đều Pending) → hủy cả combo
+                    // Giải phóng reserved quantity cho OrderDetail (combo cha)
+                    if (orderDetail.MenuItem != null)
+                    {
+                        var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(request.OrderDetailId);
+                        if (!releaseResult.success)
+                        {
+                            Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy combo {request.OrderDetailId}: {releaseResult.message}");
+                        }
+                    }
+
+                    // Hủy OrderDetail (combo cha)
+                    orderDetail.Status = "Cancelled";
+                    if (!string.IsNullOrEmpty(request.Reason))
+                    {
+                        var currentNotes = orderDetail.Notes ?? "";
+                        orderDetail.Notes = $"{currentNotes} [ĐÃ HỦY COMBO: {request.Reason}]".Trim();
+                    }
+
+                    // Hủy tất cả OrderComboItems (các món con)
+                    foreach (var comboItem in allComboItems)
+                    {
+                        comboItem.Status = "Cancelled";
+                        await _unitOfWork.OrderComboItems.UpdateAsync(comboItem);
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Tính số tiền hoàn lại
+                    var comboRefundAmount = orderDetail.Quantity * orderDetail.UnitPrice;
+
+                    return new CancelOrderDetailResponse
+                    {
+                        Success = true,
+                        Message = "Đã hủy combo thành công",
+                        RefundAmount = comboRefundAmount
+                    };
+                }
+
+                // ✅ XỬ LÝ MÓN LẺ: Không có OrderComboItemId → hủy món lẻ bình thường
                 // Kiểm tra status - cho phép hủy khi đang chờ hoặc đang nấu
                 var status = (orderDetail.Status ?? "Pending").Trim();
                 var normalizedStatus = NormalizeStatus(status);
@@ -601,27 +695,6 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
-                // Lấy order detail
-                var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
-                if (orderDetail == null)
-                {
-                    return new UpdateQuantityResponse
-                    {
-                        Success = false,
-                        Message = "Không tìm thấy món ăn"
-                    };
-                }
-
-                // Kiểm tra BillingType - chỉ cho phép update quantity cho món có BillingType = 1 (ConsumptionBased)
-                if (orderDetail.MenuItem == null || orderDetail.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
-                {
-                    return new UpdateQuantityResponse
-                    {
-                        Success = false,
-                        Message = "Chỉ có thể cập nhật số lượng cho món tiêu hao (nước, khăn ướt, v.v.)"
-                    };
-                }
-
                 // Validate quantity
                 if (request.Quantity <= 0)
                 {
@@ -632,12 +705,16 @@ namespace BusinessAccessLayer.Services
                     };
                 }
 
-                // Nếu có OrderComboItemId → cập nhật cho món trong combo
+                OrderDetail? orderDetail = null;
+
+                // Nếu có OrderComboItemId → KHÔNG cho phép cập nhật số lượng cho món trong combo
                 if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
                 {
-                    var orderComboItem = await _unitOfWork.OrderComboItems.GetByIdAsync(request.OrderComboItemId.Value);
+                    // Lấy order combo item với MenuItem để kiểm tra BillingType
+                    var orderComboItem = await _unitOfWork.OrderComboItems.GetByIdWithMenuItemAsync(request.OrderComboItemId.Value);
                     if (orderComboItem == null)
                     {
+                        Console.WriteLine($"[UpdateQuantity] OrderComboItemId: {request.OrderComboItemId.Value} không tìm thấy");
                         return new UpdateQuantityResponse
                         {
                             Success = false,
@@ -646,8 +723,65 @@ namespace BusinessAccessLayer.Services
                     }
 
                     // Kiểm tra BillingType của món trong combo
-                    if (orderComboItem.MenuItem == null || 
-                        orderComboItem.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
+                    if (orderComboItem.MenuItem == null)
+                    {
+                        Console.WriteLine($"[UpdateQuantity] OrderComboItemId: {request.OrderComboItemId.Value}, MenuItem is null");
+                        return new UpdateQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin món ăn trong combo"
+                        };
+                    }
+                    
+                    Console.WriteLine($"[UpdateQuantity] OrderComboItemId: {request.OrderComboItemId.Value}, MenuItem: {orderComboItem.MenuItem.Name}, BillingType: {orderComboItem.MenuItem.BillingType}");
+                    
+                    // ✅ QUAN TRỌNG: Món có BillingType = 1 trong combo KHÔNG được phép tăng/giảm số lượng
+                    // Chỉ được phép xác nhận với số lượng hiện tại
+                    if (orderComboItem.MenuItem.BillingType == DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
+                    {
+                        return new UpdateQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Món tiêu hao trong combo không được phép thay đổi số lượng. Chỉ được phép xác nhận với số lượng hiện tại."
+                        };
+                    }
+                    
+                    // Nếu không phải ConsumptionBased, vẫn không cho phép update (theo yêu cầu)
+                    return new UpdateQuantityResponse
+                    {
+                        Success = false,
+                        Message = "Không được phép cập nhật số lượng cho món trong combo"
+                    };
+                }
+                else
+                {
+                    // Món lẻ - cập nhật trực tiếp
+                    // Lấy order detail với MenuItem để kiểm tra BillingType
+                    orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
+                    if (orderDetail == null)
+                    {
+                        Console.WriteLine($"[UpdateQuantity] OrderDetailId: {request.OrderDetailId} không tìm thấy");
+                        return new UpdateQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy món ăn"
+                        };
+                    }
+
+                    // Kiểm tra BillingType - chỉ cho phép update quantity cho món có BillingType = 1 (ConsumptionBased)
+                    if (orderDetail.MenuItem == null)
+                    {
+                        Console.WriteLine($"[UpdateQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem is null");
+                        return new UpdateQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin món ăn"
+                        };
+                    }
+                    
+                    Console.WriteLine($"[UpdateQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem: {orderDetail.MenuItem.Name}, BillingType: {orderDetail.MenuItem.BillingType}, Expected: ConsumptionBased");
+                    
+                    if (orderDetail.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
                     {
                         return new UpdateQuantityResponse
                         {
@@ -656,35 +790,33 @@ namespace BusinessAccessLayer.Services
                         };
                     }
 
-                    // Cập nhật quantity cho order detail (tổng số lượng của combo)
-                    // Tính toán: nếu món trong combo có quantity = 2 và order detail quantity = 3
-                    // thì tổng số lượng món con = 2 * 3 = 6
-                    // Nếu muốn update thành 8, thì order detail quantity = 8 / 2 = 4
-                    var comboItemQuantity = orderComboItem.Quantity;
-                    if (comboItemQuantity <= 0)
-                    {
-                        return new UpdateQuantityResponse
-                        {
-                            Success = false,
-                            Message = "Số lượng món trong combo không hợp lệ"
-                        };
-                    }
-
-                    // Tính order detail quantity mới
-                    var newOrderDetailQuantity = (int)Math.Ceiling((decimal)request.Quantity / comboItemQuantity);
-                    orderDetail.Quantity = newOrderDetailQuantity;
-                    
-                    // Cập nhật QuantityUsed (số lượng thực tế đã sử dụng)
-                    orderDetail.QuantityUsed = request.Quantity;
-                }
-                else
-                {
-                    // Món lẻ - cập nhật trực tiếp
+                    // Cập nhật quantity cho món lẻ
                     orderDetail.Quantity = request.Quantity;
                     orderDetail.QuantityUsed = request.Quantity;
                 }
 
-                // Lưu thay đổi
+                // Lưu thay đổi (cho cả combo item và món lẻ)
+                if (orderDetail != null)
+                {
+                    await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return new UpdateQuantityResponse
+                    {
+                        Success = true,
+                        Message = "Đã cập nhật số lượng thành công"
+                    };
+                }
+                else
+                {
+                    return new UpdateQuantityResponse
+                    {
+                        Success = false,
+                        Message = "Không tìm thấy món ăn để cập nhật"
+                    };
+                }
+
+                // Lưu thay đổi cho combo item
                 await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -708,27 +840,6 @@ namespace BusinessAccessLayer.Services
         {
             try
             {
-                // Lấy order detail
-                var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
-                if (orderDetail == null)
-                {
-                    return new ConfirmConsumptionQuantityResponse
-                    {
-                        Success = false,
-                        Message = "Không tìm thấy món ăn"
-                    };
-                }
-
-                // Kiểm tra BillingType - chỉ cho phép xác nhận cho món có BillingType = 1 (ConsumptionBased)
-                if (orderDetail.MenuItem == null || orderDetail.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
-                {
-                    return new ConfirmConsumptionQuantityResponse
-                    {
-                        Success = false,
-                        Message = "Chỉ có thể xác nhận số lượng cho món tiêu hao (nước, khăn ướt, v.v.)"
-                    };
-                }
-
                 // Validate quantity
                 if (request.Quantity <= 0)
                 {
@@ -742,9 +853,11 @@ namespace BusinessAccessLayer.Services
                 // Nếu có OrderComboItemId → xác nhận cho món trong combo
                 if (request.OrderComboItemId.HasValue && request.OrderComboItemId.Value > 0)
                 {
+                    // Lấy order combo item với MenuItem để kiểm tra BillingType
                     var orderComboItem = await _unitOfWork.OrderComboItems.GetByIdWithMenuItemAsync(request.OrderComboItemId.Value);
                     if (orderComboItem == null)
                     {
+                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderComboItemId: {request.OrderComboItemId.Value} không tìm thấy");
                         return new ConfirmConsumptionQuantityResponse
                         {
                             Success = false,
@@ -753,8 +866,19 @@ namespace BusinessAccessLayer.Services
                     }
 
                     // Kiểm tra BillingType của món trong combo
-                    if (orderComboItem.MenuItem == null || 
-                        orderComboItem.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
+                    if (orderComboItem.MenuItem == null)
+                    {
+                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderComboItemId: {request.OrderComboItemId.Value}, MenuItem is null");
+                        return new ConfirmConsumptionQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin món ăn trong combo"
+                        };
+                    }
+                    
+                    Console.WriteLine($"[ConfirmConsumptionQuantity] OrderComboItemId: {request.OrderComboItemId.Value}, MenuItem: {orderComboItem.MenuItem.Name}, BillingType: {orderComboItem.MenuItem.BillingType}, Expected: ConsumptionBased");
+                    
+                    if (orderComboItem.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
                     {
                         return new ConfirmConsumptionQuantityResponse
                         {
@@ -763,10 +887,20 @@ namespace BusinessAccessLayer.Services
                         };
                     }
 
-                    // Cập nhật QuantityUsed (số lượng thực tế đã sử dụng)
-                    // Tính toán: nếu món trong combo có quantity = 2 và order detail quantity = 3
-                    // thì tổng số lượng món con = 2 * 3 = 6
-                    // Nếu xác nhận đã lấy 8, thì cần update order detail quantity = 8 / 2 = 4
+                    // Lấy order detail để kiểm tra số lượng hiện tại
+                    var orderDetail = await _unitOfWork.OrderDetails.GetByIdAsync(request.OrderDetailId);
+                    if (orderDetail == null)
+                    {
+                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId} không tìm thấy");
+                        return new ConfirmConsumptionQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy món ăn"
+                        };
+                    }
+
+                    // ✅ QUAN TRỌNG: Món trong combo chỉ được xác nhận với số lượng hiện tại, không được thay đổi
+                    // Tính số lượng hiện tại: comboItemQuantity * orderDetail.Quantity
                     var comboItemQuantity = orderComboItem.Quantity;
                     if (comboItemQuantity <= 0)
                     {
@@ -777,36 +911,95 @@ namespace BusinessAccessLayer.Services
                         };
                     }
 
-                    // Tính order detail quantity mới dựa trên số lượng đã xác nhận
-                    var newOrderDetailQuantity = (int)Math.Ceiling((decimal)request.Quantity / comboItemQuantity);
-                    orderDetail.Quantity = newOrderDetailQuantity;
+                    var currentTotalQuantity = comboItemQuantity * orderDetail.Quantity;
+                    
+                    // Validate: số lượng xác nhận phải bằng số lượng hiện tại
+                    if (request.Quantity != currentTotalQuantity)
+                    {
+                        return new ConfirmConsumptionQuantityResponse
+                        {
+                            Success = false,
+                            Message = $"Món trong combo chỉ được xác nhận với số lượng hiện tại ({currentTotalQuantity}). Không được phép thay đổi số lượng."
+                        };
+                    }
+
+                    // Xác nhận với số lượng hiện tại (không thay đổi orderDetail.Quantity)
                     orderDetail.QuantityUsed = request.Quantity;
 
                     // Đánh dấu món con trong combo là Done (đã xác nhận)
                     orderComboItem.Status = "Done";
                     orderComboItem.ReadyAt = DateTime.Now;
                     await _unitOfWork.OrderComboItems.UpdateAsync(orderComboItem);
+                    
+                    // Đánh dấu order detail là Done (đã xác nhận số lượng)
+                    orderDetail.Status = "Done";
+                    orderDetail.ReadyAt = DateTime.Now;
+                    
+                    // Lưu thay đổi
+                    await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return new ConfirmConsumptionQuantityResponse
+                    {
+                        Success = true,
+                        Message = "Đã xác nhận số lượng thành công"
+                    };
                 }
                 else
                 {
                     // Món lẻ - xác nhận trực tiếp
+                    // Lấy order detail với MenuItem để kiểm tra BillingType
+                    var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
+                    if (orderDetail == null)
+                    {
+                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId} không tìm thấy");
+                        return new ConfirmConsumptionQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy món ăn"
+                        };
+                    }
+
+                    // Kiểm tra BillingType - chỉ cho phép xác nhận cho món có BillingType = 1 (ConsumptionBased)
+                    if (orderDetail.MenuItem == null)
+                    {
+                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem is null");
+                        return new ConfirmConsumptionQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Không tìm thấy thông tin món ăn"
+                        };
+                    }
+                    
+                    Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem: {orderDetail.MenuItem.Name}, BillingType: {orderDetail.MenuItem.BillingType}, Expected: ConsumptionBased");
+                    
+                    if (orderDetail.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
+                    {
+                        return new ConfirmConsumptionQuantityResponse
+                        {
+                            Success = false,
+                            Message = "Chỉ có thể xác nhận số lượng cho món tiêu hao (nước, khăn ướt, v.v.)"
+                        };
+                    }
+
+                    // Cập nhật quantity cho món lẻ
                     orderDetail.Quantity = request.Quantity;
                     orderDetail.QuantityUsed = request.Quantity;
+                    
+                    // Đánh dấu order detail là Done (đã xác nhận số lượng)
+                    orderDetail.Status = "Done";
+                    orderDetail.ReadyAt = DateTime.Now;
+                    
+                    // Lưu thay đổi
+                    await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return new ConfirmConsumptionQuantityResponse
+                    {
+                        Success = true,
+                        Message = "Đã xác nhận số lượng thành công"
+                    };
                 }
-
-                // Đánh dấu order detail là Done (đã xác nhận số lượng)
-                orderDetail.Status = "Done";
-                orderDetail.ReadyAt = DateTime.Now;
-
-                // Lưu thay đổi
-                await _unitOfWork.OrderDetails.UpdateAsync(orderDetail);
-                await _unitOfWork.SaveChangesAsync();
-
-                return new ConfirmConsumptionQuantityResponse
-                {
-                    Success = true,
-                    Message = "Đã xác nhận số lượng thành công"
-                };
             }
             catch (Exception ex)
             {

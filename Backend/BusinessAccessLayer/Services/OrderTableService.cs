@@ -597,13 +597,25 @@ namespace BusinessAccessLayer.Services
 
             if (item.OrderComboItems != null && item.OrderComboItems.Any())
             {
-                // Kiểm tra xem có bất kỳ món con nào đã "Done" hay "Served" hay không
-                // Lưu ý: Hãy đảm bảo chữ "Done" khớp chính xác với DB của bạn (ví dụ: "Done", "Cooked", "Served")
-                bool hasCookedItem = item.OrderComboItems.Any(c => c.Status == "Done" || c.Status == "Served");
+                // ✅ FIX: Kiểm tra xem có món nào trong combo đã nấu/sẵn sàng/hoàn thành không
+                // Bao gồm: Cooking, Ready, Done, Served
+                bool hasCookedItem = item.OrderComboItems.Any(c => 
+                {
+                    var status = (c.Status ?? "Pending").Trim();
+                    var statusLower = status.ToLower();
+                    return statusLower.Contains("cooking") || 
+                           statusLower.Contains("đang nấu") ||
+                           statusLower.Contains("ready") || 
+                           statusLower.Contains("sẵn sàng") ||
+                           statusLower.Contains("done") || 
+                           statusLower.Contains("hoàn thành") ||
+                           statusLower.Contains("xong") ||
+                           statusLower.Contains("served");
+                });
 
                 if (hasCookedItem)
                 {
-                    throw new Exception("Đã có món trong combo được nấu xong nên sẽ không hủy được. Vui lòng chờ !");
+                    throw new Exception("Đã có món trong combo được nấu/sẵn sàng/hoàn thành nên sẽ không hủy được. Vui lòng chờ !");
                 }
             }
 
