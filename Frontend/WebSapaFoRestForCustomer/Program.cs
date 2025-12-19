@@ -15,26 +15,28 @@ namespace WebSapaFoRestForCustomer
             builder.Services.AddHttpClient(); // Dòng này đã có
             // Needed for ApiService to access HttpContext.User claims
             builder.Services.AddHttpContextAccessor();
+            builder.Services.AddHttpClient("API", client =>
+            {
+                client.BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"]);
+            });
 
             // === THÊM KHỐI NÀY VÀO (Lấy từ dự án cũ) ===
             // Cấu hình HttpClient tên "API"
-            builder.Services.AddHttpClient("API", client =>
-            {
-                // Lấy BaseUrl từ appsettings.json
-                // (ví dụ: "http://10.33.39.35:5180/api")
-                var baseUrl = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl");
-                var rootUrl = baseUrl.Replace("/api", "");
+            //builder.Services.AddHttpClient("API", client =>
+            //{
+            //    var baseUrl = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl");
+            //    var rootUrl = baseUrl.Replace("/api", "");
 
-                client.BaseAddress = new Uri(rootUrl);
-            })
-            .ConfigurePrimaryHttpMessageHandler(() =>
-            {
-                // Đây là phần QUAN TRỌNG: Bỏ qua lỗi chứng chỉ SSL
-                return new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-                };
-            });
+            //    client.BaseAddress = new Uri(rootUrl);
+            //})
+            //.ConfigurePrimaryHttpMessageHandler(() =>
+            //{
+            //    // Đây là phần QUAN TRỌNG: Bỏ qua lỗi chứng chỉ SSL
+            //    return new HttpClientHandler
+            //    {
+            //        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            //    };
+            //});
             // ===============================================
             // Register ApiService
             builder.Services.AddScoped<ApiService>();
