@@ -142,6 +142,7 @@ namespace DataAccessLayer.Repositories
                     (r.CustomerNameReservation != null && r.CustomerNameReservation.ToLower().Contains(searchTerm))
                 );
             }
+            query = query.Where(r => r.Status != "Cancelled");
 
             // 5. Sắp xếp
             var now = DateTime.Now.TimeOfDay;

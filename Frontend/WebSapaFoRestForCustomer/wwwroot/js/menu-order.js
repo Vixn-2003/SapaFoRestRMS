@@ -1435,7 +1435,7 @@ $(document).ready(function () {
             };
 
             $.ajax({
-                url: apiBaseUrl + '/api/OrderTable/RequestAssistance',
+                url: apiBaseUrl + '/OrderTable/RequestAssistance',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(requestData),
@@ -1482,7 +1482,7 @@ $(document).ready(function () {
 
         // 2️⃣ Gọi API
         $.ajax({
-            url: `${apiBaseUrl}/api/OrderTable/ComboDetails/${comboId}`,
+            url: `${apiBaseUrl}/OrderTable/ComboDetails/${comboId}`,
             type: 'GET',
             success: function (combo) {
                 // --- Tiêu đề ---
@@ -1603,7 +1603,7 @@ $(document).ready(function () {
 
         // 2. Gọi API mới
         $.ajax({
-            url: `${apiBaseUrl}/api/OrderTable/MenuItemDetails/${menuItemId}`,
+            url: `${apiBaseUrl}/OrderTable/MenuItemDetails/${menuItemId}`,
             type: 'GET',
             success: function (item) {
 
