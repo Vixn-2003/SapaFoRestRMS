@@ -11,6 +11,7 @@ namespace BusinessAccessLayer.DTOs.CounterStaff
         public int TransactionId { get; set; }
         public string TransactionCode { get; set; } = string.Empty;
         public int OrderId { get; set; }
+        public int? ReservationId { get; set; }
         public string OrderCode { get; set; } = string.Empty;
         public string TableNumber { get; set; } = string.Empty;
         public decimal Amount { get; set; }
@@ -40,6 +41,7 @@ namespace BusinessAccessLayer.DTOs.CounterStaff
     {
         public string TransactionCode { get; set; } = string.Empty;
         public string OrderCode { get; set; } = string.Empty;
+        public int? ReservationId { get; set; }
         public string TableNumber { get; set; } = string.Empty;
         public decimal Amount { get; set; }
         public string PaymentMethod { get; set; } = string.Empty;

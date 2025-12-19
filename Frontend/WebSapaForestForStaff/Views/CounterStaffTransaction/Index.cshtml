@@ -82,6 +82,7 @@
                             <tr>
                                 <th>Mã hóa đơn</th>
                                 <th>Mã đơn hàng</th>
+                                <th>Reservation ID</th>
                                 <th>Số tiền</th>
                                 <th>Phương thức thanh toán</th>
                                 <th>Thu ngân</th>
@@ -95,6 +96,16 @@
                                 <tr>
                                     <td><strong>@transaction.TransactionCode</strong></td>
                                     <td>@transaction.OrderCode</td>
+                                    <td>
+                                        @if (transaction.ReservationId.HasValue && transaction.ReservationId.Value > 0)
+                                        {
+                                            <span class="badge bg-primary">RES@(transaction.ReservationId.Value.ToString("D6"))</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
                                     <td><strong>@transaction.Amount.ToString("N0") ₫</strong></td>
                                     <td>
                                         @if (transaction.PaymentMethod == "Cash")

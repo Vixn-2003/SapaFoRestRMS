@@ -646,6 +646,13 @@ public partial class SapaFoRestRmsContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict) // Không cho phép xóa Order nếu có Transaction
                 .HasConstraintName("FK__Transacti__Order__Transaction_OrderId");
 
+            // Relationship: Transaction -> Reservation (Many-to-One, optional)
+            entity.HasOne(d => d.Reservation)
+                .WithMany() // Reservation không có collection Transactions (có thể thêm sau nếu cần)
+                .HasForeignKey(d => d.ReservationId)
+                .OnDelete(DeleteBehavior.NoAction) // Không xóa Reservation khi xóa Transaction
+                .HasConstraintName("FK__Transactions__ReservationId");
+
             // Index cho SessionId để tìm kiếm nhanh
             entity.HasIndex(e => e.SessionId)
                 .HasDatabaseName("IX_Transactions_SessionId");
@@ -653,6 +660,10 @@ public partial class SapaFoRestRmsContext : DbContext
             // Index cho OrderId
             entity.HasIndex(e => e.OrderId)
                 .HasDatabaseName("IX_Transactions_OrderId");
+
+            // Index cho ReservationId (để query nhanh)
+            entity.HasIndex(e => e.ReservationId)
+                .HasDatabaseName("IX_Transactions_ReservationId");
 
             // New columns for Payment Flow
             entity.Property(e => e.AmountReceived)

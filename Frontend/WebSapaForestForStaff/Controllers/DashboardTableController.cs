@@ -299,6 +299,38 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         /// <summary>
+        /// Xác nhận Reservation (confirm tất cả Orders trong Reservation)
+        /// POST /DashboardTable/ConfirmReservation
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmReservation([FromBody] ReservationConfirmRequest request)
+        {
+            if (!ModelState.IsValid || request.ReservationId <= 0)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.ConfirmReservationAsync(request.ReservationId, request);
+                
+                if (result.Success)
+                {
+                    return Ok(new { message = result.Message ?? "Xác nhận Reservation thành công" });
+                }
+                else
+                {
+                    return BadRequest(new { message = result.Message ?? "Không thể xác nhận Reservation" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
         /// Hoàn tác xác nhận đơn hàng (chuyển status từ "Confirmed" về "WaitingConfirmation")
         /// POST /DashboardTable/UndoConfirmOrder
         /// </summary>

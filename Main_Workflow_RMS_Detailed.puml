@@ -1,0 +1,194 @@
+@startuml Main_Workflow_RMS_Detailed
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 10
+skinparam activity {
+    BackgroundColor #E8F4F8
+    BorderColor #2E86AB
+    FontColor #000000
+}
+skinparam note {
+    BackgroundColor #FFF9E6
+    BorderColor #FFA500
+}
+
+title Main Workflow Chi Tiết - Restaurant Management System (RMS)
+
+|#E3F2FD|**1. KHÁCH HÀNG ĐẶT BÀN**|
+start
+:Khách hàng điền form đặt bàn\n(CustomerName, Phone, Date, Time, NumberOfGuests);
+:ReservationService.CreateReservationAsync();
+:Kiểm tra User theo Phone;
+if (User chưa tồn tại?) then (yes)
+  :Tạo User mới với RoleId = 5 (Customer);
+  :Tạo Customer record;
+else (no)
+  :Lấy Customer từ UserId;
+endif
+:Kiểm tra trùng đơn\n(Phone + Date + TimeSlot);
+if (Đã có đơn trùng?) then (yes)
+  :Trả về null (không cho đặt);
+  stop
+else (no)
+  :Tạo Reservation\nStatus = "Pending";
+  :Tính DepositAmount\n(NumberOfGuests × DEPOSIT_PER_GUEST);
+endif
+
+|#C8E6C9|**2. QUẢN LÝ XẾP BÀN**|
+:Quản lý xem danh sách đơn Pending;
+:ReservationService.AssignTablesAsync();
+:Chọn bàn phù hợp\n(Capacity >= NumberOfGuests);
+:Kiểm tra conflict\n(Bàn đã được đặt trong slot này?);
+if (Có conflict?) then (yes)
+  :Báo lỗi "Bàn đã bị đặt trước";
+  stop
+else (no)
+  :Gán bàn vào ReservationTables;
+  :Cập nhật Reservation.Status = "Confirmed";
+  :Gán StaffId (người xếp bàn);
+endif
+
+|#FFF9C4|**3. COUNTER STAFF XÁC NHẬN KHÁCH ĐẾN**|
+:Counter Staff xem danh sách đơn Confirmed;
+:DashboardTableService.SeatGuestAsync();
+:Kiểm tra Reservation.Status = "Confirmed";
+if (Status không hợp lệ?) then (yes)
+  :Báo lỗi "Reservation status is invalid";
+  stop
+else (no)
+  :Kiểm tra đã có bàn được gán?;
+  if (Chưa có bàn?) then (yes)
+    :Báo lỗi "No tables are assigned";
+    stop
+  else (no)
+    :Cập nhật Reservation.Status = "Guest Seated";
+    :Ghi ArrivalAt = DateTime.Now;
+    :SignalR notify realtime\n(ReservationStatusChanged);
+  endif
+endif
+
+|#FFE0B2|**4. PHỤC VỤ BÀN GỌI MÓN + KHÁCH HÀNG GỌI MÓN**|
+:Phục vụ/Khách chọn món từ Menu;
+:OrderTableService.CreateOrderAsync();
+:Kiểm tra Reservation đang Active\n(Status = "Guest Seated");
+if (Reservation không hợp lệ?) then (yes)
+  :Báo lỗi "Không tìm thấy bàn hợp lệ";
+  stop
+else (no)
+  :Tạo Order mới\nStatus = "Pending";
+  :Thêm OrderDetails cho từng món;
+  :Thêm OrderComboItems nếu là Combo;
+  :Reserve inventory cho ConsumptionBased items;
+  :Lưu Order vào database;
+endif
+
+|#FFCCBC|**5. BẾP NẤU MÓN**|
+:Kitchen Display hiển thị đơn mới;
+:Kitchen nhận đơn và bắt đầu nấu;
+:KitchenDisplayService.UpdateItemStatusAsync();
+:Kiểm tra đủ nguyên liệu\n(InventoryService);
+if (Thiếu nguyên liệu?) then (yes)
+  :Báo lỗi "Không đủ nguyên liệu";
+  stop
+else (no)
+  :Cập nhật OrderDetail.Status = "Cooking";
+  :Ghi StartedAt = DateTime.Now;
+  :Nếu là Combo, cập nhật tất cả OrderComboItems;
+  :SignalR notify realtime;
+  :Nấu món...;
+  :Cập nhật OrderDetail.Status = "Ready";
+  :Ghi ReadyAt = DateTime.Now;
+  :Consume inventory\n(QuantityReserved → QuantityUsed);
+  :SignalR notify realtime;
+endif
+
+|#FFE0B2|**6. PHỤC VỤ BÊ MÓN**|
+:Waiter Order Tracking hiển thị món Ready;
+:WaiterOrderTrackingService.MarkAsServedAsync();
+:Kiểm tra món đã Ready;
+if (Món chưa Ready?) then (yes)
+  :Báo lỗi "Chỉ có thể lấy món khi đã sẵn sàng";
+  stop
+else (no)
+  :Cập nhật OrderDetail.Status = "Done";
+  :Ghi ServedAt = DateTime.Now;
+  :SignalR notify realtime;
+  :Phục vụ món cho khách;
+endif
+
+|#FFE0B2|**7. PHỤC VỤ XÁC NHẬN HÓA ĐƠN ĐỂ THANH TOÁN**|
+:Waiter xem OrderDetail và xác nhận;
+:PaymentService.ConfirmOrderAsync();
+:Kiểm tra Order có món?;
+if (Không có món?) then (yes)
+  :Báo lỗi "Đơn hàng không có món";
+  stop
+else (no)
+  :Xác nhận QuantityUsed cho từng món;
+  :Cập nhật OrderDetail.Status = "Done"\n(cho các món billable);
+  :Tính toán tổng tiền:
+    * Subtotal = Σ(UnitPrice × QuantityUsed)
+    * VAT = Subtotal × 10%
+    * ServiceFee = Subtotal × 5%
+    * Discount (nếu có)
+    * TotalAmount = Subtotal + VAT + ServiceFee - Discount;
+  :Lưu TotalAmount vào Orders.TotalAmount;
+  :Cập nhật Order.Status = "Confirmed";
+  :Ghi ConfirmedAt, ConfirmedByStaffId;
+  :Ghi OrderHistory với action "Order Confirmation";
+endif
+
+|#F8BBD0|**8. THU NGÂN THANH TOÁN HÓA ĐƠN**|
+:Thu ngân chọn đơn Status = "Confirmed";
+:PaymentService.ProcessCashPaymentAsync();
+:Kiểm tra Order.Status = "Confirmed";
+if (Chưa xác nhận?) then (yes)
+  :Báo lỗi "Đơn hàng chưa được xác nhận";
+  stop
+else (no)
+  :Thu ngân chọn phương thức thanh toán\n(Cash/QR/Combined);
+  :Tạo Transaction:
+    * TransactionCode
+    * PaymentMethod
+    * Amount = TotalAmount
+    * AmountReceived
+    * RefundAmount (nếu có);
+  :Cập nhật Order.Status = "Paid";
+  :Ghi Transaction vào database;
+  :Trigger post-payment actions:
+    * VIP Status Update
+    * Loyalty Points +1
+    * Inventory Deduction (consume reserved)
+    * Revenue Recording;
+  :Giải phóng bàn\n(ReleaseTablesAndCompleteReservationAsync);
+  :Cập nhật Reservation.Status = "Completed";
+  :Xóa ReservationTables;
+  :Ghi OrderHistory với action "PaymentCompleted";
+endif
+
+|#F8BBD0|**9. THU NGÂN IN HÓA ĐƠN**|
+:Thu ngân vào màn hình Receipt;
+:ReceiptService.GenerateReceiptPdfAsync();
+:Kiểm tra Order.Status = "Paid";
+if (Chưa thanh toán?) then (yes)
+  :Báo lỗi "Đơn hàng chưa được thanh toán";
+  stop
+else (no)
+  :Tính toán lại tổng tiền\n(giống ConfirmOrder);
+  :Lấy thông tin Transaction;
+  :Lấy thông tin Customer và Table;
+  :Generate PDF bằng QuestPDF:
+    * Header: Restaurant info
+    * Content: Order info, Items table, Totals
+    * Footer: Thank you message;
+  :Lưu PDF tại /receipts/{orderCode}.pdf;
+  :Upload lên Cloudinary (nếu có);
+  :Trả về PDF file cho thu ngân;
+  :Thu ngân in hoặc tải PDF;
+endif
+
+stop
+
+@enduml
+

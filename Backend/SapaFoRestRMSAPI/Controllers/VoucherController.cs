@@ -16,6 +16,53 @@ namespace SapaFoRestRMSAPI.Controllers
             _voucherService = voucherService;
         }
 
+        /// <summary>
+        /// Search vouchers for autocomplete (chỉ lấy voucher đang sử dụng và còn hạn)
+        /// GET /api/voucher/search?keyword={keyword}
+        /// </summary>
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchVouchers([FromQuery] string? keyword, [FromQuery] int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return Ok(new { vouchers = new List<object>() });
+            }
+
+            var today = DateTime.Today;
+            var trimmedKeyword = keyword.Trim();
+
+            // Lấy tất cả vouchers và filter
+            var allVouchers = await _voucherService.GetAllAsync();
+            
+            // Filter: đang sử dụng, chưa xóa, còn hạn, và code chứa keyword
+            var availableVouchers = allVouchers
+               .Where(v =>
+    v.IsDelete != true &&
+    string.Equals(v.Status, "Đang sử dụng", StringComparison.OrdinalIgnoreCase) &&
+    (!v.StartDate.HasValue || v.StartDate.Value.Date <= today) &&
+    (!v.EndDate.HasValue || v.EndDate.Value.Date >= today) &&
+    (
+        v.Code.Contains(trimmedKeyword, StringComparison.OrdinalIgnoreCase) ||
+        (!string.IsNullOrEmpty(v.Description) &&
+         v.Description.Contains(trimmedKeyword, StringComparison.OrdinalIgnoreCase))
+    )
+)
+
+                .Take(limit)
+                .Select(v => new
+                {
+                    code = v.Code,
+                    description = v.Description,
+                    discountType = v.DiscountType,
+                    discountValue = v.DiscountValue,
+                    maxDiscount = v.MaxDiscount,
+                    minOrderValue = v.MinOrderValue
+                })
+                .ToList();
+
+            return Ok(new { vouchers = availableVouchers });
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAll(
      [FromQuery] string? keyword,

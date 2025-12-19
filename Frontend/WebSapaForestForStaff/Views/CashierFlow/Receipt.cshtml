@@ -1,33 +1,92 @@
-@model WebSapaForestForStaff.DTOs.Payment.OrderDetailDto
+@model dynamic
 
 @using System.Collections.Generic
 @using System.Linq
 @using System.Text.Json
 @using WebSapaForestForStaff.Controllers
+@using WebSapaForestForStaff.DTOs.Payment
 
 @{
     ViewData["Title"] = "Hóa đơn thanh toán";
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
-    // Lấy thông tin bàn: ưu tiên TableNumbers (danh sách), sau đó TableNumber (đơn), cuối cùng là property Table (computed)
-    var tables = "—";
-    if (Model.TableNumbers != null && Model.TableNumbers.Any())
+    
+    // ✅ Kiểm tra xem Model là OrderDetailDto hay ReservationPaymentDto
+    var isReservationPayment = Model is ReservationPaymentDto;
+    var reservationPayment = Model as ReservationPaymentDto;
+    var orderDetail = Model as OrderDetailDto;
+    
+    // ✅ Lấy thông tin từ Model (hỗ trợ cả 2 loại)
+    var orderId = isReservationPayment ? reservationPayment!.OrderId : orderDetail!.OrderId;
+    var orderCode = isReservationPayment ? reservationPayment!.OrderCode : orderDetail!.OrderCode;
+    var subtotal = isReservationPayment ? reservationPayment!.Subtotal : orderDetail!.Subtotal;
+    var vatAmount = isReservationPayment ? reservationPayment!.VatAmount : orderDetail!.VatAmount;
+    var serviceFee = isReservationPayment ? reservationPayment!.ServiceFee : orderDetail!.ServiceFee;
+    var discountAmount = isReservationPayment ? reservationPayment!.DiscountAmount : orderDetail!.DiscountAmount;
+    var totalAmount = isReservationPayment ? reservationPayment!.TotalAmount : orderDetail!.TotalAmount;
+    var depositAmount = isReservationPayment ? reservationPayment!.DepositAmount : orderDetail!.DepositAmount;
+    var depositPaid = isReservationPayment ? reservationPayment!.DepositPaid : orderDetail!.DepositPaid;
+    var depositRefundAmount = isReservationPayment ? reservationPayment!.DepositRefundAmount : orderDetail!.DepositRefundAmount;
+    var customerName = isReservationPayment ? reservationPayment!.CustomerName : orderDetail!.CustomerName;
+    var customerPhone = isReservationPayment ? reservationPayment!.CustomerPhone : orderDetail!.CustomerPhone;
+    var staffName = isReservationPayment ? reservationPayment!.StaffName : orderDetail!.StaffName;
+    var waiterName = isReservationPayment ? reservationPayment!.WaiterName : orderDetail!.WaiterName;
+    var paymentMethod = isReservationPayment ? "Kết hợp" : (orderDetail!.PaymentMethod ?? "—");
+    var createdAt = isReservationPayment ? reservationPayment!.CreatedAt : orderDetail!.CreatedAt;
+    
+    // ✅ Lấy ReservationId nếu có
+    var reservationId = isReservationPayment ? reservationPayment!.ReservationId : (int?)null;
+    
+    // ✅ Lấy danh sách items
+    var items = isReservationPayment 
+        ? (reservationPayment!.AllOrderItems ?? new List<OrderItemDto>())
+        : (orderDetail!.Items ?? new List<OrderItemDto>());
+    
+    // ✅ Lấy thông tin bàn
+    var tables = isReservationPayment
+        ? (reservationPayment!.TableNumbers != null && reservationPayment.TableNumbers.Any()
+            ? string.Join(", ", reservationPayment.TableNumbers)
+            : reservationPayment.TableNumber ?? "—")
+        : (orderDetail!.TableNumbers != null && orderDetail.TableNumbers.Any()
+            ? string.Join(", ", orderDetail.TableNumbers)
+            : orderDetail.TableNumber ?? "—");
+    
+    // ✅ Lấy transactions từ reservation payment hoặc order detail
+    var paidTransactions = new List<TransactionDto>();
+    if (isReservationPayment && reservationPayment != null)
     {
-        tables = string.Join(", ", Model.TableNumbers);
+        // Lấy transactions từ reservation payment
+        paidTransactions = (reservationPayment.Transactions ?? new List<TransactionDto>())
+            .Where(t =>
+                string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrEmpty(t.Status))
+            .ToList();
     }
-    else if (!string.IsNullOrWhiteSpace(Model.TableNumber))
+    else if (orderDetail != null)
     {
-        tables = Model.TableNumber;
+        // Lấy transactions từ order detail
+        paidTransactions = (orderDetail.Transactions ?? new List<TransactionDto>())
+            .Where(t =>
+                string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrEmpty(t.Status))
+            .ToList();
     }
-    else if (!string.IsNullOrWhiteSpace(Model.Table))
-    {
-        tables = Model.Table;
-    }
+    
+    // ✅ Lấy PaidAt: từ transaction đầu tiên (nếu có) hoặc từ order đầu tiên
+    var paidAt = isReservationPayment 
+        ? (paidTransactions.Any() 
+            ? paidTransactions.OrderByDescending(t => t.CompletedAt ?? t.CreatedAt).FirstOrDefault()?.CompletedAt 
+            : reservationPayment!.Orders?.FirstOrDefault()?.PaidAt)
+        : orderDetail!.PaidAt;
 
     // ✅ Filter logic giống Payment.cshtml:
     // 1. Bỏ qua các món đã bị hủy (cancelled/removed)
     // 2. Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
     // 3. Chỉ lấy các món có trạng thái khác "Pending" và không bị hủy
-    var billableItems = (Model.Items ?? new List<WebSapaForestForStaff.DTOs.Payment.OrderItemDto>()).Where(i =>
+    var billableItems = items.Where(i =>
     {
         var status = (i.KitchenStatus ?? "").Trim().ToLower();
         
@@ -47,34 +106,32 @@
         return true;
     }).ToList();
 
-    // Build payment breakdown from transactions (if available)
-    var paidTransactions = (Model.Transactions ?? new List<WebSapaForestForStaff.DTOs.Payment.TransactionDto>())
-        .Where(t =>
-            string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrEmpty(t.Status)) // fallback
-        .ToList();
-
+    // ✅ Build receipt JSON
     var receiptJson = JsonSerializer.Serialize(new
     {
-        Model.OrderId,
-        Model.OrderCode,
+        OrderId = orderId,
+        OrderCode = orderCode,
+        ReservationId = reservationId,
+        IsReservationPayment = isReservationPayment,
+        OrderCount = isReservationPayment && reservationPayment != null ? reservationPayment.OrderCount : 1,
+        OrderCodes = isReservationPayment && reservationPayment != null && reservationPayment.Orders != null
+            ? reservationPayment.Orders.Select(o => o.OrderCode ?? $"#{o.OrderId}").ToList()
+            : new List<string> { orderCode ?? $"#{orderId}" },
         Tables = tables,
-        CustomerName = Model.CustomerName ?? "Khách lẻ",
-        CustomerPhone = Model.CustomerPhone ?? "—",
-        CreatedAt = Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--",
-        PaidAt = Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--",
-        StaffName = Model.StaffName ?? Model.WaiterName ?? "—",
-        PaymentMethod = Model.PaymentMethod ?? "—",
-        Subtotal = Model.Subtotal,
-        VatAmount = Model.VatAmount,
-        ServiceFee = Model.ServiceFee,
-        DiscountAmount = Model.DiscountAmount,
-        DepositAmount = Model.DepositAmount,
-        DepositPaid = Model.DepositPaid,
-        DepositRefundAmount = Model.DepositRefundAmount,
-        TotalAmount = Model.TotalAmount,
+        CustomerName = customerName ?? "Khách lẻ",
+        CustomerPhone = customerPhone ?? "—",
+        CreatedAt = createdAt?.ToString("dd/MM/yyyy HH:mm") ?? "--",
+        PaidAt = paidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--",
+        StaffName = staffName ?? waiterName ?? "—",
+        PaymentMethod = paymentMethod,
+        Subtotal = subtotal,
+        VatAmount = vatAmount,
+        ServiceFee = serviceFee,
+        DiscountAmount = discountAmount,
+        DepositAmount = depositAmount,
+        DepositPaid = depositPaid,
+        DepositRefundAmount = depositRefundAmount,
+        TotalAmount = totalAmount,
         Transactions = paidTransactions.Select(t => new {
             t.PaymentMethod,
             t.Amount,
@@ -208,19 +265,19 @@
                     <div class="row gy-3">
                         <div class="col-sm-6">
                             <div class="text-muted small">Khách hàng</div>
-                            <div class="fw-bold fs-5">@(Model.CustomerName ?? "Khách lẻ")</div>
+                            <div class="fw-bold fs-5">@(customerName ?? "Khách lẻ")</div>
                         </div>
                         <div class="col-sm-6 text-sm-end">
                             <div class="text-muted small">Điện thoại</div>
-                            <div class="fw-bold">@(Model.CustomerPhone ?? "—")</div>
+                            <div class="fw-bold">@(customerPhone ?? "—")</div>
                         </div>
                         <div class="col-sm-6">
                             <div class="text-muted small">Thời gian tạo</div>
-                            <div class="fw-semibold">@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
+                            <div class="fw-semibold">@(createdAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
                         </div>
                         <div class="col-sm-6 text-sm-end">
                             <div class="text-muted small">Thời gian thanh toán</div>
-                            <div class="fw-semibold">@(Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
+                            <div class="fw-semibold">@(paidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
                         </div>
                     </div>
                 </div>
@@ -291,7 +348,7 @@
                                             Giá món trước thuế và phí
                                         </small>
                                     </td>
-                                    <td class="text-end fw-bold align-middle">@Model.Subtotal.ToString("N0") ₫</td>
+                                    <td class="text-end fw-bold align-middle">@subtotal.ToString("N0") ₫</td>
                                 </tr>
                                 <tr>
                                     <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -304,7 +361,7 @@
                                             Thuế VAT (10%): Thuế giá trị gia tăng theo quy định
                                         </small>
                                     </td>
-                                    <td class="text-end fw-bold align-middle">@Model.VatAmount.ToString("N0") ₫</td>
+                                    <td class="text-end fw-bold align-middle">@vatAmount.ToString("N0") ₫</td>
                                 </tr>
                                 <tr>
                                     <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -317,9 +374,9 @@
                                             Phí phục vụ (5%): Phụ thu phục vụ tại bàn
                                         </small>
                                     </td>
-                                    <td class="text-end fw-bold align-middle">@Model.ServiceFee.ToString("N0") ₫</td>
+                                    <td class="text-end fw-bold align-middle">@serviceFee.ToString("N0") ₫</td>
                                 </tr>
-                                @if (Model.DiscountAmount > 0)
+                                @if (discountAmount > 0)
                                 {
                                     <tr>
                                         <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -332,10 +389,10 @@
                                                 Giảm giá – theo chương trình khuyến mãi / mã giảm giá đã áp dụng
                                             </small>
                                         </td>
-                                        <td class="text-end fw-bold text-danger align-middle">-@Model.DiscountAmount.ToString("N0") ₫</td>
+                                        <td class="text-end fw-bold text-danger align-middle">-@discountAmount.ToString("N0") ₫</td>
                                     </tr>
                                 }
-                                @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                                @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
                                 {
                                     <tr class="table-info">
                                         <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -345,10 +402,10 @@
                                                 Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
                                             </small>
                                         </td>
-                                        <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
+                                        <td class="text-end fw-bold text-success align-middle">-@depositAmount.Value.ToString("N0") ₫</td>
                                     </tr>
                                 }
-                                @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
+                                @if (depositRefundAmount.HasValue && depositRefundAmount.Value > 0)
                                 {
                                     <tr class="table-warning">
                                         <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -359,12 +416,12 @@
                                             </small>
                                         </td>
                                         <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
-                                            +@Model.DepositRefundAmount.Value.ToString("N0") ₫
+                                            +@depositRefundAmount.Value.ToString("N0") ₫
                                         </td>
                                     </tr>
                                 }
                                 @{
-                                    var totalBeforeDeposit = Model.Subtotal + Model.VatAmount + Model.ServiceFee - Model.DiscountAmount;
+                                    var totalBeforeDeposit = subtotal + vatAmount + serviceFee - discountAmount;
                                 }
                                 <tr class="table-info">
                                     <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#e7f3ff;">
@@ -423,9 +480,9 @@
                                             <span class="fs-5">Số tiền khách hàng phải trả</span>
                                         </span>
                                         <small class="text-muted d-block mt-1">
-                                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                                            @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
                                             {
-                                                <text>Tổng cộng (@totalBeforeDeposit.ToString("N0") ₫) - Đã cọc (@Model.DepositAmount.Value.ToString("N0") ₫)</text>
+                                                <text>Tổng cộng (@totalBeforeDeposit.ToString("N0") ₫) - Đã cọc (@depositAmount.Value.ToString("N0") ₫)</text>
                                             }
                                             else
                                             {
@@ -434,7 +491,7 @@
                                         </small>
                                     </td>
                                     <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
-                                        @Model.TotalAmount.ToString("N0") ₫
+                                        @totalAmount.ToString("N0") ₫
                                     </td>
                                 </tr>
                                 @if (payments.Any())
@@ -485,35 +542,72 @@
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0">
-                        <dt class="col-6 text-muted small">Mã đơn</dt>
-                        <dd class="col-6 fw-semibold text-end">@(Model.OrderCode ?? $"#{Model.OrderId}")</dd>
-
+                        @if (isReservationPayment && reservationId.HasValue)
+                        {
+                            <dt class="col-6 text-muted small">Reservation ID</dt>
+                            <dd class="col-6 fw-semibold text-end">#@reservationId</dd>
+                            
+                            <dt class="col-6 text-muted small">Mã đơn</dt>
+                            <dd class="col-6 fw-semibold text-end">
+                                @if (reservationPayment!.Orders != null && reservationPayment.Orders.Any())
+                                {
+                                    @string.Join(", ", reservationPayment.Orders.Select(o => o.OrderCode ?? $"#{o.OrderId}"))
+                                }
+                                else
+                                {
+                                    @(orderCode ?? $"#{orderId}")
+                                }
+                            </dd>
+                            
+                            <dt class="col-6 text-muted small">Số lượng đơn</dt>
+                            <dd class="col-6 fw-semibold text-end">@reservationPayment.OrderCount đơn</dd>
+                        }
+                        else
+                        {
+                            <dt class="col-6 text-muted small">Mã đơn</dt>
+                            <dd class="col-6 fw-semibold text-end">@(orderCode ?? $"#{orderId}")</dd>
+                        }
 
                         <dt class="col-6 text-muted small">Thu ngân xử lý</dt>
-                        <dd class="col-6 fw-semibold text-end">@(Model.StaffName ?? Model.WaiterName ?? "—")</dd>
+                        <dd class="col-6 fw-semibold text-end">@(staffName ?? waiterName ?? "—")</dd>
 
                         <dt class="col-6 text-muted small">Phương thức thanh toán</dt>
-                        <dd class="col-6 fw-semibold text-end">@(Model.PaymentMethod ?? "—")</dd>
+                        <dd class="col-6 fw-semibold text-end">@paymentMethod</dd>
                     </dl>
                 </div>
                 <div class="card-footer bg-white d-flex flex-wrap gap-2 justify-content-end">
                     <button class="btn btn-outline-success btn-sm btn-print-receipt"
-                            data-order-id="@Model.OrderId"
-                            data-order-code="@(Model.OrderCode ?? $"#{Model.OrderId}")"
-                            @* ✅ REMOVED: data-tables - không sử dụng trong receipt print *@
-                            data-customer-name="@(Model.CustomerName ?? "Khách lẻ")"
-                            data-customer-phone="@(Model.CustomerPhone ?? "—")"
-                            data-created-at="@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"
-                            data-paid-at="@(Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"
-                            data-staff-name="@(Model.StaffName ?? Model.WaiterName ?? "—")"
-                            data-payment-method="@(Model.PaymentMethod ?? "—")"
-                            data-subtotal="@Model.Subtotal"
-                            data-vat="@Model.VatAmount"
-                            data-service-fee="@Model.ServiceFee"
-                            data-discount="@Model.DiscountAmount"
-                            data-total="@Model.TotalAmount">
+                            data-order-id="@orderId"
+                            data-order-code="@(orderCode ?? $"#{orderId}")"
+                            data-reservation-id="@(reservationId?.ToString() ?? "")"
+                            data-is-reservation="@(isReservationPayment ? "true" : "false")"
+                            data-customer-name="@(customerName ?? "Khách lẻ")"
+                            data-customer-phone="@(customerPhone ?? "—")"
+                            data-created-at="@(createdAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"
+                            data-paid-at="@(paidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"
+                            data-staff-name="@(staffName ?? waiterName ?? "—")"
+                            data-payment-method="@paymentMethod"
+                            data-subtotal="@subtotal"
+                            data-vat="@vatAmount"
+                            data-service-fee="@serviceFee"
+                            data-discount="@discountAmount"
+                            data-total="@totalAmount">
                         <i class="bi bi-printer me-1"></i> In
                     </button>
+                    @if (isReservationPayment && reservationId.HasValue)
+                    {
+                        <a href="@Url.Action(nameof(CashierPaymentFlowController.DownloadReceiptByReservation), "CashierPaymentFlow", new { reservationId })"
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-download me-1"></i> Tải PDF
+                        </a>
+                    }
+                    else
+                    {
+                        <a href="@Url.Action(nameof(CashierPaymentFlowController.DownloadReceipt), "CashierPaymentFlow", new { orderId })"
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-download me-1"></i> Tải PDF
+                        </a>
+                    }
                     <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")"
                        class="btn btn-outline-secondary">
                         Quay lại danh sách

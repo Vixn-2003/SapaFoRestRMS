@@ -172,7 +172,70 @@ namespace WebSapaForestForStaff.Services.Api
             }
             else
             {
-                _logger.LogInformation("Receipt download for order {OrderId} succeeded with {ByteCount} bytes.", orderId, fileBytes.Length);
+                _logger.LogInformation("Receipt download for order {OrderId} successful. File size: {Size} bytes", orderId, result.FileBytes?.Length ?? 0);
+            }
+
+            return result;
+        }
+
+        public async Task<ReceiptFileDto?> GenerateReceiptByReservationAsync(int reservationId)
+        {
+            var requestUrl = BuildApiUrl($"/payment/receipt/reservation/{reservationId}");
+            var result = new ReceiptFileDto
+            {
+                FileName = $"receipt-reservation-{reservationId}.pdf"
+            };
+
+            var response = await SendWithAutoRefreshAsync(client => client.GetAsync(requestUrl));
+            result.StatusCode = response.StatusCode;
+            result.ContentType = response.Content.Headers.ContentType?.MediaType;
+
+            _logger.LogInformation("Receipt download call for reservation {ReservationId} returned {StatusCode} with content-type {ContentType}", reservationId, response.StatusCode, result.ContentType ?? "unknown");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    _logger.LogWarning("Receipt download unauthorized for reservation {ReservationId}", reservationId);
+                }
+
+                result.ErrorMessage = await ReadApiMessageAsync(response) ?? $"Không thể tải hóa đơn (HTTP {(int)response.StatusCode})";
+                _logger.LogWarning("Receipt download for reservation {ReservationId} failed: {Error}", reservationId, result.ErrorMessage);
+                return result;
+            }
+
+            if (!string.Equals(result.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                result.ErrorMessage = !string.IsNullOrWhiteSpace(body)
+                    ? body
+                    : "Máy chủ không trả về file PDF.";
+
+                _logger.LogWarning("Receipt download for reservation {ReservationId} returned unexpected content-type {ContentType}. Body: {Body}", reservationId, result.ContentType, body);
+                return result;
+            }
+
+            var fileBytes = await response.Content.ReadAsByteArrayAsync();
+            var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
+
+            result.FileBytes = fileBytes;
+            result.FileName = string.IsNullOrWhiteSpace(fileName) ? result.FileName : fileName;
+            result.Success = fileBytes.Length > 0;
+
+            if (!result.Success)
+            {
+                result.ErrorMessage = "File hóa đơn bị trống.";
+                _logger.LogWarning("Receipt download for reservation {ReservationId} returned empty payload.", reservationId);
+            }
+            else
+            {
+                _logger.LogInformation("Receipt download for reservation {ReservationId} successful. File size: {Size} bytes", reservationId, result.FileBytes?.Length ?? 0);
+            }
+
+            return result;
+        
+            {
+                //_logger.LogInformation("Receipt download for order {OrderId} succeeded with {ByteCount} bytes.", orderId, fileBytes.Length);
             }
 
             return result;
@@ -241,6 +304,125 @@ namespace WebSapaForestForStaff.Services.Api
                 return new ApiResult(false, message);
             }
             return new ApiResult(true, "Đã hoàn tác xác nhận đơn hàng thành công");
+        }
+
+        // ========== RESERVATION-CENTRIC PAYMENT METHODS ==========
+
+        public async Task<ReservationPaymentDto?> GetReservationPaymentAsync(int reservationId)
+        {
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.GetAsync(BuildApiUrl($"/payment/reservations/{reservationId}/payment")));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<ReservationPaymentDto>();
+        }
+
+        public async Task<ApiResult> ProcessCashPaymentByReservationAsync(int reservationId, decimal amountReceived, string? notes)
+        {
+            var requestBody = new
+            {
+                amountReceived = amountReceived,
+                notes = notes
+            };
+
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl($"/payment/reservations/{reservationId}/cash"), requestBody));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể xử lý thanh toán tiền mặt";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Thanh toán tiền mặt thành công");
+        }
+
+        public async Task<ApiResult> ConfirmQrPaymentByReservationAsync(int reservationId, string? notes)
+        {
+            var requestBody = new
+            {
+                notes = notes
+            };
+
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl($"/payment/reservations/{reservationId}/qr"), requestBody));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể xác nhận thanh toán QR";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Xác nhận thanh toán QR thành công");
+        }
+
+        public async Task<ApiResult> ProcessCombinedPaymentByReservationAsync(int reservationId, decimal cashAmount, decimal qrAmount, decimal? cashReceived, string? notes)
+        {
+            var requestBody = new
+            {
+                cashAmount = cashAmount,
+                qrAmount = qrAmount,
+                cashReceived = cashReceived,
+                notes = notes
+            };
+
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl($"/payment/reservations/{reservationId}/combined"), requestBody));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể xử lý thanh toán kết hợp";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Thanh toán kết hợp thành công");
+        }
+
+        public async Task<ApiResult> ConfirmReservationAsync(int reservationId, ReservationConfirmRequest request)
+        {
+            var requestBody = new
+            {
+                reservationId = reservationId,
+                orderItems = request.OrderItems ?? new Dictionary<int, List<ConfirmedItemDto>>(),
+                notes = request.Notes
+            };
+
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl($"/payment/reservations/{reservationId}/confirm"), requestBody));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể xác nhận Reservation";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Đã xác nhận Reservation thành công");
+        }
+
+        public async Task<ApiResult> ApplyDiscountByReservationAsync(int reservationId, ReservationDiscountRequest request)
+        {
+            var requestBody = new
+            {
+                reservationId = reservationId,
+                voucherCode = request.VoucherCode,
+                promotionId = request.PromotionId,
+                discountAmount = request.DiscountAmount
+            };
+
+            var response = await SendWithAutoRefreshAsync(client =>
+                client.PostAsJsonAsync(BuildApiUrl($"/payment/reservations/{reservationId}/discounts/apply"), requestBody));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadApiMessageAsync(response) ?? "Không thể áp dụng ưu đãi cho Reservation";
+                return new ApiResult(false, message);
+            }
+
+            return new ApiResult(true, "Áp dụng ưu đãi thành công cho Reservation");
         }
 
         private async Task<List<OrderDto>> FetchOrdersByStatusAsync(string statusFilter)

@@ -92,7 +92,7 @@
                 const description = (voucher.description || '').replace(/['"]/g, '');
 
                 return `
-                    <div class="voucher-item" onclick="selectVoucher('${code}')">
+                    <div class="voucher-item" data-voucher-code="${code}" style="cursor: pointer;">
                         <div class="d-flex justify-content-between align-items-start">
                             <div class="flex-grow-1">
                                 <div class="voucher-code">${code}</div>
@@ -114,6 +114,33 @@
             }).join('');
 
             voucherListContainer.innerHTML = voucherHtml;
+            
+            // ✅ Bind click event listeners sau khi render HTML (chỉ bind 1 lần)
+            // Sử dụng event delegation để tránh xung đột với onclick inline
+            // Remove old listener nếu có để tránh bind nhiều lần
+            const oldHandler = voucherListContainer._voucherClickHandler;
+            if (oldHandler) {
+                voucherListContainer.removeEventListener('click', oldHandler);
+            }
+            
+            // Tạo handler mới
+            const clickHandler = function(e) {
+                const voucherItem = e.target.closest('.voucher-item');
+                if (voucherItem) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const voucherCode = voucherItem.getAttribute('data-voucher-code');
+                    if (voucherCode) {
+                        // ✅ Chỉ gọi selectVoucher - KHÔNG có AJAX call
+                        window.selectVoucher(voucherCode, e);
+                    }
+                }
+            };
+            
+            // Lưu reference để có thể remove sau
+            voucherListContainer._voucherClickHandler = clickHandler;
+            voucherListContainer.addEventListener('click', clickHandler);
         },
 
         // Update voucher count badge
@@ -125,21 +152,59 @@
         },
 
         // Select voucher function (called from onclick)
+        // ✅ CHỈ fill input và highlight - KHÔNG có AJAX call
+        // ✅ KHÔNG đóng modal - User phải click "Áp dụng" để apply
         selectVoucher: function(voucherCode) {
-            // This function should be implemented to handle voucher selection
-            // For now, just close the modal and show a message
-            console.log('Selected voucher:', voucherCode);
-            window.PaymentCore.showToast(`Đã chọn voucher: ${voucherCode}`, 'success');
-
-            if (window.PaymentCore.modals.promoModal) {
-                window.PaymentCore.modals.promoModal.hide();
+            // ✅ Fill voucher code vào input field
+            const voucherInput = document.getElementById('VoucherCode');
+            if (voucherInput) {
+                voucherInput.value = voucherCode;
             }
+
+            // ✅ Highlight selected voucher (border xanh)
+            document.querySelectorAll('.voucher-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Find and highlight the clicked voucher item
+            const voucherItems = document.querySelectorAll('.voucher-item');
+            voucherItems.forEach(item => {
+                const codeElement = item.querySelector('.voucher-code');
+                if (codeElement && codeElement.textContent.trim() === voucherCode) {
+                    item.classList.add('selected');
+                }
+            });
+
+            // ✅ Clear error message
+            const errorDiv = document.getElementById('voucherErrorMessage');
+            if (errorDiv) {
+                errorDiv.classList.add('d-none');
+            }
+
+            // ✅ KHÔNG show toast message khi chọn voucher
+            // ✅ KHÔNG gọi AJAX khi chọn voucher
+            // ✅ KHÔNG đóng modal - để user có thể click nút "Áp dụng"
+            // Modal sẽ chỉ đóng sau khi apply thành công (trong applyVoucherConfirmed)
         }
     };
 
     // Global function for selecting voucher (used in onclick handlers)
-    window.selectVoucher = function(voucherCode) {
+    // ✅ CHỈ fill input và highlight - KHÔNG có AJAX call
+    // ✅ KHÔNG đóng modal - User phải click "Áp dụng" để apply
+    window.selectVoucher = function(voucherCode, event) {
+        // ✅ Prevent event bubbling và default behavior
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+        
+        // ✅ Gọi function selectVoucher từ PromotionVoucher module
+        // Function này CHỈ fill input và highlight - KHÔNG có AJAX
         window.PromotionVoucher.selectVoucher(voucherCode);
+        
+        // ✅ Return false để đảm bảo không trigger bất kỳ event nào khác
+        // Điều này ngăn form submit hoặc modal close
+        return false;
     };
 
     // Initialize on DOM ready
