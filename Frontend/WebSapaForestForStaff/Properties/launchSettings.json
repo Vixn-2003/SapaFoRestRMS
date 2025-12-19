@@ -15,7 +15,7 @@
       "launchBrowser": true,
 
 
-      "applicationUrl": "http://10.33.12.15:5054",
+      "applicationUrl": "http://10.33.39.35:5054",
       //"applicationUrl": "http://localhost:5054",
 
       "launchUrl": "Auth/Login",

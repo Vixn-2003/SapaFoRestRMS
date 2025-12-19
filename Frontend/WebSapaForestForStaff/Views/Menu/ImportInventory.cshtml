@@ -2576,12 +2576,13 @@
         const recentSupplierList = @Html.Raw(JsonConvert.SerializeObject(Model.RecentSupplierDTOs));
         const urgentIngredientList = @Html.Raw(JsonConvert.SerializeObject(Model.UrgentIngredientDTOs));
 
-        const currentUser = {
-            id: parseInt('@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value' || '0'),
-            name: '@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value',
-            phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value',
-            email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value'
-        };
+        const currentUser = @Html.Raw(JsonConvert.SerializeObject(new
+            {
+                id = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0"),
+                name = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "N/A",
+                phone = User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value ?? "N/A",
+                email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "N/A"
+            }));
 
         console.log('Data loaded:', {
             suppliers: supplierList?.length || 0,
@@ -3624,13 +3625,12 @@
             renderUrgentIngredients();
         });
 
-        // ===== XỬ LÝ XÁC NHẬN NGƯỜI TẠO ĐƠN =====
         function handleCreatorConfirm(checkbox) {
             const creatorInfo = document.getElementById('creatorInfo');
             const checkIcon = document.getElementById('creatorCheckIcon');
 
             if (checkbox.checked) {
-                // ✅ KIỂM TRA XEM ĐÃ CÓ THÔNG TIN USER CHƯA
+                // ✅ KIỂM TRA USER
                 if (!currentUser || !currentUser.id) {
                     showToast('error', 'Lỗi', 'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
                     checkbox.checked = false;
@@ -3640,7 +3640,7 @@
                 // Hiển thị thông tin
                 creatorInfo.style.display = 'block';
 
-                // ✅ CẬP NHẬT THÔNG TIN NGƯỜI DÙNG TỪ currentUser (Claims)
+                // ✅ TIẾNG VIỆT SẼ HIỂN THỊ ĐÚNG
                 const nameElement = creatorInfo.querySelector('.creator-info-row:nth-child(1) .value');
                 const phoneElement = creatorInfo.querySelector('.creator-info-row:nth-child(2) .value');
                 const timeElement = document.getElementById('creatorTime');
@@ -3670,8 +3670,6 @@
                 checkIcon.style.color = '#9ca3af';
             }
         }
-
-
 
 
         // ===== XỬ LÝ CHỌN FILE ẢNH =====
