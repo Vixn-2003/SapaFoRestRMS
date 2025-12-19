@@ -16,19 +16,16 @@
 
         public List<RecipeDTO> Recipes { get; set; } = new List<RecipeDTO>();
 
-        // Thống kê bán hàng
         public int ServedToday { get; set; }
         public int ServedYesterday { get; set; }
         public double Average7Days { get; set; }
         public double Average30Days { get; set; }
         public double Average90Days { get; set; }
 
-        // % so sánh
         public double CompareWithYesterday { get; set; }
         public double CompareWith7Days { get; set; }
         public double CompareWith30Days { get; set; }
 
-        // Properties bổ sung để hiển thị dễ hơn trên View
         public string BillingTypeDisplay
         {
             get
@@ -51,7 +48,6 @@
 
         public string AvailabilityBadgeClass => IsAvailable ? "badge-success" : "badge-danger";
 
-        // Format cho comparison (với màu sắc)
         public string CompareYesterdayFormatted
         {
             get
