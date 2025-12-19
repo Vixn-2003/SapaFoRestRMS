@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering; // <-- THÊM
 using System.Net; // <-- THÊM
 using System.Text; // <-- THÊM
@@ -9,6 +10,8 @@ using WebSapaFoRestForStaff.DTOs.OrderTable;
 
 namespace WebSapaFoRestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:WaiterOrCashier")]
+
     public class OrderTableController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
@@ -21,7 +24,7 @@ namespace WebSapaFoRestForStaff.Controllers
             _configuration = configuration;
 
             var apiConfig = configuration.GetSection("ApiSettings");
-            // Sửa logic này để lấy đúng BaseUrl (ví dụ: http://192.168.1.47:5180)
+            // Sửa logic này để lấy đúng BaseUrl (ví dụ: http://10.33.39.35:5180)
             _apiBaseUrl = apiConfig.GetValue<string>("BaseUrl").Replace("/api", "");
         }
         // === THAY THẾ TOÀN BỘ HÀM INDEX CŨ BẰNG HÀM NÀY ===

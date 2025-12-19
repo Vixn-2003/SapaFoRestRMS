@@ -1,6 +1,7 @@
 ﻿@model WebSapaForestForStaff.DTOs.OrderGuest.StaffOrderScreenDto
 @using WebSapaForestForStaff.Controllers
 @using System
+@using System.Security.Claims
 @{
     ViewData["Title"] = $"Chi tiết bàn: {Model.TableNumber}";
 
@@ -11,6 +12,17 @@
     var categories = ViewData["Categories"] as List<WebSapaForestForStaff.DTOs.OrderGuest.CategoryDto>;
     var hasActiveOrder = Model.ActiveOrderId.HasValue;
     var userPositionId = ViewData["UserPositionId"] as int? ?? 0; // 1 = Waiter, 2 = Cashier
+    
+    // Lấy thông tin staff từ Claims
+    string GetClaim(string type) => User.FindFirst(type)?.Value ?? string.Empty;
+    var staffName = !string.IsNullOrWhiteSpace(GetClaim(ClaimTypes.Name)) 
+        ? GetClaim(ClaimTypes.Name) 
+        : "Nhân viên";
+    var staffPosition = userPositionId == 1 ? "Phục vụ" : (userPositionId == 2 ? "Thu ngân" : "Nhân viên");
+    var staffInitials = !string.IsNullOrWhiteSpace(staffName) 
+        ? (staffName.Length >= 2 ? staffName.Substring(0, 2).ToUpper() : staffName.ToUpper())
+        : "NV";
+    
     // ✅ Chuẩn hóa status về "Confirmed" (chữ C viết hoa) thay vì "confirmed"
     var orderStatus = Model.OrderStatus ?? "";
     if (!string.IsNullOrEmpty(orderStatus) && orderStatus.Equals("confirmed", StringComparison.OrdinalIgnoreCase))
@@ -519,10 +531,10 @@
 
         <!-- User -->
         <div class="d-flex align-items-center">
-            <div class="avatar-circle me-2">NV</div>
+            <div class="avatar-circle me-2">@staffInitials</div>
             <div class="user-info d-none d-sm-block">
-                <h6 class="mb-0 fw-semibold">Staff</h6>
-                <small class="text-muted">Nhân viên</small>
+                <h6 class="mb-0 fw-semibold">@staffName</h6>
+                <small class="text-muted">@staffPosition</small>
             </div>
         </div>
 
