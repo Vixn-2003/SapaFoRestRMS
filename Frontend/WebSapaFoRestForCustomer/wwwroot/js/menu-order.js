@@ -28,6 +28,7 @@ $(document).ready(function () {
     const $statusCountBadge = $("#status-count-badge");
     // $cartItemsContainer và $cartTotal không còn cần thiết vì updateCartUI vẽ lại toàn bộ
     const orderedItemCount = Array.isArray(initialOrderedItems) ? initialOrderedItems.length : 0;
+    const hubBaseUrl = apiBaseUrl.replace(/\/api$/, "") + "/tableHub";
 
     // Biến Lọc/Search
     const $searchIconBtn = $("#search-icon-btn");
@@ -74,29 +75,38 @@ $(document).ready(function () {
         showMenuPage();
     });
 
-    connection.on("ReceiveOrderStatusUpdate", (orderDetailId, newStatus) => {
-        const statusElement = document.getElementById(`status-text-${orderDetailId}`);
-        if (statusElement) {
-            statusElement.innerText = newStatus;
-            statusElement.className = 'badge'; // Reset class
+    
 
-            // Mapping màu sắc
-            if (newStatus === 'Cooking' || newStatus === 'Đang nấu') {
-                statusElement.classList.add('bg-warning'); // Vàng
-            }
-            else if (newStatus === 'Ready' || newStatus === 'Đã xong') {
-                statusElement.classList.add('bg-primary'); // Xanh dương
-            }
-            else if (newStatus === 'Served' || newStatus === 'Đã phục vụ') {
-                statusElement.classList.add('bg-success'); // Xanh lá (Đã ăn được)
-                // Có thể thêm hiệu ứng gạch ngang tên món hoặc làm mờ đi
-                // document.getElementById(`order-item-${orderDetailId}`).style.opacity = "0.7";
-            }
-            else if (newStatus === 'Cancelled' || newStatus === 'Đã hủy') {
-                statusElement.classList.add('bg-danger'); // Đỏ
-            }
-        }
-    });
+    //connection.on("ReceiveOrderStatusUpdate", (orderDetailId, newStatus) => {
+    //    const statusElement = document.getElementById(`status-text-${orderDetailId}`);
+    //    if (statusElement) {
+    //        statusElement.innerText = newStatus;
+    //        statusElement.className = 'badge'; // Reset class
+
+    //        if (newStatus === 'Cooking' || newStatus === 'Đang nấu') {
+    //            statusElement.classList.add('bg-warning');
+    //        } else if (newStatus === 'Ready' || newStatus === 'Đã xong') {
+    //            statusElement.classList.add('bg-primary');
+    //        } else if (newStatus === 'Served' || newStatus === 'Đã phục vụ') {
+    //            statusElement.classList.add('bg-success');
+    //        } else if (newStatus === 'Cancelled' || newStatus === 'Đã hủy') {
+    //            statusElement.classList.add('bg-danger');
+    //        }
+    //    }
+    //});
+
+    //// Bắt đầu kết nối
+    //connection.start()
+    //    .then(() => console.log("SignalR connected"))
+    //    .catch(err => console.error("SignalR không kết nối được:", err));
+
+
+
+
+
+
+
+
 
     // === 3. LOGIC GIỎ HÀNG ===
     function loadCart() {
@@ -659,13 +669,95 @@ $(document).ready(function () {
     });
 
 
+    //function performFilter() {
+    //    const searchString = $searchInput.val();
+    //    const categoryId = $categoryTabs.filter('.active').data('id');
+
+    //    let url = `${apiBaseUrl}/api/OrderTable/MenuOrder/${tableId}?`;
+
+    //    // === ĐÃ SỬA LỖI LOGIC (if categoryId): Chấp nhận số 0 ===
+    //    if (categoryId !== undefined && categoryId !== null && categoryId !== "") {
+    //        url += `categoryId=${categoryId}&`;
+    //    }
+
+    //    if (searchString) {
+    //        url += `searchString=${encodeURIComponent(searchString)}`;
+    //    }
+
+    //    // Hiển thị "Đang tải..."
+    //    $menuListContainer.html('<p class="text-center text-muted mt-4">Đang tải...</p>');
+
+    //    // Gọi AJAX
+    //    $.ajax({
+    //        url: url,
+    //        type: 'GET',
+    //        dataType: 'json',
+    //        success: function (response) {
+
+    //            // 1. Xóa "Đang tải..."
+    //            $menuListContainer.empty();
+
+    //            if (response) {
+    //                let hasContent = false;
+
+    //                // 2. Render Combos (nếu có)
+    //                if (response.combos && Array.isArray(response.combos) && response.combos.length > 0) {
+    //                    renderCombos(response.combos);
+    //                    hasContent = true;
+    //                }
+
+    //                // 3. Render MenuItems (nếu có)
+    //                if (response.menuItems && Array.isArray(response.menuItems) && response.menuItems.length > 0) {
+    //                    renderMenu(response.menuItems);
+    //                    hasContent = true;
+    //                }
+
+    //                // 4. Xử lý khi không có gì
+    //                if (!hasContent) {
+    //                    const currentCatId = $categoryTabs.filter('.active').data('id');
+    //                    if (currentCatId == -1) { // Tab Combo
+    //                        $menuListContainer.html('<p class="text-center text-muted mt-4">Không có combo nào để hiển thị.</p>');
+    //                    } else { // Các tab khác
+    //                        $menuListContainer.html('<p class="text-center text-muted mt-4">Không tìm thấy món ăn nào.</p>');
+    //                    }
+    //                }
+    //            }
+    //            else {
+    //                // Xử lý API trả về rỗng
+    //                $menuListContainer.empty();
+    //                console.error("API response không hợp lệ:", response);
+    //                $menuListContainer.html('<p class="text-center text-danger mt-4">Lỗi: Dữ liệu menu không đúng.</p>');
+    //            }
+    //        },
+    //        error: function (xhr, status, error) {
+    //            // Xử lý lỗi (Giữ nguyên)
+    //            $menuListContainer.empty();
+    //            console.error("Lỗi AJAX:", status, error, xhr.responseText);
+    //            let errorMsg = "Lỗi khi tải menu.";
+    //            if (xhr.responseJSON && xhr.responseJSON.message) {
+    //                errorMsg = xhr.responseJSON.message;
+    //            } else if (xhr.responseText) {
+    //                try { const err = JSON.parse(xhr.responseText); if (err.message) errorMsg = err.message; } catch (e) { }
+    //            }
+    //            $menuListContainer.html(`<p class="text-center text-danger mt-4">${errorMsg}</p>`);
+    //        }
+    //    });
+    //}
+
+
+
+
+
+    // Sự kiện Lọc/Search
+
+
+    // === 2. Hàm Filter Menu ===
     function performFilter() {
         const searchString = $searchInput.val();
         const categoryId = $categoryTabs.filter('.active').data('id');
 
-        let url = `${apiBaseUrl}/api/OrderTable/MenuOrder/${tableId}?`;
+        let url = `${apiBaseUrl}/OrderTable/MenuOrder/${tableId}?`;
 
-        // === ĐÃ SỬA LỖI LOGIC (if categoryId): Chấp nhận số 0 ===
         if (categoryId !== undefined && categoryId !== null && categoryId !== "") {
             url += `categoryId=${categoryId}&`;
         }
@@ -674,55 +766,43 @@ $(document).ready(function () {
             url += `searchString=${encodeURIComponent(searchString)}`;
         }
 
-        // Hiển thị "Đang tải..."
         $menuListContainer.html('<p class="text-center text-muted mt-4">Đang tải...</p>');
 
-        // Gọi AJAX
         $.ajax({
             url: url,
             type: 'GET',
             dataType: 'json',
             success: function (response) {
-
-                // 1. Xóa "Đang tải..."
                 $menuListContainer.empty();
 
                 if (response) {
                     let hasContent = false;
 
-                    // 2. Render Combos (nếu có)
                     if (response.combos && Array.isArray(response.combos) && response.combos.length > 0) {
                         renderCombos(response.combos);
                         hasContent = true;
                     }
 
-                    // 3. Render MenuItems (nếu có)
                     if (response.menuItems && Array.isArray(response.menuItems) && response.menuItems.length > 0) {
                         renderMenu(response.menuItems);
                         hasContent = true;
                     }
 
-                    // 4. Xử lý khi không có gì
                     if (!hasContent) {
                         const currentCatId = $categoryTabs.filter('.active').data('id');
-                        if (currentCatId == -1) { // Tab Combo
+                        if (currentCatId == -1) {
                             $menuListContainer.html('<p class="text-center text-muted mt-4">Không có combo nào để hiển thị.</p>');
-                        } else { // Các tab khác
+                        } else {
                             $menuListContainer.html('<p class="text-center text-muted mt-4">Không tìm thấy món ăn nào.</p>');
                         }
                     }
-                }
-                else {
-                    // Xử lý API trả về rỗng
-                    $menuListContainer.empty();
-                    console.error("API response không hợp lệ:", response);
+                } else {
                     $menuListContainer.html('<p class="text-center text-danger mt-4">Lỗi: Dữ liệu menu không đúng.</p>');
+                    console.error("API response không hợp lệ:", response);
                 }
             },
             error: function (xhr, status, error) {
-                // Xử lý lỗi (Giữ nguyên)
                 $menuListContainer.empty();
-                console.error("Lỗi AJAX:", status, error, xhr.responseText);
                 let errorMsg = "Lỗi khi tải menu.";
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
@@ -730,10 +810,71 @@ $(document).ready(function () {
                     try { const err = JSON.parse(xhr.responseText); if (err.message) errorMsg = err.message; } catch (e) { }
                 }
                 $menuListContainer.html(`<p class="text-center text-danger mt-4">${errorMsg}</p>`);
+                console.error("Lỗi AJAX:", status, error, xhr.responseText);
             }
         });
     }
-    // Sự kiện Lọc/Search
+
+    // === 3. Lấy reservationId đang active ===
+    async function fetchActiveReservation() {
+        try {
+            const response = await $.getJSON(`${apiBaseUrl}/Reservation/active/${tableId}`);
+            if (response && response.reservationId) {
+                return response.reservationId;
+            }
+        } catch (err) {
+            console.error("Không lấy được reservationId:", err.statusText || err);
+            return null;
+        }
+    }
+
+    // === 4. Khởi tạo SignalR ===
+    async function initSignalR() {
+        connection = new signalR.HubConnectionBuilder()
+            .withUrl(hubBaseUrl)
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveItemStatusUpdate", (orderDetailId, orderComboItemId, newStatus) => {
+            const statusElement = document.getElementById(`status-text-${orderDetailId}`);
+            if (statusElement) {
+                statusElement.innerText = newStatus;
+                statusElement.className = 'badge';
+
+                if (newStatus === 'Cooking' || newStatus === 'Đang nấu') {
+                    statusElement.classList.add('bg-warning');
+                } else if (newStatus === 'Ready' || newStatus === 'Đã xong') {
+                    statusElement.classList.add('bg-primary');
+                } else if (newStatus === 'Served' || newStatus === 'Đã phục vụ') {
+                    statusElement.classList.add('bg-success');
+                } else if (newStatus === 'Cancelled' || newStatus === 'Đã hủy') {
+                    statusElement.classList.add('bg-danger');
+                }
+            }
+        });
+
+        try {
+            await connection.start();
+            console.log("SignalR connected");
+
+            const reservationId = await fetchActiveReservation();
+            if (reservationId) {
+                await connection.invoke("JoinGroup", `Reservation_${reservationId}`);
+                console.log("Joined group Reservation_" + reservationId);
+            }
+        } catch (err) {
+            console.error("SignalR connection failed:", err);
+        }
+    }
+
+    // === 5. Khởi chạy khi document ready ===
+    $(document).ready(function () {
+        performFilter(); // load menu
+        initSignalR();   // kết nối SignalR
+    });
+
+
+
     $searchIconBtn.on('click', function () {
         $searchBar.toggleClass('page-hidden');
         if (!$searchBar.hasClass('page-hidden')) {
@@ -914,7 +1055,7 @@ $(document).ready(function () {
 
             // 3. Gửi AJAX (Giữ nguyên code của bạn)
             $.ajax({
-                url: apiBaseUrl + '/api/OrderTable/SubmitOrder',
+                url: apiBaseUrl + '/OrderTable/SubmitOrder',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(orderData),
@@ -1061,7 +1202,7 @@ $(document).ready(function () {
 
             // Gọi API hủy món
             $.ajax({
-                url: apiBaseUrl + '/api/OrderTable/CancelItem/' + orderDetailId,
+                url: apiBaseUrl + '/OrderTable/CancelItem/' + orderDetailId,
                 type: 'POST',
                 success: function (response) {
                     showMobileToast('Đã hủy món thành công!', 'success');

@@ -245,9 +245,7 @@
                 <div class="collapse navbar-collapse" id="mainNavbar">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                         <li class="nav-item"><a class="nav-link" asp-controller="Home" asp-action="Index">Trang Chủ</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Menu" asp-action="Index">Thực Đơn</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="About" asp-action="Index">Giới thiệu</a></li>
-                        <li class="nav-item"><a class="nav-link" asp-controller="Contact" asp-action="Index">Ưu Đãi</a></li>
+                       
                         <li class="nav-item">
                             @if (User.Identity?.IsAuthenticated == true)
                             {
@@ -266,7 +264,7 @@
                     </ul>
                     <div class="d-flex align-items-center">
                         <div class="me-3 hotline">
-                            📞 <a href="tel:0123456789" class="text-decoration-none hotline">Hotline: 0123 456 789</a>
+                            📞 <a href="tel:0123456789" class="text-decoration-none hotline">Hotline: 0397604824</a>
                         </div>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
@@ -404,13 +402,11 @@
                 <div class="col-md-3 mb-4 mb-md-0">
                     <ul class="list-unstyled text-white">
                         <li><a class="text-decoration-none text-white-50" asp-controller="Menu" asp-action="Index">Trang Chủ</a></li>
-                        <li><a class="text-decoration-none text-white-50" asp-controller="Branch" asp-action="Index">Thực Đơn</a></li>
-                        <li><a class="text-decoration-none text-white-50" asp-controller="Promotion" asp-action="Index">Giới Thiệu </a></li>
-                        <li><a class="text-decoration-none text-white-50" asp-controller="Contact" asp-action="Index">Ưu Đãi </a></li>
+                     
                     </ul>
                 </div>
                 <div class="col-md-3 mb-4 mb-md-0 text-white">
-                    <p class="mb-1">Hotline: <span class="text-warning fw-bold">0123 456 789</span></p>
+                    <p class="mb-1">Hotline: <span class="text-warning fw-bold"></span></p>
                     <p class="mb-0">
                         Email: <a href="mailto:rungxanhsapa@gmail.com" class="text-warning text-decoration-none">rungxanhsapa@gmail.com</a>
                     </p>
