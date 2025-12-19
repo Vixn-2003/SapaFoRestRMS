@@ -24,7 +24,7 @@ namespace WebSapaFoRestForStaff.Controllers
             _configuration = configuration;
 
             var apiConfig = configuration.GetSection("ApiSettings");
-            // Sửa logic này để lấy đúng BaseUrl (ví dụ: http://192.168.1.47:5180)
+            // Sửa logic này để lấy đúng BaseUrl (ví dụ: http://10.33.39.35:5180)
             _apiBaseUrl = apiConfig.GetValue<string>("BaseUrl").Replace("/api", "");
         }
         // === THAY THẾ TOÀN BỘ HÀM INDEX CŨ BẰNG HÀM NÀY ===

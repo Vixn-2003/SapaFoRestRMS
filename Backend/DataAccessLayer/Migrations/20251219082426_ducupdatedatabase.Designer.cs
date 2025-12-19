@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(SapaFoRestRmsContext))]
-    [Migration("20251217173127_ducUpdatecode")]
-    partial class ducUpdatecode
+    [Migration("20251219082426_ducupdatedatabase")]
+    partial class ducupdatedatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2267,86 +2267,6 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("UnitId");
 
                     b.ToTable("Units");
-
-                    b.HasData(
-                        new
-                        {
-                            UnitId = 1,
-                            UnitName = "quả",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 2,
-                            UnitName = "cái",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 3,
-                            UnitName = "hộp",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 4,
-                            UnitName = "chai",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 5,
-                            UnitName = "gói",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 6,
-                            UnitName = "bịch",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 7,
-                            UnitName = "bó",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 8,
-                            UnitName = "con",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 9,
-                            UnitName = "túi",
-                            UnitType = 1
-                        },
-                        new
-                        {
-                            UnitId = 10,
-                            UnitName = "kg",
-                            UnitType = 2
-                        },
-                        new
-                        {
-                            UnitId = 11,
-                            UnitName = "gram",
-                            UnitType = 2
-                        },
-                        new
-                        {
-                            UnitId = 12,
-                            UnitName = "lít",
-                            UnitType = 2
-                        },
-                        new
-                        {
-                            UnitId = 13,
-                            UnitName = "ml",
-                            UnitType = 2
-                        });
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>

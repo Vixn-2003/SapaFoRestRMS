@@ -1418,25 +1418,6 @@ public partial class SapaFoRestRmsContext : DbContext
         });
 
 
-
-        modelBuilder.Entity<Unit>().HasData(
-    new Unit { UnitId = 1, UnitName = "quả", UnitType = UnitType.Integer },
-    new Unit { UnitId = 2, UnitName = "cái", UnitType = UnitType.Integer },
-    new Unit { UnitId = 3, UnitName = "hộp", UnitType = UnitType.Integer },
-    new Unit { UnitId = 4, UnitName = "chai", UnitType = UnitType.Integer },
-    new Unit { UnitId = 5, UnitName = "gói", UnitType = UnitType.Integer },
-    new Unit { UnitId = 6, UnitName = "bịch", UnitType = UnitType.Integer },
-    new Unit { UnitId = 7, UnitName = "bó", UnitType = UnitType.Integer },
-    new Unit { UnitId = 8, UnitName = "con", UnitType = UnitType.Integer },
-    new Unit { UnitId = 9, UnitName = "túi", UnitType = UnitType.Integer },
-
-    new Unit { UnitId = 10, UnitName = "kg", UnitType = UnitType.Decimal },
-    new Unit { UnitId = 11, UnitName = "gram", UnitType = UnitType.Decimal },
-    new Unit { UnitId = 12, UnitName = "lít", UnitType = UnitType.Decimal },
-    new Unit { UnitId = 13, UnitName = "ml", UnitType = UnitType.Decimal }
-);
-
-
         OnModelCreatingPartial(modelBuilder);
     }
 

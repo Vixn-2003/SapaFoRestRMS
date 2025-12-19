@@ -21,7 +21,7 @@ namespace WebSapaFoRestForCustomer
             builder.Services.AddHttpClient("API", client =>
             {
                 // Lấy BaseUrl từ appsettings.json
-                // (ví dụ: "http://192.168.1.47:5180/api")
+                // (ví dụ: "http://10.33.39.35:5180/api")
                 var baseUrl = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl");
                 var rootUrl = baseUrl.Replace("/api", "");
 
