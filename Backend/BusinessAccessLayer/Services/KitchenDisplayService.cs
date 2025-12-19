@@ -363,7 +363,8 @@ namespace BusinessAccessLayer.Services
                     return new StatusUpdateResponse
                     {
                         Success = true,
-                        Message = "Trạng thái món đã ở đúng trạng thái hiện tại"
+                        Message = "Trạng thái món đã ở đúng trạng thái hiện tại",
+                        ReservationId = (int)order.ReservationId,
                     };
                 }
                 

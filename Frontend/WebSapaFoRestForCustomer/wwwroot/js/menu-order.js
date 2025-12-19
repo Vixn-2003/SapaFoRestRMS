@@ -74,6 +74,29 @@ $(document).ready(function () {
         showMenuPage();
     });
 
+    connection.on("ReceiveOrderStatusUpdate", (orderDetailId, newStatus) => {
+        const statusElement = document.getElementById(`status-text-${orderDetailId}`);
+        if (statusElement) {
+            statusElement.innerText = newStatus;
+            statusElement.className = 'badge'; // Reset class
+
+            // Mapping màu sắc
+            if (newStatus === 'Cooking' || newStatus === 'Đang nấu') {
+                statusElement.classList.add('bg-warning'); // Vàng
+            }
+            else if (newStatus === 'Ready' || newStatus === 'Đã xong') {
+                statusElement.classList.add('bg-primary'); // Xanh dương
+            }
+            else if (newStatus === 'Served' || newStatus === 'Đã phục vụ') {
+                statusElement.classList.add('bg-success'); // Xanh lá (Đã ăn được)
+                // Có thể thêm hiệu ứng gạch ngang tên món hoặc làm mờ đi
+                // document.getElementById(`order-item-${orderDetailId}`).style.opacity = "0.7";
+            }
+            else if (newStatus === 'Cancelled' || newStatus === 'Đã hủy') {
+                statusElement.classList.add('bg-danger'); // Đỏ
+            }
+        }
+    });
 
     // === 3. LOGIC GIỎ HÀNG ===
     function loadCart() {

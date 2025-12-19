@@ -514,5 +514,14 @@ namespace BusinessAccessLayer.Services
         {
             return _reservationRepository.GetPendingCountAsync();
         }
+
+        public async Task<int?> GetActiveReservationIdByTableAsync(int tableId)
+        {
+            var reservation = await _reservationRepository.GetActiveByTableIdAsync(tableId);
+
+            if (reservation == null) return null;
+
+            return reservation.ReservationId; 
+        }
     }
 }

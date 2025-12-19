@@ -31,6 +31,8 @@ namespace DataAccessLayer.Repositories.Interfaces
         Task SaveChangesAsync();
         Task<Reservation?> GetByIdAsync(int reservationId);
         Task UpdateAsync(Reservation reservation);
+
+        Task<Reservation?> GetActiveByTableIdAsync(int tableId);
     }
 
 }
