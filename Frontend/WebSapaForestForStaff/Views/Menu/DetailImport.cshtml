@@ -1,4 +1,5 @@
-﻿@model WebSapaForestForStaff.DTOs.PurchaseOrderDTO
+﻿@using Newtonsoft.Json
+@model WebSapaForestForStaff.DTOs.PurchaseOrderDTO
 
 @{
     ViewData["Title"] = "Nhập Hàng Vào Kho";
@@ -495,8 +496,9 @@ button {
 }
 
 .btn-reject {
-    background-color: #dc2626;
-    color: white;
+            background-color: #dc2626;
+            color: white;
+            display: none;
 }
 
 .btn-reject:hover {
@@ -1765,6 +1767,15 @@ body.sidebar-open .container {
 
 
     <script>
+
+        const currentUser = @Html.Raw(JsonConvert.SerializeObject(new
+            {
+                id = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0"),
+                name = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "N/A",
+                phone = User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value ?? "N/A",
+                email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "N/A"
+            }));
+
         let inspectorConfirmed = false;
 
         function handleInspectorConfirm(checkbox) {
@@ -1772,11 +1783,27 @@ body.sidebar-open .container {
             const inspectorInfo = document.getElementById('inspectorInfo');
             const checkIcon = document.getElementById('checkIcon');
             const acceptBtn = document.getElementById('acceptBtn');
+            const rejectBtn = document.querySelector('.btn-reject'); // ✅ THÊM
 
             if (inspectorConfirmed) {
+                // ✅ KIỂM TRA THÔNG TIN USER
+                if (!currentUser || !currentUser.id) {
+                    showToast('error', 'Lỗi', 'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+                    checkbox.checked = false;
+                    return;
+                }
+
                 // Hiển thị thông tin người xác nhận
                 inspectorInfo.style.display = 'block';
-                
+
+                // ✅ CẬP NHẬT THÔNG TIN TỪ CLAIMS
+                const nameElement = inspectorInfo.querySelector('.inspector-info-row:nth-child(1) .value');
+                const phoneElement = inspectorInfo.querySelector('.inspector-info-row:nth-child(2) .value');
+                const timeElement = document.getElementById('confirmTime');
+
+                if (nameElement) nameElement.textContent = currentUser.name || 'N/A';
+                if (phoneElement) phoneElement.textContent = currentUser.phone || 'N/A';
+
                 // Cập nhật thời gian xác nhận
                 const now = new Date();
                 const timeString = now.toLocaleString('vi-VN', {
@@ -1787,39 +1814,37 @@ body.sidebar-open .container {
                     minute: '2-digit',
                     second: '2-digit'
                 });
-                document.getElementById('confirmTime').textContent = timeString;
-                
+                if (timeElement) timeElement.textContent = timeString;
+
                 // Thay đổi màu icon
-                checkIcon.style.color = '#16a34a';
-                
-                // Enable nút chấp nhận
+                checkIcon.style.color = '#4f46e5';
+
+                // ✅ Enable cả 2 nút
                 acceptBtn.classList.remove('disabled');
                 acceptBtn.classList.add('enabled');
                 acceptBtn.disabled = false;
+
+                rejectBtn.style.display = 'inline-block';
+
+                showToast('success', 'Đã xác nhận', `Người kiểm tra: ${currentUser.name}`);
             } else {
                 // Ẩn thông tin người xác nhận
                 inspectorInfo.style.display = 'none';
-                
+
                 // Thay đổi màu icon về mặc định
                 checkIcon.style.color = '#9ca3af';
-                
-                // Disable nút chấp nhận
+
+                // ✅ Disable cả 2 nút
                 acceptBtn.classList.remove('enabled');
                 acceptBtn.classList.add('disabled');
                 acceptBtn.disabled = true;
+                    
+                rejectBtn.style.display = 'none'; 
             }
         }
 
         function goBack() {
-            if (confirm('Bạn có chắc chắn muốn quay lại?')) {
-                window.history.back();
-            }
-        }
-
-        function goBack() {
-            if (confirm('Bạn có chắc chắn muốn quay lại?')) {
-                window.history.back();
-            }
+            window.history.back();
         }
 
         // ===== MODAL XÁC NHẬN TỪ CHỐI =====
@@ -1832,24 +1857,19 @@ body.sidebar-open .container {
         }
 
         function executeReject() {
-            console.log('========== JAVASCRIPT: BẮT ĐẦU TỪ CHỐI ==========');
 
-            // ✅ SET GIÁ TRỊ VÀO HIDDEN FIELDS
             document.getElementById('StatusInput').value = 'Cancelled';
             document.getElementById('RejectReasonInput').value = 'Đơn hàng bị từ chối bởi người kiểm tra';
-            document.getElementById('CheckIdInput').value = '3';
+            document.getElementById('CheckIdInput').value = currentUser.id; 
 
             console.log('Status:', document.getElementById('StatusInput').value);
             console.log('CheckId:', document.getElementById('CheckIdInput').value);
 
-            // ✅ ĐÓNG MODAL
             closeRejectConfirmModal();
 
-            // ✅ HIỂN THỊ LOADING
             showToast('info', 'Đang xử lý...', 'Đang gửi yêu cầu từ chối đơn hàng', 10000);
 
-            // ✅ SUBMIT FORM
-            console.log('🚀 Submitting form...');
+            console.log('Submitting form...');
             document.getElementById('confirmForm').submit();
         }
 
@@ -1867,24 +1887,20 @@ body.sidebar-open .container {
         }
 
         function executeAccept() {
-            console.log('========== JAVASCRIPT: BẮT ĐẦU CHẤP NHẬN ==========');
 
-            // ✅ SET GIÁ TRỊ VÀO HIDDEN FIELDS
+    
             document.getElementById('StatusInput').value = 'Completed';
             document.getElementById('RejectReasonInput').value = '';
-            document.getElementById('CheckIdInput').value = '3';
+            document.getElementById('CheckIdInput').value = currentUser.id; 
 
             console.log('Status:', document.getElementById('StatusInput').value);
             console.log('CheckId:', document.getElementById('CheckIdInput').value);
 
-            // ✅ ĐÓNG MODAL
             closeAcceptConfirmModal();
 
-            // ✅ HIỂN THỊ LOADING
             showToast('info', 'Đang xử lý...', 'Đang xác nhận đơn hàng và nhập kho', 10000);
 
-            // ✅ SUBMIT FORM
-            console.log('🚀 Submitting form...');
+            console.log('Submitting form...');
             document.getElementById('confirmForm').submit();
         }
 

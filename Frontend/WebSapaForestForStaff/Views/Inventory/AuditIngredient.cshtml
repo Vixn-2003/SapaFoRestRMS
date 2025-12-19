@@ -1512,11 +1512,10 @@
 
     const currentUser = {
         userId: parseInt('@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value' || '0'),
-        fullName: '@User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value',
+        fullName: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? ""))'),
         phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value',
         email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value',
-        //  LẤY POSITION TỪ CLAIMS
-        position: '@Html.Raw(User.FindFirst("Positions")?.Value ?? "Nhân viên kho")'
+        position: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst("Positions")?.Value ?? "Nhân viên kho"))')
     };
 
         let currentPage = 1;
@@ -2207,7 +2206,8 @@
                     message: 'Xác nhận đơn kiểm kê thành công!',
                     warning: null,
                     buttonText: ' Đóng',
-                    buttonClass: 'confirm-modal-btn-confirm'
+                    buttonClass: 'confirm-modal-btn-confirm',
+                        showCancelButton: false
                 });
                 closeAuditModal();
                 location.reload();
@@ -2258,6 +2258,7 @@
             warning: ' Hành động này không thể hoàn tác!',
             buttonText: ' Từ chối',
             buttonClass: 'confirm-modal-btn-reject'
+            
         });
 
         if (!isConfirmed) return;
@@ -2299,7 +2300,8 @@
                     message: 'Từ chối đơn kiểm kê thành công!',
                     warning: null,
                     buttonText: ' Đóng',
-                    buttonClass: 'confirm-modal-btn-confirm'
+                    buttonClass: 'confirm-modal-btn-confirm',
+                    showCancelButton: false
                 });
                 closeAuditModal();
                 location.reload();
@@ -2389,15 +2391,20 @@
             // Set buttons
             footer.innerHTML = '';
 
-            // Cancel button
-            const cancelBtn = document.createElement('button');
-            cancelBtn.className = 'confirm-modal-btn confirm-modal-btn-cancel';
-            cancelBtn.innerHTML = 'Hủy bỏ';
-            cancelBtn.onclick = () => {
-                closeConfirmModal();
-                resolve(false);
-            };
-            footer.appendChild(cancelBtn);
+            // ✅ THÊM: Kiểm tra nếu có tham số showCancelButton (mặc định là true)
+            const showCancelButton = config.showCancelButton !== false;
+
+            // ✅ CHỈ HIỂN THỊ NÚT HỦY NẾU showCancelButton = true
+            if (showCancelButton) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'confirm-modal-btn confirm-modal-btn-cancel';
+                cancelBtn.innerHTML = 'Hủy bỏ';
+                cancelBtn.onclick = () => {
+                    closeConfirmModal();
+                    resolve(false);
+                };
+                footer.appendChild(cancelBtn);
+            }
 
             // Confirm/Reject button
             const actionBtn = document.createElement('button');

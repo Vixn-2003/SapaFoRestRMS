@@ -9,7 +9,6 @@ namespace BusinessAccessLayer.DTOs.ManagementCombo
 {
     public class UpdateDtosCombo
     {
-        // DTO trả về thông tin chi tiết Combo (để hiển thị lên Form Edit)
         public class ComboDetailDto
         {
             public int ComboId { get; set; }
