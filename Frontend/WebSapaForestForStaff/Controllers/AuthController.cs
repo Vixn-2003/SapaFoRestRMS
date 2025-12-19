@@ -75,7 +75,7 @@ namespace WebSapaForestForStaff.Controllers
                         switch (primaryPositionId)
                         {
                             case 1: // Waiter/Waitress
-                                return RedirectToAction("ListOrder", "DashboardTable");
+                                return RedirectToAction("Index", "WaiterOrderTracking");
 
                             case 2: // Cashier
                                 return RedirectToAction("Index", "CounterStaffDashboard");
@@ -95,7 +95,7 @@ namespace WebSapaForestForStaff.Controllers
                             var positionIds = System.Text.Json.JsonSerializer.Deserialize<List<int>>(positionIdsJson) ?? new();
                             if (positionIds.Contains(1))
                             {
-                                return RedirectToAction("ListOrder", "DashboardTable");
+                                return RedirectToAction("Index", "WaiterOrderTracking");
                             }
                             if (positionIds.Contains(2))
                             {
@@ -205,7 +205,7 @@ namespace WebSapaForestForStaff.Controllers
                         // Id = 1 (Waiter/Waitress) -> DashboardTable/ListOrder
                         if (positionIds.Contains(1))
                         {
-                            redirectUrl = returnUrl ?? Url.Action("ListOrder", "DashboardTable");
+                            redirectUrl = returnUrl ?? Url.Action("Index", "WaiterOrderTracking");
                         }
                         // Id = 2 (Cashier) -> CashierFlow/OrderSelection
                         else if (positionIds.Contains(2))
