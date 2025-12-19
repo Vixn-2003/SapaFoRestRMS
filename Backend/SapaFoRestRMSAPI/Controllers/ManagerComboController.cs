@@ -44,13 +44,6 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(result);
         }
 
-        //[HttpPost]
-        //public async Task<IActionResult> CreateCombo([FromBody] CreateComboRequest request)
-        //{
-        //    await _managerComboService.CreateComboAsync(request);
-        //    return Ok(new { message = "Combo created successfully" });
-        //}
-
         [HttpGet("top-sellers")]
         public async Task<IActionResult> GetTopSellers([FromQuery] string type) // type = "menu" or "combo"
         {
@@ -71,18 +64,24 @@ namespace SapaFoRestRMSAPI.Controllers
         {
             var result = _managerComboService.GetComboDisplayList(search, isAvailable, pageIndex, pageSize);
             return Ok(result);
-        }
+        }    
+
         [HttpGet("api/combo/top")]
         public IActionResult GetTopCombos(string period = "week")
         {
-            // Lấy hết combo (có thể pageSize rất lớn hoặc implement thêm GetAll)
             var result = _managerComboService.GetComboDisplayList(null, true, 1, int.MaxValue);
             var combos = result.Items;
 
             var topCombos = period.ToLower() switch
             {
-                "month" => combos.OrderByDescending(c => c.MonthlyUsed).Take(3),
-                _ => combos.OrderByDescending(c => c.WeeklyUsed).Take(3),
+                "month" => combos
+                            .Where(c => c.MonthlyUsed > 0)   // chỉ lấy combo bán được
+                            .OrderByDescending(c => c.MonthlyUsed)
+                            .Take(3),
+                _ => combos
+                        .Where(c => c.WeeklyUsed > 0)
+                        .OrderByDescending(c => c.WeeklyUsed)
+                        .Take(3),
             };
 
             return Ok(topCombos);
@@ -96,12 +95,17 @@ namespace SapaFoRestRMSAPI.Controllers
 
             var lowCombos = period.ToLower() switch
             {
-                "month" => combos.OrderBy(c => c.MonthlyUsed).Take(3),
-                _ => combos.OrderBy(c => c.WeeklyUsed).Take(3),
+                "month" => combos
+                            .OrderBy(c => c.MonthlyUsed)   // sắp xếp từ ít bán nhất
+                            .Take(Math.Min(3, combos.Count)), // lấy tối đa 3 combo, nếu combo <3 thì lấy hết
+                _ => combos
+                        .OrderBy(c => c.WeeklyUsed)
+                        .Take(Math.Min(3, combos.Count)),
             };
 
             return Ok(lowCombos);
         }
+
 
         [HttpGet("api/combo/overview")]
         public IActionResult GetComboOverview()
@@ -248,6 +252,21 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new { message = $"❌ Lỗi: {ex.Message}" });
             }
         }
+        [HttpGet("top5new")]
+        public async Task<IActionResult> GetTop5NewMenuItems()
+        {
+            try
+            {
+                var top5MenuItems = await _managerComboService.GetTop5NewMenuItemsAsync();
 
+                // Nếu muốn trả về PagedResult hoặc metadata khác, có thể thêm sau
+                return Ok(top5MenuItems);
+            }
+            catch (Exception ex)
+            {
+                // Log nếu cần
+                return StatusCode(500, new { message = "Lỗi khi lấy menu mới nhất.", details = ex.Message });
+            }
+        }
     }
 }

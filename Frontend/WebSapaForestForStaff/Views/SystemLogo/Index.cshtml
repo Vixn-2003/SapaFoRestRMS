@@ -62,7 +62,7 @@
                                 <img src="@logo.LogoUrl" alt="logo" style="height:50px;" />
                             }
                         </td>
-                        <td>@logo.Description</td>
+                        <td>@Html.Raw(logo.Description?.Replace("\n", "<br />"))</td>
                         <td>
                             <span class="badge @(logo.IsActive ? "bg-success" : "bg-secondary")">
                                 @(logo.IsActive ? "Active" : "Inactive")
