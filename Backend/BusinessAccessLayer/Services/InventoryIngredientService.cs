@@ -323,9 +323,7 @@ namespace BusinessAccessLayer.Services
 
                 // Trước đây chỉ release khi status là Pending hoặc Cooking.
                 // YÊU CẦU MỚI: Dù hủy món từ đâu, chỉ cần gọi hàm này thì vẫn phải trả lại QuantityReserved.
-                // Vì vậy không chặn theo status nữa, chỉ log để debug.
-                var status = (orderDetail.Status ?? "").Trim();
-                Console.WriteLine($"[Release] Start releasing reserved for OrderDetail {orderDetailId} with status '{status}'");
+                // Vì vậy không chặn theo status nữa.
 
                 // Get recipes for this menu item
                 var recipes = await _unitOfWork.MenuItem.GetRecipeByMenuItem(orderDetail.MenuItem.MenuItemId);
@@ -350,13 +348,10 @@ namespace BusinessAccessLayer.Services
                     var batches = await _unitOfWork.InventoryIngredient.GetAllBatchesByIngredientAsync(recipe.IngredientId);
                     var batchesList = batches.OrderBy(b => b.ExpiryDate ?? DateOnly.MaxValue).ThenBy(b => b.CreatedAt).ToList();
                     
-                    //  Log để debug
                     var totalReservedBefore = batchesList.Sum(b => b.QuantityReserved);
-                    Console.WriteLine($"[Release] OrderDetail {orderDetailId}: Ingredient {recipe.Ingredient.Name}, Need to release: {totalToRelease}, Total reserved before: {totalReservedBefore}");
                     
                     if (totalReservedBefore <= 0)
                     {
-                        Console.WriteLine($"[Release] Warning: Không có batch nào có reserved > 0 cho ingredient {recipe.Ingredient.Name}");
                         continue; // Skip ingredient này
                     }
                     
@@ -381,21 +376,6 @@ namespace BusinessAccessLayer.Services
                         batch.QuantityReserved -= toRelease;
                         remainingToRelease -= toRelease;
                         hasChanges = true;
-                        
-                        Console.WriteLine($"[Release]   Batch {batch.BatchId}: Reserved {reservedBefore} -> {batch.QuantityReserved} (released {toRelease})");
-                    }
-                    
-                    //  Kiểm tra nếu chưa release đủ (có thể do reserved không đủ)
-                    if (remainingToRelease > 0)
-                    {
-                        // Log warning nhưng vẫn tiếp tục (có thể đã được release từ nơi khác hoặc chưa reserve)
-                        Console.WriteLine($"[Release] Warning: Không thể release đủ {totalToRelease} {recipe.Ingredient.Name} cho OrderDetail {orderDetailId}. Còn thiếu: {remainingToRelease}");
-                    }
-                    
-                    if (hasChanges)
-                    {
-                        var totalReservedAfter = batchesList.Sum(b => b.QuantityReserved);
-                        Console.WriteLine($"[Release]   Total reserved after: {totalReservedAfter} (changed: {hasChanges})");
                     }
                 }
 
@@ -404,12 +384,9 @@ namespace BusinessAccessLayer.Services
                 try
                 {
                     await _unitOfWork.SaveChangesAsync();
-                    Console.WriteLine($"[Release]  SaveChangesAsync thành công cho OrderDetail {orderDetailId}");
                 }
                 catch (Exception saveEx)
                 {
-                    Console.WriteLine($"[Release] ❌ SaveChangesAsync LỖI cho OrderDetail {orderDetailId}: {saveEx.Message}");
-                    Console.WriteLine($"[Release] Stack trace: {saveEx.StackTrace}");
                     return (false, $"Lỗi khi lưu thay đổi: {saveEx.Message}");
                 }
                 
@@ -427,23 +404,24 @@ namespace BusinessAccessLayer.Services
             // Lấy tất cả active orders
             var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForStationAsync();
 
-            // Lấy OrderDetails trạng thái chờ (Pending/Confirmed) để hiển thị thiếu nguyên liệu
+            // Lấy OrderDetails trạng thái đang nấu/trễ (Pending, Cooking, Late) để hiển thị nguyên liệu cần thiết
             var cookingOrderDetails = activeOrders
                 .SelectMany(o => o.OrderDetails)
                 .Where(od =>
                 {
                     var status = (od.Status ?? "").Trim().ToLowerInvariant();
-                    return status == "pending";
+                    return status == "pending" || status == "cooking" || status == "late";
                 })
                 .ToList();
 
             // Filter theo CategoryMenu nếu có
             if (!string.IsNullOrWhiteSpace(categoryName))
             {
-                // Decode HTML entities
+                // Decode HTML entities (bao gồm cả hex entities như &#x1ECB;)
                 var decodedCategoryName = System.Net.WebUtility.HtmlDecode(categoryName);
                 if (decodedCategoryName.Contains("&#"))
                 {
+                    // Decode hex entities như &#x1ECB; -> ị
                     decodedCategoryName = System.Text.RegularExpressions.Regex.Replace(
                         decodedCategoryName,
                         @"&#x([0-9A-Fa-f]+);",
@@ -453,6 +431,7 @@ namespace BusinessAccessLayer.Services
                             return char.ConvertFromUtf32(code);
                         }
                     );
+                    // Decode decimal entities như &#1234;
                     decodedCategoryName = System.Text.RegularExpressions.Regex.Replace(
                         decodedCategoryName,
                         @"&#(\d+);",

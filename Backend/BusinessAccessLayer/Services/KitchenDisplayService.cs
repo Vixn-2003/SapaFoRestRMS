@@ -1216,26 +1216,11 @@ namespace BusinessAccessLayer.Services
             // Trim và normalize
             categoryName = categoryName?.Trim() ?? string.Empty;
             
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] Received categoryName (after decode): '{categoryName}'");
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] CategoryName length: {categoryName.Length}");
-            
             // Lấy tất cả active orders với order details thuộc category này
             var activeOrders = await _unitOfWork.Orders.GetActiveOrdersForStationAsync();
 
             var allItems = new List<StationItemDto>();
             var urgentItems = new List<StationItemDto>();
-
-            // Debug: Log số lượng orders
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] Found {activeOrders.Count} active orders");
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] Filtering by categoryName: '{categoryName}'");
-            
-            // Log tổng số order details trước khi filter
-            var totalOrderDetails = activeOrders.Sum(o => o.OrderDetails.Count);
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] Total order details before filter: {totalOrderDetails}");
-            
-            // Log tất cả categories có trong database để debug
-            var allCategories = await _unitOfWork.MenuCategory.GetCategoryNamesAsync();
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] All categories in DB: {string.Join(", ", allCategories)}");
 
             foreach (var order in activeOrders)
             {
@@ -1391,15 +1376,6 @@ namespace BusinessAccessLayer.Services
             urgentItems = urgentItems
                 .OrderByDescending(i => i.WaitingMinutes)
                 .ToList();
-
-            // Debug: Log kết quả
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] Total items found: {allItems.Count}");
-            Console.WriteLine($"[GetStationItemsByCategoryAsync] Items by status:");
-            var statusGroups = allItems.GroupBy(i => i.Status ?? "NULL");
-            foreach (var group in statusGroups)
-            {
-                Console.WriteLine($"[GetStationItemsByCategoryAsync]   - {group.Key}: {group.Count()} items");
-            }
 
             return new StationItemsResponse
             {
@@ -2198,7 +2174,6 @@ namespace BusinessAccessLayer.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error getting order detail for print: {ex.Message}");
                 return null;
             }
         }
