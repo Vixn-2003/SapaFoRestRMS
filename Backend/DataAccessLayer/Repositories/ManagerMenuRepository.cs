@@ -55,11 +55,11 @@ namespace DataAccessLayer.Repositories
                     .ThenInclude(r => r.Ingredient)
                         .ThenInclude(i => i.Unit)
                 .Include(m => m.OrderDetails.Where(od =>
-                    od.Status == "Served" &&
-                    od.Order.Status != "Cancelled" &&
+                    od.Status == "Done" &&
+                    od.Order.Status == "Paid" &&
                     od.CreatedAt >= fromDate))
                     .ThenInclude(od => od.Order)
-                .AsSplitQuery() // ⚠️ Quan trọng: tránh Cartesian explosion
+                .AsSplitQuery() 
                 .ToListAsync();
         }
 
