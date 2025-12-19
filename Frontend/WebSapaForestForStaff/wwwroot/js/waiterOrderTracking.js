@@ -32,7 +32,7 @@ async function submitUrgentRequest() {
     const finalReason = reason === 'Khác' ? reasonOther : reason;
 
     if (!finalReason) {
-        alert('Vui lòng chọn hoặc nhập lý do làm gấp');
+        showToast('Vui lòng chọn hoặc nhập lý do làm gấp', 'warning');
         return;
     }
 
@@ -146,8 +146,8 @@ function showToast(message, type = 'success') {
             }
         });
     } catch (e) {
-        // Fallback nếu Bootstrap Toast lỗi
-        alert(message);
+        // Fallback nếu Bootstrap Toast lỗi - sử dụng console thay vì alert
+        console.error('Toast error:', e, 'Message:', message);
     }
 }
 
@@ -379,7 +379,7 @@ function handleServed(orderDetailId, orderComboItemId, maxQuantity) {
     }
     const itemRow = document.querySelector(selector);
     if (!itemRow) {
-        alert('Không tìm thấy món ăn');
+        showToast('Không tìm thấy món ăn', 'error');
         return;
     }
     
@@ -403,7 +403,11 @@ function handleServed(orderDetailId, orderComboItemId, maxQuantity) {
 
 // Handle Served Direct (for split items - no popup needed, take all)
 async function handleServedDirect(orderDetailId, orderComboItemId, quantity) {
-    if (!confirm(`Xác nhận đã lấy ${quantity} món và phục vụ khách?`)) {
+    const confirmed = await showWaiterConfirmPopup(
+        `Xác nhận đã lấy ${quantity} món và phục vụ khách?`,
+        { title: 'Xác nhận lấy món', confirmText: 'Xác nhận', cancelText: 'Hủy' }
+    );
+    if (!confirmed) {
         return;
     }
 
@@ -428,10 +432,10 @@ async function handleServedDirect(orderDetailId, orderComboItemId, quantity) {
             sessionStorage.setItem('waiterOrderFilter', currentFilter);
             location.reload();
         } else {
-            alert('Lỗi: ' + result.message);
+            showToast('Lỗi: ' + result.message, 'error');
         }
     } catch (error) {
-        alert('Lỗi kết nối: ' + error.message);
+        showToast('Lỗi kết nối: ' + error.message, 'error');
     }
 }
 
@@ -442,7 +446,7 @@ async function submitPickupRequest() {
     const maxQuantity = parseInt(document.getElementById('pickupQuantity').max);
     
     if (!quantity || quantity <= 0 || quantity > maxQuantity) {
-        alert(`Số lượng phải từ 1 đến ${maxQuantity}`);
+        showToast(`Số lượng phải từ 1 đến ${maxQuantity}`, 'warning');
         return;
     }
     
@@ -471,17 +475,17 @@ async function submitPickupRequest() {
             sessionStorage.setItem('waiterOrderFilter', currentFilter);
             location.reload();
         } else {
-            alert('Lỗi: ' + result.message);
+            showToast('Lỗi: ' + result.message, 'error');
         }
     } catch (error) {
-        alert('Lỗi kết nối: ' + error.message);
+        showToast('Lỗi kết nối: ' + error.message, 'error');
     }
 }
 
 // Update consumption quantity (inline edit)
 async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quantity) {
     if (!quantity || quantity <= 0) {
-        alert('Số lượng phải lớn hơn 0');
+        showToast('Số lượng phải lớn hơn 0', 'warning');
         return;
     }
     
@@ -489,7 +493,7 @@ async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quanti
     const comboItemId = orderComboItemId || 0;
     if (comboItemId > 0) {
         // Món trong combo: KHÔNG cho phép cập nhật số lượng
-        alert('Món tiêu hao trong combo không được phép thay đổi số lượng. Chỉ được phép xác nhận với số lượng hiện tại.');
+        showToast('Món tiêu hao trong combo không được phép thay đổi số lượng. Chỉ được phép xác nhận với số lượng hiện tại.', 'warning');
         // Reset về giá trị cũ
         const quantityInput = document.getElementById(`quantity_${orderDetailId}_${comboItemId}`);
         if (quantityInput) {
@@ -519,7 +523,7 @@ async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quanti
         // Chỉ cho phép cập nhật nếu BillingType = 1 (ConsumptionBased)
         // billingType có thể là '1', '', null, hoặc undefined
         if (billingType !== '1') {
-            alert('Chỉ có thể cập nhật số lượng cho món tiêu hao (nước, khăn ướt, v.v.)');
+            showToast('Chỉ có thể cập nhật số lượng cho món tiêu hao (nước, khăn ướt, v.v.)', 'warning');
             // Reset về giá trị cũ
             const quantityInput = document.getElementById(`quantity_${orderDetailId}_${comboItemId}`);
             if (quantityInput) {
@@ -552,7 +556,7 @@ async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quanti
                 console.log('Đã cập nhật số lượng thành công');
             }
         } else {
-            alert('Lỗi: ' + result.message);
+            showToast('Lỗi: ' + result.message, 'error');
             // Reset về giá trị cũ nếu có lỗi
             const quantityInput = document.getElementById(`quantity_${orderDetailId}_${orderComboItemId || 0}`);
             if (quantityInput && itemRow) {
@@ -562,7 +566,7 @@ async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quanti
         }
     } catch (error) {
         console.error('Error updating quantity:', error);
-        alert('Lỗi kết nối: ' + error.message);
+        showToast('Lỗi kết nối: ' + error.message, 'error');
         // Reset về giá trị cũ nếu có lỗi
         const quantityInput = document.getElementById(`quantity_${orderDetailId}_${orderComboItemId || 0}`);
         if (quantityInput && itemRow) {
@@ -597,12 +601,12 @@ async function submitConfirmConsumptionQuantity() {
     const quantity = parseInt(document.getElementById('confirmConsumptionQuantity').value);
     
     if (!quantity || quantity <= 0) {
-        alert('Số lượng phải lớn hơn 0');
+        showToast('Số lượng phải lớn hơn 0', 'warning');
         return;
     }
     
     if (!orderDetailId || isNaN(orderDetailId)) {
-        alert('Lỗi: Không tìm thấy ID món ăn');
+        showToast('Lỗi: Không tìm thấy ID món ăn', 'error');
         return;
     }
     
@@ -657,23 +661,19 @@ async function submitConfirmConsumptionQuantity() {
                 }
             }
             
-            // Toast notification (if showToast exists, otherwise use alert)
-            if (typeof showToast === 'function') {
-                showToast('Đã xác nhận số lượng thành công', 'success');
-            } else {
-                alert('Đã xác nhận số lượng thành công');
-            }
+            // Toast notification
+            showToast('Đã xác nhận số lượng thành công', 'success');
             
             // Reload trang để cập nhật UI
             const currentFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'all';
             sessionStorage.setItem('waiterOrderFilter', currentFilter);
             location.reload();
         } else {
-            alert('Lỗi: ' + (result.message || 'Không thể xác nhận số lượng'));
+            showToast('Lỗi: ' + (result.message || 'Không thể xác nhận số lượng'), 'error');
         }
     } catch (error) {
         console.error('Error confirming consumption quantity:', error);
-        alert('Lỗi kết nối: ' + error.message);
+        showToast('Lỗi kết nối: ' + error.message, 'error');
     }
 }
 
