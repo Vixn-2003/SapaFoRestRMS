@@ -79,8 +79,9 @@ namespace BusinessAccessLayer.Services
                     .SelectMany(o => o.Transactions)
                     .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
                     .Sum(t => (decimal?)t.Amount) ?? 0,
-                // 2. Tính từ ReservationDeposits (tiền đặt cọc)
+                // 2. Tính từ ReservationDeposits (tiền đặt cọc) - CHỈ tính từ Reservation có Status = "Completed"
                 DepositSpending = c.Reservations
+                    .Where(r => r.Status == "Completed")
                     .SelectMany(r => r.ReservationDeposits)
                     .Sum(d => (decimal?)d.Amount) ?? 0,
                 // 3. Tổng chi tiêu = TransactionSpending + DepositSpending
@@ -90,6 +91,7 @@ namespace BusinessAccessLayer.Services
                     .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
                     .Sum(t => (decimal?)t.Amount) ?? 0) +
                     (c.Reservations
+                    .Where(r => r.Status == "Completed")
                     .SelectMany(r => r.ReservationDeposits)
                     .Sum(d => (decimal?)d.Amount) ?? 0),
                 TotalVisits = c.Orders
@@ -200,8 +202,9 @@ namespace BusinessAccessLayer.Services
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
                 .Sum(t => t.Amount);
             
-            // 2. Tính từ ReservationDeposits (tiền đặt cọc)
+            // 2. Tính từ ReservationDeposits (tiền đặt cọc) - CHỈ tính từ Reservation có Status = "Completed"
             var depositSpending = customer.Reservations
+                .Where(r => r.Status == "Completed")
                 .SelectMany(r => r.ReservationDeposits)
                 .Sum(d => d.Amount);
             

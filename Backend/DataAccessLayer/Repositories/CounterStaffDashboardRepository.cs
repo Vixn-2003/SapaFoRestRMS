@@ -35,7 +35,7 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu hôm nay
         /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
-        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today
+        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today VÀ Reservation.Status = "Completed"
         /// </summary>
         public async Task<decimal> GetTodayRevenueAsync()
         {
@@ -50,10 +50,13 @@ namespace DataAccessLayer.Repositories
                             t.CompletedAt.Value.Date <= todayEnd.Date)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
 
-            // Doanh thu từ ReservationDeposits (tiền cọc)
+            // Doanh thu từ ReservationDeposits (tiền cọc) - CHỈ tính từ Reservation có Status = "Completed"
             var depositRevenue = await _context.ReservationDeposits
+                .Include(d => d.Reservation)
                 .Where(d => d.DepositDate.Date >= todayStart.Date && 
-                           d.DepositDate.Date <= todayEnd.Date)
+                           d.DepositDate.Date <= todayEnd.Date &&
+                           d.Reservation != null &&
+                           d.Reservation.Status == "Completed")
                 .SumAsync(d => (decimal?)d.Amount) ?? 0m;
 
             return transactionRevenue + depositRevenue;
@@ -111,7 +114,7 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu theo giờ trong ngày
         /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
-        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today
+        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today VÀ Reservation.Status = "Completed"
         /// </summary>
         public async Task<Dictionary<int, decimal>> GetHourlyRevenueChartAsync()
         {
@@ -130,9 +133,13 @@ namespace DataAccessLayer.Repositories
                 })
                 .ToListAsync();
 
-            // Revenue from Deposits
+            // Revenue from Deposits - CHỈ tính từ Reservation có Status = "Completed"
             var deposits = await _context.ReservationDeposits
-                .Where(d => d.DepositDate >= todayStart && d.DepositDate <= todayEnd)
+                .Include(d => d.Reservation)
+                .Where(d => d.DepositDate >= todayStart && 
+                           d.DepositDate <= todayEnd &&
+                           d.Reservation != null &&
+                           d.Reservation.Status == "Completed")
                 .Select(d => new
                 {
                     Hour = d.DepositDate.Hour,
