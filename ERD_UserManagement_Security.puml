@@ -1,0 +1,100 @@
+@startuml ERD_UserManagement_Security
+!theme plain
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+title ERD - User Management and Security
+
+entity "User" as User {
+  * UserId : INT <<PK>>
+  --
+  * FullName : VARCHAR(100)
+  * Email : VARCHAR(100) <<UNIQUE>>
+  * Phone : VARCHAR(20)
+  * PasswordHash : VARCHAR(200)
+  * RoleId : INT <<FK>>
+  * AvatarUrl : VARCHAR(500)
+  * Status : INT
+  --
+  CreatedAt : DATETIME
+  CreatedBy : INT
+  ModifiedAt : DATETIME2
+  ModifiedBy : INT
+  DeletedAt : DATETIME2
+  DeletedBy : INT
+  IsDeleted : BIT
+}
+
+entity "Role" as Role {
+  * RoleId : INT <<PK>>
+  --
+  * RoleName : VARCHAR
+  --
+  Note: 1 - Owner\n2 - Admin\n3 - Manager\n4 - Staff\n5 - Customer
+}
+
+entity "VerificationCode" as VerificationCode {
+  * VerificationCodeId : INT <<PK>>
+  --
+  * UserId : INT <<FK>>
+  * Code : VARCHAR(10)
+  * ExpiresAt : DATETIME
+  * IsUsed : BIT
+  * Purpose : VARCHAR(50)
+  --
+  Note: Purpose: "ResetPassword",\n"ChangePassword", etc.
+}
+
+entity "AuditLog" as AuditLog {
+  * AuditLogId : INT <<PK>>
+  --
+  * EventType : VARCHAR
+  * EntityType : VARCHAR
+  * EntityId : INT
+  Description : VARCHAR
+  Metadata : VARCHAR
+  UserId : INT <<FK>>
+  IpAddress : VARCHAR
+  * CreatedAt : DATETIME
+  --
+  Note: EventType: attempt_underpaid,\npayment_failed, payment_success, etc.
+}
+
+entity "Staff" as Staff {
+  * StaffId : INT <<PK>>
+  --
+  * UserId : INT <<FK>>
+  DepartmentId : INT <<FK>>
+  * HireDate : DATE
+  * SalaryBase : DECIMAL
+  * Status : INT
+}
+
+' Relationships
+User ||--o{ Role : "belongs to"
+User ||--o{ VerificationCode : "has"
+User ||--o| Staff : "has (1:1)"
+User ||--o{ AuditLog : "performs"
+
+' Notes
+note right of User
+  Main user entity with
+  authentication and
+  authorization data
+end note
+
+note right of VerificationCode
+  Used for password reset,
+  email verification,
+  and other security
+  operations
+end note
+
+note right of AuditLog
+  Tracks security events
+  and user actions for
+  compliance and monitoring
+end note
+
+@enduml
+

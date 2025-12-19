@@ -1,0 +1,89 @@
+@startuml Module_Payment_Transaction
+
+' Styling
+skinparam linetype ortho
+
+title MODULE: PAYMENT & TRANSACTION MANAGEMENT
+
+entity "Order" as Order {
+    * OrderId : int <<PK>>
+    ReservationId : int <<FK>>
+    CustomerId : int <<FK>>
+    * OrderType : string
+    TotalAmount : decimal
+    Status : string
+    ConfirmedAt : datetime
+    ConfirmedByStaffId : int <<FK>>
+    CreatedAt : datetime
+}
+
+entity "Payment" as Payment {
+    * PaymentId : int <<PK>>
+    * OrderId : int <<FK>>
+    * PaymentMethod : string
+    * Subtotal : decimal
+    DiscountAmount : decimal
+    VATPercent : decimal
+    VATAmount : decimal
+    * FinalAmount : decimal
+    VoucherId : int <<FK>>
+    PaymentDate : datetime
+}
+
+entity "Transaction" as Transaction {
+    * TransactionId : int <<PK>>
+    * OrderId : int <<FK>>
+    * TransactionCode : string
+    * Amount : decimal
+    AmountReceived : decimal
+    RefundAmount : decimal
+    * PaymentMethod : string
+    * Status : string
+    * CreatedAt : datetime
+    CompletedAt : datetime
+    SessionId : string
+    GatewayReference : string
+    GatewayErrorCode : string
+    GatewayErrorMessage : string
+    RetryCount : int
+    LastRetryAt : datetime
+    Notes : string
+    ParentTransactionId : int <<FK>>
+    IsManualConfirmed : bool
+    ConfirmedByUserId : int <<FK>>
+}
+
+entity "Voucher" as Voucher {
+    * VoucherId : int <<PK>>
+    * Code : string
+    Description : string
+    DiscountType : string
+    * DiscountValue : decimal
+    StartDate : datetime
+    EndDate : datetime
+    MinOrderValue : decimal
+    MaxDiscount : decimal
+    Status : string
+    IsDelete : bool
+}
+
+entity "User" as User {
+    * UserId : int <<PK>>
+    * FullName : string
+    * Email : string
+    Phone : string
+    * PasswordHash : string
+    * RoleId : int <<FK>>
+    AvatarUrl : string
+    * Status : int
+}
+
+' Relationships
+Order ||--o{ Payment : "has"
+Order ||--o{ Transaction : "has"
+Payment }o--|| Voucher : "uses"
+Transaction }o--o| User : "confirmed by"
+Transaction ||--o{ Transaction : "split from"
+
+@enduml
+
