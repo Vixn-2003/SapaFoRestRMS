@@ -16,7 +16,7 @@ public class MenuOrderController : Controller
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         // Đảm bảo "ApiSettings:BaseUrl" trong appsettings.json là đúng
-        _apiBaseUrl = _configuration.GetValue<string>("ApiSettings:BaseUrl").Replace("/api", "");
+_apiBaseUrl = _configuration.GetValue<string>("ApiSettings:BaseUrl");
     }
 
     [HttpGet]

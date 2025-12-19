@@ -17,7 +17,7 @@
       //"applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.1.47:7096;http://192.168.1.47:5180", //wifi nhà
       //"applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.16.106:7096;http://192.168.16.106:5180", //wifi nhà hieu
 
-      "applicationUrl": "https://localhost:7096;http://localhost:5180;http://192.168.1.20:5180",
+      "applicationUrl": "https://localhost:7096;http://localhost:5180;http://10.33.8.77:5180;http://localhost:5096;http://10.33.8.77:5096",
 
 
 
@@ -27,7 +27,7 @@
 
       //"applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.105.100:7096;http://192.168.105.100:5180",
       //"applicationUrl": "https://localhost:7096;http://localhost:5180",
-     // "applicationUrl": "https://localhost:7096;http://localhost:5180",
+      // "applicationUrl": "https://localhost:7096;http://localhost:5180",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -43,7 +43,7 @@
       //"applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.16.106:7096;http://192.168.16.106:5180", //wifi hieu
       //"applicationUrl": "https://localhost:7096;http://localhost:5180;https://192.168.105.100:7096;http://192.168.105.100:5180",
 
-      "applicationUrl": "https://localhost:7096;http://localhost:5180;http://192.168.1.20:5180", //wifi nha Vi
+      "applicationUrl": "https://localhost:7096;http://localhost:5180;http://10.33.8.77:5180;http://localhost:5096;http://10.33.8.77:5096", //wifi nha Vi
 
       //"applicationUrl": "https://localhost:7096;http://localhost:5180;http://192.168.1.47:5180", //wifi Vi
 
