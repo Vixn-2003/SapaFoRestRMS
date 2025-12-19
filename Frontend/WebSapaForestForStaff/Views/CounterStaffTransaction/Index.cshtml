@@ -39,7 +39,6 @@
                         <option value="">Tất cả</option>
                         <option value="Cash" selected="@(Model.Filter.PaymentMethod == "Cash")">Tiền mặt</option>
                         <option value="QRBankTransfer" selected="@(Model.Filter.PaymentMethod == "QRBankTransfer")">Chuyển khoản QR</option>
-                        <option value="Combined" selected="@(Model.Filter.PaymentMethod == "Combined")">Kết hợp</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -47,7 +46,6 @@
                     <select class="form-select" id="status" name="status">
                         <option value="">Tất cả</option>
                         <option value="Paid" selected="@(Model.Filter.Status == "Paid")">Đã thanh toán</option>
-                        <option value="Completed" selected="@(Model.Filter.Status == "Completed")">Hoàn thành</option>
                     </select>
                 </div>
                 <div class="col-md-2">

@@ -116,7 +116,8 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu hôm nay
         /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
-        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today
+        ///   (loại bỏ Split Bill parent transactions và child transactions)
+        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today VÀ Reservation.Status = "Completed"
         /// </summary>
         public async Task<decimal> GetTodayRevenueAsync()
         {
@@ -124,15 +125,19 @@ namespace DataAccessLayer.Repositories
             var todayStart = today.Date;
             var todayEnd = today.Date;
 
-            // Doanh thu từ Transactions
+            // Doanh thu từ Transactions (loại bỏ Split Bill parent và child transactions)
             var transactionRevenue = await _context.Transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => t.CompletedAt.Value.Date >= todayStart && t.CompletedAt.Value.Date <= todayEnd)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
 
-            // Doanh thu từ ReservationDeposits (tiền cọc)
+            // Doanh thu từ ReservationDeposits (tiền cọc) - CHỈ tính từ Reservation có Status = "Completed"
             var depositRevenue = await _context.ReservationDeposits
+                .Include(d => d.Reservation)
                 .Where(d => d.DepositDate.Date >= todayStart && d.DepositDate.Date <= todayEnd)
+                .Where(d => d.Reservation != null && d.Reservation.Status == "Completed") // ✅ Chỉ tính từ Completed reservations
                 .SumAsync(d => (decimal?)d.Amount) ?? 0m;
 
             return transactionRevenue + depositRevenue;
@@ -141,6 +146,7 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu 7 ngày gần nhất - Áp dụng logic từ OwnerRevenueService
         /// Chỉ lấy transactions có Status = "Paid" và CompletedAt.HasValue
+        /// (loại bỏ Split Bill parent transactions và child transactions)
         /// </summary>
         public async Task<List<(DateTime Date, decimal Revenue)>> GetRevenueLast7DaysAsync()
         {
@@ -149,6 +155,8 @@ namespace DataAccessLayer.Repositories
 
             var transactions = await _context.Transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => t.CompletedAt.Value.Date >= startDate.Date && t.CompletedAt.Value.Date <= endDate.Date)
                 .Select(t => new
                 {
@@ -178,6 +186,7 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu tháng hiện tại - Áp dụng logic từ OwnerRevenueService
         /// Chỉ lấy transactions có Status = "Paid" và CompletedAt.HasValue
+        /// (loại bỏ Split Bill parent transactions và child transactions)
         /// </summary>
         public async Task<decimal> GetMonthRevenueAsync()
         {
@@ -186,6 +195,8 @@ namespace DataAccessLayer.Repositories
 
             return await _context.Transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => t.CompletedAt.Value.Date >= firstDayOfMonth.Date && t.CompletedAt.Value.Date <= lastDayOfMonth.Date)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
         }

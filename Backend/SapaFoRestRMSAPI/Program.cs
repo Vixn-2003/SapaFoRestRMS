@@ -33,9 +33,9 @@ QuestPDF.Settings.License = LicenseType.Community;
 // Choose the appropriate license type for your usage:
 // - Commercial: ExcelPackage.License.SetCommercial("YOUR_LICENSE_KEY");
 // - Non-commercial: SetNonCommercialPersonal/SetNonCommercialOrganization
+ExcelPackage.License.SetNonCommercialOrganization("SapaFoRestRMS");
 
 var builder = WebApplication.CreateBuilder(args);
-ExcelPackage.License.SetNonCommercialOrganization("SapaFoRestRMS");
 
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
 {

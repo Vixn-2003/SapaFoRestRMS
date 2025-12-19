@@ -314,14 +314,14 @@ public class PaymentService : IPaymentService
             }
         }
 
-        // ✅ FIX: Làm tròn discount amount XUỐNG mệnh giá 1000 (không làm tròn lên để tránh thiệt hại cho khách)
-        // Ví dụ: 112,500 → 112,000 (không phải 113,000)
-        var roundedDiscountAmount = RoundDownToThousand(discountAmount);
-        orderDto.DiscountAmount = roundedDiscountAmount;
+        // ✅ FIX: KHÔNG làm tròn discount amount - giữ nguyên giá trị tính toán
+        orderDto.DiscountAmount = discountAmount;
 
-        // Tính lại tổng tiền sau ưu đãi và làm tròn
+        // Tính lại tổng tiền sau ưu đãi (KHÔNG làm tròn các thành phần trung gian)
         var totalBeforeRounding = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
                                   (orderDto.ServiceFee ?? 0) - orderDto.DiscountAmount.Value;
+        
+        // ✅ CHỈ làm tròn số tiền cuối cùng khách phải trả (TotalAmount)
         orderDto.TotalAmount = RoundUpToThousand(totalBeforeRounding);
 
         //  FIX: Lưu discount vào Payment record trong database
@@ -354,7 +354,7 @@ public class PaymentService : IPaymentService
                 OrderId = request.OrderId,
                 PaymentMethod = "Pending", // Tạm thời, sẽ cập nhật khi thanh toán
                 Subtotal = orderDto.Subtotal ?? 0,
-                DiscountAmount = roundedDiscountAmount,
+                DiscountAmount = discountAmount,
                 Vatpercent = 10, // Default VAT
                 Vatamount = orderDto.VatAmount ?? 0,
                 FinalAmount = orderDto.TotalAmount ?? 0,
@@ -371,7 +371,7 @@ public class PaymentService : IPaymentService
         else
         {
             // Cập nhật Payment record hiện có
-            payment.DiscountAmount = roundedDiscountAmount;
+            payment.DiscountAmount = discountAmount;
             payment.VoucherId = voucherId;
             payment.Subtotal = orderDto.Subtotal ?? 0;
             payment.Vatamount = orderDto.VatAmount ?? 0;
@@ -465,9 +465,7 @@ public class PaymentService : IPaymentService
             }
         }
 
-        // ✅ FIX: Làm tròn discount amount XUỐNG mệnh giá 1000 (không làm tròn lên để tránh thiệt hại cho khách)
-        var roundedDiscountAmount = RoundDownToThousand(discountAmount);
-
+        // ✅ FIX: KHÔNG làm tròn discount amount - giữ nguyên giá trị tính toán
         // ✅ Phân bổ discount cho tất cả Orders trong Reservation theo tỷ lệ Subtotal
         // Ví dụ: Order1 có Subtotal = 100k, Order2 có Subtotal = 200k, Total = 300k
         // Discount = 30k → Order1: 10k, Order2: 20k
@@ -504,22 +502,23 @@ public class PaymentService : IPaymentService
             if (totalSubtotal > 0 && orderDto.Subtotal.HasValue)
             {
                 var ratio = orderDto.Subtotal.Value / totalSubtotal;
-                orderDiscount = roundedDiscountAmount * ratio;
+                orderDiscount = discountAmount * ratio;
             }
             else if (ordersList.Count == 1)
             {
                 // Nếu chỉ có 1 Order, áp dụng toàn bộ discount
-                orderDiscount = roundedDiscountAmount;
+                orderDiscount = discountAmount;
             }
 
-            // ✅ FIX: Làm tròn discount cho từng Order XUỐNG mệnh giá 1000
-            orderDiscount = RoundDownToThousand(orderDiscount);
+            // ✅ FIX: KHÔNG làm tròn discount - giữ nguyên giá trị tính toán
+            orderDto.DiscountAmount = orderDiscount;
 
-            // Tính lại tổng tiền sau ưu đãi cho Order này
+            // Tính lại tổng tiền sau ưu đãi cho Order này (KHÔNG làm tròn các thành phần trung gian)
             var orderTotalBeforeRounding = (orderDto.Subtotal ?? 0) + (orderDto.VatAmount ?? 0) +
                                           (orderDto.ServiceFee ?? 0) - orderDiscount;
+            
+            // ✅ CHỈ làm tròn số tiền cuối cùng khách phải trả (TotalAmount)
             orderDto.TotalAmount = RoundUpToThousand(orderTotalBeforeRounding);
-            orderDto.DiscountAmount = orderDiscount;
 
             // Lưu discount vào Payment record của Order
             var payment = order.Payments?.OrderByDescending(p => p.PaymentDate ?? DateTime.MinValue).FirstOrDefault();
@@ -1266,14 +1265,14 @@ public class PaymentService : IPaymentService
             }
         }
 
-        //  Làm tròn Subtotal lên mệnh giá 1000
-        orderDto.Subtotal = RoundUpToThousand(subtotal);
+        // ✅ FIX: KHÔNG làm tròn Subtotal - giữ nguyên giá trị tính toán
+        orderDto.Subtotal = subtotal;
 
-        // Tính VAT (10%) từ Subtotal đã làm tròn
-        orderDto.VatAmount = RoundUpToThousand(orderDto.Subtotal.Value * 0.1m);
+        // ✅ FIX: Tính VAT (10%) từ Subtotal (KHÔNG làm tròn)
+        orderDto.VatAmount = orderDto.Subtotal.Value * 0.1m;
 
-        // Tính phí dịch vụ (5%) từ Subtotal đã làm tròn
-        orderDto.ServiceFee = RoundUpToThousand(orderDto.Subtotal.Value * 0.05m);
+        // ✅ FIX: Tính phí dịch vụ (5%) từ Subtotal (KHÔNG làm tròn)
+        orderDto.ServiceFee = orderDto.Subtotal.Value * 0.05m;
 
         // Lấy discount từ Payment nếu có (không cần làm tròn lại vì đã làm tròn khi lưu)
         if (order.Payments != null && order.Payments.Any())
@@ -1316,14 +1315,14 @@ public class PaymentService : IPaymentService
         // Nếu tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa cho khách
         if (depositToDeduct > 0 && depositToDeduct > totalBeforeDeposit)
         {
-            // Tính số tiền cần trả lại và làm tròn
-            orderDto.DepositRefundAmount = RoundUpToThousand(depositToDeduct - totalBeforeDeposit);
+            // Tính số tiền cần trả lại (KHÔNG làm tròn - giữ nguyên)
+            orderDto.DepositRefundAmount = depositToDeduct - totalBeforeDeposit;
             // Tổng tiền thanh toán = 0 (vì đã đủ tiền cọc)
             orderDto.TotalAmount = 0;
         }
         else
         {
-            // Trừ tiền cọc vào tổng tiền và làm tròn
+            // ✅ CHỈ làm tròn số tiền cuối cùng khách phải trả (TotalAmount)
             orderDto.TotalAmount = RoundUpToThousand(totalBeforeDeposit - depositToDeduct);
             orderDto.DepositRefundAmount = 0;
             
@@ -2560,6 +2559,25 @@ public class PaymentService : IPaymentService
                 // Step 8.1.2: Tăng LoyaltyPoints +1 cho Customer sau khi thanh toán thành công
                 try
                 {
+                    // ✅ FIX: Kiểm tra xem Order đã được tăng điểm chưa (tránh duplicate)
+                    // Kiểm tra xem đã có audit log "LoyaltyPointsIncreased" cho Order này chưa
+                    var existingAuditLogs = await _unitOfWork.AuditLogs.GetByEntityAsync("Order", orderId);
+                    var existingLoyaltyLog = existingAuditLogs.FirstOrDefault(a => 
+                        a.EventType == "LoyaltyPointsIncreased");
+                    
+                    if (existingLoyaltyLog != null)
+                    {
+                        // Đã tăng điểm rồi, bỏ qua
+                        await _auditLogService.LogEventAsync(
+                            eventType: "LoyaltyPointsSkipped",
+                            entityType: "Order",
+                            entityId: orderId,
+                            description: $"Bỏ qua tăng điểm tích lũy: Order {orderId} đã được tăng điểm trước đó",
+                            userId: null,
+                            ct: ct);
+                        return; // Exit early để tránh duplicate
+                    }
+                    
                     // ✅ FIX: Fallback sang Reservation.Customer nếu Order.Customer null
                     DomainAccessLayer.Models.Customer? customerToUpdate = null;
                     int customerId = 0;
@@ -2584,12 +2602,12 @@ public class PaymentService : IPaymentService
                         // Save changes để lưu LoyaltyPoints
                         await _unitOfWork.SaveChangesAsync();
                         
-                        // Log việc tăng điểm
+                        // Log việc tăng điểm (với OrderId để check duplicate sau này)
                         await _auditLogService.LogEventAsync(
                             eventType: "LoyaltyPointsIncreased",
-                            entityType: "Customer",
-                            entityId: customerId,
-                            description: $"Tăng điểm tích lũy +1 sau thanh toán thành công. Điểm hiện tại: {customerToUpdate.LoyaltyPoints}",
+                            entityType: "Order",
+                            entityId: orderId,
+                            description: $"Tăng điểm tích lũy +1 cho Customer {customerId} sau thanh toán thành công Order {orderId}. Điểm hiện tại: {customerToUpdate.LoyaltyPoints}",
                             userId: null,
                             ct: ct);
                     }
@@ -2916,12 +2934,6 @@ public class PaymentService : IPaymentService
             dto.TableNumber = string.Join(", ", dto.TableNumbers);
         }
 
-        // ✅ Lấy thông tin Staff (người đặt bàn - Quản lý) từ Reservations.StaffId
-        if (reservation.Staff != null)
-        {
-            dto.StaffName = reservation.Staff.FullName ?? reservation.Staff.FullName;
-        }
-
         // ✅ Lấy WaiterName (người confirm order) từ Orders.ConfirmedByStaffId
         // Lấy từ Order đầu tiên có ConfirmedByStaffId (thường tất cả Orders trong Reservation đều có cùng Waiter)
         var confirmedOrder = ordersList.FirstOrDefault(o => o.ConfirmedByStaffId.HasValue && o.ConfirmedByStaff != null);
@@ -2967,6 +2979,30 @@ public class PaymentService : IPaymentService
         var transactions = await _unitOfWork.Payments.GetTransactionsByReservationIdAsync(reservationId);
         var transactionDtos = transactions.Select(t => _mapper.Map<TransactionDto>(t)).ToList();
         dto.Transactions = transactionDtos;
+        
+        // ✅ FIX: Lấy StaffName (Thu ngân xử lý) từ Transaction.ConfirmedByUser (không phải từ Reservation.Staff)
+        var paidTransactions = transactions
+            .Where(t =>
+                string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(t => t.CompletedAt ?? t.CreatedAt)
+            .ToList();
+        
+        if (paidTransactions.Any())
+        {
+            var latestPaidTransaction = paidTransactions.FirstOrDefault();
+            if (latestPaidTransaction?.ConfirmedByUser != null)
+            {
+                dto.StaffName = latestPaidTransaction.ConfirmedByUser.FullName;
+            }
+        }
+        
+        // Fallback: Nếu không có StaffName từ transaction, thử lấy từ Reservation.Staff (legacy)
+        if (string.IsNullOrWhiteSpace(dto.StaffName) && reservation.Staff != null)
+        {
+            dto.StaffName = reservation.Staff.FullName;
+        }
 
         // Tính tổng tiền từ tất cả Orders
         CalculateReservationAmount(dto);
@@ -2998,20 +3034,20 @@ public class PaymentService : IPaymentService
             }
         }
 
-        // Làm tròn Subtotal lên mệnh giá 1000
-        dto.Subtotal = RoundUpToThousand(subtotal);
+        // ✅ FIX: KHÔNG làm tròn Subtotal - giữ nguyên giá trị tính toán
+        dto.Subtotal = subtotal;
 
-        // Tính VAT (10%) từ Subtotal đã làm tròn
-        dto.VatAmount = RoundUpToThousand(dto.Subtotal * 0.1m);
+        // ✅ FIX: Tính VAT (10%) từ Subtotal (KHÔNG làm tròn)
+        dto.VatAmount = dto.Subtotal * 0.1m;
 
-        // Tính phí dịch vụ (5%) từ Subtotal đã làm tròn
-        dto.ServiceFee = RoundUpToThousand(dto.Subtotal * 0.05m);
+        // ✅ FIX: Tính phí dịch vụ (5%) từ Subtotal (KHÔNG làm tròn)
+        dto.ServiceFee = dto.Subtotal * 0.05m;
 
-        // ✅ FIX: Tổng discount làm tròn XUỐNG (không làm tròn lên để tránh thiệt hại cho khách)
-        dto.DiscountAmount = RoundDownToThousand(totalDiscount);
+        // ✅ FIX: KHÔNG làm tròn discount - giữ nguyên giá trị tính toán
+        dto.DiscountAmount = totalDiscount;
 
-        // Tính tổng tiền cuối cùng (trước khi trừ deposit)
-        decimal totalBeforeDeposit = RoundUpToThousand(dto.Subtotal + dto.VatAmount + dto.ServiceFee - dto.DiscountAmount);
+        // Tính tổng tiền cuối cùng (trước khi trừ deposit) - KHÔNG làm tròn các thành phần trung gian
+        decimal totalBeforeDeposit = dto.Subtotal + dto.VatAmount + dto.ServiceFee - dto.DiscountAmount;
 
         // ✅ XỬ LÝ DEPOSIT LOGIC (giống như trong CalculateOrderAmounts)
         decimal depositToDeduct = 0;
@@ -3023,20 +3059,20 @@ public class PaymentService : IPaymentService
         // ✅ XỬ LÝ TRƯỜNG HỢP DEPOSIT > TOTAL
         if (depositToDeduct > 0 && depositToDeduct > totalBeforeDeposit)
         {
-            // Tiền cọc lớn hơn tổng tiền → cần trả lại tiền thừa
-            dto.DepositRefundAmount = RoundUpToThousand(depositToDeduct - totalBeforeDeposit);
+            // Tiền cọc lớn hơn tổng tiền → cần trả lại tiền thừa (KHÔNG làm tròn)
+            dto.DepositRefundAmount = depositToDeduct - totalBeforeDeposit;
             dto.TotalAmount = 0; // Không cần thanh toán thêm
         }
         else if (depositToDeduct > 0)
         {
-            // Trừ tiền cọc vào tổng tiền
+            // ✅ CHỈ làm tròn số tiền cuối cùng khách phải trả (TotalAmount)
             dto.TotalAmount = RoundUpToThousand(totalBeforeDeposit - depositToDeduct);
             dto.DepositRefundAmount = 0; // Không có tiền thừa
         }
         else
         {
-            // Không có deposit hoặc chưa thanh toán deposit
-            dto.TotalAmount = totalBeforeDeposit;
+            // ✅ CHỈ làm tròn số tiền cuối cùng khách phải trả (TotalAmount)
+            dto.TotalAmount = RoundUpToThousand(totalBeforeDeposit);
             dto.DepositRefundAmount = 0;
         }
     }

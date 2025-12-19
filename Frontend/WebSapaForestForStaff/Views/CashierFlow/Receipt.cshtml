@@ -28,10 +28,6 @@
     var depositRefundAmount = isReservationPayment ? reservationPayment!.DepositRefundAmount : orderDetail!.DepositRefundAmount;
     var customerName = isReservationPayment ? reservationPayment!.CustomerName : orderDetail!.CustomerName;
     var customerPhone = isReservationPayment ? reservationPayment!.CustomerPhone : orderDetail!.CustomerPhone;
-    var staffName = isReservationPayment ? reservationPayment!.StaffName : orderDetail!.StaffName;
-    var waiterName = isReservationPayment ? reservationPayment!.WaiterName : orderDetail!.WaiterName;
-    var paymentMethod = isReservationPayment ? "Kết hợp" : (orderDetail!.PaymentMethod ?? "—");
-    var createdAt = isReservationPayment ? reservationPayment!.CreatedAt : orderDetail!.CreatedAt;
     
     // ✅ Lấy ReservationId nếu có
     var reservationId = isReservationPayment ? reservationPayment!.ReservationId : (int?)null;
@@ -50,7 +46,7 @@
             ? string.Join(", ", orderDetail.TableNumbers)
             : orderDetail.TableNumber ?? "—");
     
-    // ✅ Lấy transactions từ reservation payment hoặc order detail
+    // ✅ Lấy transactions từ reservation payment hoặc order detail (PHẢI khai báo TRƯỚC khi sử dụng)
     var paidTransactions = new List<TransactionDto>();
     if (isReservationPayment && reservationPayment != null)
     {
@@ -74,6 +70,24 @@
                 string.IsNullOrEmpty(t.Status))
             .ToList();
     }
+    
+    // ✅ FIX: Thu ngân xử lý (StaffName) lấy từ Transaction.ConfirmedByUser (không phải từ Reservation.Staff)
+    var staffName = "—";
+    if (isReservationPayment && reservationPayment != null && paidTransactions.Any())
+    {
+        // Note: TransactionDto không có ConfirmedByUser property, cần lấy từ backend
+        // Lấy từ ReservationPaymentDto.StaffName (sẽ được populate từ Transaction.ConfirmedByUser ở backend)
+        staffName = reservationPayment.StaffName ?? "—";
+    }
+    else if (orderDetail != null)
+    {
+        staffName = orderDetail.StaffName ?? "—";
+    }
+    
+    // ✅ FIX: Nhân viên phục vụ (WaiterName) lấy từ Order.ConfirmedByStaffId
+    var waiterName = isReservationPayment ? reservationPayment!.WaiterName : orderDetail!.WaiterName;
+    var paymentMethod = isReservationPayment ? "Kết hợp" : (orderDetail!.PaymentMethod ?? "—");
+    var createdAt = isReservationPayment ? reservationPayment!.CreatedAt : orderDetail!.CreatedAt;
     
     // ✅ Lấy PaidAt: từ transaction đầu tiên (nếu có) hoặc từ order đầu tiên
     var paidAt = isReservationPayment 
@@ -594,7 +608,7 @@
                             data-total="@totalAmount">
                         <i class="bi bi-printer me-1"></i> In
                     </button>
-                    @if (isReservationPayment && reservationId.HasValue)
+                @*     @if (isReservationPayment && reservationId.HasValue)
                     {
                         <a href="@Url.Action(nameof(CashierPaymentFlowController.DownloadReceiptByReservation), "CashierPaymentFlow", new { reservationId })"
                            class="btn btn-outline-primary btn-sm">
@@ -607,7 +621,7 @@
                            class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-download me-1"></i> Tải PDF
                         </a>
-                    }
+                    } *@
                     <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")"
                        class="btn btn-outline-secondary">
                         Quay lại danh sách

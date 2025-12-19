@@ -12,6 +12,36 @@
     // Check if we're showing unpaid orders (confirmed, pendingpayment) or paid orders (paid, completed, success)
     // Nếu ViewBag.OrderStatus = "paid" thì isUnpaid = false, ngược lại = true
     var isUnpaid = !orderStatus.Equals("paid", StringComparison.OrdinalIgnoreCase);
+    
+    // ✅ Helper function: Lấy PaymentMethod từ danh sách orders (có thể combined)
+    string GetReservationPaymentMethod(List<WebSapaForestForStaff.DTOs.Payment.OrderDto> orders)
+    {
+        var paymentMethods = orders
+            .Where(o => !string.IsNullOrWhiteSpace(o.PaymentMethod))
+            .Select(o => o.PaymentMethod!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        
+        if (paymentMethods.Count == 0)
+        {
+            return "—";
+        }
+        
+        if (paymentMethods.Count > 1)
+        {
+            // Có nhiều payment methods → Combined
+            var hasCash = paymentMethods.Any(pm => string.Equals(pm, "Cash", StringComparison.OrdinalIgnoreCase));
+            var hasQR = paymentMethods.Any(pm => pm.Contains("QR", StringComparison.OrdinalIgnoreCase) || 
+                                                  pm.Contains("BankTransfer", StringComparison.OrdinalIgnoreCase));
+            if (hasCash && hasQR)
+            {
+                return "Combined";
+            }
+        }
+        
+        // Trả về payment method đầu tiên
+        return paymentMethods.First();
+    }
 }
 
 @if (Model == null || !Model.Any())
@@ -91,14 +121,19 @@ else
                             ReservationId = g.Key,
                             Orders = g.ToList(),
                             FirstOrder = g.First(),
-                            TotalAmount = g.Sum(o => o.Total),
+                            // ✅ FIX: Tính tổng TotalAmount từ tất cả orders (không phải Total)
+                            TotalAmount = g.Sum(o => o.TotalAmount > 0 ? o.TotalAmount : o.Subtotal),
                             OrderCodes = string.Join(", ", g.Select(o => o.OrderCode ?? $"#{o.OrderId}")),
                             OrderCount = g.Count(),
                             CreatedAt = g.Min(o => o.CreatedAt),
                             PaidAt = g.Max(o => o.PaidAt),
-                            WaiterName = g.First().WaiterName,
+                            // ✅ FIX: Lấy WaiterName từ order có ConfirmedByStaffId (không phải First())
+                            WaiterName = g.Where(o => !string.IsNullOrWhiteSpace(o.WaiterName)).FirstOrDefault()?.WaiterName 
+                                       ?? g.First().WaiterName,
                             TableName = g.First().Table ?? "—",
-                            PaymentMethod = g.First().PaymentMethod
+                            // ✅ FIX: Lấy PaymentMethod từ transactions (có thể combined)
+                            // Logic: Nếu có nhiều payment methods khác nhau → "Combined", ngược lại lấy từ order đầu tiên
+                            PaymentMethod = GetReservationPaymentMethod(g.ToList())
                         })
                         .ToList();
 

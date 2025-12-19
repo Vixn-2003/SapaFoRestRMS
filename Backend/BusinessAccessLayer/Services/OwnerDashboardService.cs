@@ -38,9 +38,11 @@ namespace BusinessAccessLayer.Services
             var ingredients = (await _unitOfWork.InventoryIngredient.GetAllAsync()).ToList();
             
             // Load reservations with deposits to calculate deposit revenue
+            // ✅ CHỈ lấy deposits từ Reservation có Status = "Completed"
             var reservations = await _unitOfWork.Reservations.GetPendingAndConfirmedReservationsAsync(
                 status: null, date: null, customerName: null, phone: null, timeSlot: null, page: 1, pageSize: int.MaxValue);
             var deposits = reservations.Data
+                .Where(r => r.Status == "Completed") // ✅ Chỉ tính deposits từ Completed reservations
                 .SelectMany(r => r.ReservationDeposits ?? new List<ReservationDeposit>())
                 .ToList();
 
@@ -70,9 +72,11 @@ namespace BusinessAccessLayer.Services
             List<Ingredient> ingredients)
         {
 
-            // Today Revenue from Transactions
+            // Today Revenue from Transactions (loại bỏ Split Bill parent và child transactions)
             var todayTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == today)
                 .Sum(t => t.Amount);
 
@@ -84,9 +88,11 @@ namespace BusinessAccessLayer.Services
             // Today Revenue = Transactions + Deposits
             var todayRevenue = todayTransactionRevenue + todayDepositRevenue;
 
-            // Yesterday Revenue from Transactions
+            // Yesterday Revenue from Transactions (loại bỏ Split Bill parent và child transactions)
             var yesterdayTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) == yesterday)
                 .Sum(t => t.Amount);
 
@@ -98,9 +104,11 @@ namespace BusinessAccessLayer.Services
             // Yesterday Revenue = Transactions + Deposits
             var yesterdayRevenue = yesterdayTransactionRevenue + yesterdayDepositRevenue;
 
-            // Monthly Revenue from Transactions
+            // Monthly Revenue from Transactions (loại bỏ Split Bill parent và child transactions)
             var monthlyTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt) >= startOfMonth)
                 .Sum(t => t.Amount);
 
@@ -112,9 +120,11 @@ namespace BusinessAccessLayer.Services
             // Monthly Revenue = Transactions + Deposits
             var monthlyRevenue = monthlyTransactionRevenue + monthlyDepositRevenue;
 
-            // Last Month Revenue from Transactions
+            // Last Month Revenue from Transactions (loại bỏ Split Bill parent và child transactions)
             var lastMonthTransactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && (t.CompletedAt.HasValue || t.CreatedAt != default))
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => {
                     var date = DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt);
                     return date >= lastMonth && date < startOfMonth;
@@ -187,9 +197,11 @@ namespace BusinessAccessLayer.Services
         private List<RevenueTrendDataDto> GetRevenueTrendAsync(DateOnly startDate, DateOnly endDate, 
             List<Transaction> transactions)
         {
-            // Revenue from Transactions
+            // Revenue from Transactions (loại bỏ Split Bill parent và child transactions)
             var transactionTrend = transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .GroupBy(t => DateOnly.FromDateTime(t.CompletedAt.Value))
                 .Where(g => g.Key >= startDate && g.Key <= endDate)
                 .Select(g => new
@@ -249,10 +261,12 @@ namespace BusinessAccessLayer.Services
             // Hiện tại chỉ có 1 branch, trả về data mẫu
             // TODO: Implement khi có multi-branch
 
-            // Revenue from Transactions
+            // Revenue from Transactions (loại bỏ Split Bill parent và child transactions)
             var transactionRevenue = transactions
                 .Where(t => t.Status == "Paid" && 
                        t.CompletedAt.HasValue &&
+                       t.ParentTransactionId == null && // ✅ Loại bỏ child transactions
+                       t.PaymentMethod != "Split" && // ✅ Loại bỏ parent Split transactions
                        DateOnly.FromDateTime(t.CompletedAt.Value) >= startDate &&
                        DateOnly.FromDateTime(t.CompletedAt.Value) <= endDate)
                 .Sum(t => t.Amount);
@@ -263,6 +277,8 @@ namespace BusinessAccessLayer.Services
             var totalOrders = transactions
                 .Where(t => t.Status == "Paid" && 
                        t.CompletedAt.HasValue &&
+                       t.ParentTransactionId == null && // ✅ Loại bỏ child transactions
+                       t.PaymentMethod != "Split" && // ✅ Loại bỏ parent Split transactions
                        DateOnly.FromDateTime(t.CompletedAt.Value) >= startDate &&
                        DateOnly.FromDateTime(t.CompletedAt.Value) <= endDate)
                 .Select(t => t.OrderId)

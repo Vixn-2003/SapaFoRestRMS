@@ -455,34 +455,7 @@
                                     ? reservationPayment!.DepositRefundAmount 
                                     : orderDetail!.DepositRefundAmount;
                             }
-                            @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
-                            {
-                                <tr class="table-info">
-                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
-                                        <i class="fa-solid fa-hand-holding-dollar me-1"></i>
-                                        Đã đặt cọc
-                                        <small class="text-muted d-block">
-                                            Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
-                                        </small>
-                                    </td>
-                                    <td class="text-end fw-bold text-success align-middle">-@depositAmount.Value.ToString("N0") ₫</td>
-                                </tr>
-                            }
-                             @if (depositRefundAmount.HasValue && depositRefundAmount.Value > 0)
-                             {
-                                 <tr class="table-warning">
-                                     <td colspan="4" class="fw-semibold ps-3 align-middle">
-                                         <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
-                                         Tiền cần trả lại cho khách
-                                         <small class="text-muted d-block">
-                                             Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
-                                         </small>
-                                     </td>
-                                     <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
-                                         +@depositRefundAmount.Value.ToString("N0") ₫
-                                     </td>
-                                 </tr>
-                             }
+                          
                             @{
                                 var totalBeforeDeposit = subtotal + vatAmount + serviceFee - discountAmount;
                             }
@@ -500,6 +473,34 @@
                                     @totalBeforeDeposit.ToString("N0") ₫
                                 </td>
                             </tr>
+                            @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
+                            {
+                                <tr class="table-info">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+                                        Đã đặt cọc
+                                        <small class="text-muted d-block">
+                                            Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-success align-middle">-@depositAmount.Value.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                            @if (depositRefundAmount.HasValue && depositRefundAmount.Value > 0)
+                            {
+                                <tr class="table-warning">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
+                                        Tiền cần trả lại cho khách
+                                        <small class="text-muted d-block">
+                                            Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
+                                        +@depositRefundAmount.Value.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
                             @{
                                 // ✅ Lấy thông tin deposit và payment từ Model (hỗ trợ cả 2 loại)
                                 var amountReceived = isReservationPayment ? (decimal?)null : orderDetail!.AmountReceived;
