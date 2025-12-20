@@ -3305,8 +3305,6 @@ function renderIngredientShortage(shortageList) {
             <div style="background: #fff3cd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
                 <div style="font-weight: 600; color: #856404; margin-bottom: 8px;">
                     <i class="mdi mdi-information" style="margin-right: 6px;"></i>
-                    Tổng quan nguyên liệu thiếu
-                </div>
                 <div style="font-size: 14px; color: #856404;">
                     Có <strong>${uniqueIngredientCount}</strong> nguyên liệu đang thiếu, ảnh hưởng đến <strong>${shortageList.length}</strong> món
                 </div>
