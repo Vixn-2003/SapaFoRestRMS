@@ -100,12 +100,6 @@ namespace BusinessAccessLayer.Services
                     // Đảm bảo chỉ set true khi thực sự là ConsumptionBased
                     var canConfirmQuantity = isConsumptionBased && !isDone;
                     
-                    // Debug logging
-                    if (orderDetail.MenuItem != null)
-                    {
-                        Console.WriteLine($"[WaiterOrderTracking] OrderDetailId: {orderDetail.OrderDetailId}, MenuItem: {orderDetail.MenuItem.Name}, BillingType: {orderDetail.MenuItem.BillingType}, isConsumptionBased: {isConsumptionBased}, canConfirmQuantity: {canConfirmQuantity}");
-                    }
-                    
                     // Kiểm tra xem order detail này có phải đã được tách từ order detail gốc không
                     // Nếu có StartedAt và CreatedAt gần nhau (trong vòng 5 phút), có thể đã được tách
                     // Hoặc kiểm tra xem có order detail khác cùng OrderId, MenuItemId, Notes nhưng có Quantity khác không
@@ -158,12 +152,6 @@ namespace BusinessAccessLayer.Services
                             //  Món ConsumptionBased có thể xác nhận số lượng ngay (không cần chờ Ready)
                             var isComboItemConsumptionBased = mi?.BillingType == DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased;
                             var canConfirmComboQuantity = isComboItemConsumptionBased && !comboIsDone;
-                            
-                            // Debug logging cho combo items
-                            if (mi != null)
-                            {
-                                Console.WriteLine($"[WaiterOrderTracking] ComboItem - OrderDetailId: {orderDetail.OrderDetailId}, OrderComboItemId: {orderComboItem.OrderComboItemId}, MenuItem: {mi.Name}, BillingType: {mi.BillingType}, isComboItemConsumptionBased: {isComboItemConsumptionBased}, canConfirmComboQuantity: {canConfirmComboQuantity}");
-                            }
 
                             var comboItem = new OrderTrackingItemDto
                             {
@@ -452,7 +440,6 @@ namespace BusinessAccessLayer.Services
                         var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(request.OrderDetailId);
                         if (!releaseResult.success)
                         {
-                            Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy combo {request.OrderDetailId}: {releaseResult.message}");
                         }
                     }
 
@@ -506,7 +493,6 @@ namespace BusinessAccessLayer.Services
                     if (!releaseResult.success)
                     {
                         // Log warning nhưng không fail việc hủy món
-                        Console.WriteLine($"Warning: Không thể giải phóng nguyên liệu khi hủy món {request.OrderDetailId}: {releaseResult.message}");
                     }
                 }
 
@@ -725,15 +711,12 @@ namespace BusinessAccessLayer.Services
                     // Kiểm tra BillingType của món trong combo
                     if (orderComboItem.MenuItem == null)
                     {
-                        Console.WriteLine($"[UpdateQuantity] OrderComboItemId: {request.OrderComboItemId.Value}, MenuItem is null");
                         return new UpdateQuantityResponse
                         {
                             Success = false,
                             Message = "Không tìm thấy thông tin món ăn trong combo"
                         };
                     }
-                    
-                    Console.WriteLine($"[UpdateQuantity] OrderComboItemId: {request.OrderComboItemId.Value}, MenuItem: {orderComboItem.MenuItem.Name}, BillingType: {orderComboItem.MenuItem.BillingType}");
                     
                     // ✅ QUAN TRỌNG: Món có BillingType = 1 trong combo KHÔNG được phép tăng/giảm số lượng
                     // Chỉ được phép xác nhận với số lượng hiện tại
@@ -760,7 +743,6 @@ namespace BusinessAccessLayer.Services
                     orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
                     if (orderDetail == null)
                     {
-                        Console.WriteLine($"[UpdateQuantity] OrderDetailId: {request.OrderDetailId} không tìm thấy");
                         return new UpdateQuantityResponse
                         {
                             Success = false,
@@ -771,15 +753,12 @@ namespace BusinessAccessLayer.Services
                     // Kiểm tra BillingType - chỉ cho phép update quantity cho món có BillingType = 1 (ConsumptionBased)
                     if (orderDetail.MenuItem == null)
                     {
-                        Console.WriteLine($"[UpdateQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem is null");
                         return new UpdateQuantityResponse
                         {
                             Success = false,
                             Message = "Không tìm thấy thông tin món ăn"
                         };
                     }
-                    
-                    Console.WriteLine($"[UpdateQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem: {orderDetail.MenuItem.Name}, BillingType: {orderDetail.MenuItem.BillingType}, Expected: ConsumptionBased");
                     
                     if (orderDetail.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
                     {
@@ -876,8 +855,6 @@ namespace BusinessAccessLayer.Services
                         };
                     }
                     
-                    Console.WriteLine($"[ConfirmConsumptionQuantity] OrderComboItemId: {request.OrderComboItemId.Value}, MenuItem: {orderComboItem.MenuItem.Name}, BillingType: {orderComboItem.MenuItem.BillingType}, Expected: ConsumptionBased");
-                    
                     if (orderComboItem.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
                     {
                         return new ConfirmConsumptionQuantityResponse
@@ -891,7 +868,6 @@ namespace BusinessAccessLayer.Services
                     var orderDetail = await _unitOfWork.OrderDetails.GetByIdAsync(request.OrderDetailId);
                     if (orderDetail == null)
                     {
-                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId} không tìm thấy");
                         return new ConfirmConsumptionQuantityResponse
                         {
                             Success = false,
@@ -952,7 +928,6 @@ namespace BusinessAccessLayer.Services
                     var orderDetail = await _unitOfWork.OrderDetails.GetByIdWithMenuItemAsync(request.OrderDetailId);
                     if (orderDetail == null)
                     {
-                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId} không tìm thấy");
                         return new ConfirmConsumptionQuantityResponse
                         {
                             Success = false,
@@ -963,15 +938,12 @@ namespace BusinessAccessLayer.Services
                     // Kiểm tra BillingType - chỉ cho phép xác nhận cho món có BillingType = 1 (ConsumptionBased)
                     if (orderDetail.MenuItem == null)
                     {
-                        Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem is null");
                         return new ConfirmConsumptionQuantityResponse
                         {
                             Success = false,
                             Message = "Không tìm thấy thông tin món ăn"
                         };
                     }
-                    
-                    Console.WriteLine($"[ConfirmConsumptionQuantity] OrderDetailId: {request.OrderDetailId}, MenuItem: {orderDetail.MenuItem.Name}, BillingType: {orderDetail.MenuItem.BillingType}, Expected: ConsumptionBased");
                     
                     if (orderDetail.MenuItem.BillingType != DomainAccessLayer.Enums.ItemBillingType.ConsumptionBased)
                     {

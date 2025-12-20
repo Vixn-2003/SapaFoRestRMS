@@ -203,7 +203,7 @@ namespace WebSapaForestForStaff.Controllers
                 // 1: Waiter/Waitress -> _waiterLayout
                 if (hasPosition(1))
                 {
-                    return "~/Views/Shared/_waiterLayout.cshtml";
+                    return "~/Views/Shared/_counterstaffLayout.cshtml";
                 }
 
                 // 2: Cashier -> _counterstaffLayout

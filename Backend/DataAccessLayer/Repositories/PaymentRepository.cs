@@ -99,6 +99,14 @@ public class PaymentRepository : IPaymentRepository
             .FirstOrDefaultAsync(o => o.OrderId == orderId);
     }
 
+    public async Task<IEnumerable<Order>> GetOrdersByReservationIdAsync(int reservationId)
+    {
+        return await BuildOrderQuery()
+            .Where(o => o.ReservationId == reservationId)
+            .OrderBy(o => o.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Order>> GetOrdersByDateAsync(DateOnly date)
     {
         var dayStart = date.ToDateTime(TimeOnly.MinValue);
@@ -209,6 +217,15 @@ public class PaymentRepository : IPaymentRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Transaction>> GetTransactionsByReservationIdAsync(int reservationId)
+    {
+        return await _context.Set<Transaction>()
+            .Include(t => t.ConfirmedByUser)
+            .Where(t => t.ReservationId == reservationId)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task UpdateTransactionAsync(Transaction transaction)
     {
         _context.Set<Transaction>().Update(transaction);
@@ -244,6 +261,40 @@ public class PaymentRepository : IPaymentRepository
                 .ThenInclude(o => o.Customer)
             .Include(t => t.ConfirmedByUser)
             .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Transaction>> GetFilteredTransactionsAsync(DateTime startDate, DateTime endDate, string? paymentMethod = null, string? branchName = null)
+    {
+        var query = _context.Set<Transaction>()
+            .Include(t => t.Order)
+                .ThenInclude(o => o.Customer)
+                    .ThenInclude(c => c!.User)
+            .Include(t => t.ConfirmedByUser)
+            .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+            .Where(t => t.CompletedAt.Value.Date >= startDate.Date && t.CompletedAt.Value.Date <= endDate.Date);
+
+        // Filter by payment method if specified
+        if (!string.IsNullOrEmpty(paymentMethod) && paymentMethod != "ALL")
+        {
+            if (paymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase))
+            {
+                // QR in system is stored as "QRBankTransfer", "QR", or "VietQR"
+                query = query.Where(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
+                                        t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
+                                        t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                query = query.Where(t => t.PaymentMethod.Equals(paymentMethod, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        // TODO: Filter by branch when multi-branch is implemented
+        // For now, ignore branch filter
+
+        return await query
+            .OrderByDescending(t => t.CompletedAt)
             .ToListAsync();
     }
 }

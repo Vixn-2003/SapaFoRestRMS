@@ -46,6 +46,8 @@ namespace WebSapaForestForStaff.DTOs.Payment
         public decimal? AmountReceived { get; set; }
         public decimal? RefundAmount { get; set; }
         public string? Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
         public string? Notes { get; set; }
     }
 }

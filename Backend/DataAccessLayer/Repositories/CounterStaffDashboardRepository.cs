@@ -35,6 +35,7 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu hôm nay
         /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
+        ///   (loại bỏ Split Bill parent transactions và child transactions)
         /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today VÀ Reservation.Status = "Completed"
         /// </summary>
         public async Task<decimal> GetTodayRevenueAsync()
@@ -43,9 +44,11 @@ namespace DataAccessLayer.Repositories
             var todayStart = today.ToDateTime(TimeOnly.MinValue);
             var todayEnd = today.ToDateTime(TimeOnly.MaxValue);
 
-            // Doanh thu từ Transactions
+            // Doanh thu từ Transactions (loại bỏ Split Bill parent và child transactions)
             var transactionRevenue = await _context.Transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => t.CompletedAt.Value.Date >= todayStart.Date && 
                             t.CompletedAt.Value.Date <= todayEnd.Date)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;

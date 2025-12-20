@@ -130,15 +130,21 @@ function renderCart() {
             }
 
             // --- 6. CONTROLS HTML (Nút cộng trừ) ---
+            // --- 6. CONTROLS HTML (Nút cộng trừ + Input) ---
             var controlsHtml = '';
 
-            // NẾU KHÔNG KHÓA (Tức là Mới hoặc Pending) -> HIỆN NÚT
+            // NẾU KHÔNG KHÓA (Tức là Mới hoặc Pending) -> HIỆN NÚT VÀ INPUT
             if (!isLocked) {
                 controlsHtml = `
                     <div class="d-flex justify-content-between align-items-center mt-2">
-                        <div class="qty-control" data-index="${realIndex}">
+                        <div class="qty-control d-flex align-items-center" data-index="${realIndex}">
                             <button class="btn-minus btn btn-sm btn-outline-secondary"><i class="fa-solid fa-minus"></i></button>
-                            <span class="qty-val fw-bold mx-2">${item.quantity}</span>
+                            
+                            <input type="number" class="qty-input form-control form-control-sm mx-2 text-center" 
+                                   value="${item.quantity}" 
+                                   min="1" 
+                                   style="width: 60px; font-weight: bold; padding: 2px;">
+                                   
                             <button class="btn-plus btn btn-sm btn-outline-secondary"><i class="fa-solid fa-plus"></i></button>
                         </div>
                         <div class="text-muted small" style="font-size:10px;">
@@ -146,7 +152,7 @@ function renderCart() {
                         </div>
                     </div>`;
             } else {
-                // ĐÃ KHÓA (Cooking/Done) -> CHỈ HIỆN TEXT
+                // ĐÃ KHÓA (Cooking/Done) -> CHỈ HIỆN TEXT (Giữ nguyên như cũ)
                 controlsHtml = `
                     <div class="d-flex justify-content-between align-items-center mt-2">
                         <div class="fw-bold text-success" style="font-size:13px;">SL: ${item.quantity}</div>
@@ -510,4 +516,71 @@ $(document).ready(function () {
 
         setTimeout(() => $("#liveToastContainer").remove(), 3000);
     }
+});
+// ================================
+// Input Quantity Direct Change
+// ================================
+$(document).on('change', '.qty-input', function () {
+    var $input = $(this);
+    var index = $input.closest('.cart-item').data('index');
+    var newVal = parseInt($input.val());
+    var item = cartItems[index];
+
+    // 1. Validate dữ liệu nhập
+    if (isNaN(newVal) || newVal < 1) {
+        alert("Số lượng phải lớn hơn 0");
+        renderCart(); // Reset lại hiển thị số cũ
+        return;
+    }
+
+    // 2. Kiểm tra các điều kiện chặn (Confirmed/Finished)
+    // (Copy logic từ changeQty sang để đảm bảo an toàn)
+    if (orderStatus && orderStatus.toLowerCase() === 'confirmed') {
+        showWarningModal({
+            type: 'orderConfirmed',
+            message: 'Đơn hàng đã được xác nhận, không thể chỉnh sửa số lượng.'
+        });
+        renderCart(); // Reset lại số cũ
+        return;
+    }
+
+    var isFinished = item.status === "Done" || item.status === "Served" || item.status === "Đã xong";
+    if (isFinished) {
+        showWarningModal({
+            type: 'invalidStatus',
+            message: 'Món đã hoàn thành, không thể chỉnh số lượng.'
+        });
+        renderCart(); // Reset lại số cũ
+        return;
+    }
+
+    // 3. Nếu là món cũ (đã lưu DB) -> Cảnh báo
+    if (!item.isNew) {
+        // Tính độ lệch để hiển thị trong modal (Mới - Cũ)
+        var diff = newVal - item.quantity;
+        if (diff === 0) return; // Không thay đổi gì
+
+        // Hack: dùng lại modal warning nhưng truyền tham số đặc biệt để xử lý set trực tiếp
+        // Tuy nhiên để đơn giản, ta gán tạm vào logic existing
+        // Vì logic modal hiện tại dùng +/- (change), nên ta cần custom lại một chút
+        // Cách đơn giản nhất: Gọi thẳng hàm update nếu user confirm
+
+        // Ở đây tôi sẽ cập nhật trực tiếp biến pendingModification để modal hiểu
+        // Nhưng modal hiện tại logic là "change" (+/-). 
+        // Để hỗ trợ set trực tiếp, ta tính diff và dùng logic cũ:
+        showWarningModal({ type: 'qty', index: index, change: diff });
+
+        // Reset hiển thị về số cũ trước khi user bấm Đồng ý trong modal
+        renderCart();
+        return;
+    }
+
+    // 4. Nếu là món mới -> Cập nhật luôn
+    item.quantity = newVal;
+    renderCart();
+});
+
+// (Tùy chọn) Focus vào input thì bôi đen toàn bộ số để dễ nhập
+$(document).on('focus', '.qty-input', function () {
+    $(this).select();
 });

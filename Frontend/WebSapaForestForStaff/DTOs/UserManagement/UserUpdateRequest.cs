@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace WebSapaForestForStaff.DTOs.UserManagement
 {
@@ -34,5 +35,8 @@ namespace WebSapaForestForStaff.DTOs.UserManagement
         [Display(Name = "Avatar URL")]
         [Url(ErrorMessage = "URL avatar không hợp lệ")]
         public string? AvatarUrl { get; set; }
+
+        [Display(Name = "Ảnh đại diện")]
+        public IFormFile? AvatarFile { get; set; }
     }
 }

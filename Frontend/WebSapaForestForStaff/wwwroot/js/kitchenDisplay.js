@@ -138,7 +138,6 @@ function initializeSignalR() {
         // OPTIMIZED: Start connection trong background, không block
         signalRConnection.start()
             .then(() => {
-                console.log('SignalR connected successfully');
                 showSignalRBanner(false);
                 stopFallbackPolling();
             })
@@ -766,7 +765,6 @@ function startFallbackPolling() {
     const interval = 10000 + Math.random() * 10000; // 10-20 seconds
     
     fallbackPollingInterval = setInterval(() => {
-        console.log('[Fallback Polling] Refreshing data...');
         if (currentViewMode === 'theo-tung-mon') {
             loadGroupedItems();
         } else {
@@ -775,7 +773,6 @@ function startFallbackPolling() {
         loadIngredientShortage();
     }, interval);
     
-    console.log(`[Fallback Polling] Started with interval: ${Math.round(interval/1000)}s`);
 }
 
 // Stop fallback polling
@@ -783,7 +780,6 @@ function stopFallbackPolling() {
     if (fallbackPollingInterval) {
         clearInterval(fallbackPollingInterval);
         fallbackPollingInterval = null;
-        console.log('[Fallback Polling] Stopped');
     }
 }
 
@@ -1140,9 +1136,6 @@ async function loadGroupedItems() {
             ? `${API_BASE}/KitchenDisplay/grouped-by-item?statusFilter=${encodeURIComponent(currentStatusFilter)}`
             : `${API_BASE}/KitchenDisplay/grouped-by-item`;
         
-        console.log('[loadGroupedItems] API Base URL:', API_BASE);
-        console.log('[loadGroupedItems] Full URL:', url);
-        console.log('[loadGroupedItems] Status Filter:', currentStatusFilter);
         
         const response = await fetch(url, {
             signal: controller.signal
@@ -1164,11 +1157,9 @@ async function loadGroupedItems() {
         if (result.success && result.data) {
             // ✅ Backend đã filter Done items rồi, không cần filter ở frontend nữa
             currentGroupedItems = result.data;
-            console.log('[loadGroupedItems] Received data:', currentGroupedItems.length, 'items');
             
             // Double check view mode before rendering
             if (currentViewMode === 'theo-tung-mon') {
-                console.log('[loadGroupedItems] Rendering with currentGroupedItems:', currentGroupedItems.length);
                 renderGroupedItems(currentGroupedItems);
                 updateOrderCount(currentGroupedItems.length);
             }

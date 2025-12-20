@@ -137,10 +137,6 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
-                // Log error
-                Console.WriteLine($"Error in GetBatchIngredient: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-
                 return StatusCode(500, new
                 {
                     message = "Có lỗi xảy ra khi lấy dữ liệu",
@@ -290,8 +286,6 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in UpdateIngredient API: {ex.Message}");
-
                 return StatusCode(500, new
                 {
                     success = false,
@@ -479,7 +473,6 @@ namespace SapaFoRestRMSAPI.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Exception: {ex.Message}");
                 return StatusCode(500, new
                 {
                     success = false,

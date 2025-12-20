@@ -42,13 +42,38 @@ namespace DataAccessLayer.Repositories
 
         public async Task<Dictionary<string, int>> GetUsersByRoleAsync()
         {
-            var userRoles = await _context.Users
-                .Where(u => u.RoleId != null)
-                .GroupBy(u => u.Role.RoleName)
-                .Select(g => new { RoleName = g.Key, Count = g.Count() })
-                .ToListAsync();
+            try
+            {
+                // Include Role navigation property to avoid null reference
+                var userRoles = await _context.Users
+                    .Include(u => u.Role)
+                    .Where(u => u.RoleId != null)
+                    .GroupBy(u => u.Role != null ? u.Role.RoleName : "Unknown")
+                    .Select(g => new { RoleName = g.Key ?? "Unknown", Count = g.Count() })
+                    .ToListAsync();
 
-            return userRoles.ToDictionary(x => x.RoleName ?? "Unknown", x => x.Count);
+                // Debug logging
+                Console.WriteLine($"GetUsersByRoleAsync: Found {userRoles.Count} role groups");
+                foreach (var role in userRoles)
+                {
+                    Console.WriteLine($"  - {role.RoleName}: {role.Count} users");
+                }
+
+                // Handle potential duplicate keys by summing counts
+                var result = userRoles
+                    .GroupBy(x => x.RoleName)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
+                
+                Console.WriteLine($"GetUsersByRoleAsync: Returning dictionary with {result.Count} roles");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // Return empty dictionary as fallback
+                Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return new Dictionary<string, int>();
+            }
         }
 
         // ========== SYSTEM ACTIVITY ==========
@@ -104,7 +129,8 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu hôm nay
         /// = Sum(Transaction.Amount) với Status = "Paid" và CompletedAt.Date = today
-        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today
+        ///   (loại bỏ Split Bill parent transactions và child transactions)
+        /// + Sum(ReservationDeposit.Amount) với DepositDate.Date = today VÀ Reservation.Status = "Completed"
         /// </summary>
         public async Task<decimal> GetTodayRevenueAsync()
         {
@@ -112,15 +138,19 @@ namespace DataAccessLayer.Repositories
             var todayStart = today.Date;
             var todayEnd = today.Date;
 
-            // Doanh thu từ Transactions
+            // Doanh thu từ Transactions (loại bỏ Split Bill parent và child transactions)
             var transactionRevenue = await _context.Transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => t.CompletedAt.Value.Date >= todayStart && t.CompletedAt.Value.Date <= todayEnd)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
 
-            // Doanh thu từ ReservationDeposits (tiền cọc)
+            // Doanh thu từ ReservationDeposits (tiền cọc) - CHỈ tính từ Reservation có Status = "Completed"
             var depositRevenue = await _context.ReservationDeposits
+                .Include(d => d.Reservation)
                 .Where(d => d.DepositDate.Date >= todayStart && d.DepositDate.Date <= todayEnd)
+                .Where(d => d.Reservation != null && d.Reservation.Status == "Completed") // ✅ Chỉ tính từ Completed reservations
                 .SumAsync(d => (decimal?)d.Amount) ?? 0m;
 
             return transactionRevenue + depositRevenue;
@@ -129,6 +159,7 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu 7 ngày gần nhất - Áp dụng logic từ OwnerRevenueService
         /// Chỉ lấy transactions có Status = "Paid" và CompletedAt.HasValue
+        /// (loại bỏ Split Bill parent transactions và child transactions)
         /// </summary>
         public async Task<List<(DateTime Date, decimal Revenue)>> GetRevenueLast7DaysAsync()
         {
@@ -137,6 +168,8 @@ namespace DataAccessLayer.Repositories
 
             var transactions = await _context.Transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => t.CompletedAt.Value.Date >= startDate.Date && t.CompletedAt.Value.Date <= endDate.Date)
                 .Select(t => new
                 {
@@ -166,6 +199,7 @@ namespace DataAccessLayer.Repositories
         /// <summary>
         /// Tính doanh thu tháng hiện tại - Áp dụng logic từ OwnerRevenueService
         /// Chỉ lấy transactions có Status = "Paid" và CompletedAt.HasValue
+        /// (loại bỏ Split Bill parent transactions và child transactions)
         /// </summary>
         public async Task<decimal> GetMonthRevenueAsync()
         {
@@ -174,6 +208,8 @@ namespace DataAccessLayer.Repositories
 
             return await _context.Transactions
                 .Where(t => t.Status == "Paid" && t.CompletedAt.HasValue)
+                .Where(t => t.ParentTransactionId == null) // ✅ Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // ✅ Loại bỏ parent Split transactions
                 .Where(t => t.CompletedAt.Value.Date >= firstDayOfMonth.Date && t.CompletedAt.Value.Date <= lastDayOfMonth.Date)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0m;
         }
@@ -215,50 +251,74 @@ namespace DataAccessLayer.Repositories
         // ========== WAREHOUSE ALERTS ==========
         public async Task<int> GetLowStockCountAsync()
         {
-            // Lấy tất cả ingredients có ReorderLevel
-            var ingredients = await _context.Ingredients
-                .Include(i => i.InventoryBatches)
-                .Where(i => i.ReorderLevel.HasValue && i.ReorderLevel.Value > 0)
-                .ToListAsync();
-
-            // Đếm số ingredients có tổng available < ReorderLevel
-            int lowStockCount = 0;
-            foreach (var ingredient in ingredients)
+            try
             {
-                // Tính tổng available = tổng QuantityRemaining - tổng QuantityReserved
-                var totalAvailable = ingredient.InventoryBatches.Sum(b => b.QuantityRemaining - b.QuantityReserved);
-                
-                // Nếu available <= ReorderLevel thì coi là low stock
-                if (totalAvailable <= ingredient.ReorderLevel.Value)
-                {
-                    lowStockCount++;
-                }
-            }
+                // Lấy tất cả ingredients có ReorderLevel
+                var ingredients = await _context.Ingredients
+                    .Include(i => i.InventoryBatches)
+                    .Where(i => i.ReorderLevel.HasValue && i.ReorderLevel.Value > 0)
+                    .ToListAsync();
 
-            return lowStockCount;
+                // Đếm số ingredients có tổng available < ReorderLevel
+                int lowStockCount = 0;
+                foreach (var ingredient in ingredients)
+                {
+                    // Tính tổng available = tổng QuantityRemaining - tổng QuantityReserved
+                    var totalAvailable = ingredient.InventoryBatches?.Sum(b => b.QuantityRemaining - b.QuantityReserved) ?? 0;
+
+                    // Nếu available <= ReorderLevel thì coi là low stock
+                    if (totalAvailable <= ingredient.ReorderLevel.Value)
+                    {
+                        lowStockCount++;
+                    }
+                }
+
+                return lowStockCount;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetLowStockCountAsync: {ex.Message}");
+                return 0;
+            }
         }
 
         public async Task<int> GetExpiredIngredientsCountAsync()
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
+            try
+            {
+                var today = DateOnly.FromDateTime(DateTime.Today);
 
-            return await _context.InventoryBatches
-                .Where(b => b.ExpiryDate.HasValue && b.ExpiryDate.Value < today)
-                .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
-                .CountAsync();
+                return await _context.InventoryBatches
+                    .Where(b => b.ExpiryDate.HasValue && b.ExpiryDate.Value < today)
+                    .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
+                    .CountAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetExpiredIngredientsCountAsync: {ex.Message}");
+                return 0;
+            }
         }
 
         public async Task<int> GetNearExpiryIngredientsCountAsync()
         {
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            var sevenDaysLater = today.AddDays(7);
+            try
+            {
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var sevenDaysLater = today.AddDays(7);
 
-            return await _context.InventoryBatches
-                .Where(b => b.ExpiryDate.HasValue &&
-                            b.ExpiryDate.Value >= today &&
-                            b.ExpiryDate.Value <= sevenDaysLater)
-                .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
-                .CountAsync();
+                return await _context.InventoryBatches
+                    .Where(b => b.ExpiryDate.HasValue &&
+                                b.ExpiryDate.Value >= today &&
+                                b.ExpiryDate.Value <= sevenDaysLater)
+                    .Where(b => b.QuantityRemaining > 0) // Còn tồn kho
+                    .CountAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetNearExpiryIngredientsCountAsync: {ex.Message}");
+                return 0;
+            }
         }
 
         // ========== TOP ANALYTICS ==========

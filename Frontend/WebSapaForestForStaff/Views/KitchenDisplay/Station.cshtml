@@ -664,8 +664,21 @@
     </script>
     <script src="~/js/kitchenStation.js"></script>
     <script>
-        // Helper function to decode HTML entities
+        // Helper function to decode HTML entities (bao gồm cả hex entities như &#x1ECB;)
         function decodeHtmlEntities(text) {
+            if (!text) return text;
+            
+            // Decode hex entities như &#x1ECB; -> ị
+            text = text.replace(/&#x([0-9A-Fa-f]+);/g, function(match, hex) {
+                return String.fromCharCode(parseInt(hex, 16));
+            });
+            
+            // Decode decimal entities như &#1234;
+            text = text.replace(/&#(\d+);/g, function(match, dec) {
+                return String.fromCharCode(parseInt(dec, 10));
+            });
+            
+            // Decode named entities như &amp; &lt; etc. bằng textarea
             const textarea = document.createElement('textarea');
             textarea.innerHTML = text;
             return textarea.value;
@@ -707,7 +720,9 @@
 
             try {
                 let categoryName = '@Html.Raw(ViewBag.CategoryName)';
-                if (categoryName.includes('&#')) {
+                
+                // Luôn decode để đảm bảo xử lý đúng
+                if (categoryName && categoryName !== 'N/A') {
                     categoryName = decodeHtmlEntities(categoryName);
                 }
                 
@@ -904,12 +919,9 @@
             }
             
             if (!categoryName || categoryName === 'N/A') {
-                console.error('Category name is missing!');
                 showError('Không tìm thấy tên trạm. Vui lòng kiểm tra lại URL.');
                 return;
             }
-            console.log('Initializing station with category:', categoryName);
-            console.log('API Base URL:', window.API_BASE_URL);
             initializeStation(categoryName);
             
             // Auto-refresh ingredients every 10 seconds when on ingredients tab

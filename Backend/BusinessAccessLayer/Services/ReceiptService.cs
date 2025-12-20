@@ -571,5 +571,406 @@ public class ReceiptService : IReceiptService
             return billionWords;
         return billionWords + " " + ConvertNumberToWords(billionRemainder);
     }
+
+    /// <summary>
+    /// Generate PDF receipt for a paid reservation (tổng hợp tất cả Orders)
+    /// </summary>
+    public async Task<string> GenerateReceiptPdfByReservationAsync(int reservationId, CancellationToken ct = default)
+    {
+        _logger.LogInformation("Starting PDF receipt generation for reservation {ReservationId}", reservationId);
+
+        // Lấy tất cả Orders của Reservation
+        var orders = await _unitOfWork.Payments.GetOrdersByReservationIdAsync(reservationId);
+        var ordersList = orders.ToList();
+
+        if (!ordersList.Any())
+        {
+            _logger.LogWarning("Cannot generate receipt for reservation {ReservationId}: no orders found", reservationId);
+            throw new KeyNotFoundException($"Không tìm thấy đơn hàng nào cho Reservation với ID: {reservationId}");
+        }
+
+        // Kiểm tra tất cả Orders đã được thanh toán
+        var unpaidOrders = ordersList.Where(o => !IsPaidStatus(o.Status)).ToList();
+        if (unpaidOrders.Any())
+        {
+            _logger.LogWarning("Cannot generate receipt for reservation {ReservationId}: {Count} orders not paid", reservationId, unpaidOrders.Count);
+            throw new InvalidOperationException($"Có {unpaidOrders.Count} đơn hàng chưa được thanh toán. Vui lòng thanh toán tất cả đơn hàng trước khi tạo hóa đơn.");
+        }
+
+        // Lấy thông tin Reservation từ order đầu tiên
+        var firstOrder = ordersList.First();
+        var reservation = firstOrder.Reservation;
+        if (reservation == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy Reservation với ID: {reservationId}");
+        }
+
+        // Lấy thông tin Customer
+        var customer = reservation.Customer ?? firstOrder.Customer;
+        var customerName = customer?.User?.FullName ?? reservation.CustomerNameReservation ?? "Khách vãng lai";
+        var customerPhone = customer?.User?.Phone ?? "";
+
+        // Lấy thông tin bàn
+        var tableNumbers = new List<string>();
+        if (reservation.ReservationTables != null && reservation.ReservationTables.Any())
+        {
+            tableNumbers = reservation.ReservationTables
+                .Where(rt => rt.Table != null && !string.IsNullOrEmpty(rt.Table.TableNumber))
+                .Select(rt => rt.Table!.TableNumber!)
+                .ToList();
+        }
+        var tableNumber = tableNumbers.Any() ? string.Join(", ", tableNumbers) : "—";
+
+        // Lấy thông tin Staff (thu ngân từ Transaction)
+        var confirmedBy = "Thu ngân";
+        var transactions = ordersList
+            .SelectMany(o => o.Transactions ?? new List<Transaction>())
+            .Where(t => t.IsManualConfirmed && t.ConfirmedByUser != null)
+            .OrderByDescending(t => t.CompletedAt)
+            .ToList();
+        
+        if (transactions.Any())
+        {
+            confirmedBy = transactions.First().ConfirmedByUser?.FullName ?? "Thu ngân";
+        }
+
+        // Lấy PaymentMethod từ Transaction
+        var paymentMethod = transactions.Any() 
+            ? transactions.First().PaymentMethod ?? "Tiền mặt" 
+            : "Tiền mặt";
+
+        // Tính tổng tất cả OrderDetails từ tất cả Orders
+        decimal subtotal = 0;
+        var allOrderDetails = new List<OrderDetail>();
+
+        foreach (var order in ordersList)
+        {
+            if (order.OrderDetails != null && order.OrderDetails.Any())
+            {
+                foreach (var od in order.OrderDetails)
+                {
+                    // Bỏ qua món đã bị xóa hoặc đã hủy
+                    var status = (od.Status ?? "").Trim();
+                    var statusLower = status.ToLower();
+                    
+                    if (statusLower == "removed" || statusLower == "cancelled" || statusLower == "đã hủy")
+                    {
+                        continue;
+                    }
+
+                    // Chỉ tính tiền món có Status = "Cooking", "Done", "Ready"
+                    var billableStatuses = new[] { "cooking", "done", "ready", "served", "đang chế biến", "đã xong", "sẵn sàng" };
+                    bool isBillable = billableStatuses.Any(s => statusLower == s);
+
+                    // XỬ LÝ COMBO
+                    if (od.ComboId.HasValue && od.OrderComboItems != null && od.OrderComboItems.Any())
+                    {
+                        var activeComboItems = od.OrderComboItems.Where(oci =>
+                        {
+                            var comboItemStatus = (oci.Status ?? "").Trim().ToLower();
+                            return comboItemStatus != "cancelled" && comboItemStatus != "đã hủy" && comboItemStatus != "removed";
+                        }).ToList();
+
+                        if (!activeComboItems.Any())
+                        {
+                            continue;
+                        }
+
+                        bool hasReadyComboItem = activeComboItems.Any(oci =>
+                        {
+                            var comboItemStatus = (oci.Status ?? "").Trim().ToLower();
+                            return billableStatuses.Any(s => comboItemStatus == s);
+                        });
+
+                        if (!hasReadyComboItem)
+                        {
+                            continue;
+                        }
+                    }
+                    else if (!isBillable)
+                    {
+                        continue;
+                    }
+
+                    // Tính tiền
+                    int billableQuantity;
+                    if (od.MenuItem?.BillingType == ItemBillingType.ConsumptionBased)
+                    {
+                        billableQuantity = (od.QuantityUsed.HasValue && od.QuantityUsed > 0)
+    ? od.QuantityUsed.Value
+    : od.Quantity;
+                    }
+                    else
+                    {
+                        billableQuantity = od.Quantity;
+                    }
+
+                    subtotal += od.UnitPrice * billableQuantity;
+                    allOrderDetails.Add(od);
+                }
+            }
+        }
+
+        // Tính VAT, Service Fee, Discount, Total (sử dụng logic từ PaymentService)
+        var vatAmount = subtotal * 0.1m;
+        var serviceFee = subtotal * 0.05m;
+        
+        // Lấy discount từ Transaction hoặc Order (nếu có)
+        decimal discountAmount = 0;
+        // TODO: Có thể lấy discount từ voucher/promotion nếu cần
+
+        var totalAmount = subtotal + vatAmount + serviceFee - discountAmount;
+
+        // Lấy PaidAt từ Transaction
+        var paidAt = transactions.Any() && transactions.First().CompletedAt.HasValue
+            ? transactions.First().CompletedAt.Value
+            : DateTime.Now;
+
+        // Generate reservation code
+        var reservationCode = $"RES{reservationId:D6}";
+
+        // Restaurant info từ config
+        var restaurantName = _configuration["ReceiptSettings:RestaurantName"] ?? "Nhà hàng Sapa Forest";
+        var restaurantAddress = _configuration["ReceiptSettings:RestaurantAddress"] ?? "Địa chỉ nhà hàng";
+        var restaurantPhone = _configuration["ReceiptSettings:RestaurantPhone"] ?? "0123 456 789";
+
+        // Format payment method
+        var paymentMethodUpper = paymentMethod.ToUpperInvariant();
+        if (paymentMethodUpper.Contains("CASH"))
+            paymentMethodUpper = "TIỀN MẶT";
+        else if (paymentMethodUpper.Contains("VIETQR") || paymentMethodUpper.Contains("CHUYỂN KHOẢN"))
+            paymentMethodUpper = "CHUYỂN KHOẢN";
+        else if (paymentMethodUpper.Contains("COMBINED") || paymentMethodUpper.Contains("KẾT HỢP"))
+            paymentMethodUpper = "KẾT HỢP";
+
+        // Convert amount to Vietnamese words
+        var amountInWordsRaw = ConvertNumberToVietnameseWords(totalAmount);
+        var amountInWords = char.ToUpperInvariant(amountInWordsRaw[0]) + amountInWordsRaw.Substring(1);
+
+        // Create receipts directory
+        var receiptsPath = Path.Combine(_webRootPath, "receipts");
+        if (!Directory.Exists(receiptsPath))
+        {
+            Directory.CreateDirectory(receiptsPath);
+        }
+
+        var pdfFileName = $"{reservationCode}.pdf";
+        var pdfPath = Path.Combine(receiptsPath, pdfFileName);
+
+        // Generate PDF
+        _logger.LogInformation("Composed receipt document for reservation {ReservationId}. Totals: subtotal {Subtotal}, VAT {Vat}, service fee {ServiceFee}, discount {Discount}, total {Total}", 
+            reservationId, subtotal, vatAmount, serviceFee, discountAmount, totalAmount);
+
+        var document = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(25);
+
+                // Restaurant Header
+                page.Header()
+                    .Column(column =>
+                    {
+                        column.Item().AlignCenter().Text(restaurantName)
+                            .FontSize(18)
+                            .Bold()
+                            .FontColor(Colors.Black);
+
+                        column.Item().PaddingTop(3);
+
+                        column.Item().AlignCenter().Text(restaurantAddress)
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken2);
+
+                        column.Item().AlignCenter().Text($"ĐT: {restaurantPhone}")
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken2);
+
+                        column.Item().PaddingTop(8);
+
+                        column.Item().AlignCenter().Text("HÓA ĐƠN THANH TOÁN")
+                            .FontSize(16)
+                            .Bold()
+                            .FontColor(Colors.Black);
+
+                        column.Item().PaddingTop(5);
+
+                        column.Item().Row(row =>
+                        {
+                            row.RelativeItem().AlignLeft().Text($"Số HĐ: {reservationCode}")
+                                .FontSize(10)
+                                .Bold();
+                            row.RelativeItem().AlignRight().Text($"Ngày: {paidAt:dd/MM/yyyy HH:mm}")
+                                .FontSize(10);
+                        });
+
+                        column.Item().PaddingTop(3);
+                    });
+
+                // Content
+                page.Content()
+                    .PaddingVertical(8)
+                    .Column(column =>
+                    {
+                        // Order Information Section
+                        column.Item().Column(infoColumn =>
+                        {
+                            infoColumn.Item().Text($"Bàn: {tableNumber}")
+                                .FontSize(10);
+                            infoColumn.Item().Text($"Thu ngân: {confirmedBy}")
+                                .FontSize(10);
+                            infoColumn.Item().Text($"Khách hàng: {customerName}")
+                                .FontSize(10);
+                            if (!string.IsNullOrEmpty(customerPhone))
+                            {
+                                infoColumn.Item().Text($"ĐT: {customerPhone}")
+                                    .FontSize(10);
+                            }
+                            infoColumn.Item().Text($"Số đơn: {ordersList.Count} đơn")
+                                .FontSize(10)
+                                .FontColor(Colors.Grey.Darken1);
+                        });
+
+                        column.Item().PaddingTop(5);
+                        column.Item().LineHorizontal(1).LineColor(Colors.Black);
+
+                        // Items Table
+                        column.Item().PaddingTop(5).Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.ConstantColumn(25); // Number
+                                columns.RelativeColumn(3.5f); // Item name
+                                columns.ConstantColumn(30); // Quantity
+                                columns.RelativeColumn(2); // Unit price
+                                columns.RelativeColumn(2.5f); // Total
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Element(CellStyle).Text("STT").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).Text("Tên món").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).AlignRight().Text("SL").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).AlignRight().Text("Đơn giá").Bold().FontSize(9);
+                                header.Cell().Element(CellStyle).AlignRight().Text("Thành tiền").Bold().FontSize(9);
+                            });
+
+                            if (allOrderDetails.Any())
+                            {
+                                int itemNumber = 1;
+                                foreach (var item in allOrderDetails)
+                                {
+                                    var itemName = item.MenuItem?.Name ?? item.Combo?.Name ?? "N/A";
+                                    var quantity = item.MenuItem?.BillingType == ItemBillingType.ConsumptionBased
+                                        ? (item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity)
+                                        : item.Quantity;
+                                    var unitPrice = item.UnitPrice;
+                                    var itemTotal = unitPrice * quantity;
+
+                                    table.Cell().Element(CellStyle).AlignCenter().Text($"({itemNumber})").FontSize(9);
+                                    table.Cell().Element(CellStyle).Text(itemName).FontSize(9);
+                                    table.Cell().Element(CellStyle).AlignRight().Text(quantity.ToString()).FontSize(9);
+                                    table.Cell().Element(CellStyle).AlignRight().Text($"{unitPrice:N0} đ").FontSize(9);
+                                    table.Cell().Element(CellStyle).AlignRight().Text($"{itemTotal:N0} đ").FontSize(9).Bold();
+
+                                    itemNumber++;
+                                }
+                            }
+                        });
+
+                        column.Item().PaddingTop(8);
+                        column.Item().LineHorizontal(1).LineColor(Colors.Black);
+
+                        // Totals Section
+                        column.Item().PaddingTop(5).AlignRight().Column(summaryColumn =>
+                        {
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("Tổng cộng:").FontSize(10);
+                                row.RelativeItem().AlignRight().Text($"{subtotal:N0} đ").FontSize(10).Bold();
+                            });
+
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("VAT (10%):").FontSize(10);
+                                row.RelativeItem().AlignRight().Text($"{vatAmount:N0} đ").FontSize(10);
+                            });
+
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("Phí dịch vụ (5%):").FontSize(10);
+                                row.RelativeItem().AlignRight().Text($"{serviceFee:N0} đ").FontSize(10);
+                            });
+
+                            if (discountAmount > 0)
+                            {
+                                summaryColumn.Item().Row(row =>
+                                {
+                                    row.RelativeItem().AlignLeft().Text("Giảm giá:").FontSize(10).FontColor(Colors.Red.Darken2);
+                                    row.RelativeItem().AlignRight().Text($"-{discountAmount:N0} đ").FontSize(10).FontColor(Colors.Red.Darken2).Bold();
+                                });
+                            }
+
+                            summaryColumn.Item().PaddingTop(3);
+                            summaryColumn.Item().LineHorizontal(1).LineColor(Colors.Black);
+
+                            summaryColumn.Item().PaddingTop(3);
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("TỔNG CỘNG:").FontSize(12).Bold();
+                                row.RelativeItem().AlignRight().Text($"{totalAmount:N0} đ").FontSize(12).Bold();
+                            });
+
+                            summaryColumn.Item().PaddingTop(5);
+                            summaryColumn.Item().Row(row =>
+                            {
+                                row.RelativeItem().AlignLeft().Text("Phương thức:").FontSize(10);
+                                row.RelativeItem().AlignRight().Text(paymentMethodUpper).FontSize(10).Bold();
+                            });
+
+                            summaryColumn.Item().PaddingTop(3);
+                            summaryColumn.Item().Text($"Bằng chữ: {amountInWords}")
+                                .FontSize(9)
+                                .Italic()
+                                .FontColor(Colors.Grey.Darken1);
+                        });
+
+                        column.Item().PaddingTop(10);
+                        column.Item().AlignCenter().Text("Cảm ơn quý khách!")
+                            .FontSize(10)
+                            .Italic()
+                            .FontColor(Colors.Grey.Darken1);
+                    });
+            });
+        });
+
+        document.GeneratePdf(pdfPath);
+
+        _logger.LogInformation("PDF receipt generated successfully for reservation {ReservationId} at {PdfPath}", reservationId, pdfPath);
+
+        // Backend/BusinessAccessLayer/Services/ReceiptService.cs (line 950-966)
+        // Upload to Cloudinary if available
+        if (_cloudinaryService != null)
+        {
+            try
+            {
+                // Read PDF file from path
+                var pdfBytes = await File.ReadAllBytesAsync(pdfPath, ct);
+                var cloudinaryUrl = await _cloudinaryService.UploadPdfAsync(pdfBytes, pdfFileName, "receipts");
+                if (!string.IsNullOrEmpty(cloudinaryUrl))
+                {
+                    _logger.LogInformation("Receipt uploaded to Cloudinary for reservation {ReservationId}: {CloudinaryUrl}", reservationId, cloudinaryUrl);
+                    return cloudinaryUrl;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to upload receipt to Cloudinary for reservation {ReservationId}. Using local path.", reservationId);
+            }
+        }
+
+        return $"/receipts/{pdfFileName}";
+    }
 }
 

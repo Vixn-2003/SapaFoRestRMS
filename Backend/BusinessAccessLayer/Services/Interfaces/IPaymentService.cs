@@ -26,6 +26,11 @@ public interface IPaymentService
     Task<OrderDto> ApplyDiscountAsync(DiscountRequestDto request, CancellationToken ct = default);
 
     /// <summary>
+    /// Áp dụng ưu đãi/giảm giá cho Reservation (áp dụng cho tất cả Orders trong Reservation)
+    /// </summary>
+    Task<ReservationPaymentDto> ApplyDiscountByReservationAsync(ReservationDiscountRequestDto request, CancellationToken ct = default);
+
+    /// <summary>
     /// Khởi tạo giao dịch thanh toán
     /// </summary>
     Task<TransactionDto> InitiatePaymentAsync(PaymentInitiateRequestDto request, CancellationToken ct = default);
@@ -35,6 +40,11 @@ public interface IPaymentService
     /// </summary>
     Task<TransactionDto> ProcessPaymentAsync(PaymentRequestDto request, int userId, CancellationToken ct = default);
     Task<OrderDto> ConfirmOrderAsync(CustomerConfirmRequestDto request, int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Xác nhận Reservation (confirm tất cả Orders trong Reservation)
+    /// </summary>
+    Task<ReservationPaymentDto> ConfirmReservationAsync(ReservationConfirmRequestDto request, int userId, CancellationToken ct = default);
 
     Task<bool> UndoConfirmOrderAsync(int orderId, UndoConfirmRequestDto request, CancellationToken ct = default);
 
@@ -148,5 +158,34 @@ public interface IPaymentService
     /// Hủy toàn bộ đơn hàng và giải phóng bàn (khi khách rời đi trước khi món làm)
     /// </summary>
     Task<bool> CancelOrderAsync(int orderId, string reason, int? userId = null, CancellationToken ct = default);
+
+    // ========== RESERVATION-CENTRIC PAYMENT METHODS ==========
+
+    /// <summary>
+    /// Lấy thông tin thanh toán theo ReservationId (tổng hợp tất cả Orders)
+    /// </summary>
+    Task<ReservationPaymentDto?> GetReservationPaymentAsync(int reservationId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Xử lý thanh toán tiền mặt theo ReservationId
+    /// </summary>
+    Task<TransactionDto> ProcessCashPaymentByReservationAsync(int reservationId, decimal amountReceived, string? notes, int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Xử lý thanh toán QR theo ReservationId
+    /// </summary>
+    Task<TransactionDto> ProcessQrPaymentByReservationAsync(int reservationId, string? notes, int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Xử lý thanh toán kết hợp (Cash + QR) theo ReservationId
+    /// </summary>
+    Task<List<TransactionDto>> ProcessCombinedPaymentByReservationAsync(
+        int reservationId,
+        decimal cashAmount,
+        decimal qrAmount,
+        decimal? cashReceived,
+        string? notes,
+        int userId,
+        CancellationToken ct = default);
 }
 

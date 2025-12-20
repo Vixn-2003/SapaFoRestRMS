@@ -755,7 +755,7 @@
                                         @* @if (item.MenuItemName.Contains("Rượu táo mèo"))
                                         {
                                             <script>
-                                                console.log('Item: @item.MenuItemName', {
+                                                // Item data
                                                     OrderDetailId: @item.OrderDetailId,
                                                     BillingType: @(item.BillingType.HasValue ? item.BillingType.Value.ToString() : "null"),
                                                     CanConfirmQuantity: @item.CanConfirmQuantity.ToString().ToLower(),
@@ -922,7 +922,7 @@
                     <div class="empty-state">
                         <div style="font-size: 80px; margin-bottom: 16px;">🎉</div>
                         <h3 style="font-size: 24px; font-weight: 700; color: #374151; margin-bottom: 8px;">Tuyệt vời!</h3>
-                        <p style="color: #6b7280;">Bạn không còn món nào cần phục vụ</p>
+                        <p style="color: #6b7280;">Bạn đã hoàn thành hết nhiệm vụ</p>
                     </div>
                 }
             </div>
@@ -1017,7 +1017,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+@* Bootstrap JS đã được load trong _counterstaffLayout.cshtml, không cần load lại *@
 <script src="~/js/waiterOrderTracking.js"></script>
 <script>
     // Update time
@@ -1102,7 +1102,6 @@
             });
 
             await waiterSignalRConnection.start();
-            console.log('WaiterOrderTracking SignalR connected.');
         } catch (error) {
             console.error('Error initializing WaiterOrderTracking SignalR:', error);
         }
@@ -1569,10 +1568,8 @@
 
     // Filter orders
     function filterOrders(filterType) {
-        console.log('Filtering by:', filterType);
         
         const itemRows = document.querySelectorAll('.item-row-wrapper');
-        console.log('Total items found:', itemRows.length);
         
         let doneCount = 0;
         let processingCount = 0;
@@ -1582,7 +1579,6 @@
             const isDone = isDoneAttr === 'true';
             
             if (index < 5) {
-                console.log(`Item ${index}: data-is-done="${isDoneAttr}", isDone=${isDone}`);
             }
             
             if (filterType === 'all') {
@@ -1606,7 +1602,6 @@
             }
         });
         
-        console.log(`Done items: ${doneCount}, Processing items: ${processingCount}`);
         
         // Không ẩn order cards, chỉ ẩn items Done bên trong
         // Order cards luôn hiển thị, chỉ items bên trong bị ẩn
@@ -1616,7 +1611,6 @@
             card.style.display = '';
         });
         
-        console.log('Filter applied - Only items are filtered, cards remain visible');
     }
 
     // Search orders

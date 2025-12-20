@@ -159,7 +159,25 @@
 
                     // Submit form with AmountReceived = 0
                     console.log('[DEBUG] Submitting form with AmountReceived = 0');
-                    document.getElementById('cashPaymentOrderId').value = orderId;
+                    
+                    // ✅ Kiểm tra xem có ReservationId không (Reservation-centric payment)
+                    const isReservationPayment = window.PaymentCore.orderContext?.IsReservationPayment === true;
+                    const reservationId = window.PaymentCore.orderContext?.ReservationId;
+                    
+                    if (isReservationPayment && reservationId) {
+                        // Reservation payment: set ReservationId
+                        const reservationIdInput = document.querySelector('#cashPaymentForm input[name="ReservationId"]');
+                        if (reservationIdInput) {
+                            reservationIdInput.value = reservationId;
+                        }
+                    } else {
+                        // Order payment: set OrderId (backward compatible)
+                        const orderIdInput = document.getElementById('cashPaymentOrderId');
+                        if (orderIdInput) {
+                            orderIdInput.value = orderId;
+                        }
+                    }
+                    
                     document.getElementById('cashPaymentAmountReceived').value = '0';
                     document.getElementById('cashPaymentNotes').value = `Đã thanh toán đủ bằng tiền cọc. Trả lại tiền thừa: ${depositRefund.toLocaleString('vi-VN')} ₫`;
 
@@ -168,14 +186,19 @@
                     console.log('[DEBUG] Form action:', form?.action);
                     console.log('[DEBUG] Form method:', form?.method);
                     console.log('[DEBUG] Form values:', {
-                        OrderId: document.getElementById('cashPaymentOrderId').value,
+                        OrderId: document.getElementById('cashPaymentOrderId')?.value,
+                        ReservationId: document.querySelector('#cashPaymentForm input[name="ReservationId"]')?.value,
                         AmountReceived: document.getElementById('cashPaymentAmountReceived').value,
                         Notes: document.getElementById('cashPaymentNotes').value
                     });
 
                     // Set processing state for result modal
                     sessionStorage.setItem('cashPaymentProcessing', 'true');
-                    sessionStorage.setItem('cashPaymentOrderId', orderId);
+                    if (isReservationPayment && reservationId) {
+                        sessionStorage.setItem('cashPaymentReservationId', reservationId);
+                    } else {
+                        sessionStorage.setItem('cashPaymentOrderId', orderId);
+                    }
 
                     // Show loading modal
                     this.showCashPaymentLoadingModal();
@@ -201,7 +224,25 @@
 
                     // Submit form with AmountReceived
                     console.log('[DEBUG] Submitting form with AmountReceived =', received);
-                    document.getElementById('cashPaymentOrderId').value = orderId;
+                    
+                    // ✅ Kiểm tra xem có ReservationId không (Reservation-centric payment)
+                    const isReservationPayment = window.PaymentCore.orderContext?.IsReservationPayment === true;
+                    const reservationId = window.PaymentCore.orderContext?.ReservationId;
+                    
+                    if (isReservationPayment && reservationId) {
+                        // Reservation payment: set ReservationId
+                        const reservationIdInput = document.querySelector('#cashPaymentForm input[name="ReservationId"]');
+                        if (reservationIdInput) {
+                            reservationIdInput.value = reservationId;
+                        }
+                    } else {
+                        // Order payment: set OrderId (backward compatible)
+                        const orderIdInput = document.getElementById('cashPaymentOrderId');
+                        if (orderIdInput) {
+                            orderIdInput.value = orderId;
+                        }
+                    }
+                    
                     document.getElementById('cashPaymentAmountReceived').value = received;
                     document.getElementById('cashPaymentNotes').value = document.getElementById('paymentNotes')?.value || '';
 
@@ -210,14 +251,19 @@
                     console.log('[DEBUG] Form action:', form?.action);
                     console.log('[DEBUG] Form method:', form?.method);
                     console.log('[DEBUG] Form values:', {
-                        OrderId: document.getElementById('cashPaymentOrderId').value,
+                        OrderId: document.getElementById('cashPaymentOrderId')?.value,
+                        ReservationId: document.querySelector('#cashPaymentForm input[name="ReservationId"]')?.value,
                         AmountReceived: document.getElementById('cashPaymentAmountReceived').value,
                         Notes: document.getElementById('cashPaymentNotes').value
                     });
 
                     // Set processing state for result modal
                     sessionStorage.setItem('cashPaymentProcessing', 'true');
-                    sessionStorage.setItem('cashPaymentOrderId', orderId);
+                    if (isReservationPayment && reservationId) {
+                        sessionStorage.setItem('cashPaymentReservationId', reservationId);
+                    } else {
+                        sessionStorage.setItem('cashPaymentOrderId', orderId);
+                    }
 
                     // Show loading modal
                     this.showCashPaymentLoadingModal();
@@ -299,16 +345,27 @@
                 const errorMessage = window.PaymentCore.getTempDataMessage('ErrorMessage');
 
                 if (successMessage) {
-                    // Find redirect URL from success message or construct it
+                    // ✅ Kiểm tra xem có ReservationId không (Reservation-centric payment)
+                    const reservationId = sessionStorage.getItem('cashPaymentReservationId');
                     const orderId = sessionStorage.getItem('cashPaymentOrderId');
-                    const redirectUrl = orderId ? `/cashier-flow/receipt/${orderId}` : null;
+                    
+                    let redirectUrl = null;
+                    if (reservationId) {
+                        // Reservation payment: redirect đến receipt của reservation
+                        redirectUrl = `/cashier-flow/receipt/reservation/${reservationId}`;
+                    } else if (orderId) {
+                        // Order payment: redirect đến receipt của order
+                        redirectUrl = `/cashier-flow/receipt/${orderId}`;
+                    }
+                    
                     this.showCashPaymentResultModal(true, successMessage, redirectUrl);
                 } else if (errorMessage) {
                     this.showCashPaymentResultModal(false, errorMessage);
                 }
 
-                // Clear stored orderId
+                // Clear stored IDs
                 sessionStorage.removeItem('cashPaymentOrderId');
+                sessionStorage.removeItem('cashPaymentReservationId');
             }
         }
     };

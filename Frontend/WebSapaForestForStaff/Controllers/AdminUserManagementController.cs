@@ -194,10 +194,11 @@ namespace WebSapaForestForStaff.Controllers
                     FullName = user.FullName,
                     Email = user.Email,
                     Phone = user.Phone,
-                    RoleId = user.RoleId,
+                    RoleId = user.RoleId, // Preserve original role (cannot be changed)
                     Status = user.Status,
                     AvatarUrl = user.AvatarUrl,
-                    AvailableRoles = roles ?? new List<Role>()
+                    AvailableRoles = roles ?? new List<Role>(),
+                    RoleName = user.RoleName // Store role name for display
                 };
 
                 return View(viewModel);
@@ -234,16 +235,25 @@ namespace WebSapaForestForStaff.Controllers
 
             try
             {
-                // Map ViewModel to DTO
+                // Get original user to preserve RoleId (cannot be changed)
+                var originalUser = await _userApiService.GetUserAsync(id);
+                if (originalUser == null)
+                {
+                    TempData["ErrorMessage"] = "Không tìm thấy người dùng";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Map ViewModel to DTO - Keep original RoleId (cannot be changed)
                 var updateRequest = new UserUpdateRequest
                 {
                     UserId = viewModel.UserId,
                     FullName = viewModel.FullName,
                     Email = viewModel.Email,
                     Phone = viewModel.Phone,
-                    RoleId = viewModel.RoleId,
+                    RoleId = originalUser.RoleId, // Preserve original role, don't allow change
                     Status = viewModel.Status,
-                    AvatarUrl = viewModel.AvatarUrl
+                    AvatarUrl = viewModel.AvatarUrl,
+                    AvatarFile = viewModel.AvatarFile // Include file upload if provided
                 };
 
                 var success = await _userApiService.UpdateUserAsync(updateRequest);
