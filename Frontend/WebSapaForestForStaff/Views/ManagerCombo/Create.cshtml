@@ -171,7 +171,7 @@
                                            name="ImageFile"
                                            accept="image/*"
                                            class="d-none"
-                                           onchange="previewImageCreate(event)" />
+                                           onchange="previewImageCreate(event)" required />
                                     <small class="text-muted d-block mt-1">JPG, PNG hoặc GIF (tối đa 5MB)</small>
                                 </div>
                             </div>
@@ -180,7 +180,7 @@
                             <label class="form-label fw-bold small">Tên Combo</label>
                             <span class="text-danger">*</span>
 
-                            <input asp-for="Name" class="form-control" placeholder="Nhập tên combo..." />
+                            <input asp-for="Name" class="form-control" placeholder="Nhập tên combo..." required />
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small">
@@ -189,14 +189,14 @@
                             <textarea asp-for="Description"
                                       class="form-control"
                                       rows="3"
-                                      placeholder="Nhập mô tả combo..."></textarea>
+                                      placeholder="Nhập mô tả combo..." required></textarea>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-success">Giá bán (VNĐ)</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-success text-white">₫</span>
-                                <input asp-for="SellingPrice" type="number" class="form-control fw-bold text-success" id="sellingPrice" />
+                                <input asp-for="SellingPrice" min="1" type="number" required class="form-control fw-bold text-success" id="sellingPrice" />
                             </div>
                         </div>
                         <hr class="my-3">
