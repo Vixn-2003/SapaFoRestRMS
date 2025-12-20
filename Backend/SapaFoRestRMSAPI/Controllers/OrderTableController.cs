@@ -97,14 +97,13 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(names);
         }
 
-        // ===  ===
         [HttpGet("Filters/Floors")]
         public async Task<IActionResult> GetFloors()
         {
             var floors = await _orderTableService.GetFloorsAsync();
 
-            // Cũ (SAI): return Ok(new { data = floors });
-            // MỚI (ĐÚNG):
+            //  return Ok(new { data = floors });
+            // 
             return Ok(floors);
         }
 
@@ -188,7 +187,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        // === API MỚI: NHẬN GIỎ HÀNG (ORDER) ===
+        // ===: NHẬN GIỎ HÀNG (ORDER) ===
         [HttpPost("SubmitOrder")]
         public async Task<IActionResult> SubmitOrder([FromBody] SubmitOrderRequest orderDto)
         {

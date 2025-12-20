@@ -28,7 +28,6 @@ namespace BusinessAccessLayer.Services
         private readonly IInventoryIngredientService _inventoryService;
         private readonly IKitchenDisplayService _kitchenDisplayService;
 
-        // ⭐️ SỬA LỖI 1 & 2: Cập nhật Constructor
         public DashboardTableService(
             IDashboardTableRepository dashboardRepo,
             IOrderTableRepository orderTableRepo,
@@ -117,7 +116,7 @@ namespace BusinessAccessLayer.Services
         }
 
 
-        // (1) Lấy danh sách 
+        // Lấy danh sách đơn đc xếp bàn
         public async Task<PagedList<ReservationListDto>> GetReservationsAsync(ReservationQueryParameters parameters)
         {
             var pagedReservations = await _dashboardRepo.GetPagedReservationsAsync(parameters);
@@ -191,8 +190,7 @@ namespace BusinessAccessLayer.Services
             return detailDto;
         }
 
-        // (3) Đổi trạng thái
-        // Đổi signature từ Task sang Task<Reservation>
+        //  Đổi trạng thái khách đến
         public async Task<Reservation> SeatGuestAsync(int reservationId)
         {
             // 1. Lấy dữ liệu (Lưu ý: Repo cần Include ReservationTables để lấy được TableId sau này)
@@ -212,7 +210,7 @@ namespace BusinessAccessLayer.Services
 
             // 2. Cập nhật thông tin
             var now = DateTime.Now;
-            reservation.Status = "Guest Seated"; // Sửa thành "Active" để khớp với logic hiển thị màu cam ở Frontend
+            reservation.Status = "Guest Seated"; 
             reservation.ArrivalAt = now;
             reservation.StatusUpdatedAt = now;
 
@@ -248,238 +246,7 @@ namespace BusinessAccessLayer.Services
             });
         }
 
-
-        // --- ĐÂY LÀ HÀM QUAN TRỌNG ĐÃ SỬA ---
-        //public async Task<StaffOrderScreenDto> GetStaffOrderScreenAsync(int tableId, int? categoryId, string? searchString)
-        //{
-        //    if (tableId <= 0)
-        //        throw new ArgumentException("Table ID không hợp lệ.");
-
-        //    // 1. Lấy thông tin Bàn
-        //    var table = await _dashboardRepo.GetTableInfoAsync(tableId);
-        //    if (table == null)
-        //        throw new Exception("Không tìm thấy bàn.");
-
-        //    // 2. Lấy Reservation (Giữ nguyên logic Include để hiển thị tên món đã gọi)
-        //    var activeReservation = await _context.Reservations
-        //          .Include(r => r.Customer).ThenInclude(c => c.User)
-        //          .Include(r => r.Orders)
-        //              .ThenInclude(o => o.OrderDetails)
-        //                  .ThenInclude(od => od.MenuItem)
-        //          .Include(r => r.Orders)
-        //              .ThenInclude(o => o.OrderDetails)
-        //                  .ThenInclude(od => od.Combo)
-        //          .Where(r => r.ReservationTables.Any(rt => rt.TableId == tableId)
-        //                   && r.Status == "Guest Seated")
-        //          .FirstOrDefaultAsync();
-
-        //    // 3. CHUẨN BỊ DỮ LIỆU MENU & COMBO
-        //    IEnumerable<MenuItem> menuItems = new List<MenuItem>();
-        //    IEnumerable<Combo> combos = new List<Combo>();
-        //    string searchLower = searchString?.ToLower().Trim();
-
-        //    // --- XỬ LÝ QUERY COMBO (MỚI: INCLUDE ĐỂ TÍNH GIÁ GỐC) ---
-        //    // Ta tạo query cơ bản có Include sẵn để dùng cho các trường hợp bên dưới
-        //    var baseComboQuery = _context.Combos
-        //        .Include(c => c.ComboItems)           // <-- QUAN TRỌNG: Để lấy danh sách món trong combo
-        //            .ThenInclude(ci => ci.MenuItem)   // <-- QUAN TRỌNG: Để lấy giá gốc của từng món
-        //        .Where(c => c.IsAvailable == true)
-        //        .AsQueryable(); // Để tiếp tục nối chuỗi query
-
-        //    // --- TRƯỜNG HỢP 1: Chỉ lấy Combos (CategoryId = -1) ---
-        //    if (categoryId.HasValue && categoryId.Value == -1)
-        //    {
-        //        if (!string.IsNullOrEmpty(searchLower))
-        //        {
-        //            baseComboQuery = baseComboQuery.Where(c => c.Name.ToLower().Contains(searchLower));
-        //        }
-        //        combos = await baseComboQuery.ToListAsync();
-        //    }
-        //    // --- TRƯỜNG HỢP 2: Lấy Tất cả (CategoryId = null hoặc 0) ---
-        //    else if (!categoryId.HasValue || categoryId.Value == 0)
-        //    {
-        //        // a. Lấy MenuItems
-        //        var menuQuery = await _dashboardRepo.GetActiveMenuItemsAsync();
-        //        // b. Lấy Combos (dùng query có Include ở trên)
-
-        //        if (!string.IsNullOrEmpty(searchLower))
-        //        {
-        //            menuQuery = menuQuery.Where(m => m.Name.ToLower().Contains(searchLower)).ToList();
-        //            baseComboQuery = baseComboQuery.Where(c => c.Name.ToLower().Contains(searchLower));
-        //        }
-
-        //        menuItems = menuQuery;
-        //        combos = await baseComboQuery.ToListAsync();
-        //    }
-        //    // --- TRƯỜNG HỢP 3: Lấy Category cụ thể ---
-        //    else
-        //    {
-        //        var menuQuery = await _dashboardRepo.GetActiveMenuItemsAsync();
-        //        menuQuery = menuQuery.Where(m => m.CategoryId == categoryId.Value).ToList();
-
-        //        if (!string.IsNullOrEmpty(searchLower))
-        //        {
-        //            menuQuery = menuQuery.Where(m => m.Name.ToLower().Contains(searchLower)).ToList();
-        //        }
-        //        menuItems = menuQuery;
-        //        // Combos rỗng
-        //    }
-
-        //    // 4. MAPPING SANG DTO
-        //    var screenDto = new StaffOrderScreenDto();
-
-        //    // Map Bàn
-        //    screenDto.TableId = table.TableId;
-        //    screenDto.TableNumber = table.TableNumber;
-        //    screenDto.AreaName = table.Area?.AreaName;
-        //    screenDto.Floor = table.Area?.Floor ?? 0;
-
-        //    // Map MenuItems
-        //    screenDto.MenuItems = menuItems.Select(m => new DTOs.OrderGuest.MenuItemDto
-        //    {
-        //        MenuItemId = m.MenuItemId,
-        //        Name = m.Name,
-        //        CategoryName = m.Category?.CategoryName,
-        //        Price = m.Price,
-        //        ImageUrl = m.ImageUrl,
-        //        IsAvailable = m.IsAvailable
-        //    }).ToList();
-
-        //    // Map Combos (CÓ TÍNH TOÁN ORIGINAL PRICE)
-        //    screenDto.Combos = combos.Select(c => new ComboDto
-        //    {
-        //        ComboId = c.ComboId,
-        //        Name = c.Name,
-        //        ImageUrl = c.ImageUrl,
-        //        IsAvailable = c.IsAvailable,
-
-        //        Price = c.Price, // Giá bán (giá ưu đãi)
-
-        //        // === LOGIC TÍNH TOÁN GIÁ GỐC (Giống hàm BuildComboDtoAsync) ===
-        //        OriginalPrice = c.ComboItems.Sum(ci =>
-        //            (ci.MenuItem != null ? ci.MenuItem.Price * ci.Quantity : 0)
-        //        )
-        //    }).ToList();
-
-        //    // Map Order (Phần bên phải - Giữ nguyên)
-        //    if (activeReservation != null)
-        //    {
-        //        screenDto.ReservationId = activeReservation.ReservationId;
-        //        screenDto.GuestCount = activeReservation.NumberOfGuests;
-
-        //        if (activeReservation.Customer?.User != null)
-        //        {
-        //            screenDto.CustomerName = activeReservation.Customer.User.FullName;
-        //            screenDto.CustomerPhone = activeReservation.Customer.User.Phone;
-        //        }
-
-        //        var latestOrder = activeReservation.Orders?
-        //            .OrderByDescending(o => o.CreatedAt ?? DateTime.MinValue)
-        //            .FirstOrDefault();
-
-        //        if (latestOrder != null)
-        //        {
-        //            screenDto.ActiveOrderId = latestOrder.OrderId;
-        //            //  Đưa trạng thái order hiện tại ra FE để dùng cho flow waiter/cashier
-        //            // Chuẩn hoá về lowercase để so sánh đơn giản ở frontend
-        //            screenDto.OrderStatus = latestOrder.Status?.ToLowerInvariant();
-
-        //            foreach (var od in latestOrder.OrderDetails)
-        //            {
-
-        //                string itemName = od.MenuItemId.HasValue
-        //                                  ? od.MenuItem?.Name
-        //                                  : (od.ComboId.HasValue ? od.Combo?.Name : "Lỗi dữ liệu");
-
-        //                if (itemName == null) continue;
-
-        //                screenDto.OrderedItems.Add(new OrderedItemDto
-        //                {
-        //                    OrderDetailId = od.OrderDetailId,
-        //                    MenuItemId = od.MenuItemId,
-        //                    ComboId = od.ComboId,
-        //                    ItemName = itemName,
-        //                    Quantity = od.Quantity,
-        //                    UnitPrice = od.UnitPrice,
-        //                    Status = od.Status,
-        //                    Notes = od.Notes
-        //                });
-        //            }
-        //        }
-        //        else
-        //        {
-        //            foreach (var order in activeReservation.Orders)
-        //            {
-        //                foreach (var od in order.OrderDetails)
-        //                {
-        //                    string itemName = od.MenuItemId.HasValue
-        //                                      ? od.MenuItem?.Name
-        //                                      : (od.ComboId.HasValue ? od.Combo?.Name : "Lỗi dữ liệu");
-
-        //                    if (itemName == null) continue;
-
-        //                    screenDto.OrderedItems.Add(new OrderedItemDto
-        //                    {
-        //                        OrderDetailId = od.OrderDetailId,
-        //                        MenuItemId = od.MenuItemId,
-        //                        ComboId = od.ComboId,
-        //                        ItemName = itemName,
-        //                        Quantity = od.Quantity,
-        //                        UnitPrice = od.UnitPrice,
-        //                        Status = od.Status,
-        //                        Notes = od.Notes
-        //                    });
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    //  TÍNH TOÁN SỐ LƯỢNG MÓN THEO TRẠNG THÁI (Backend)
-        //    screenDto.TotalQuantity = screenDto.OrderedItems.Sum(item => item.Quantity);
-
-        //    foreach (var item in screenDto.OrderedItems)
-        //    {
-        //        var status = (item.Status ?? "").Trim();
-        //        var statusLower = status.ToLower();
-
-        //        // Đã phục vụ & đang nấu: Status = "Cooking", "Done", "Ready", "Served"
-        //        var isReady = statusLower == "cooking" ||
-        //                     statusLower == "done" ||
-        //                     statusLower == "ready" ||
-        //                     statusLower == "served" ||
-        //                     statusLower == "đang chế biến" ||
-        //                     statusLower == "đã xong" ||
-        //                     statusLower == "sẵn sàng";
-
-        //        // Chưa nấu: Status = "Pending"
-        //        var isPending = statusLower == "pending" ||
-        //                       statusLower == "đã gửi" ||
-        //                       string.IsNullOrEmpty(status);
-
-        //        // Món đã hủy: Status = "Cancelled", "Removed"
-        //        var isCancelled = statusLower == "cancelled" ||
-        //                         statusLower == "hủy" ||
-        //                         statusLower == "removed";
-
-        //        if (isReady)
-        //        {
-        //            screenDto.QtyServedAndCooking += item.Quantity;
-        //        }
-        //        else if (isPending)
-        //        {
-        //            screenDto.QtyNotCooked += item.Quantity;
-        //        }
-        //        else if (isCancelled)
-        //        {
-        //            screenDto.QtyCancelled += item.Quantity;
-        //        }
-        //    }
-
-        //    return screenDto;
-        //}
-
-        // Trong Implementation
-
+        //Lấy toàn bộ dữ liệu cần thiết cho màn hình Order của nhân viên
         public async Task<StaffOrderScreenDto> GetStaffOrderScreenAsync(int tableId, int? categoryId, string? searchString)
         {
             if (tableId <= 0)
@@ -683,9 +450,6 @@ namespace BusinessAccessLayer.Services
         }
 
 
-        // Lấy danh sách món đã gọi của khách
-        // Lấy danh sách OrderDetail hiện tại của bàn
-
         public async Task SaveOrderChangesAsync(SaveOrderRequest request)
         {
             // BƯỚC 1: TÌM RESERVATION
@@ -705,7 +469,7 @@ namespace BusinessAccessLayer.Services
                 currentOrder = new Order
                 {
                     ReservationId = activeReservation.ReservationId,
-                    CustomerId = activeReservation.CustomerId, // ✅ Set CustomerId từ reservation
+                    CustomerId = activeReservation.CustomerId, //  Set CustomerId từ reservation
                     CreatedAt = DateTime.Now,
                     TotalAmount = 0,    // Tạm tính là 0
                     Status = "Pending",  // Trạng thái chờ,
@@ -911,7 +675,7 @@ namespace BusinessAccessLayer.Services
 
                         if (itemToDelete != null && itemToDelete.Order.ReservationId == activeReservation.ReservationId)
                         {
-                            //  QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC KHI cập nhật status
+                            // Giải phóng reserved quantity TRƯỚC KHI cập nhật status
                             // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
                             // Phải gọi TRƯỚC khi set status = Cancelled để release có thể check status Pending/Cooking
                             if (itemToDelete.MenuItem != null)

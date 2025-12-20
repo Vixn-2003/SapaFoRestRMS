@@ -181,7 +181,7 @@ namespace BusinessAccessLayer.Services
             return await query.CountAsync();
         }
 
-        // HÀM GenerateQrCodeForTableAsync (Giữ nguyên, không thay đổi)
+        // HÀM GenerateQrCodeForTableAsync 
         public async Task<byte[]> GenerateQrCodeForTableAsync(int tableId)
         {
             var table = await _orderTableRepository.GetByTbIdAsync(tableId);
@@ -352,40 +352,6 @@ namespace BusinessAccessLayer.Services
                 )
             });
         }
-
-        // === SỬA HÀM NÀY ===
-        //  private async Task<IEnumerable<MenuItemDto>> BuildMenuDtoForReservation(
-        //Reservation reservation,
-        //int? categoryId,
-        //string? searchString)
-        //  {
-        //      // 1. Gọi Repository đã được lọc
-        //      var menuItems = await _orderTableRepository.GetAvailableMenuWithCategoryAsync(categoryId, searchString);
-
-        //      // 2. Code cũ của bạn
-        //      var orderedItems = reservation.Orders
-        //       .SelectMany(o => o.OrderDetails)
-
-        //       // === THÊM DÒNG NÀY ĐỂ LỌC BỎ COMBO ===
-        //       .Where(od => od.MenuItemId.HasValue) // Chỉ lấy các chi tiết là MÓN ĂN
-        //                                            // ===================================
-
-        //       .GroupBy(od => od.MenuItemId.Value) // Giờ có thể dùng .Value an toàn
-        //       .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
-
-        //      // 3. Trả về DTO (Giữ nguyên)
-        //      return menuItems.Select(m => new MenuItemDto
-        //      {
-        //          MenuItemId = m.MenuItemId,
-        //          Name = m.Name,
-        //          CategoryName = m.Category?.CategoryName ?? "",
-        //          Price = m.Price,
-        //          ImageUrl = m.ImageUrl,
-        //          IsAvailable = m.IsAvailable,
-        //          Quantity = orderedItems.ContainsKey(m.MenuItemId) ? orderedItems[m.MenuItemId] : 0
-        //      }).ToList();
-        //  }
-
         private async Task<IEnumerable<MenuItemDto>> BuildMenuDtoForReservation(
     Reservation reservation,
     int? categoryId,
@@ -565,15 +531,10 @@ namespace BusinessAccessLayer.Services
                         Console.WriteLine($"Warning Inventory: {reserveResult.message}");
                     }
                 }
-
-                // TH2: Trừ kho Combo (nếu logic kho của bạn hỗ trợ)
-                // Bạn có thể loop qua orderDetail.OrderComboItems để trừ kho từng món con
             }
 
 
-            // =========================================================================
             // BƯỚC 5: TRẢ VỀ KẾT QUẢ (DTO)
-            // =========================================================================
             var result = new OrderResultDto
             {
                 OrderId = newOrder.OrderId,
@@ -634,7 +595,7 @@ namespace BusinessAccessLayer.Services
 
             if (item.OrderComboItems != null && item.OrderComboItems.Any())
             {
-                // ✅ FIX: Kiểm tra xem có món nào trong combo đã nấu/sẵn sàng/hoàn thành không
+                // FIX: Kiểm tra xem có món nào trong combo đã nấu/sẵn sàng/hoàn thành không
                 // Bao gồm: Cooking, Ready, Done, Served
                 bool hasCookedItem = item.OrderComboItems.Any(c => 
                 {
@@ -656,7 +617,7 @@ namespace BusinessAccessLayer.Services
                 }
             }
 
-            //  QUAN TRỌNG: Giải phóng reserved quantity TRƯỚC khi cập nhật status
+            //  Giải phóng reserved quantity TRƯỚC khi cập nhật status
             // Nếu món đã được reserve nguyên liệu, cần giải phóng để available có thể tăng lại
             var releaseResult = await _inventoryService.ReleaseReservedBatchesForOrderDetailAsync(orderDetailId);
             if (!releaseResult.success)
