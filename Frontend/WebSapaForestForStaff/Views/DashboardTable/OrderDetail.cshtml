@@ -911,6 +911,13 @@
             return;
         }
 
+        // ✅ Lấy ReservationId từ Model (nếu có)
+        const reservationId = @(Model.ReservationId.HasValue ? Model.ReservationId.Value : 0);
+        if (!reservationId || reservationId <= 0) {
+            alert('⚠️ Không tìm thấy ReservationId. Vui lòng kiểm tra lại đơn hàng.');
+            return;
+        }
+
         const tableNumber = '@Model.TableNumber';
         const customerName = '@(Model.CustomerName ?? "Khách vãng lai")';
         const totalAmount = visibleItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -972,20 +979,23 @@
         }
 
         try {
-            // Gọi API backend để chuyển trạng thái Order sang Confirmed
+            // ✅ Gọi API backend để chuyển trạng thái Reservation sang Confirmed (confirm tất cả Orders)
+            // Tạo payload với ReservationId và items từ Order hiện tại
             const payload = {
-                orderId: activeOrderId,
-                items: visibleItems.map(item => ({
-                    orderDetailId: item.id,
-                    quantityUsed: item.quantity,
-                    isRemoved: false
-                })),
+                reservationId: reservationId,
+                orderItems: {
+                    [activeOrderId]: visibleItems.map(item => ({
+                        orderDetailId: item.id,
+                        quantityUsed: item.quantity,
+                        isRemoved: false
+                    }))
+                },
                 notes: null
             };
 
             // ✅ Gọi qua Controller thay vì gọi API trực tiếp
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-            const response = await fetch('/DashboardTable/ConfirmOrder', {
+            const response = await fetch('/DashboardTable/ConfirmReservation', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -996,21 +1006,21 @@
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Không thể xác nhận đơn hàng');
+                throw new Error(errorData.message || 'Không thể xác nhận Reservation');
             }
 
             const result = await response.json();
             
             // Hiển thị thông báo thành công
-            showToast('✅ Đã xác nhận đơn hàng thành công! Đơn hàng đã được khóa và sẵn sàng cho thu ngân thanh toán.', 'success');
+            showToast('✅ Đã xác nhận Reservation thành công! Tất cả Orders đã được khóa và sẵn sàng cho thu ngân thanh toán.', 'success');
             
             // Reload trang để cập nhật trạng thái
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
         } catch (error) {
-            console.error('Lỗi khi xác nhận đơn hàng:', error);
-            alert('Lỗi: ' + (error.message || 'Không thể xác nhận đơn hàng. Vui lòng thử lại.'));
+            console.error('Lỗi khi xác nhận Reservation:', error);
+            alert('Lỗi: ' + (error.message || 'Không thể xác nhận Reservation. Vui lòng thử lại.'));
         }
     }
 
@@ -1038,6 +1048,13 @@
         const activeOrderId = window.__ACTIVE_ORDER_ID__;
         if (activeOrderId <= 0) {
             alert('Không tìm thấy đơn hàng. Vui lòng thử lại.');
+            return;
+        }
+
+        // ✅ Lấy ReservationId từ Model (nếu có)
+        const reservationId = @(Model.ReservationId.HasValue ? Model.ReservationId.Value : 0);
+        if (!reservationId || reservationId <= 0) {
+            alert('⚠️ Không tìm thấy ReservationId. Vui lòng kiểm tra lại đơn hàng.');
             return;
         }
 
@@ -1082,7 +1099,7 @@
             <div class="alert alert-info d-flex align-items-start gap-2 mt-3 mb-0">
                 <i class="fa-solid fa-info-circle mt-1"></i>
                 <div class="small">
-                    Sau khi xác nhận, hệ thống sẽ chuyển sang màn hình thanh toán để xử lý thanh toán.
+                    Sau khi xác nhận, hệ thống sẽ chuyển sang màn hình thanh toán để xử lý thanh toán cho toàn bộ Reservation (tất cả Orders).
                 </div>
             </div>`,
             " Thanh toán bàn",
@@ -1093,8 +1110,8 @@
             return;
         }
 
-        // Redirect tới màn hình Payment (không cần confirm nữa vì Waiter đã confirm rồi)
-        window.location.href = `/cashier-flow/payment/${activeOrderId}`;
+        // ✅ Redirect tới màn hình Payment theo ReservationId (thay vì OrderId)
+        window.location.href = `/cashier-flow/payment/reservation/${reservationId}`;
     }
 
     /**

@@ -54,22 +54,34 @@ namespace BusinessAccessLayer.Services
 
         private RevenueSummaryDto BuildSummary(List<DomainAccessLayer.Models.Transaction> transactions)
         {
-            var totalRevenue = transactions.Sum(t => t.Amount);
-            var totalOrders = transactions.Select(t => t.OrderId).Distinct().Count();
+            // ✅ Loại bỏ Split Bill parent và child transactions
+            var validTransactions = transactions
+                .Where(t => t.ParentTransactionId == null) // Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // Loại bỏ parent Split transactions
+                .ToList();
+
+            var totalRevenue = validTransactions.Sum(t => t.Amount);
+            var totalOrders = validTransactions.Select(t => t.OrderId).Distinct().Count();
             var averagePerOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-            var cashRevenue = transactions
+            var cashRevenue = validTransactions
                 .Where(t => t.PaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase))
                 .Sum(t => t.Amount);
 
-            var qrRevenue = transactions
+            var qrRevenue = validTransactions
                 .Where(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
                            t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
                            t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase))
                 .Sum(t => t.Amount);
 
-            var combinedRevenue = transactions
-                .Where(t => t.PaymentMethod.Equals("Combined", StringComparison.OrdinalIgnoreCase))
+            // ✅ Sửa Combined Payment logic: Tìm orders có cả Cash và QR transactions
+            var combinedRevenue = validTransactions
+                .GroupBy(t => t.OrderId)
+                .Where(g => g.Any(t => t.PaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase)) &&
+                           g.Any(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
+                                     t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
+                                     t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase)))
+                .SelectMany(g => g)
                 .Sum(t => t.Amount);
 
             return new RevenueSummaryDto
@@ -87,7 +99,13 @@ namespace BusinessAccessLayer.Services
         {
             var orderDict = orders.ToDictionary(o => o.OrderId);
 
-            return transactions
+            // ✅ Loại bỏ Split Bill parent và child transactions
+            var validTransactions = transactions
+                .Where(t => t.ParentTransactionId == null) // Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // Loại bỏ parent Split transactions
+                .ToList();
+
+            return validTransactions
                 .OrderByDescending(t => t.CompletedAt)
                 .Select(t => new RevenueDetailDto
                 {
@@ -107,7 +125,13 @@ namespace BusinessAccessLayer.Services
 
         private List<RevenueTrendDataDto> BuildTrendData(List<DomainAccessLayer.Models.Transaction> transactions)
         {
-            return transactions
+            // ✅ Loại bỏ Split Bill parent và child transactions
+            var validTransactions = transactions
+                .Where(t => t.ParentTransactionId == null) // Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // Loại bỏ parent Split transactions
+                .ToList();
+
+            return validTransactions
                 .GroupBy(t => DateOnly.FromDateTime(t.CompletedAt ?? t.CreatedAt))
                 .Select(g => new RevenueTrendDataDto
                 {
@@ -121,18 +145,34 @@ namespace BusinessAccessLayer.Services
 
         private PaymentMethodBreakdownDto BuildPaymentBreakdown(List<DomainAccessLayer.Models.Transaction> transactions)
         {
-            var cashTransactions = transactions
+            // ✅ Loại bỏ Split Bill parent và child transactions
+            var validTransactions = transactions
+                .Where(t => t.ParentTransactionId == null) // Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // Loại bỏ parent Split transactions
+                .ToList();
+
+            var cashTransactions = validTransactions
                 .Where(t => t.PaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var qrTransactions = transactions
+            var qrTransactions = validTransactions
                 .Where(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
                            t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
                            t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var combinedTransactions = transactions
-                .Where(t => t.PaymentMethod.Equals("Combined", StringComparison.OrdinalIgnoreCase))
+            // ✅ Sửa Combined Payment logic: Tìm orders có cả Cash và QR transactions
+            var combinedOrderIds = validTransactions
+                .GroupBy(t => t.OrderId)
+                .Where(g => g.Any(t => t.PaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase)) &&
+                           g.Any(t => t.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase) ||
+                                     t.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) ||
+                                     t.PaymentMethod.Equals("VietQR", StringComparison.OrdinalIgnoreCase)))
+                .Select(g => g.Key)
+                .ToHashSet();
+
+            var combinedTransactions = validTransactions
+                .Where(t => combinedOrderIds.Contains(t.OrderId))
                 .ToList();
 
             return new PaymentMethodBreakdownDto
@@ -142,7 +182,7 @@ namespace BusinessAccessLayer.Services
                 CombinedAmount = combinedTransactions.Sum(t => t.Amount),
                 CashCount = cashTransactions.Count,
                 QrCount = qrTransactions.Count,
-                CombinedCount = combinedTransactions.Count
+                CombinedCount = combinedOrderIds.Count // Số lượng orders có combined payment
             };
         }
 
@@ -150,8 +190,14 @@ namespace BusinessAccessLayer.Services
         {
             // TODO: Implement multi-branch comparison
             // For now, return single branch data
-            var totalRevenue = transactions.Sum(t => t.Amount);
-            var totalOrders = transactions.Select(t => t.OrderId).Distinct().Count();
+            // ✅ Loại bỏ Split Bill parent và child transactions
+            var validTransactions = transactions
+                .Where(t => t.ParentTransactionId == null) // Loại bỏ child transactions
+                .Where(t => t.PaymentMethod != "Split") // Loại bỏ parent Split transactions
+                .ToList();
+
+            var totalRevenue = validTransactions.Sum(t => t.Amount);
+            var totalOrders = validTransactions.Select(t => t.OrderId).Distinct().Count();
 
             return new List<BranchComparisonDto>
             {

@@ -12,6 +12,36 @@
     // Check if we're showing unpaid orders (confirmed, pendingpayment) or paid orders (paid, completed, success)
     // Nếu ViewBag.OrderStatus = "paid" thì isUnpaid = false, ngược lại = true
     var isUnpaid = !orderStatus.Equals("paid", StringComparison.OrdinalIgnoreCase);
+    
+    // ✅ Helper function: Lấy PaymentMethod từ danh sách orders (có thể combined)
+    string GetReservationPaymentMethod(List<WebSapaForestForStaff.DTOs.Payment.OrderDto> orders)
+    {
+        var paymentMethods = orders
+            .Where(o => !string.IsNullOrWhiteSpace(o.PaymentMethod))
+            .Select(o => o.PaymentMethod!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        
+        if (paymentMethods.Count == 0)
+        {
+            return "—";
+        }
+        
+        if (paymentMethods.Count > 1)
+        {
+            // Có nhiều payment methods → Combined
+            var hasCash = paymentMethods.Any(pm => string.Equals(pm, "Cash", StringComparison.OrdinalIgnoreCase));
+            var hasQR = paymentMethods.Any(pm => pm.Contains("QR", StringComparison.OrdinalIgnoreCase) || 
+                                                  pm.Contains("BankTransfer", StringComparison.OrdinalIgnoreCase));
+            if (hasCash && hasQR)
+            {
+                return "Combined";
+            }
+        }
+        
+        // Trả về payment method đầu tiên
+        return paymentMethods.First();
+    }
 }
 
 @if (Model == null || !Model.Any())
@@ -58,7 +88,7 @@ else
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>Mã đơn</th>
+                    <th>Reservation / Mã đơn</th>
                    
                     @if (isUnpaid)
                     {
@@ -81,15 +111,102 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var order in Model)
+                @{
+                    // ✅ Group orders theo ReservationId
+                    var reservationGroups = Model
+                        .Where(o => o.ReservationId.HasValue && o.ReservationId.Value > 0)
+                        .GroupBy(o => o.ReservationId.Value)
+                        .Select(g => new
+                        {
+                            ReservationId = g.Key,
+                            Orders = g.ToList(),
+                            FirstOrder = g.First(),
+                            // ✅ FIX: Tính tổng TotalAmount từ tất cả orders (không phải Total)
+                            TotalAmount = g.Sum(o => o.TotalAmount > 0 ? o.TotalAmount : o.Subtotal),
+                            OrderCodes = string.Join(", ", g.Select(o => o.OrderCode ?? $"#{o.OrderId}")),
+                            OrderCount = g.Count(),
+                            CreatedAt = g.Min(o => o.CreatedAt),
+                            PaidAt = g.Max(o => o.PaidAt),
+                            // ✅ FIX: Lấy WaiterName từ order có ConfirmedByStaffId (không phải First())
+                            WaiterName = g.Where(o => !string.IsNullOrWhiteSpace(o.WaiterName)).FirstOrDefault()?.WaiterName 
+                                       ?? g.First().WaiterName,
+                            TableName = g.First().Table ?? "—",
+                            // ✅ FIX: Lấy PaymentMethod từ transactions (có thể combined)
+                            // Logic: Nếu có nhiều payment methods khác nhau → "Combined", ngược lại lấy từ order đầu tiên
+                            PaymentMethod = GetReservationPaymentMethod(g.ToList())
+                        })
+                        .ToList();
+
+                    // ✅ Orders không có ReservationId (standalone orders)
+                    var standaloneOrders = Model
+                        .Where(o => !o.ReservationId.HasValue || o.ReservationId.Value <= 0)
+                        .ToList();
+                }
+
+                @* Hiển thị Reservations (grouped orders) *@
+                @foreach (var reservationGroup in reservationGroups)
+                {
+                    var isOver15Minutes = IsAged(reservationGroup.CreatedAt);
+                    var paidTime = reservationGroup.PaidAt ?? reservationGroup.CreatedAt;
+
+                    <tr>
+                        <td class="fw-bold">
+                            <div>
+                                <span>Reservation #@reservationGroup.ReservationId</span>
+                                <small class="text-muted d-block">Đơn: @reservationGroup.OrderCodes</small>
+                                <small class="badge bg-info text-white">@reservationGroup.OrderCount đơn</small>
+                            </div>
+                        </td>
+                   
+                        @if (isUnpaid)
+                        {
+                            <td class="fw-bold">@reservationGroup.TableName</td>
+                            <td>@(reservationGroup.WaiterName ?? "—")</td>
+                            <td>
+                                @FormatTime(reservationGroup.CreatedAt)
+                                @if (isOver15Minutes)
+                                {
+                                    <span class="text-danger ms-1" title="Đơn đã chờ hơn 15 phút">⏰</span>
+                                }
+                            </td>
+                            <td class="text-end fw-bold text-primary">@FormatCurrency(reservationGroup.TotalAmount)</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">Chờ thanh toán</span>
+                            </td>
+                            <td class="text-end">
+                                <a class="btn btn-outline-secondary btn-sm"
+                                   href="@Url.Action(nameof(CashierPaymentFlowController.PaymentByReservation), "CashierPaymentFlow", new { reservationId = reservationGroup.ReservationId })">
+                                    <i class="fa-solid fa-eye me-1"></i>
+                                    Chi tiết
+                                </a>
+                            </td>
+                        }
+                        else
+                        {
+                            <td>@(reservationGroup.WaiterName ?? "—")</td>
+                            <td>@FormatTime(paidTime)</td>
+                            <td class="text-end fw-bold text-success">@FormatCurrency(reservationGroup.TotalAmount)</td>
+                            <td>@(reservationGroup.PaymentMethod ?? "—")</td>
+                            <td>
+                                <span class="badge bg-success">Đã thanh toán</span>
+                            </td>
+                            <td class="text-end">
+                                <a class="btn btn-outline-primary btn-sm me-2"
+                                   href="@Url.Action(nameof(CashierPaymentFlowController.ReceiptByReservation), "CashierPaymentFlow", new { reservationId = reservationGroup.ReservationId })">
+                                    Xem hóa đơn
+                                </a>
+                            </td>
+                        }
+                    </tr>
+                }
+
+                @* Hiển thị Standalone Orders (không có ReservationId) *@
+                @foreach (var order in standaloneOrders)
                 {
                     var isOver15Minutes = IsAged(order.CreatedAt);
                     var code = order.OrderCode ?? $"#{order.OrderId}";
                     var tableName = order.Table ?? "—";
                     var paidTime = order.PaidAt ?? order.CreatedAt;
-                    
-                    // ✅ DEBUG: Log order status để kiểm tra
-                    @* Debug: Order @order.OrderId - Status: @order.Status, ViewBag.OrderStatus: @ViewBag.OrderStatus, isUnpaid: @isUnpaid *@
 
                     <tr>
                         <td class="fw-bold">@code</td>
@@ -110,7 +227,6 @@ else
                                 <span class="badge bg-warning text-dark">Chờ thanh toán</span>
                             </td>
                             <td class="text-end">
-                                
                                 <a class="btn btn-outline-secondary btn-sm"
                                    href="@Url.Action(nameof(CashierPaymentFlowController.Payment), "CashierPaymentFlow", new { id = order.OrderId })">
                                     <i class="fa-solid fa-eye me-1"></i>
@@ -132,7 +248,6 @@ else
                                    href="@Url.Action(nameof(CashierPaymentFlowController.Receipt), "CashierPaymentFlow", new { orderId = order.OrderId })">
                                     Xem hóa đơn
                                 </a>
-                          
                             </td>
                         }
                     </tr>

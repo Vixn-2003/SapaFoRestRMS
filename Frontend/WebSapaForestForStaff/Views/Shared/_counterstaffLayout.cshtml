@@ -217,6 +217,10 @@
                        class="menu-item @(currentController == "CashierPaymentFlow" ? "active" : "")">
                         Danh sách order
                     </a>
+                    <a href="/counter-staff/transactions"
+                       class="menu-item @(currentController == "CounterStaffTransaction" && currentAction == "Index" ? "active" : "")">
+                       Lịch sử giao dịch
+                    </a>
                 }
             </div>
         </div>
@@ -228,23 +232,21 @@
                 <span class="badge"></span>
             </div>
             <!-- User profile dropdown (cashier / waiter) -->
-            <div class="icon-btn user-dropdown">
+            <div class="icon-btn user-dropdown dropdown ms-auto">
                 <a class="nav-link dropdown-toggle" id="CounterUserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false" role="button">
                     <i class="fa-solid fa-user"></i>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end navbar-dropdown" aria-labelledby="CounterUserDropdown">
-                    <form asp-controller="UserProfile" asp-action="Index" method="get" class="dropdown-item p-0 m-0">
-                        <button type="submit" class="btn btn-link dropdown-item p-0 m-0 w-100 text-start">
-                            <i class="fa-solid fa-id-badge me-2"></i> Hồ sơ của tôi
-                        </button>
-                    </form>
+                    <a class="dropdown-item" asp-controller="UserProfile" asp-action="Index">
+                        <i class="fa-solid fa-id-badge me-2"></i> Hồ sơ của tôi
+                    </a>
                     <div class="dropdown-divider"></div>
-                    <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
+                    <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="display: none;">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-link dropdown-item p-0 m-0 w-100 text-start">
-                            <i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất
-                        </button>
                     </form>
+                    <a class="dropdown-item" href="#" onclick="event.preventDefault(); document.getElementById('logoutForm').submit(); return false;" style="cursor: pointer;">
+                        <i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất
+                    </a>
                 </div>
             </div>
         </div>
@@ -407,42 +409,49 @@
     <!-- Bootstrap JS - Load từ CDN để đảm bảo tương thích -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-    <!-- Initialize Dropdown (Sử dụng cách từ _LayoutAdmin.cshtml) -->
+    <!-- Initialize Dropdown -->
     <script>
-        // Global tooltip enable (fallback if pages don't initialize per-view)
-        document.addEventListener('DOMContentLoaded', function () {
-            console.log('DOM Content Loaded - Initializing dropdown...');
+        // ✅ Đảm bảo dropdown được initialize sau khi tất cả scripts đã load
+        // Sử dụng window.onload thay vì DOMContentLoaded để đảm bảo Bootstrap đã sẵn sàng
+        (function() {
+            function initializeDropdown() {
+                if (typeof bootstrap === 'undefined') {
+                    console.warn('Bootstrap chưa được load, retry sau 100ms...');
+                    setTimeout(initializeDropdown, 100);
+                    return;
+                }
 
-            if (typeof bootstrap !== 'undefined') {
-                console.log('Bootstrap is available');
-
+                // Initialize tooltips
                 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+                tooltipTriggerList.map(function (tooltipTriggerEl) { 
+                    return new bootstrap.Tooltip(tooltipTriggerEl); 
+                });
 
-                // Initialize dropdowns - ensure user dropdown works
+                // Initialize dropdown - Bootstrap sẽ tự động handle với data-bs-toggle
+                // Nhưng đảm bảo element tồn tại
                 var userDropdown = document.getElementById('CounterUserDropdown');
-                console.log('CounterUserDropdown element:', userDropdown);
-
                 if (userDropdown) {
-                    console.log('CounterUserDropdown found, Bootstrap should handle it automatically via data-bs-toggle');
-
-                    // Let Bootstrap handle the dropdown automatically via data-bs-toggle
-                    // But ensure we can still manually control it if needed
-                    var dropdown = new bootstrap.Dropdown(userDropdown);
-                    console.log('Dropdown instance created:', dropdown);
-
-                    // Add click handler for debugging
-                    userDropdown.addEventListener('click', function(e) {
-                        console.log('Dropdown clicked, Bootstrap should handle this');
-                    });
-
+                    // Bootstrap tự động handle dropdown với data-bs-toggle="dropdown"
+                    // Không cần tạo instance thủ công, chỉ cần đảm bảo Bootstrap đã load
+                    console.log('Dropdown element found, Bootstrap will handle via data-bs-toggle');
                 } else {
                     console.error('CounterUserDropdown element not found');
                 }
-            } else {
-                console.error('Bootstrap is not loaded');
             }
-        });
+
+            // Thử initialize ngay nếu DOM đã sẵn sàng
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeDropdown);
+            } else {
+                // DOM đã sẵn sàng, nhưng đợi thêm một chút để đảm bảo Bootstrap đã load
+                setTimeout(initializeDropdown, 50);
+            }
+
+            // Fallback: thử lại sau khi window load xong
+            window.addEventListener('load', function() {
+                setTimeout(initializeDropdown, 100);
+            });
+        })();
     </script>
 
     @* Render Scripts section from child views *@

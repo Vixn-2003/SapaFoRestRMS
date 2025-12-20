@@ -113,11 +113,23 @@ namespace SapaFoRestRMSAPI.Controllers
 
         /// <summary>
         /// Admin: Cập nhật user
+        /// Supports both JSON (FromBody) and multipart/form-data (FromForm) for file upload
         /// </summary>
         [HttpPut("{id:int}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Update(int id, [FromBody] UserUpdateRequest request, CancellationToken ct)
+        public async Task<IActionResult> Update(int id, [FromForm] UserUpdateRequest? formRequest, [FromBody] UserUpdateRequest? jsonRequest, CancellationToken ct)
         {
+            // Prefer form request if available (for file upload), otherwise use JSON request
+            var request = formRequest ?? jsonRequest;
+            
+            if (request == null)
+            {
+                return BadRequest(new { message = "Request body is required" });
+            }
+
+            // Note: RoleId in request is ignored in UpdateAsync (preserved from original user)
+            // The id parameter is the user ID to update
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);

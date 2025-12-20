@@ -12,6 +12,12 @@ public partial class Transaction
 
     public int OrderId { get; set; }
 
+    /// <summary>
+    /// ReservationId - nullable để backward compatible với các Transaction cũ
+    /// Khi có ReservationId, Transaction sẽ gắn với toàn bộ Reservation (nhiều Orders)
+    /// </summary>
+    public int? ReservationId { get; set; }
+
     public string TransactionCode { get; set; } = null!;
 
     public decimal Amount { get; set; }
@@ -79,6 +85,8 @@ public partial class Transaction
     public int? ConfirmedByUserId { get; set; }
 
     public virtual Order Order { get; set; } = null!;
+
+    public virtual Reservation? Reservation { get; set; }
 
     public virtual Transaction? ParentTransaction { get; set; }
 

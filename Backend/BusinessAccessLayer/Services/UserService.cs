@@ -287,11 +287,28 @@ namespace BusinessAccessLayer.Services
             }
 
             // Update user properties
+            // NOTE: RoleId cannot be changed when editing user - preserve original role
             user.FullName = request.FullName;
             user.Email = request.Email;
             user.Phone = request.Phone;
-            user.RoleId = request.RoleId;
+            // user.RoleId = request.RoleId; // DO NOT UPDATE ROLE - Role cannot be changed when editing
             user.Status = request.Status;
+
+            // Handle avatar upload - ưu tiên upload file lên Cloudinary nếu có
+            if (request.AvatarFile != null && request.AvatarFile.Length > 0 && _cloudinaryService != null)
+            {
+                var uploadedUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile, "avatars");
+                if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                {
+                    user.AvatarUrl = uploadedUrl;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+            {
+                // Fallback: sử dụng URL nếu không có file upload
+                user.AvatarUrl = request.AvatarUrl.Trim();
+            }
+
             user.ModifiedAt = DateTime.UtcNow;
 
             await _unitOfWork.Users.UpdateAsync(user);

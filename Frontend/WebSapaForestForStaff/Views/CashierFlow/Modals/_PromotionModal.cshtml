@@ -1,8 +1,19 @@
-@model WebSapaForestForStaff.DTOs.Payment.OrderDetailDto
+@model WebSapaForestForStaff.DTOs.Payment.ReservationPaymentDto
 @using System.Collections.Generic
+@using WebSapaForestForStaff.DTOs.Payment
 
 @{
     var availableVouchers = ViewData["AvailableVouchers"] as List<dynamic> ?? new List<dynamic>();
+    
+    // ✅ Lấy thông tin từ ReservationPaymentDto
+    var orderId = Model.OrderId;
+    var orderCode = Model.OrderCode;
+    var totalAmount = Model.TotalAmount;
+    var discountAmount = Model.DiscountAmount;
+    var reservationId = Model.ReservationId;
+    
+    // ✅ Lấy API base URL từ ViewData (được set từ controller)
+    var apiBaseUrl = ViewData["ApiBaseUrl"] as string ?? "https://localhost:7096/api";
 }
 
 <style>
@@ -48,9 +59,39 @@
         color: #9ca3af;
         margin-top: 4px;
     }
+    
+    /* ✅ Autocomplete dropdown styles */
+    #voucherAutocompleteDropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        margin-top: 2px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border: 1px solid #dee2e6;
+    }
+    
+    #voucherAutocompleteDropdown .dropdown-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    #voucherAutocompleteDropdown .dropdown-item:hover,
+    #voucherAutocompleteDropdown .dropdown-item.active {
+        background-color: #f8f9fa;
+    }
+    
+    #voucherAutocompleteDropdown .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    .input-group {
+        position: relative;
+    }
 </style>
 
-<div class="modal fade" id="promotionModal" tabindex="-1" aria-labelledby="promotionModalLabel" aria-hidden="true">
+<div class="modal fade" id="promotionModal" tabindex="-1" aria-labelledby="promotionModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
@@ -59,9 +100,9 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form asp-action="ApplyDiscount" asp-controller="CashierPaymentFlow" method="post" id="applyDiscountForm">
+            <form asp-action="ApplyDiscountByReservation" asp-controller="CashierPaymentFlow" asp-route-reservationId="@reservationId" method="post" id="applyDiscountForm">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="OrderId" value="@Model.OrderId" />
+                <input type="hidden" name="ReservationId" value="@reservationId" />
                 
                 <div class="modal-body">
                     <div class="row g-4">
@@ -89,17 +130,22 @@
                                 <label for="VoucherCode" class="form-label fw-bold">
                                     <i class="bi bi-upc-scan me-2"></i>Nhập mã giảm giá
                                 </label>
-                                <div class="input-group">
+                                <div class="input-group position-relative">
                                     <input type="text"
                                            class="form-control"
                                            id="VoucherCode"
                                            name="VoucherCode"
                                            placeholder="Nhập mã giảm giá..."
                                            value="@(ViewData["VoucherCode"] as string ?? "")"
+                                           autocomplete="off"
                                            required>
                                     <button class="btn btn-primary" type="button" id="applyVoucherBtn" onclick="applyVoucher()">
                                         <i class="bi bi-check-circle me-2"></i>Áp dụng
                                     </button>
+                                    <!-- ✅ Dropdown autocomplete -->
+                                    <div id="voucherAutocompleteDropdown" class="dropdown-menu w-100" style="max-height: 300px; overflow-y: auto; display: none;">
+                                        <!-- Kết quả sẽ được populate qua JavaScript -->
+                                    </div>
                                 </div>
                                 <!-- Error message hiển thị dưới label -->
                                 <div id="voucherErrorMessage" class="text-danger small mt-2 d-none">
@@ -108,7 +154,7 @@
                                 </div>
                                 <small class="text-muted d-block mt-2">
                                     <i class="bi bi-info-circle me-1"></i>
-                                    Nhập mã voucher hoặc chọn từ danh sách bên phải.
+                                    Nhập mã voucher để tìm kiếm tự động hoặc chọn từ danh sách bên phải.
                                 </small>
                             </div>
 
@@ -118,14 +164,14 @@
                                 <h6 class="fw-bold mb-3">
                                     <i class="bi bi-gift me-2"></i>Thông tin giảm giá hiện tại
                                 </h6>
-                                @if (Model.DiscountAmount > 0)
+                                @if (discountAmount > 0)
                                 {
                                     <div class="alert alert-info mb-0">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <div>
                                                 <i class="bi bi-tags me-2"></i>
                                                 <strong>Đã áp dụng giảm giá:</strong>
-                                                <span class="text-danger fw-bold">-@Model.DiscountAmount.ToString("N0") ₫</span>
+                                                <span class="text-danger fw-bold">-@discountAmount.ToString("N0") ₫</span>
                                             </div>
                                         </div>
                                     </div>
@@ -207,21 +253,149 @@
 </div>
 
 <script>
-    function selectVoucher(code) {
-        document.getElementById('VoucherCode').value = code;
-        // Highlight selected voucher
-        document.querySelectorAll('.voucher-item').forEach(item => {
-            item.classList.remove('selected');
-        });
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('selected');
+    let searchTimeout = null;
+    let currentSearchKeyword = '';
+
+    // ✅ Autocomplete search khi user nhập
+    document.addEventListener('DOMContentLoaded', function() {
+        const voucherInput = document.getElementById('VoucherCode');
+        const autocompleteDropdown = document.getElementById('voucherAutocompleteDropdown');
+
+        if (voucherInput && autocompleteDropdown) {
+            // Lắng nghe input event
+            voucherInput.addEventListener('input', function(e) {
+                const keyword = e.target.value.trim();
+                currentSearchKeyword = keyword;
+
+                // Ẩn dropdown nếu input rỗng
+                if (!keyword) {
+                    autocompleteDropdown.style.display = 'none';
+                    return;
+                }
+
+                // Debounce: đợi 300ms sau khi user ngừng gõ
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchVouchers(keyword);
+                }, 300);
+            });
+
+            // Ẩn dropdown khi click ra ngoài
+            document.addEventListener('click', function(e) {
+                if (!voucherInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
+                    autocompleteDropdown.style.display = 'none';
+                }
+            });
+
+            // Xử lý keyboard navigation
+            voucherInput.addEventListener('keydown', function(e) {
+                const items = autocompleteDropdown.querySelectorAll('.dropdown-item');
+                const activeItem = autocompleteDropdown.querySelector('.dropdown-item.active');
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (activeItem) {
+                        activeItem.classList.remove('active');
+                        const next = activeItem.nextElementSibling;
+                        if (next) {
+                            next.classList.add('active');
+                        } else if (items.length > 0) {
+                            items[0].classList.add('active');
+                        }
+                    } else if (items.length > 0) {
+                        items[0].classList.add('active');
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (activeItem) {
+                        activeItem.classList.remove('active');
+                        const prev = activeItem.previousElementSibling;
+                        if (prev) {
+                            prev.classList.add('active');
+                        } else if (items.length > 0) {
+                            items[items.length - 1].classList.add('active');
+                        }
+                    }
+                } else if (e.key === 'Enter' && activeItem) {
+                    e.preventDefault();
+                    activeItem.click();
+                } else if (e.key === 'Escape') {
+                    autocompleteDropdown.style.display = 'none';
+                }
+            });
         }
+    });
+
+    // ✅ Search vouchers từ API
+    async function searchVouchers(keyword) {
+        if (!keyword || keyword.length < 1) {
+            document.getElementById('voucherAutocompleteDropdown').style.display = 'none';
+            return;
+        }
+
+        const dropdown = document.getElementById('voucherAutocompleteDropdown');
         
-        // ✅ FIX: KHÔNG tự submit form, chỉ fill vào input
-        // User phải ấn nút "Áp dụng" để submit
-        // Clear error message khi chọn voucher mới
+        try {
+            // ✅ Gọi API search với base URL từ appsettings
+            const apiBaseUrl = '@apiBaseUrl'.trim().replace(/\/$/, ''); // Remove trailing slash
+            const response = await fetch(`${apiBaseUrl}/voucher/search?keyword=${encodeURIComponent(keyword)}&limit=10`);
+            
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            const vouchers = data.vouchers || [];
+
+            // Kiểm tra xem keyword có thay đổi không (tránh race condition)
+            if (keyword !== currentSearchKeyword) {
+                return;
+            }
+
+            // Render kết quả
+            if (vouchers.length === 0) {
+                dropdown.innerHTML = '<div class="dropdown-item-text text-muted">Không tìm thấy mã giảm giá nào</div>';
+            } else {
+                dropdown.innerHTML = vouchers.map(v => {
+                    const discountText = v.discountType === 'Phần trăm' 
+                        ? `${v.discountValue}%${v.maxDiscount ? ` (tối đa ${v.maxDiscount.toLocaleString('vi-VN')} ₫)` : ''}`
+                        : `${v.discountValue.toLocaleString('vi-VN')} ₫`;
+                    const minOrderText = v.minOrderValue 
+                        ? `Đơn tối thiểu: ${v.minOrderValue.toLocaleString('vi-VN')} ₫` 
+                        : '';
+                    
+                    return `
+                        <a href="#" class="dropdown-item" onclick="selectVoucherFromAutocomplete('${v.code}'); return false;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold text-primary">${v.code}</div>
+                                    ${v.description ? `<div class="small text-muted">${v.description}</div>` : ''}
+                                    <div class="small text-success">Giảm: ${discountText}</div>
+                                    ${minOrderText ? `<div class="small text-warning">${minOrderText}</div>` : ''}
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                }).join('');
+            }
+
+            dropdown.style.display = 'block';
+        } catch (error) {
+            console.error('Error searching vouchers:', error);
+            dropdown.style.display = 'none';
+        }
+    }
+
+    // ✅ Chọn voucher từ autocomplete dropdown
+    function selectVoucherFromAutocomplete(code) {
+        document.getElementById('VoucherCode').value = code;
+        document.getElementById('voucherAutocompleteDropdown').style.display = 'none';
         clearVoucherError();
     }
+
+    // ✅ Function selectVoucher đã được define trong promotion-voucher.js
+    // Không cần define lại ở đây để tránh xung đột
+    // window.selectVoucher từ promotion-voucher.js sẽ được gọi khi click vào voucher-item
 
     // Update voucher count badge
     function updateVoucherCount(count) {
@@ -252,7 +426,7 @@
     // Apply voucher via AJAX (sau khi xác nhận)
     async function applyVoucherConfirmed() {
         const voucherCode = document.getElementById('VoucherCode').value?.trim();
-        const orderId = @Model.OrderId;
+        const reservationId = @reservationId;
         
         if (!voucherCode) {
             showVoucherError('Vui lòng nhập mã giảm giá');
@@ -270,14 +444,15 @@
 
         try {
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-            const response = await fetch('/cashier-flow/payment/apply-discount', {
+            // ✅ Gọi API với ReservationId thay vì OrderId
+            const response = await fetch(`/cashier-flow/payment/reservation/@reservationId/apply-discount`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'RequestVerificationToken': token
                 },
                 body: new URLSearchParams({
-                    OrderId: orderId,
+                    ReservationId: @reservationId,
                     VoucherCode: voucherCode
                 })
             });
@@ -285,18 +460,24 @@
             const result = await response.json();
 
             if (result.success) {
-                // ✅ Thành công: hiển thị toast và reload page để cập nhật order
+                // ✅ Thành công: đóng modal và reload page
+                // Đóng promotion modal
+                const promoModal = bootstrap.Modal.getInstance(document.getElementById('promotionModal'));
+                if (promoModal) {
+                    promoModal.hide();
+                }
+                
+                // ✅ Hiển thị toast message
                 if (typeof showToast === 'function') {
                     showToast('Áp dụng mã ưu đãi thành công', 'success');
                 } else {
                     alert('Áp dụng mã ưu đãi thành công');
                 }
                 
-                // ✅ FIX: Đợi 1.5 giây để đảm bảo backend đã commit transaction
-                // Sau đó reload với URL đầy đủ để load lại order mới nhất
+                // ✅ Reload page sau khi apply thành công để cập nhật dữ liệu
+                // Đợi 1.5 giây để đảm bảo backend đã commit transaction
                 setTimeout(() => {
-                    // Reload với URL đầy đủ để đảm bảo load lại order từ API
-                    window.location.href = `/cashier-flow/payment/${orderId}`;
+                    window.location.href = `/cashier-flow/payment/reservation/@reservationId`;
                 }, 1500);
             } else {
                 // ❌ Lỗi: hiển thị dưới label

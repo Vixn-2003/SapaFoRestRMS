@@ -28,26 +28,82 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         /// <summary>
-        /// UC55 - View List Staff (renders view only, data loaded via AJAX)
+        /// UC55 - View List Staff (server-side rendering)
         /// GET: /StaffManagement/Index
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(
+            string? searchKeyword,
+            string? position,
+            int? status,
+            string sortBy = "HireDate",
+            string sortDirection = "desc",
+            int page = 1,
+            int pageSize = 20)
         {
-            // Load positions for dropdown filter
             try
             {
-                var (success, positions, _) = await _staffApiService.GetActivePositionsAsync();
-                ViewBag.AvailablePositions = success ? (positions ?? new List<PositionDto>()) : new List<PositionDto>();
+                // Load positions for dropdown filter
+                var (successPositions, positions, _) = await _staffApiService.GetActivePositionsAsync();
+                var availablePositions = successPositions ? (positions ?? new List<PositionDto>()) : new List<PositionDto>();
+
+                // Build filter from query parameters
+                var filter = new StaffFilterDto
+                {
+                    SearchKeyword = searchKeyword,
+                    Position = position,
+                    Status = status,
+                    SortBy = sortBy,
+                    SortDirection = sortDirection,
+                    Page = page > 0 ? page : 1,
+                    PageSize = pageSize > 0 && pageSize <= 100 ? pageSize : 20
+                };
+
+                // Load staff list
+                var (success, staffList, message) = await _staffApiService.GetStaffListAsync(filter);
+
+                if (!success)
+                {
+                    _logger.LogWarning("Failed to load staff list: {Message}", message);
+                    TempData["ErrorMessage"] = message ?? "Không thể tải danh sách nhân viên";
+                }
+
+                // Build view model
+                var viewModel = new StaffIndexViewModel
+                {
+                    Filter = filter,
+                    StaffList = staffList ?? new StaffListResponse
+                    {
+                        Data = new List<StaffListItemDto>(),
+                        Page = filter.Page,
+                        PageSize = filter.PageSize,
+                        TotalCount = 0,
+                        TotalPages = 0
+                    },
+                    AvailablePositions = availablePositions
+                };
+
+                return View(viewModel);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading positions for staff index filter");
-                ViewBag.AvailablePositions = new List<PositionDto>();
+                _logger.LogError(ex, "Error loading staff index page");
+                TempData["ErrorMessage"] = "Đã xảy ra lỗi khi tải trang quản lý nhân viên";
+                
+                return View(new StaffIndexViewModel
+                {
+                    Filter = new StaffFilterDto(),
+                    StaffList = new StaffListResponse
+                    {
+                        Data = new List<StaffListItemDto>(),
+                        Page = 1,
+                        PageSize = 20,
+                        TotalCount = 0,
+                        TotalPages = 0
+                    },
+                    AvailablePositions = new List<PositionDto>()
+                });
             }
-
-            // JavaScript will call GetStaffList AJAX endpoint to load staff data
-            return View();
         }
 
         /// <summary>
