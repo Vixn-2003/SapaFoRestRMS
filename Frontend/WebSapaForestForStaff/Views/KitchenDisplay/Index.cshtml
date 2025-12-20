@@ -1217,7 +1217,6 @@
         window.addEventListener('error', function(e) {
             // Don't block execution on datepicker errors
             if (e.message && e.message.includes('datepicker')) {
-                console.warn('Datepicker error ignored:', e.message);
                 e.preventDefault();
             }
         }, true);

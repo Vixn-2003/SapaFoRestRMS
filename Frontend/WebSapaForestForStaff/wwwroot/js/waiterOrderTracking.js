@@ -514,11 +514,9 @@ async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quanti
     const itemRow = document.querySelector(selector);
     if (!itemRow) {
         // Nếu không tìm thấy item row, thử tìm bằng cách khác
-        console.warn(`Không tìm thấy item row với selector: ${selector}`);
         // Vẫn cho phép gọi API, backend sẽ kiểm tra lại
     } else {
         const billingType = itemRow.getAttribute('data-billing-type');
-        console.log(`BillingType từ data attribute: "${billingType}", OrderDetailId: ${orderDetailId}, ComboItemId: ${comboItemId}`);
         
         // Chỉ cho phép cập nhật nếu BillingType = 1 (ConsumptionBased)
         // billingType có thể là '1', '', null, hoặc undefined
@@ -550,11 +548,7 @@ async function updateConsumptionQuantity(orderDetailId, orderComboItemId, quanti
         const result = await response.json();
         if (result.success) {
             // Toast notification (if showToast exists, otherwise use alert)
-            if (typeof showToast === 'function') {
-                showToast('Đã cập nhật số lượng thành công', 'success');
-            } else {
-                console.log('Đã cập nhật số lượng thành công');
-            }
+            showToast('Đã cập nhật số lượng thành công', 'success');
         } else {
             showToast('Lỗi: ' + result.message, 'error');
             // Reset về giá trị cũ nếu có lỗi
@@ -627,7 +621,6 @@ async function submitConfirmConsumptionQuantity() {
 
         const updateResult = await updateResponse.json();
         if (!updateResult.success) {
-            console.warn('Warning: Không thể cập nhật số lượng:', updateResult.message);
             // Vẫn tiếp tục xác nhận
         }
 
