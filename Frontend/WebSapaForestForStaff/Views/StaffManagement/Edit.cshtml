@@ -11,7 +11,7 @@
         <div class="col">
             <h3 class="page-title">Chỉnh sửa thông tin  nhân viên</h3>
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-controller="HomeManager" asp-action="Index">Trang chủ</a></li>
                 <li class="breadcrumb-item"><a asp-action="Index">Quản lý Nhân viên</a></li>
                 <li class="breadcrumb-item active">Chỉnh sửa nhân viên</li>
             </ul>
@@ -122,8 +122,8 @@
                     <div class="form-group">
                         <label asp-for="Status" class="control-label required"></label>
                         <select asp-for="Status" class="form-control form-control-lg">
-                            <option value="1">✓ Đang hoạt động</option>
-                            <option value="0">✗ Ngừng hoạt động</option>
+                            <option value="0">✓ Đang hoạt động</option>
+                            <option value="1">✗ Ngừng hoạt động</option>
                         </select>
                         <span asp-validation-for="Status" class="text-danger"></span>
                     </div>

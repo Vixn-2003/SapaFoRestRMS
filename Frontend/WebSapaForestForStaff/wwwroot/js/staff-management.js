@@ -204,8 +204,57 @@ const StaffManagement = {
         const html = staffList.map(staff => this.renderStaffRow(staff)).join('');
         $('#staffTableBody').html(html);
 
-        // Initialize Bootstrap dropdowns for dynamically rendered elements
-        this.initializeDropdowns();
+        // Bind click handlers for detail buttons - use both jQuery and native JS for maximum compatibility
+        // Use setTimeout to ensure DOM is ready and other scripts have loaded
+        setTimeout(() => {
+            const tableBody = document.getElementById('staffTableBody');
+            if (!tableBody) return;
+
+            // Remove any existing handlers first (jQuery)
+            $('#staffTableBody').off('click', '.view-detail-btn');
+            
+            // Also remove native event listeners if any
+            const existingButtons = tableBody.querySelectorAll('.view-detail-btn');
+            existingButtons.forEach(btn => {
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+            });
+
+            // Add jQuery handler (for compatibility)
+            $('#staffTableBody').on('click', '.view-detail-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                const staffId = $(this).data('staff-id') || $(this).attr('data-staff-id') || $(this).attr('href')?.match(/\/(\d+)$/)?.[1];
+                
+                if (staffId) {
+                    console.log('Navigating to staff detail:', staffId);
+                    window.location.href = `/StaffManagement/Details/${staffId}`;
+                } else {
+                    console.error('Staff ID not found');
+                }
+                return false;
+            });
+
+            // Also add native JS handler as backup (runs first)
+            tableBody.addEventListener('click', function(e) {
+                const btn = e.target.closest('.view-detail-btn');
+                if (btn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    
+                    const staffId = btn.getAttribute('data-staff-id') || btn.getAttribute('href')?.match(/\/(\d+)$/)?.[1];
+                    
+                    if (staffId) {
+                        console.log('Navigating to staff detail (native):', staffId);
+                        window.location.href = `/StaffManagement/Details/${staffId}`;
+                    }
+                    return false;
+                }
+            }, true); // Use capture phase to run before other handlers
+        }, 200);
 
         // Update info
         const start = (this.state.currentPage - 1) * this.state.pageSize + 1;
@@ -227,9 +276,12 @@ const StaffManagement = {
             ? '<span class="badge badge-success">Đang hoạt động</span>'
             : '<span class="badge badge-danger">Ngừng hoạt động</span>';
         const hireDate = this.formatDate(staff.hireDate);
+        
+        // Ensure staffId is a number (not escaped, safe for URL)
+        const staffId = parseInt(staff.staffId) || 0;
 
         return `
-            <tr data-staff-id="${staff.staffId}">
+            <tr data-staff-id="${staffId}">
                 <td>
                     <img src="${avatar}" alt="${fullName}" class="avatar" 
                          style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
@@ -242,34 +294,11 @@ const StaffManagement = {
                 <td>${statusBadge}</td>
                 <td>${hireDate}</td>
                 <td class="text-right">
-                    <div class="dropdown dropdown-action">
-                        <a href="#" class="action-icon dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a class="dropdown-item" href="/StaffManagement/Details/${staff.staffId}">
-                                <i class="far fa-eye text-info m-r-5"></i> Xem chi tiết
-                            </a>
-                            <a class="dropdown-item" href="/StaffManagement/Edit/${staff.staffId}">
-                                <i class="fas fa-edit text-warning m-r-5"></i> Chỉnh sửa
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            ${staff.status === 0 ? `
-                            <a class="dropdown-item" href="#" data-action="deactivate" data-staff-id="${staff.staffId}" data-staff-name="${fullName}">
-                                <i class="fas fa-ban text-danger m-r-5"></i> Ngừng hoạt động
-                            </a>
-                            ` : `
-                            <a class="dropdown-item" href="#" data-action="activate" data-staff-id="${staff.staffId}" data-staff-name="${fullName}">
-                                <i class="fas fa-check-circle text-success m-r-5"></i> Kích hoạt lại
-                            </a>
-                            `}
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="#" data-action="reset-password" data-staff-id="${staff.staffId}" data-staff-name="${fullName}">
-                                <i class="fas fa-key text-primary m-r-5"></i> Reset mật khẩu
-                            </a>
-                        </div>
-                    </div>
-                </td>
+                    <a href="/StaffManagement/Details/${staffId}" 
+                       class="btn btn-sm btn-info view-detail-btn" 
+                       data-staff-id="${staffId}">
+                        <i class="far fa-eye"></i> Xem chi tiết
+                    </a>
             </tr>
         `;
     },
@@ -385,45 +414,6 @@ const StaffManagement = {
         return `${day}/${month}/${year}`;
     },
 
-    /**
-     * Initialize Bootstrap dropdowns for dynamically rendered elements
-     * Bootstrap 5 requires manual initialization for dynamically added elements
-     */
-    initializeDropdowns() {
-        // Use setTimeout to ensure DOM is updated
-        setTimeout(() => {
-            if (typeof bootstrap === 'undefined') {
-                console.warn('⚠️ Bootstrap not loaded, dropdowns may not work');
-                return;
-            }
-
-            // Find all dropdown toggles in the table
-            const dropdownToggles = document.querySelectorAll('#staffTableBody .dropdown-toggle[data-bs-toggle="dropdown"]');
-            
-            if (dropdownToggles.length === 0) {
-                return;
-            }
-
-            dropdownToggles.forEach((toggle) => {
-                try {
-                    // Dispose existing instance if any
-                    const existingInstance = bootstrap.Dropdown.getInstance(toggle);
-                    if (existingInstance) {
-                        existingInstance.dispose();
-                    }
-                    
-                    // Initialize new dropdown instance
-                    new bootstrap.Dropdown(toggle, {
-                        boundary: 'viewport'
-                    });
-                } catch (error) {
-                    console.error('Error initializing dropdown:', error);
-                }
-            });
-
-            console.log(`✅ Initialized ${dropdownToggles.length} dropdown(s)`);
-        }, 100);
-    }
 };
 
 // ============================================================================
@@ -570,33 +560,4 @@ const StaffResetPassword = {
 $(document).ready(function () {
     // Initialize staff management
     StaffManagement.init();
-
-    // Event delegation for deactivate buttons (since table rows are dynamic)
-    $(document).on('click', 'a[data-action="deactivate"]', function (e) {
-        e.preventDefault();
-        const staffId = $(this).data('staff-id');
-        const staffName = $(this).data('staff-name');
-        StaffDeactivate.open(staffId, staffName);
-    });
-
-    // Event delegation for activate buttons
-    $(document).on('click', 'a[data-action="activate"]', function (e) {
-        e.preventDefault();
-        const staffId = $(this).data('staff-id');
-        const staffName = $(this).data('staff-name');
-        StaffActivate.activate(staffId, staffName);
-    });
-
-    // Event delegation for reset password buttons
-    $(document).on('click', 'a[data-action="reset-password"]', function (e) {
-        e.preventDefault();
-        const staffId = $(this).data('staff-id');
-        const staffName = $(this).data('staff-name');
-        StaffResetPassword.reset(staffId, staffName);
-    });
-
-    // Deactivate modal submit button
-    $('#deactivateModal .btn-danger').on('click', function () {
-        StaffDeactivate.submit();
-    });
 });
