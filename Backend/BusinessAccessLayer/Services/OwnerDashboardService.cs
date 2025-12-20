@@ -1,5 +1,6 @@
 using BusinessAccessLayer.DTOs.Owner;
 using BusinessAccessLayer.Services.Interfaces;
+using DataAccessLayer.Dbcontext;
 using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,10 +18,12 @@ namespace BusinessAccessLayer.Services
     public class OwnerDashboardService : IOwnerDashboardService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly SapaFoRestRmsContext _context;
 
-        public OwnerDashboardService(IUnitOfWork unitOfWork)
+        public OwnerDashboardService(IUnitOfWork unitOfWork, SapaFoRestRmsContext context)
         {
             _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         public async Task<OwnerDashboardDto> GetDashboardDataAsync(CancellationToken ct = default)
@@ -37,14 +40,12 @@ namespace BusinessAccessLayer.Services
             var orderDetails = (await _unitOfWork.OrderDetails.GetAllAsync()).ToList();
             var ingredients = (await _unitOfWork.InventoryIngredient.GetAllAsync()).ToList();
             
-            // Load reservations with deposits to calculate deposit revenue
-            // ✅ CHỈ lấy deposits từ Reservation có Status = "Completed"
-            var reservations = await _unitOfWork.Reservations.GetPendingAndConfirmedReservationsAsync(
-                status: null, date: null, customerName: null, phone: null, timeSlot: null, page: 1, pageSize: int.MaxValue);
-            var deposits = reservations.Data
-                .Where(r => r.Status == "Completed") // ✅ Chỉ tính deposits từ Completed reservations
-                .SelectMany(r => r.ReservationDeposits ?? new List<ReservationDeposit>())
-                .ToList();
+            // ✅ Load deposits trực tiếp từ database (giống AdminDashboardRepository)
+            // CHỈ lấy deposits từ Reservation có Status = "Completed"
+            var deposits = await _context.ReservationDeposits
+                .Include(d => d.Reservation)
+                .Where(d => d.Reservation != null && d.Reservation.Status == "Completed")
+                .ToListAsync(ct);
 
             // Now process in parallel on in-memory data
             var kpiTask = Task.Run(() => GetKpiCardsAsync(today, startOfMonth, yesterday, lastMonth, orders, transactions, deposits, ingredients));

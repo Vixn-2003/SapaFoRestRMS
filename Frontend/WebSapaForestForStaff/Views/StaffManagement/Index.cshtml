@@ -12,7 +12,7 @@
         <div class="col">
             <h3 class="page-title">Quản lý thông tin Nhân viên</h3>
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-controller="HomeManager" asp-action="Index">Trang chủ</a></li>
                 <li class="breadcrumb-item active">Quản lý Nhân viên</li>
             </ul>
         </div>
@@ -180,6 +180,39 @@
 
 @section Scripts {
     <script src="~/js/staff-management.js"></script>
+    <style>
+        /* Fix dropdown positioning for dynamically rendered elements */
+        .dropdown-action {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-action .dropdown-menu {
+            position: absolute !important;
+            top: 100% !important;
+            right: 0 !important;
+            left: auto !important;
+            z-index: 1050 !important;
+            margin-top: 0.125rem;
+            min-width: 200px;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        .dropdown-action .dropdown-menu.show {
+            display: block !important;
+        }
+        
+        /* Prevent dropdown from being cut off by table-responsive */
+        .table-responsive {
+            overflow-x: auto;
+            overflow-y: visible !important;
+        }
+        
+        .table td {
+            overflow: visible !important;
+            position: relative;
+        }
+    </style>
     <script>
         // Show success/error messages from TempData
         @if (TempData["SuccessMessage"] != null)

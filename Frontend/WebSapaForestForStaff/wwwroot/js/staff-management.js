@@ -204,6 +204,9 @@ const StaffManagement = {
         const html = staffList.map(staff => this.renderStaffRow(staff)).join('');
         $('#staffTableBody').html(html);
 
+        // Initialize Bootstrap dropdowns for dynamically rendered elements
+        this.initializeDropdowns();
+
         // Update info
         const start = (this.state.currentPage - 1) * this.state.pageSize + 1;
         const end = Math.min(this.state.currentPage * this.state.pageSize, this.state.totalCount);
@@ -214,7 +217,7 @@ const StaffManagement = {
      * Render single staff row (safe from XSS)
      */
     renderStaffRow(staff) {
-        const avatar = this.escapeHtml(staff.avatarUrl || '/images/default-avatar.png');
+        const avatar = this.escapeHtml(staff.avatarUrl || '/assets/images/faces/face8.jpg');
         const fullName = this.escapeHtml(staff.fullName);
         const phone = this.escapeHtml(staff.phone || 'N/A');
         const email = this.escapeHtml(staff.email);
@@ -380,6 +383,46 @@ const StaffManagement = {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
+    },
+
+    /**
+     * Initialize Bootstrap dropdowns for dynamically rendered elements
+     * Bootstrap 5 requires manual initialization for dynamically added elements
+     */
+    initializeDropdowns() {
+        // Use setTimeout to ensure DOM is updated
+        setTimeout(() => {
+            if (typeof bootstrap === 'undefined') {
+                console.warn('⚠️ Bootstrap not loaded, dropdowns may not work');
+                return;
+            }
+
+            // Find all dropdown toggles in the table
+            const dropdownToggles = document.querySelectorAll('#staffTableBody .dropdown-toggle[data-bs-toggle="dropdown"]');
+            
+            if (dropdownToggles.length === 0) {
+                return;
+            }
+
+            dropdownToggles.forEach((toggle) => {
+                try {
+                    // Dispose existing instance if any
+                    const existingInstance = bootstrap.Dropdown.getInstance(toggle);
+                    if (existingInstance) {
+                        existingInstance.dispose();
+                    }
+                    
+                    // Initialize new dropdown instance
+                    new bootstrap.Dropdown(toggle, {
+                        boundary: 'viewport'
+                    });
+                } catch (error) {
+                    console.error('Error initializing dropdown:', error);
+                }
+            });
+
+            console.log(`✅ Initialized ${dropdownToggles.length} dropdown(s)`);
+        }, 100);
     }
 };
 

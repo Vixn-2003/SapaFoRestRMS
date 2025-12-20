@@ -44,21 +44,34 @@ namespace DataAccessLayer.Repositories
         {
             try
             {
+                // Include Role navigation property to avoid null reference
                 var userRoles = await _context.Users
+                    .Include(u => u.Role)
                     .Where(u => u.RoleId != null)
                     .GroupBy(u => u.Role != null ? u.Role.RoleName : "Unknown")
                     .Select(g => new { RoleName = g.Key ?? "Unknown", Count = g.Count() })
                     .ToListAsync();
 
+                // Debug logging
+                Console.WriteLine($"GetUsersByRoleAsync: Found {userRoles.Count} role groups");
+                foreach (var role in userRoles)
+                {
+                    Console.WriteLine($"  - {role.RoleName}: {role.Count} users");
+                }
+
                 // Handle potential duplicate keys by summing counts
-                return userRoles
+                var result = userRoles
                     .GroupBy(x => x.RoleName)
                     .ToDictionary(g => g.Key, g => g.Sum(x => x.Count));
+                
+                Console.WriteLine($"GetUsersByRoleAsync: Returning dictionary with {result.Count} roles");
+                return result;
             }
             catch (Exception ex)
             {
                 // Return empty dictionary as fallback
                 Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return new Dictionary<string, int>();
             }
         }

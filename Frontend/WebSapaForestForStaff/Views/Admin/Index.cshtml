@@ -258,7 +258,7 @@
                 </div>
             </div> *@
 
-            <!-- User Distribution and Alerts -->
+            <!-- User Distribution and Top Active Users -->
             <div class="row mb-4">
                 <div class="col-lg-6">
                     <div class="card">
@@ -273,30 +273,8 @@
                     </div>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="fas fa-exclamation-circle me-2"></i>Phân loại cảnh báo kho
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-container">
-                                <canvas id="alertsChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tables Section -->
-        <div class="dashboard-section">
-            <h4 class="dashboard-title">
-                <i class="fas fa-table"></i>Dữ liệu chi tiết
-            </h4>
-
-            <div class="row">
                 <!-- Top Active Users -->
-                <div class="col-lg-6 mb-4">
+                <div class="col-lg-6">
                     <div class="card">
                         <div class="card-header">
                             <i class="fas fa-user-check me-2"></i>Top 5 người dùng hoạt động
@@ -330,55 +308,6 @@
                                         {
                                             <tr>
                                                 <td colspan="2" class="text-center text-muted">
-                                                    <i class="fas fa-info-circle me-1"></i>Không có dữ liệu
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Top Selling Categories -->
-                <div class="col-lg-6 mb-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="fas fa-star me-2"></i>Top 5 danh mục bán chạy
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th><i class="fas fa-tag me-1"></i>Danh mục</th>
-                                            <th><i class="fas fa-boxes me-1"></i>Đã bán</th>
-                                            <th><i class="fas fa-dollar-sign me-1"></i>Doanh thu</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @if (Model.Dashboard.Top5BestSellingCategories != null && Model.Dashboard.Top5BestSellingCategories.Any())
-                                        {
-                                            foreach (var category in Model.Dashboard.Top5BestSellingCategories)
-                                            {
-                                                <tr>
-                                                    <td>
-                                                        <strong>@category.CategoryName</strong>
-                                                    </td>
-                                                    <td>
-                                                        <span class="badge bg-success">@category.ItemsSold</span>
-                                                    </td>
-                                                    <td>
-                                                        <strong class="text-success">@category.Revenue.ToString("N0") đ</strong>
-                                                    </td>
-                                                </tr>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <tr>
-                                                <td colspan="3" class="text-center text-muted">
                                                     <i class="fas fa-info-circle me-1"></i>Không có dữ liệu
                                                 </td>
                                             </tr>
@@ -448,12 +377,25 @@
     <script>
         // Embed data from ViewModel into JavaScript
         var dashboardData = @Html.Raw(Json.Serialize(Model.Dashboard ?? new WebSapaForestForStaff.DTOs.AdminDashboard.AdminDashboardDto()));
+        
+        // Debug: Log full dashboard data
+        console.log('=== Admin Dashboard Data ===');
+        console.log('Full dashboardData:', dashboardData);
+        console.log('UserRoleDistribution:', dashboardData?.UserRoleDistribution);
+        console.log('RoleDistribution:', dashboardData?.UserRoleDistribution?.RoleDistribution);
+        console.log('Chart.js loaded:', typeof Chart !== 'undefined');
 
         // Global chart instances for cleanup
         var charts = {};
 
         // Initialize all charts when page loads
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded - Initializing charts...');
+            // Small delay to ensure Chart.js is fully loaded
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded!');
+                return;
+            }
             initializeCharts();
         });
 
@@ -557,56 +499,89 @@
             }
 
             // User Role Distribution Chart
+            console.log('Checking User Role Distribution data...');
+            console.log('dashboardData.UserRoleDistribution:', dashboardData.UserRoleDistribution);
+            
             if (dashboardData.UserRoleDistribution && dashboardData.UserRoleDistribution.RoleDistribution) {
                 const userRoleCtx = document.getElementById('userRoleChart');
                 if (userRoleCtx) {
                     const roleData = dashboardData.UserRoleDistribution.RoleDistribution;
                     const labels = Object.keys(roleData);
                     const data = Object.values(roleData);
+                    
+                    console.log('Role Distribution Data:', roleData);
+                    console.log('Labels:', labels);
+                    console.log('Data:', data);
+                    
+                    // Check if we have data to display
+                    if (labels.length === 0 || data.length === 0 || data.every(val => val === 0)) {
+                        console.warn('No user role data available or all values are zero');
+                        // Display message in chart container
+                        userRoleCtx.parentElement.innerHTML = '<div class="text-center text-muted p-4"><i class="fas fa-info-circle me-2"></i>Không có dữ liệu phân bố vai trò người dùng</div>';
+                    } else {
+                        // Map colors based on role names
+                        const roleColors = {
+                            'Admin': 'rgba(220, 53, 69, 0.8)',      // Red
+                            'Owner': 'rgba(111, 66, 193, 0.8)',     // Purple
+                            'Manager': 'rgba(0, 123, 255, 0.8)',   // Blue
+                            'Staff': 'rgba(23, 162, 184, 0.8)',    // Cyan
+                            'Cashier': 'rgba(40, 167, 69, 0.8)',   // Green
+                            'Waiter': 'rgba(255, 193, 7, 0.8)',    // Yellow
+                            'Kitchen': 'rgba(253, 126, 20, 0.8)',  // Orange
+                            'Customer': 'rgba(108, 117, 125, 0.8)' // Gray
+                        };
+                        
+                        const backgroundColors = labels.map(role => roleColors[role] || 'rgba(201, 203, 207, 0.8)');
 
-                    charts.userRole = new Chart(userRoleCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                data: data,
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.8)',
-                                    'rgba(54, 162, 235, 0.8)',
-                                    'rgba(255, 205, 86, 0.8)',
-                                    'rgba(75, 192, 192, 0.8)',
-                                    'rgba(153, 102, 255, 0.8)',
-                                    'rgba(255, 159, 64, 0.8)',
-                                    'rgba(201, 203, 207, 0.8)',
-                                    'rgba(255, 99, 255, 0.8)'
-                                ],
-                                borderWidth: 2,
-                                borderColor: '#fff'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        padding: 20,
-                                        usePointStyle: true
-                                    }
+                        try {
+                            charts.userRole = new Chart(userRoleCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: labels,
+                                    datasets: [{
+                                        data: data,
+                                        backgroundColor: backgroundColors,
+                                        borderWidth: 2,
+                                        borderColor: '#fff'
+                                    }]
                                 },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'bottom',
+                                            labels: {
+                                                padding: 20,
+                                                usePointStyle: true
+                                            }
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                    const percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            }
+                            });
+                            console.log('User Role Chart initialized successfully');
+                        } catch (error) {
+                            console.error('Error initializing User Role Chart:', error);
+                            userRoleCtx.parentElement.innerHTML = '<div class="text-center text-danger p-4"><i class="fas fa-exclamation-triangle me-2"></i>Lỗi khi khởi tạo biểu đồ</div>';
                         }
-                    });
+                    }
+                } else {
+                    console.error('Canvas element "userRoleChart" not found');
+                }
+            } else {
+                console.warn('UserRoleDistribution data is missing or invalid');
+                const userRoleCtx = document.getElementById('userRoleChart');
+                if (userRoleCtx) {
+                    userRoleCtx.parentElement.innerHTML = '<div class="text-center text-muted p-4"><i class="fas fa-info-circle me-2"></i>Không có dữ liệu phân bố vai trò người dùng</div>';
                 }
             }
 
