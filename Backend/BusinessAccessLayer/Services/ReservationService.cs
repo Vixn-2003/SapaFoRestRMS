@@ -18,7 +18,7 @@ namespace BusinessAccessLayer.Services
         private readonly ICustomerRepository _customerRepository; // thêm repo Customer
         private readonly IConfiguration _configuration;
 
-        private const decimal DEPOSIT_PER_GUEST = 1000m;
+        private const decimal DEPOSIT_PER_GUEST = 50000m;
 
         public ReservationService(
             IReservationRepository reservationRepository,
