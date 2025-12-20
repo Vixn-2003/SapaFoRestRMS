@@ -32,7 +32,7 @@ namespace SapaFoRestRMSAPI.Controllers
         private static readonly ConcurrentDictionary<string, OtpInfo> _otpCache = new();
         private static readonly ConcurrentDictionary<string, ReservationCreateDto> _pendingReservationCache = new();
 
-        private const decimal DEPOSIT_PER_GUEST = 1000m;
+        private const decimal DEPOSIT_PER_GUEST = 50000m;
 
         public ReservationController(
             IReservationService reservationService,

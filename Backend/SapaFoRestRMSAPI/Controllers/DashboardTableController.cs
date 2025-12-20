@@ -49,7 +49,11 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        // (1) API List (Không đổi)
+        /// <summary>
+        /// Danh sách đơn đuọc xếp
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> GetReservations([FromQuery] ReservationQueryParameters parameters)
         {
@@ -67,8 +71,12 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(pagedResult.Items);
         }
 
-        // (2) API Detail (Thay đổi: Guid -> int)
-        [HttpGet("{id:int}")] // Thêm ràng buộc :int
+        /// <summary>
+        /// Chi tiết đơn được xếo bàn
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpGet("{id:int}")] 
         public async Task<IActionResult> GetReservationDetail(int id)
         {
             try
@@ -82,7 +90,11 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
-        // (3) API Đổi trạng thái 
+        /// <summary>
+        /// Xác nhận khách đến
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpPut("{id:int}/seat")]
         public async Task<IActionResult> SeatGuest(int id)
         {
@@ -108,6 +120,7 @@ namespace SapaFoRestRMSAPI.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
 
         [HttpGet("MenuOrder/{tableId}")]
         public async Task<IActionResult> GetMenuOrder(
@@ -141,7 +154,11 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
 
-        // Xem các món đã gọi
+        /// <summary>
+        ///  Xem các món đã gọi
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         [HttpPost("SaveChanges")]
         public async Task<IActionResult> SaveChanges([FromBody] SaveOrderRequest request)
         {
