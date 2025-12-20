@@ -337,39 +337,7 @@ namespace WebSapaForestForStaff.Services
                     document.Add(allTable);
                 }
 
-                // ===== VII. PHÂN BỔ THEO KHO =====
-                document.NewPage();
-                Paragraph section7 = new Paragraph("VII. PHÂN BỔ THEO KHO", headerFont);
-                section7.SpacingAfter = 10;
-                document.Add(section7);
-
-                if (reportData.WarehouseStats.Any())
-                {
-                    PdfPTable warehouseTable = new PdfPTable(5);
-                    warehouseTable.WidthPercentage = 100;
-                    warehouseTable.SetWidths(new float[] { 3f, 1.5f, 1.5f, 1.5f, 2f });
-
-                    AddHeaderCell(warehouseTable, "Tên kho", boldFont);
-                    AddHeaderCell(warehouseTable, "Số lô", boldFont);
-                    AddHeaderCell(warehouseTable, "Số MH", boldFont);
-                    AddHeaderCell(warehouseTable, "Lô hết hạn", boldFont);
-                    AddHeaderCell(warehouseTable, "Ghi chú", boldFont);
-
-                    foreach (var stat in reportData.WarehouseStats)
-                    {
-                        AddCell(warehouseTable, stat.WarehouseName, normalFont);
-                        AddCell(warehouseTable, stat.BatchCount.ToString(), normalFont);
-                        AddCell(warehouseTable, stat.IngredientCount.ToString(), normalFont);
-                        AddCell(warehouseTable, stat.ExpiredBatchCount.ToString(), normalFont);
-
-                        string note = stat.ExpiredBatchCount > 0 ? $"{stat.ExpiredBatchCount} lô hết hạn" :
-                                     stat.ExpiringSoonBatchCount > 0 ? $"{stat.ExpiringSoonBatchCount} lô sắp hết hạn" :
-                                     "Bình thường";
-                        AddCell(warehouseTable, note, normalFont);
-                    }
-
-                    document.Add(warehouseTable);
-                }
+              
 
                 // ===== FOOTER - Chữ ký =====
                 document.NewPage();

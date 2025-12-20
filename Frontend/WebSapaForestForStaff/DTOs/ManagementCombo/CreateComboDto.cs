@@ -10,11 +10,13 @@ namespace WebSapaForestForStaff.DTOs.ManagementCombo
   
     public class CreateComboDto
     {
-        [Required]
+        [Required(ErrorMessage = "Tên combo không được để trống")]
         public string Name { get; set; }
         [Required]
         [Range(0, double.MaxValue, ErrorMessage = "Giá bán phải lớn hơn 0")]
         public decimal SellingPrice { get; set; }
+
+        [Required(ErrorMessage = "Tên mô tả không được để trống")]
         public string Description { get; set; }
         public bool IsAvailable { get; set; }
         public IFormFile? ImageFile { get; set; }

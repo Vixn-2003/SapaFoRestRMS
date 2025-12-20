@@ -1,16 +1,54 @@
-@model WebSapaForestForStaff.DTOs.Payment.OrderDetailDto
+@model dynamic
 
 @using System.Collections.Generic
 @using System.Linq
 @using System.Text.Json
 @using WebSapaForestForStaff.Controllers
+@using WebSapaForestForStaff.DTOs.Payment
 
 @{
     ViewData["Title"] = "Thanh toán";
     Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
-    var tables = Model.TableNumbers != null && Model.TableNumbers.Any()
-        ? string.Join(", ", Model.TableNumbers)
-        : Model.TableNumber ?? "—";
+    
+    // ✅ Kiểm tra xem Model là OrderDetailDto hay ReservationPaymentDto
+    var isReservationPayment = Model is ReservationPaymentDto;
+    var reservationPayment = Model as ReservationPaymentDto;
+    var orderDetail = Model as OrderDetailDto;
+    
+    // ✅ Lấy thông tin từ Model (hỗ trợ cả 2 loại)
+    var orderId = isReservationPayment ? reservationPayment!.OrderId : orderDetail!.OrderId;
+    var orderCode = isReservationPayment ? reservationPayment!.OrderCode : orderDetail!.OrderCode;
+    var subtotal = isReservationPayment ? reservationPayment!.Subtotal : orderDetail!.Subtotal;
+    var vatAmount = isReservationPayment ? reservationPayment!.VatAmount : orderDetail!.VatAmount;
+    var serviceFee = isReservationPayment ? reservationPayment!.ServiceFee : orderDetail!.ServiceFee;
+    var discountAmount = isReservationPayment ? reservationPayment!.DiscountAmount : orderDetail!.DiscountAmount;
+    var totalAmount = isReservationPayment ? reservationPayment!.TotalAmount : orderDetail!.TotalAmount;
+    var depositAmount = isReservationPayment ? reservationPayment!.DepositAmount : orderDetail!.DepositAmount;
+    var depositPaid = isReservationPayment ? reservationPayment!.DepositPaid : orderDetail!.DepositPaid;
+    var status = isReservationPayment ? reservationPayment!.Status : orderDetail!.Status;
+    var customerName = isReservationPayment ? reservationPayment!.CustomerName : orderDetail!.CustomerName;
+    var customerPhone = isReservationPayment ? reservationPayment!.CustomerPhone : orderDetail!.CustomerPhone;
+    var waiterName = isReservationPayment ? reservationPayment!.WaiterName : orderDetail!.WaiterName;
+    var staffName = isReservationPayment ? reservationPayment!.StaffName : orderDetail!.StaffName;
+    
+    // ✅ Lấy danh sách items
+    var items = isReservationPayment 
+        ? (reservationPayment!.AllOrderItems ?? new List<OrderItemDto>())
+        : (orderDetail!.Items ?? new List<OrderItemDto>());
+    
+    // ✅ Lấy thông tin bàn
+    var tables = isReservationPayment
+        ? (reservationPayment!.TableNumbers != null && reservationPayment.TableNumbers.Any()
+            ? string.Join(", ", reservationPayment.TableNumbers)
+            : reservationPayment.TableNumber ?? "—")
+        : (orderDetail!.TableNumbers != null && orderDetail.TableNumbers.Any()
+            ? string.Join(", ", orderDetail.TableNumbers)
+            : orderDetail.TableNumber ?? "—");
+    
+    // ✅ Lấy ReservationId nếu có
+    var reservationId = isReservationPayment ? reservationPayment!.ReservationId : (int?)null;
+    var reservationIdFromViewData = ViewData["ReservationId"] as int?;
+    reservationId = reservationId ?? reservationIdFromViewData;
 
     string GetStatusBadgeClass(string? status)
     {
@@ -42,26 +80,39 @@
         };
     }
 
+    // ✅ Lấy OrderCount và OrderCodes cho reservation
+    var orderCount = 1;
+    var orderCodes = new List<string>();
+    if (isReservationPayment && reservationPayment != null)
+    {
+        orderCount = reservationPayment.OrderCount;
+        orderCodes = reservationPayment.Orders?.Select(o => o.OrderCode ?? $"#{o.OrderId}").ToList() ?? new List<string>();
+    }
+
     var orderJson = JsonSerializer.Serialize(new
     {
-        Model.OrderId,
-        Model.OrderCode,
+        OrderId = orderId,
+        OrderCode = orderCode,
+        OrderCodes = orderCodes, // ✅ Danh sách tất cả order codes trong reservation
+        ReservationId = reservationId,
+        IsReservationPayment = isReservationPayment,
+        OrderCount = orderCount,
         Tables = tables,
-        Subtotal = Model.Subtotal,
-        Vat = Model.VatAmount,
-        ServiceFee = Model.ServiceFee,
-        Discount = Model.DiscountAmount,
-        DepositAmount = Model.DepositAmount,
-        DepositPaid = Model.DepositPaid,
-        // DepositRefundAmount = Model.DepositRefundAmount,
-        Total = Model.TotalAmount,
-        Items = (Model.Items ?? new List<WebSapaForestForStaff.DTOs.Payment.OrderItemDto>()).Select(i => new
+        Subtotal = subtotal,
+        Vat = vatAmount,
+        ServiceFee = serviceFee,
+        Discount = discountAmount,
+        DepositAmount = depositAmount,
+        DepositPaid = depositPaid,
+        DepositRefundAmount = isReservationPayment && reservationPayment != null ? reservationPayment.DepositRefundAmount : null,
+        Total = totalAmount,
+        Items = items.Select(i => new
         {
-            i.Name,
-            i.Quantity,
-            i.QuantityUsed,
-            i.UnitPrice,
-            i.TotalPrice
+            Name = i.MenuItemName ?? i.Name,
+            Quantity = i.Quantity,
+            QuantityUsed = i.QuantityUsed,
+            UnitPrice = i.UnitPrice,
+            TotalPrice = i.TotalPrice
         })
     });
 
@@ -101,15 +152,36 @@
                     <i class="bi bi-receipt-cutoff"></i>
                 </div>
                 <div class="payment-header-text">
-                    <h2 class="page-title mb-1">Thanh toán đơn hàng</h2>
+                    <h2 class="page-title mb-1">@(isReservationPayment ? "Thanh toán Reservation" : "Thanh toán đơn hàng")</h2>
                     <div class="payment-header-sub">
-                        <span>Đơn <strong>#@(Model.OrderCode ?? $"#{Model.OrderId}")</strong></span>
+                        @if (isReservationPayment && reservationPayment!.Orders != null && reservationPayment.Orders.Any())
+                        {
+                            <span>
+                                Đơn: 
+                                @foreach (var order in reservationPayment.Orders)
+                                {
+                                    <strong>#@(order.OrderCode ?? $"#{order.OrderId}")</strong>
+                                    @if (order != reservationPayment.Orders.Last())
+                                    {
+                                        <text>, </text>
+                                    }
+                                }
+                            </span>
+                            @if (reservationPayment.OrderCount > 1)
+                            {
+                                <span class="badge bg-info ms-2">@reservationPayment.OrderCount đơn</span>
+                            }
+                        }
+                        else
+                        {
+                            <span>Đơn <strong>#@(orderCode ?? $"#{orderId}")</strong></span>
+                        }
                         <span>Bàn <strong class="text-warning">@tables</strong></span>
-                        @if (!string.IsNullOrEmpty(Model.WaiterName) || !string.IsNullOrEmpty(Model.StaffName))
+                        @if (!string.IsNullOrEmpty(waiterName))
                         {
                             <span>
                                 <i class="bi bi-people me-1"></i>
-                                Phục vụ: <strong>@(Model.WaiterName ?? Model.StaffName ?? "—")</strong>
+                                Phục vụ: <strong>@waiterName</strong>
                             </span>
                         }
                     </div>
@@ -130,13 +202,26 @@
                 </div>
             </div>
             <div class="payment-header-right">
-                @if (!string.IsNullOrWhiteSpace(Model.Status))
+                @* Hiển thị trạng thái Order (lấy từ Order đầu tiên nếu là Reservation) *@
+                @{
+                    string? orderStatusToDisplay = null;
+                    if (isReservationPayment && reservationPayment!.Orders != null && reservationPayment.Orders.Any())
+                    {
+                        // Lấy status từ Order đầu tiên trong Reservation
+                        orderStatusToDisplay = reservationPayment.Orders.First().Status;
+                    }
+                    else
+                    {
+                        // Lấy status từ OrderDetailDto
+                        orderStatusToDisplay = status;
+                    }
+                }
+                @if (!string.IsNullOrWhiteSpace(orderStatusToDisplay))
                 {
-                    <span class="badge @GetStatusBadgeClass(Model.Status) px-3 py-2">
-                        @GetStatusDisplayText(Model.Status)
+                    <span class="badge @GetStatusBadgeClass(orderStatusToDisplay) px-3 py-2">
+                        @GetStatusDisplayText(orderStatusToDisplay)
                     </span>
                 }
-               
             </div>
         </div>
     </div>
@@ -209,7 +294,7 @@
             <div class="card-header fw-bold">
                 Danh sách món ăn / đồ uống
                 @{
-                    var billableCount = Model.Items?.Where(i =>
+                    var billableCount = items?.Where(i =>
                     {
                         var status = (i.KitchenStatus ?? "").Trim().ToLower();
                         
@@ -246,7 +331,7 @@
                         <tbody>
                             @{
                                 var index = 1;
-                                if (Model.Items == null || !Model.Items.Any())
+                                if (items == null || !items.Any())
                                 {
                                     <tr>
                                         <td colspan="5" class="text-center text-muted py-4">Đơn hàng chưa có món.</td>
@@ -258,7 +343,7 @@
                                     // 1. Bỏ qua các món đã bị hủy (cancelled/removed)
                                     // 2. Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
                                     // 3. Chỉ hiển thị các món có trạng thái khác "Pending" và không bị hủy
-                                    var billableItems = Model.Items.Where(i =>
+                                    var billableItems = items.Where(i =>
                                     {
                                         var status = (i.KitchenStatus ?? "").Trim().ToLower();
                                         
@@ -321,7 +406,7 @@
                                         Giá món trước thuế và phí
                                     </small>
                                 </td>
-                                <td class="text-end fw-bold align-middle">@Model.Subtotal.ToString("N0") ₫</td>
+                                <td class="text-end fw-bold align-middle">@subtotal.ToString("N0") ₫</td>
                             </tr>
                             <tr>
                                 <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -334,7 +419,7 @@
                                         Thuế VAT (10%): Thuế giá trị gia tăng theo quy định
                                     </small>
                                 </td>
-                                <td class="text-end fw-bold align-middle">@Model.VatAmount.ToString("N0") ₫</td>
+                                <td class="text-end fw-bold align-middle">@vatAmount.ToString("N0") ₫</td>
                             </tr>
                             <tr>
                                 <td colspan="4" class="fw-semibold ps-3 align-middle">
@@ -347,7 +432,7 @@
                                         Phí phục vụ (5%): Phụ thu phục vụ tại bàn
                                     </small>
                                 </td>
-                                <td class="text-end fw-bold align-middle">@Model.ServiceFee.ToString("N0") ₫</td>
+                                <td class="text-end fw-bold align-middle">@serviceFee.ToString("N0") ₫</td>
                             </tr>
                             
                                 <tr>
@@ -361,39 +446,18 @@
                                             Giảm giá – theo chương trình khuyến mãi / mã giảm giá đã áp dụng
                                         </small>
                                     </td>
-                                    <td class="text-end fw-bold text-danger align-middle">-@Model.DiscountAmount.ToString("N0") ₫</td>
+                                    <td class="text-end fw-bold text-danger align-middle">-@discountAmount.ToString("N0") ₫</td>
                                 </tr>
                             
-                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
-                            {
-                                <tr class="table-info">
-                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
-                                        <i class="fa-solid fa-hand-holding-dollar me-1"></i>
-                                        Đã đặt cọc
-                                        <small class="text-muted d-block">
-                                            Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
-                                        </small>
-                                    </td>
-                                    <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
-                                </tr>
-                            }
-                             @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
-                             {
-                                 <tr class="table-warning">
-                                     <td colspan="4" class="fw-semibold ps-3 align-middle">
-                                         <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
-                                         Tiền cần trả lại cho khách
-                                         <small class="text-muted d-block">
-                                             Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
-                                         </small>
-                                     </td>
-                                     <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
-                                         +@Model.DepositRefundAmount.Value.ToString("N0") ₫
-                                     </td>
-                                 </tr>
-                             }
                             @{
-                                var totalBeforeDeposit = Model.Subtotal + Model.VatAmount + Model.ServiceFee - Model.DiscountAmount;
+                                // ✅ Lấy DepositRefundAmount từ Model
+                                var depositRefundAmount = isReservationPayment 
+                                    ? reservationPayment!.DepositRefundAmount 
+                                    : orderDetail!.DepositRefundAmount;
+                            }
+                          
+                            @{
+                                var totalBeforeDeposit = subtotal + vatAmount + serviceFee - discountAmount;
                             }
                             <tr class="table-info">
                                 <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#e7f3ff;">
@@ -409,7 +473,40 @@
                                     @totalBeforeDeposit.ToString("N0") ₫
                                 </td>
                             </tr>
-                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                            @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
+                            {
+                                <tr class="table-info">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+                                        Đã đặt cọc
+                                        <small class="text-muted d-block">
+                                            Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-success align-middle">-@depositAmount.Value.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                            @if (depositRefundAmount.HasValue && depositRefundAmount.Value > 0)
+                            {
+                                <tr class="table-warning">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
+                                        Tiền cần trả lại cho khách
+                                        <small class="text-muted d-block">
+                                            Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
+                                        +@depositRefundAmount.Value.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
+                            @{
+                                // ✅ Lấy thông tin deposit và payment từ Model (hỗ trợ cả 2 loại)
+                                var amountReceived = isReservationPayment ? (decimal?)null : orderDetail!.AmountReceived;
+                                var changeAmount = isReservationPayment ? (decimal?)null : orderDetail!.ChangeAmount;
+                            }
+                            @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
                             {
                                 <tr class="table-success">
                                     <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
@@ -418,23 +515,23 @@
                                             <span class="fs-5">Số tiền khách hàng phải trả</span>
                                         </span>
                                         <small class="text-muted d-block mt-1">
-                                            Tổng cộng thanh toán - Đặt cọc (@Model.DepositAmount.Value.ToString("N0") ₫)
-                                            @if (Model.AmountReceived.HasValue && Model.AmountReceived.Value > 0)
+                                            Tổng cộng thanh toán - Đặt cọc (@depositAmount.Value.ToString("N0") ₫)
+                                            @if (amountReceived.HasValue && amountReceived.Value > 0)
                                             {
                                                 <span class="text-info d-block mt-1">
-                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @Model.AmountReceived.Value.ToString("N0") ₫
+                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @amountReceived.Value.ToString("N0") ₫
                                                 </span>
                                             }
-                                            @if (Model.ChangeAmount.HasValue && Model.ChangeAmount.Value > 0)
+                                            @if (changeAmount.HasValue && changeAmount.Value > 0)
                                             {
                                                 <span class="text-warning d-block mt-1">
-                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @Model.ChangeAmount.Value.ToString("N0") ₫
+                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @changeAmount.Value.ToString("N0") ₫
                                                 </span>
                                             }
                                         </small>
                                     </td>
                                     <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
-                                        @Model.TotalAmount.ToString("N0") ₫
+                                        @totalAmount.ToString("N0") ₫
                                     </td>
                                 </tr>
                             }
@@ -448,22 +545,22 @@
                                         </span>
                                         <small class="text-muted d-block mt-1">
                                             Tổng cộng thanh toán (không có đặt cọc)
-                                            @if (Model.AmountReceived.HasValue && Model.AmountReceived.Value > 0)
+                                            @if (amountReceived.HasValue && amountReceived.Value > 0)
                                             {
                                                 <span class="text-info d-block mt-1">
-                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @Model.AmountReceived.Value.ToString("N0") ₫
+                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @amountReceived.Value.ToString("N0") ₫
                                                 </span>
                                             }
-                                            @if (Model.ChangeAmount.HasValue && Model.ChangeAmount.Value > 0)
+                                            @if (changeAmount.HasValue && changeAmount.Value > 0)
                                             {
                                                 <span class="text-warning d-block mt-1">
-                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @Model.ChangeAmount.Value.ToString("N0") ₫
+                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @changeAmount.Value.ToString("N0") ₫
                                                 </span>
                                             }
                                         </small>
                                     </td>
                                     <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
-                                        @Model.TotalAmount.ToString("N0") ₫
+                                        @totalAmount.ToString("N0") ₫
                                     </td>
                                 </tr>
                             }
@@ -481,31 +578,68 @@
       method="post"
       class="d-none">
     @Html.AntiForgeryToken()
-    <input type="hidden" name="OrderId" value="@Model.OrderId" />
+    <input type="hidden" name="OrderId" value="@orderId" />
     <input type="hidden" name="PaymentMethod" id="paymentMethodInput" />
-    <input type="hidden" name="Amount" id="paymentAmountInput" value="@Model.TotalAmount" />
+    <input type="hidden" name="Amount" id="paymentAmountInput" value="@totalAmount" />
 </form>
 
-<form id="cashPaymentForm"
-      asp-action="ProcessCashPayment"
-      asp-controller="CashierPaymentFlow"
-      method="post"
-      class="d-none">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="OrderId" id="cashPaymentOrderId" />
-    <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
-    <input type="hidden" name="Notes" id="cashPaymentNotes" />
-</form>
+@if (isReservationPayment && reservationId.HasValue)
+{
+    <!-- ✅ Form cho Reservation Payment (Cash) -->
+    <form id="cashPaymentForm"
+          asp-action="ProcessCashPaymentByReservation"
+          asp-controller="CashierPaymentFlow"
+          asp-route-reservationId="@reservationId"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReservationId" value="@reservationId" />
+        <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
+        <input type="hidden" name="Notes" id="cashPaymentNotes" />
+    </form>
+}
+else
+{
+    <!-- Form cho Order Payment (Cash) - Backward compatible -->
+    <form id="cashPaymentForm"
+          asp-action="ProcessCashPayment"
+          asp-controller="CashierPaymentFlow"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OrderId" id="cashPaymentOrderId" />
+        <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
+        <input type="hidden" name="Notes" id="cashPaymentNotes" />
+    </form>
+}
 
-<form id="qrConfirmForm"
-      asp-action="ConfirmQrPayment"
-      asp-controller="CashierPaymentFlow"
-      method="post"
-      class="d-none">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="OrderId" id="qrConfirmOrderId" />
-    <input type="hidden" name="Notes" id="qrConfirmNotes" />
-</form>
+@if (isReservationPayment && reservationId.HasValue)
+{
+    <!-- ✅ Form cho Reservation Payment (QR) -->
+    <form id="qrConfirmForm"
+          asp-action="ConfirmQrPaymentByReservation"
+          asp-controller="CashierPaymentFlow"
+          asp-route-reservationId="@reservationId"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReservationId" value="@reservationId" />
+        <input type="hidden" name="Notes" id="qrConfirmNotes" />
+    </form>
+}
+else
+{
+    <!-- Form cho Order Payment (QR) - Backward compatible -->
+    <form id="qrConfirmForm"
+          asp-action="ConfirmQrPayment"
+          asp-controller="CashierPaymentFlow"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OrderId" id="qrConfirmOrderId" />
+        <input type="hidden" name="Notes" id="qrConfirmNotes" />
+    </form>
+}
 
 <script>
     // ✅ DEBUG: Add event listener để trace form submit
@@ -537,18 +671,39 @@
     });
 </script>
 
-<form id="combinedPaymentForm"
-      asp-action="ProcessCombinedPayment"
-      asp-controller="CashierPaymentFlow"
-      method="post"
-      class="d-none">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="OrderId" id="combinedPaymentOrderId" />
-    <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
-    <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
-    <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
-    <input type="hidden" name="Notes" id="combinedPaymentNotes" />
-</form>
+@if (isReservationPayment && reservationId.HasValue)
+{
+    <!-- ✅ Form cho Reservation Payment (Combined) -->
+    <form id="combinedPaymentForm"
+          asp-action="ProcessCombinedPaymentByReservation"
+          asp-controller="CashierPaymentFlow"
+          asp-route-reservationId="@reservationId"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReservationId" value="@reservationId" />
+        <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
+        <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
+        <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
+        <input type="hidden" name="Notes" id="combinedPaymentNotes" />
+    </form>
+}
+else
+{
+    <!-- Form cho Order Payment (Combined) - Backward compatible -->
+    <form id="combinedPaymentForm"
+          asp-action="ProcessCombinedPayment"
+          asp-controller="CashierPaymentFlow"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OrderId" id="combinedPaymentOrderId" />
+        <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
+        <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
+        <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
+        <input type="hidden" name="Notes" id="combinedPaymentNotes" />
+    </form>
+}
 
 <form id="splitBillForm"
       asp-action="ProcessSplitBill"
@@ -562,6 +717,11 @@
 </form>
 </div>
 
+@{
+    // ✅ Pass thông tin reservation vào modal
+    ViewData["IsReservationPayment"] = isReservationPayment;
+    ViewData["ReservationId"] = reservationId;
+}
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_CashPaymentModal.cshtml")
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_QRPaymentModal.cshtml")
 @await Html.PartialAsync("~/Views/CashierFlow/Modals/_CombinedPaymentModal.cshtml")

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class UpdateDBVinxFinal : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1376,6 +1376,7 @@ namespace DataAccessLayer.Migrations
                     TransactionId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     OrderId = table.Column<int>(type: "int", nullable: false),
+                    ReservationId = table.Column<int>(type: "int", nullable: true),
                     TransactionCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     AmountReceived = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
@@ -1414,6 +1415,11 @@ namespace DataAccessLayer.Migrations
                         column: x => x.ParentTransactionId,
                         principalTable: "Transactions",
                         principalColumn: "TransactionId");
+                    table.ForeignKey(
+                        name: "FK__Transactions__ReservationId",
+                        column: x => x.ReservationId,
+                        principalTable: "Reservations",
+                        principalColumn: "ReservationId");
                 });
 
             migrationBuilder.CreateTable(
@@ -1945,6 +1951,11 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Transactions_ParentTransactionId",
                 table: "Transactions",
                 column: "ParentTransactionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Transactions_ReservationId",
+                table: "Transactions",
+                column: "ReservationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_SessionId",

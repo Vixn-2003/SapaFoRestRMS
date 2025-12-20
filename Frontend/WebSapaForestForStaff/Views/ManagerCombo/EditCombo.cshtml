@@ -180,17 +180,17 @@
                                            name="ImageFile"
                                            accept="image/*"
                                            class="d-none"
-                                           onchange="previewImageEdit(event)" />
+                                           onchange="previewImageEdit(event)" required />
                                     <small class="text-muted d-block mt-1">Chọn ảnh mới để thay đổi (tối đa 5MB)</small>
                                 </div>
 
                                 <!-- Hidden field lưu URL ảnh cũ -->
-                                <input type="hidden" asp-for="ImageUrl" />
+                                <input type="hidden" asp-for="ImageUrl"  />
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small">Tên Combo</label>
-                            <input asp-for="Name" class="form-control" placeholder="Nhập tên combo..." />
+                            <input asp-for="Name" class="form-control" placeholder="Nhập tên combo..." required />
                         </div>
                            <div class="mb-3">
                             <label class="form-label fw-bold small">
@@ -199,13 +199,13 @@
                             <textarea asp-for="Description"
                                       class="form-control"
                                       rows="3"
-                                      placeholder="Nhập mô tả combo..."></textarea>
+                                      placeholder="Nhập mô tả combo..." required></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-success">Giá bán (VNĐ)</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-success text-white">₫</span>
-                                <input asp-for="SellingPrice" type="number" class="form-control fw-bold text-success" id="sellingPrice" />
+                                <input asp-for="SellingPrice" type="number" required min="1" class="form-control fw-bold text-success" id="sellingPrice" />
                             </div>
                         </div>
                         <hr class="my-3">

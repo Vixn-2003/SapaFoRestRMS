@@ -11,6 +11,7 @@ namespace WebSapaForestForStaff.DTOs.Payment
     {
         public int OrderId { get; set; }
         public string? OrderCode { get; set; }
+        public int? ReservationId { get; set; }
         public List<string>? TableNumbers { get; set; }
         public string? TableNumber { get; set; }
         public string? CustomerName { get; set; }
