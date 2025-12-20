@@ -58,15 +58,14 @@ namespace BusinessAccessLayer.Services
 
             var excelDtos = _mapper.Map<List<TransactionExcelDto>>(transactions);
 
-            // Set EPPlus license context
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
+            // EPPlus license is configured in Program.cs at application startup
             using var package = new ExcelPackage();
             var worksheet = package.Workbook.Worksheets.Add("Transactions");
 
             // Header
             worksheet.Cells[1, 1].Value = "Receipt ID";
             worksheet.Cells[1, 2].Value = "Order ID";
+            worksheet.Cells[1, 3].Value = "Reservation ID";
             worksheet.Cells[1, 4].Value = "Amount";
             worksheet.Cells[1, 5].Value = "Payment Method";
             worksheet.Cells[1, 6].Value = "Cashier";
@@ -74,7 +73,7 @@ namespace BusinessAccessLayer.Services
             worksheet.Cells[1, 8].Value = "Status";
 
             // Style header
-            using (var range = worksheet.Cells[1, 1, 1, 7])
+            using (var range = worksheet.Cells[1, 1, 1, 8])
             {
                 range.Style.Font.Bold = true;
                 range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
@@ -87,7 +86,7 @@ namespace BusinessAccessLayer.Services
             {
                 worksheet.Cells[row, 1].Value = item.TransactionCode;
                 worksheet.Cells[row, 2].Value = item.OrderCode;
-                worksheet.Cells[row, 3].Value = item.TableNumber;
+                worksheet.Cells[row, 3].Value = item.ReservationId.HasValue ? $"RES{item.ReservationId.Value:D6}" : "N/A";
                 worksheet.Cells[row, 4].Value = item.Amount;
                 worksheet.Cells[row, 5].Value = item.PaymentMethod;
                 worksheet.Cells[row, 6].Value = item.CashierName;

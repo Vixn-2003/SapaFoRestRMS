@@ -238,7 +238,7 @@ else
     <div class="row mt-3">
         <div class="col-12">
             <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
-            <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-primary" onclick="return confirm('Bạn có chắc muốn chỉnh sửa người dùng này?');">Chỉnh sửa</a>
+            <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-primary">Chỉnh sửa</a>
             @if (user.Status == 0)
             {
                 <button type="button" class="btn btn-warning" onclick="openDeactivateModal(@user.UserId, '@user.FullName')">
@@ -247,7 +247,7 @@ else
             }
             else
             {
-                <button type="button" class="btn btn-success" onclick="if(confirm('Kích hoạt người dùng này?')) changeStatus(@user.UserId, 0);">
+                <button type="button" class="btn btn-success" onclick="openActivateModal(@user.UserId, '@user.FullName')">
                     <i class="fas fa-check"></i> Kích hoạt
                 </button>
             }
@@ -315,5 +315,44 @@ else
 
 @section Scripts {
     <script src="~/js/admin-user-management.js"></script>
+    <script>
+        // Activate Modal Functions
+        function openActivateModal(userId, userName) {
+            document.getElementById('activateUserId').value = userId;
+            document.getElementById('activateUserName').textContent = userName;
+            $('#activateModal').modal('show');
+        }
+
+        function submitActivate() {
+            const userId = document.getElementById('activateUserId').value;
+            changeStatus(userId, 0);
+            $('#activateModal').modal('hide');
+        }
+    </script>
 }
+
+<!-- Activate Modal -->
+<div class="modal fade" id="activateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Kích hoạt người dùng</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn kích hoạt người dùng này?</p>
+                <p><strong>Tên:</strong> <span id="activateUserName"></span></p>
+                <input type="hidden" id="activateUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="submitActivate()">
+                    <i class="fas fa-check me-1"></i>Kích hoạt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 

@@ -94,13 +94,33 @@
             }
 
             try {
-                // Submit form to controller (not using fetch)
-                document.getElementById('qrConfirmOrderId').value = window.PaymentCore.orderContext.OrderId;
+                // ✅ Kiểm tra xem có ReservationId không (Reservation-centric payment)
+                const isReservationPayment = window.PaymentCore.orderContext?.IsReservationPayment === true;
+                const reservationId = window.PaymentCore.orderContext?.ReservationId;
+                
+                if (isReservationPayment && reservationId) {
+                    // Reservation payment: set ReservationId
+                    const reservationIdInput = document.querySelector('#qrConfirmForm input[name="ReservationId"]');
+                    if (reservationIdInput) {
+                        reservationIdInput.value = reservationId;
+                    }
+                } else {
+                    // Order payment: set OrderId (backward compatible)
+                    const orderIdInput = document.getElementById('qrConfirmOrderId');
+                    if (orderIdInput) {
+                        orderIdInput.value = window.PaymentCore.orderContext.OrderId;
+                    }
+                }
+                
                 document.getElementById('qrConfirmNotes').value = 'Thu ngân xác nhận đã nhận tiền qua QR';
 
                 // Set processing state for result modal
                 sessionStorage.setItem('qrPaymentProcessing', 'true');
-                sessionStorage.setItem('qrPaymentOrderId', window.PaymentCore.orderContext.OrderId);
+                if (isReservationPayment && reservationId) {
+                    sessionStorage.setItem('qrPaymentReservationId', reservationId);
+                } else {
+                    sessionStorage.setItem('qrPaymentOrderId', window.PaymentCore.orderContext.OrderId);
+                }
 
                 // Show loading modal
                 this.showQrPaymentLoadingModal();

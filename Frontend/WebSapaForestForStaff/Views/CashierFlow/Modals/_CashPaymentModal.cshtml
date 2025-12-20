@@ -1,3 +1,9 @@
+@{
+    // ✅ Lấy thông tin từ Payment.cshtml context
+    var isReservationPayment = ViewData["IsReservationPayment"] as bool? ?? false;
+    var reservationId = ViewData["ReservationId"] as int?;
+}
+
 <!-- Cash Payment Modal -->
 <div class="modal fade" id="cashPaymentModal" tabindex="-1" aria-labelledby="cashPaymentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -12,11 +18,19 @@
                 <div class="card mb-3">
                     <div class="card-body">
                         <h6 class="card-title mb-3">
-                            <i class="bi bi-receipt me-2"></i>Thông tin đơn hàng
+                            <i class="bi bi-receipt me-2"></i>Thông tin @(isReservationPayment ? "Reservation" : "đơn hàng")
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
-                                <p class="mb-1"><strong>Mã đơn:</strong> <span id="cashOrderCode">-</span></p>
+                                @if (isReservationPayment && reservationId.HasValue)
+                                {
+                                    <p class="mb-1"><strong>Reservation ID:</strong> <span>#@reservationId</span></p>
+                                    <p class="mb-1"><strong>Mã đơn:</strong> <span id="cashOrderCode">-</span> <small class="text-muted" id="cashOrderCount"></small></p>
+                                }
+                                else
+                                {
+                                    <p class="mb-1"><strong>Mã đơn:</strong> <span id="cashOrderCode">-</span></p>
+                                }
                                 <p class="mb-1"><strong>Bàn:</strong> <span id="cashTableNumber">-</span></p>
                             </div>
                             <div class="col-md-6">

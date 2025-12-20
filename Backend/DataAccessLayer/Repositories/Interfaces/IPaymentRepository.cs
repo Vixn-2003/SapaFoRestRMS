@@ -16,6 +16,11 @@ public interface IPaymentRepository : IRepository<Order>
     Task<Order?> GetOrderWithItemsAsync(int orderId);
 
     /// <summary>
+    /// Lấy tất cả đơn hàng theo ReservationId (kèm đầy đủ navigation properties)
+    /// </summary>
+    Task<IEnumerable<Order>> GetOrdersByReservationIdAsync(int reservationId);
+
+    /// <summary>
     /// Lấy danh sách đơn hàng theo ngày (kèm đầy đủ navigation properties)
     /// </summary>
     Task<IEnumerable<Order>> GetOrdersByDateAsync(DateOnly date);
@@ -54,6 +59,11 @@ public interface IPaymentRepository : IRepository<Order>
     /// Lấy danh sách transactions theo OrderId
     /// </summary>
     Task<IEnumerable<Transaction>> GetTransactionsByOrderIdAsync(int orderId);
+
+    /// <summary>
+    /// Lấy danh sách transactions theo ReservationId
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetTransactionsByReservationIdAsync(int reservationId);
 
     /// <summary>
     /// Cập nhật transaction

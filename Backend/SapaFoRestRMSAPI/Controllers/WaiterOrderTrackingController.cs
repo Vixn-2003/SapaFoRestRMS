@@ -119,7 +119,6 @@ namespace SapaFoRestRMSAPI.Controllers
                     catch (Exception ex)
                     {
                         // Không chặn response nếu SignalR lỗi
-                        Console.WriteLine($"SignalR ItemStatusChanged error (MarkAsServed): {ex.Message}");
                     }
 
                     return Ok(result);

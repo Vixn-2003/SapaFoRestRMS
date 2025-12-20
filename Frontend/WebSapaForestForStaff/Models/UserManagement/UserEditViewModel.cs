@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 using WebSapaForestForStaff.DTOs;
 using DTOsRole = WebSapaForestForStaff.DTOs.Role;
 
@@ -37,8 +38,14 @@ namespace WebSapaForestForStaff.Models.UserManagement
         [Url(ErrorMessage = "URL avatar không hợp lệ")]
         public string? AvatarUrl { get; set; }
 
+        [Display(Name = "Ảnh đại diện")]
+        public IFormFile? AvatarFile { get; set; }
+
         // For dropdown
         public List<DTOsRole>? AvailableRoles { get; set; }
+
+        // Role name for display (readonly)
+        public string? RoleName { get; set; }
     }
 }
 

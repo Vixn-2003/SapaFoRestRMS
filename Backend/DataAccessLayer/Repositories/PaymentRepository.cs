@@ -99,6 +99,14 @@ public class PaymentRepository : IPaymentRepository
             .FirstOrDefaultAsync(o => o.OrderId == orderId);
     }
 
+    public async Task<IEnumerable<Order>> GetOrdersByReservationIdAsync(int reservationId)
+    {
+        return await BuildOrderQuery()
+            .Where(o => o.ReservationId == reservationId)
+            .OrderBy(o => o.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Order>> GetOrdersByDateAsync(DateOnly date)
     {
         var dayStart = date.ToDateTime(TimeOnly.MinValue);
@@ -205,6 +213,15 @@ public class PaymentRepository : IPaymentRepository
         return await _context.Set<Transaction>()
             .Include(t => t.ConfirmedByUser)
             .Where(t => t.OrderId == orderId)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Transaction>> GetTransactionsByReservationIdAsync(int reservationId)
+    {
+        return await _context.Set<Transaction>()
+            .Include(t => t.ConfirmedByUser)
+            .Where(t => t.ReservationId == reservationId)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
     }

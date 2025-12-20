@@ -2205,6 +2205,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("RefundAmount")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<int?>("ReservationId")
+                        .HasColumnType("int");
+
                     b.Property<int>("RetryCount")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -2235,6 +2238,9 @@ namespace DataAccessLayer.Migrations
                         .HasDatabaseName("IX_Transactions_OrderId");
 
                     b.HasIndex("ParentTransactionId");
+
+                    b.HasIndex("ReservationId")
+                        .HasDatabaseName("IX_Transactions_ReservationId");
 
                     b.HasIndex("SessionId")
                         .HasDatabaseName("IX_Transactions_SessionId");
@@ -3206,11 +3212,19 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .HasConstraintName("FK__Transactions__ParentTransactionId");
 
+                    b.HasOne("DomainAccessLayer.Models.Reservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK__Transactions__ReservationId");
+
                     b.Navigation("ConfirmedByUser");
 
                     b.Navigation("Order");
 
                     b.Navigation("ParentTransaction");
+
+                    b.Navigation("Reservation");
                 });
 
             modelBuilder.Entity("DomainAccessLayer.Models.User", b =>

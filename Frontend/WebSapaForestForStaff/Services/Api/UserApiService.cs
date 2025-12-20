@@ -233,16 +233,45 @@ namespace WebSapaForestForStaff.Services.Api
 
         /// <summary>
         /// Updates a user using UserUpdateRequest
+        /// Supports file upload for avatar using multipart/form-data
         /// </summary>
         public async Task<bool> UpdateUserAsync(UserUpdateRequest request)
         {
             try
             {
-                var json = JsonSerializer.Serialize(request);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                // If AvatarFile is provided, use multipart/form-data
+                if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+                {
+                    using var content = new MultipartFormDataContent();
+                    content.Add(new StringContent(request.UserId.ToString()), nameof(request.UserId));
+                    content.Add(new StringContent(request.FullName), nameof(request.FullName));
+                    content.Add(new StringContent(request.Email), nameof(request.Email));
+                    content.Add(new StringContent(request.Phone ?? string.Empty), nameof(request.Phone));
+                    content.Add(new StringContent(request.RoleId.ToString()), nameof(request.RoleId));
+                    content.Add(new StringContent(request.Status.ToString()), nameof(request.Status));
+                    
+                    if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+                    {
+                        content.Add(new StringContent(request.AvatarUrl), nameof(request.AvatarUrl));
+                    }
 
-                var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/{request.UserId}", content));
-                return response.IsSuccessStatusCode;
+                    // Add file
+                    var streamContent = new StreamContent(request.AvatarFile.OpenReadStream());
+                    streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(request.AvatarFile.ContentType);
+                    content.Add(streamContent, nameof(request.AvatarFile), request.AvatarFile.FileName);
+
+                    var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/{request.UserId}", content));
+                    return response.IsSuccessStatusCode;
+                }
+                else
+                {
+                    // No file upload, use JSON
+                    var json = JsonSerializer.Serialize(request);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/{request.UserId}", content));
+                    return response.IsSuccessStatusCode;
+                }
             }
             catch
             {

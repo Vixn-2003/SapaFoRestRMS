@@ -71,10 +71,34 @@
         // Populate order summary in modals
         populateOrderSummary: function(prefix) {
             const orderCode = document.getElementById(`${prefix}OrderCode`);
-            if (orderCode) orderCode.textContent = this.orderContext.OrderCode;
+            if (orderCode) {
+                // ✅ Nếu là Reservation payment, hiển thị tất cả order codes
+                if (this.orderContext.IsReservationPayment && this.orderContext.ReservationId) {
+                    const orderCount = this.orderContext.OrderCount || 1;
+                    const orderCodes = this.orderContext.OrderCodes || [];
+                    
+                    if (orderCodes.length > 0) {
+                        // Hiển thị tất cả order codes
+                        orderCode.textContent = orderCodes.join(', ');
+                    } else if (orderCount > 1) {
+                        // Fallback: hiển thị order code đầu tiên với số lượng orders
+                        orderCode.textContent = `${this.orderContext.OrderCode || '-'} (+${orderCount - 1} đơn khác)`;
+                    } else {
+                        orderCode.textContent = this.orderContext.OrderCode || '-';
+                    }
+                    
+                    // Hiển thị số lượng orders
+                    const orderCountEl = document.getElementById(`${prefix}OrderCount`);
+                    if (orderCountEl) {
+                        orderCountEl.textContent = `(${orderCount} đơn)`;
+                    }
+                } else {
+                    orderCode.textContent = this.orderContext.OrderCode || '-';
+                }
+            }
 
             const tableNumber = document.getElementById(`${prefix}TableNumber`);
-            if (tableNumber) tableNumber.textContent = this.orderContext.Tables;
+            if (tableNumber) tableNumber.textContent = this.orderContext.Tables || '-';
 
             const totalAmount = document.getElementById(`${prefix}TotalAmount`);
             if (totalAmount) totalAmount.textContent = this.formatCurrency(this.orderContext.Total);

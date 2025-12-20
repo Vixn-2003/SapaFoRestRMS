@@ -42,6 +42,9 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         public record ConfirmQrPaymentRequest(int OrderId, string? Notes);
+        public record ReservationCashPaymentRequest(int ReservationId, decimal AmountReceived, string? Notes);
+        public record ReservationQrPaymentRequest(int ReservationId, string? Notes);
+        public record ReservationCombinedPaymentRequest(int ReservationId, decimal CashAmount, decimal QrAmount, decimal? CashReceived, string? Notes);
         
         public class SplitBillPart
         {
@@ -71,7 +74,7 @@ namespace WebSapaForestForStaff.Controllers
             System.Diagnostics.Debug.WriteLine($"[OrderSelection] Confirmed orders count: {confirmedOrders.Count}");
             foreach (var order in confirmedOrders.Take(5))
             {
-                System.Diagnostics.Debug.WriteLine($"[OrderSelection] Confirmed Order {order.OrderId}: Status = {order.Status}");
+                System.Diagnostics.Debug.WriteLine($"[OrderSelection] Confirmed Order {order.OrderId}: Status = {order.Status}, ReservationId = {order.ReservationId}");
             }
 
             // Paid: đã thanh toán xong
@@ -81,7 +84,7 @@ namespace WebSapaForestForStaff.Controllers
             System.Diagnostics.Debug.WriteLine($"[OrderSelection] Paid orders count: {paidOrders.Count}");
             foreach (var order in paidOrders.Take(5))
             {
-                System.Diagnostics.Debug.WriteLine($"[OrderSelection] Paid Order {order.OrderId}: Status = {order.Status}");
+                System.Diagnostics.Debug.WriteLine($"[OrderSelection] Paid Order {order.OrderId}: Status = {order.Status}, ReservationId = {order.ReservationId}");
             }
 
             var viewModel = new OrderSelectionViewModel
@@ -162,11 +165,41 @@ namespace WebSapaForestForStaff.Controllers
             var availableVouchers = await GetAvailableVouchersAsync(order.Subtotal);
             ViewData["AvailableVouchers"] = availableVouchers;
             
+            // ✅ Pass API base URL để JavaScript có thể gọi API đúng địa chỉ
+            ViewData["ApiBaseUrl"] = GetApiBaseUrl();
+            
             // ✅ MỚI: Thu ngân KHÔNG validate confirm
             // Waiter đã xác nhận món trước đó
             // Thu ngân chỉ xử lý thanh toán
             
             return View("~/Views/CashierFlow/Payment.cshtml", order);
+        }
+
+        /// <summary>
+        /// GET: Màn hình thanh toán theo ReservationId (tổng hợp tất cả Orders)
+        /// </summary>
+        [HttpGet("payment/reservation/{reservationId}")]
+        public async Task<IActionResult> PaymentByReservation(int reservationId)
+        {
+            // Khi vào màn hình thanh toán, xoá mọi ErrorMessage/SuccessMessage cũ
+            TempData.Remove("ErrorMessage");
+            TempData.Remove("SuccessMessage");
+
+            var reservationPayment = await _paymentApiService.GetReservationPaymentAsync(reservationId);
+            if (reservationPayment == null) return NotFound();
+            
+            // ✅ Load danh sách voucher phù hợp với tổng tiền Reservation
+            var availableVouchers = await GetAvailableVouchersAsync(reservationPayment.Subtotal);
+            ViewData["AvailableVouchers"] = availableVouchers;
+            
+            // ✅ Pass API base URL để JavaScript có thể gọi API đúng địa chỉ
+            ViewData["ApiBaseUrl"] = GetApiBaseUrl();
+            
+            // ✅ Set ViewData để view biết đang dùng Reservation-centric flow
+            ViewData["IsReservationPayment"] = true;
+            ViewData["ReservationId"] = reservationId;
+            
+            return View("~/Views/CashierFlow/Payment.cshtml", reservationPayment);
         }
 
         /// <summary>
@@ -492,6 +525,121 @@ namespace WebSapaForestForStaff.Controllers
         }
 
         /// <summary>
+        /// POST: Xử lý thanh toán tiền mặt theo ReservationId
+        /// </summary>
+        [HttpPost("payment/reservation/{reservationId}/cash")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessCashPaymentByReservation(int reservationId, ReservationCashPaymentRequest request)
+        {
+            if (request == null || reservationId <= 0)
+            {
+                TempData["ErrorMessage"] = "Dữ liệu thanh toán không hợp lệ.";
+                return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.ProcessCashPaymentByReservationAsync(
+                    reservationId,
+                    request.AmountReceived,
+                    request.Notes);
+
+                if (!result.Success)
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                    return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+                }
+
+                TempData["SuccessMessage"] = "✅ Thanh toán thành công!";
+                
+                // ✅ Redirect đến ReceiptByReservation
+                return RedirectToAction(nameof(ReceiptByReservation), new { reservationId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi xử lý thanh toán: {ex.Message}";
+                return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+            }
+        }
+
+        /// <summary>
+        /// POST: Xác nhận thanh toán QR theo ReservationId
+        /// </summary>
+        [HttpPost("payment/reservation/{reservationId}/qr")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmQrPaymentByReservation(int reservationId, ReservationQrPaymentRequest request)
+        {
+            if (request == null || reservationId <= 0)
+            {
+                TempData["ErrorMessage"] = "Dữ liệu không hợp lệ";
+                return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.ConfirmQrPaymentByReservationAsync(
+                    reservationId,
+                    request.Notes);
+
+                if (!result.Success)
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                    return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+                }
+
+                TempData["SuccessMessage"] = "✅ Đã xác nhận thanh toán QR thành công!";
+                
+                // ✅ Redirect đến ReceiptByReservation
+                return RedirectToAction(nameof(ReceiptByReservation), new { reservationId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi xác nhận thanh toán: {ex.Message}";
+                return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+            }
+        }
+
+        /// <summary>
+        /// POST: Xử lý thanh toán kết hợp (Cash + QR) theo ReservationId
+        /// </summary>
+        [HttpPost("payment/reservation/{reservationId}/combined")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessCombinedPaymentByReservation(int reservationId, ReservationCombinedPaymentRequest request)
+        {
+            if (request == null || reservationId <= 0)
+            {
+                TempData["ErrorMessage"] = "Dữ liệu thanh toán không hợp lệ.";
+                return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+            }
+
+            try
+            {
+                var result = await _paymentApiService.ProcessCombinedPaymentByReservationAsync(
+                    reservationId,
+                    request.CashAmount,
+                    request.QrAmount,
+                    request.CashReceived,
+                    request.Notes);
+
+                if (!result.Success)
+                {
+                    TempData["ErrorMessage"] = result.Message;
+                    return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+                }
+
+                TempData["SuccessMessage"] = result.Message ?? "✅ Thanh toán kết hợp thành công!";
+                
+                // ✅ Redirect đến ReceiptByReservation
+                return RedirectToAction(nameof(ReceiptByReservation), new { reservationId });
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi xử lý thanh toán kết hợp: {ex.Message}";
+                return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+            }
+        }
+
+        /// <summary>
         /// POST: Xử lý thanh toán kết hợp (Cash + QR)
         /// </summary>
         [HttpPost("payment/combined")]
@@ -658,6 +806,134 @@ namespace WebSapaForestForStaff.Controllers
             }
         }
 
+        /// <summary>
+        /// GET: Hiển thị hóa đơn thanh toán cho Reservation
+        /// </summary>
+        [HttpGet("receipt/reservation/{reservationId}")]
+        public async Task<IActionResult> ReceiptByReservation(int reservationId)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[ReceiptByReservation] Loading reservation {reservationId} for receipt");
+                
+                // Lấy thông tin reservation payment
+                var reservationPayment = await _paymentApiService.GetReservationPaymentAsync(reservationId);
+                
+                // Nếu không tìm thấy, thử lại sau 500ms (có thể do database chưa commit)
+                if (reservationPayment == null)
+                {
+                    await Task.Delay(500);
+                    reservationPayment = await _paymentApiService.GetReservationPaymentAsync(reservationId);
+                    
+                    if (reservationPayment == null)
+                    {
+                        TempData["ErrorMessage"] = $"Không tìm thấy Reservation với ID: {reservationId}";
+                        return RedirectToAction(nameof(OrderSelection));
+                    }
+                }
+
+                // Kiểm tra tất cả Orders đã được thanh toán chưa
+                var unpaidOrders = reservationPayment.Orders?.Where(o => 
+                    string.IsNullOrEmpty(o.Status) || 
+                    (!o.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) &&
+                     !o.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) &&
+                     !o.Status.Equals("Success", StringComparison.OrdinalIgnoreCase))).ToList() ?? new List<OrderDto>();
+
+                if (unpaidOrders.Any())
+                {
+                    // Đợi thêm một chút và thử lại
+                    await Task.Delay(500);
+                    reservationPayment = await _paymentApiService.GetReservationPaymentAsync(reservationId);
+                    
+                    if (reservationPayment != null)
+                    {
+                        unpaidOrders = reservationPayment.Orders?.Where(o => 
+                            string.IsNullOrEmpty(o.Status) || 
+                            (!o.Status.Equals("Paid", StringComparison.OrdinalIgnoreCase) &&
+                             !o.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) &&
+                             !o.Status.Equals("Success", StringComparison.OrdinalIgnoreCase))).ToList() ?? new List<OrderDto>();
+                    }
+                    
+                    if (unpaidOrders.Any())
+                    {
+                        // Vẫn chưa Paid, nhưng có thể đang trong quá trình xử lý
+                        // Cho phép xem receipt nếu có thông báo thành công từ TempData
+                        if (TempData.ContainsKey("SuccessMessage"))
+                        {
+                            // Có thông báo thành công, cho phép xem receipt
+                            return View("~/Views/CashierFlow/Receipt.cshtml", reservationPayment);
+                        }
+                        
+                        TempData["ErrorMessage"] = $"Có {unpaidOrders.Count} đơn hàng chưa được thanh toán. Vui lòng thanh toán tất cả đơn hàng trước khi xem hóa đơn.";
+                        return RedirectToAction(nameof(PaymentByReservation), new { reservationId });
+                    }
+                }
+
+                return View("~/Views/CashierFlow/Receipt.cshtml", reservationPayment);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi tải thông tin Reservation: {ex.Message}";
+                return RedirectToAction(nameof(OrderSelection));
+            }
+        }
+
+        /// <summary>
+        /// GET: Download PDF receipt cho Reservation
+        /// </summary>
+        [HttpGet("receipt/reservation/{reservationId}/download")]
+        public async Task<IActionResult> DownloadReceiptByReservation(int reservationId)
+        {
+            try
+            {
+                var file = await _paymentApiService.GenerateReceiptByReservationAsync(reservationId);
+                
+                if (file == null)
+                {
+                    TempData["ErrorMessage"] = "Không thể tải hóa đơn. Vui lòng thử lại sau.";
+                    return RedirectToAction(nameof(ReceiptByReservation), new { reservationId });
+                }
+
+                if (!file.Success)
+                {
+                    var errorMsg = file.ErrorMessage ?? "Không thể tải hóa đơn.";
+                    
+                    if (file.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        errorMsg = "Không tìm thấy Reservation hoặc hóa đơn chưa được tạo.";
+                    }
+                    else if (file.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                    {
+                        errorMsg = "Có đơn hàng chưa được thanh toán. Vui lòng thanh toán tất cả đơn hàng trước khi tải hóa đơn.";
+                    }
+                    else if (file.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        errorMsg = "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+                    }
+                    else if (file.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+                    {
+                        errorMsg = "Lỗi hệ thống khi tạo hóa đơn. Vui lòng liên hệ quản trị viên.";
+                    }
+
+                    TempData["ErrorMessage"] = errorMsg;
+                    return RedirectToAction(nameof(ReceiptByReservation), new { reservationId });
+                }
+
+                if (file.FileBytes == null || file.FileBytes.Length == 0)
+                {
+                    TempData["ErrorMessage"] = "File hóa đơn bị trống. Vui lòng thử lại.";
+                    return RedirectToAction(nameof(ReceiptByReservation), new { reservationId });
+                }
+
+                return File(file.FileBytes, "application/pdf", file.FileName);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Lỗi khi tải hóa đơn: {ex.Message}";
+                return RedirectToAction(nameof(ReceiptByReservation), new { reservationId });
+            }
+        }
+
         [HttpGet("receipt/{orderId}/download")]
         public async Task<IActionResult> DownloadReceipt(int orderId)
         {
@@ -744,6 +1020,41 @@ namespace WebSapaForestForStaff.Controllers
             return Json(new { 
                 success = true, 
                 message = result.Message ?? "Áp dụng mã ưu đãi thành công" 
+            });
+        }
+
+        /// <summary>
+        /// Áp dụng ưu đãi/giảm giá cho Reservation
+        /// POST /cashier-flow/payment/reservation/{reservationId}/apply-discount
+        /// </summary>
+        [HttpPost("payment/reservation/{reservationId}/apply-discount")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApplyDiscountByReservation(int reservationId, ReservationDiscountRequest request)
+        {
+            if (request == null || reservationId <= 0)
+            {
+                return Json(new { success = false, message = "Dữ liệu ưu đãi không hợp lệ." });
+            }
+
+            request.ReservationId = reservationId;
+
+            // Gọi ApiService để áp dụng voucher cho Reservation
+            var result = await _paymentApiService.ApplyDiscountByReservationAsync(reservationId, request);
+            
+            if (result == null)
+            {
+                return Json(new { success = false, message = "Không thể áp dụng ưu đãi. Vui lòng thử lại sau." });
+            }
+
+            if (!result.Success)
+            {
+                return Json(new { success = false, message = result.Message ?? "Không thể áp dụng mã giảm giá." });
+            }
+
+            // ✅ Thành công: trả về JSON để frontend xử lý
+            return Json(new { 
+                success = true, 
+                message = result.Message ?? "Áp dụng mã ưu đãi thành công cho Reservation" 
             });
         }
     }

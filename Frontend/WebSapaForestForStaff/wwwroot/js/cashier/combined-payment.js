@@ -259,8 +259,24 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
 
             try {
-                // Set form values and submit
-                document.getElementById('combinedPaymentOrderId').value = window.PaymentCore.orderContext.OrderId;
+                // ✅ Kiểm tra xem có ReservationId không (Reservation-centric payment)
+                const isReservationPayment = window.PaymentCore.orderContext?.IsReservationPayment === true;
+                const reservationId = window.PaymentCore.orderContext?.ReservationId;
+                
+                if (isReservationPayment && reservationId) {
+                    // Reservation payment: set ReservationId
+                    const reservationIdInput = document.querySelector('#combinedPaymentForm input[name="ReservationId"]');
+                    if (reservationIdInput) {
+                        reservationIdInput.value = reservationId;
+                    }
+                } else {
+                    // Order payment: set OrderId (backward compatible)
+                    const orderIdInput = document.getElementById('combinedPaymentOrderId');
+                    if (orderIdInput) {
+                        orderIdInput.value = window.PaymentCore.orderContext.OrderId;
+                    }
+                }
+                
                 document.getElementById('combinedPaymentCashAmount').value = cashAmount;
                 document.getElementById('combinedPaymentCashReceived').value = cashReceived ?? '';
                 document.getElementById('combinedPaymentQrAmount').value = qrAmount;
@@ -268,7 +284,11 @@
 
                 // Set processing state for result modal
                 sessionStorage.setItem('combinedPaymentProcessing', 'true');
-                sessionStorage.setItem('combinedPaymentOrderId', window.PaymentCore.orderContext.OrderId);
+                if (isReservationPayment && reservationId) {
+                    sessionStorage.setItem('combinedPaymentReservationId', reservationId);
+                } else {
+                    sessionStorage.setItem('combinedPaymentOrderId', window.PaymentCore.orderContext.OrderId);
+                }
 
                 // Show loading modal
                 this.showCombinedPaymentLoadingModal();
