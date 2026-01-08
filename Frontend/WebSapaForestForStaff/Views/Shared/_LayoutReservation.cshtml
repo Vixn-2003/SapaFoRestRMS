@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Sapa Forest Restaurant</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css" />
+
+    <style>
+        body {
+            background: #f5f7f5;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        /* Layout tổng */
+        .layout-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #1B4332, #2D6A4F);
+            color: #fff;
+            padding: 25px 20px;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            box-shadow: 2px 0 6px rgba(0,0,0,0.2);
+        }
+
+            .sidebar .logo {
+                font-size: 22px;
+                font-weight: 800;
+                text-transform: uppercase;
+                text-align: center;
+                margin-bottom: 30px;
+                letter-spacing: 2px;
+            }
+
+            .sidebar a {
+                display: block;
+                color: #d8f3dc;
+                padding: 10px 12px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 15px;
+                margin-bottom: 6px;
+                transition: 0.3s;
+            }
+
+                .sidebar a:hover,
+                .sidebar a.active {
+                    background: rgba(255, 255, 255, 0.15);
+                    color: #fff;
+                }
+
+            .sidebar i {
+                margin-right: 8px;
+            }
+
+        /* Nội dung chính */
+        .content-wrapper {
+            margin-left: 260px;
+            padding: 30px;
+            width: 100%;
+        }
+
+        /* Header nhỏ */
+        .page-header {
+            padding: 15px 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 25px;
+        }
+
+            .page-header h1 {
+                font-size: 24px;
+                font-weight: 700;
+                color: #2D6A4F;
+            }
+    </style>
+</head>
+
+<body>
+    <div class="layout-wrapper">
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                🌲 Sapa Forest
+            </div>
+
+            <a href="/ReservationStaff" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "ReservationStaff" ? "active" : "")">
+                <i class="bi bi-journal-text"></i> Đơn đặt bàn
+            </a>
+
+            <a href="/TableManage/index">
+                <i class="bi bi-table"></i> Quản lý bàn 
+            </a>
+            <a href="/HomeManager/index">
+                <i class="bi bi-table"></i> Quay Lại Trang Quản Lý
+            </a>
+            <a href="javascript:void(0);" onclick="document.getElementById('logoutForm').submit();">
+                <i class="bi bi-box-arrow-right"></i> Đăng xuất
+            </a>
+
+            <form id="logoutForm" asp-controller="Auth" asp-action="Logout" method="post" style="display:none;"></form>
+
+        </div>
+
+        <!-- Content -->
+        <div class="content-wrapper">
+            <div class="page-header">
+                <h1>@ViewData["Title"]</h1>
+            </div>
+
+            <main>
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

@@ -25,7 +25,7 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Mô tả</label>
-                <input class="form-control form-control-sm" asp-for="Description" />
+                <input class="form-control form-control-sm" asp-for="Description" required />
                 <span asp-validation-for="Description" class="text-danger"></span>
             </div>
 
@@ -41,7 +41,7 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Giá trị giảm</label>
-                <input type="number" step="0.01" class="form-control form-control-sm border-info" asp-for="DiscountValue" />
+                <input type="number" step="0.01" class="form-control form-control-sm border-info" asp-for="DiscountValue" required />
                 <span asp-validation-for="DiscountValue" class="text-danger"></span>
             </div>
         </div>
@@ -50,25 +50,25 @@
         <div class="col-md-6">
             <div class="mb-3">
                 <label class="form-label fw-semibold">Ngày bắt đầu</label>
-                <input type="date" class="form-control form-control-sm border-secondary" asp-for="StartDate" id="StartDate" />
+                <input type="date" class="form-control form-control-sm border-secondary" asp-for="StartDate" id="StartDate" required />
                 <span asp-validation-for="StartDate" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Ngày kết thúc</label>
-                <input type="date" class="form-control form-control-sm border-secondary" asp-for="EndDate" id="EndDate" />
+                <input type="date" class="form-control form-control-sm border-secondary" asp-for="EndDate" id="EndDate" required />
                 <span asp-validation-for="EndDate" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Giá trị đơn tối thiểu</label>
-                <input type="number" step="0.01" class="form-control form-control-sm border-warning" asp-for="MinOrderValue" />
+                <input type="number" step="0.01" class="form-control form-control-sm border-warning" asp-for="MinOrderValue" required />
                 <span asp-validation-for="MinOrderValue" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Giảm tối đa</label>
-                <input type="number" step="0.01" class="form-control form-control-sm border-warning" asp-for="MaxDiscount" />
+                <input type="number" step="0.01" class="form-control form-control-sm border-warning" asp-for="MaxDiscount" required />
                 <span asp-validation-for="MaxDiscount" class="text-danger"></span>
             </div>
 

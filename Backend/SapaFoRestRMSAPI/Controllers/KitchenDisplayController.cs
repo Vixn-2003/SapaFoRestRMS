@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using BusinessAccessLayer.Services;
 using BusinessAccessLayer.DTOs.Kitchen;
@@ -12,25 +13,28 @@ namespace SapaFoRestRMSAPI.Controllers
     {
         private readonly IKitchenDisplayService _kitchenService;
         private readonly IHubContext<KitchenHub> _hubContext;
-
+        private readonly IHubContext<TableHub> _tableHubContext; // Thêm biến này
         public KitchenDisplayController(
             IKitchenDisplayService kitchenService,
-            IHubContext<KitchenHub> hubContext)
+            IHubContext<KitchenHub> hubContext,
+            IHubContext<TableHub> tableHubContext)
         {
             _kitchenService = kitchenService;
             _hubContext = hubContext;
+            _tableHubContext = tableHubContext;
         }
 
         /// <summary>
-        /// GET: api/KitchenDisplay/active-orders
+        /// GET: api/KitchenDisplay/active-orders?statusFilter=Pending
         /// Get all active orders for Sous Chef screen
         /// </summary>
+        /// <param name="statusFilter">Optional: Filter by item status (Pending, Cooking, Late, Ready). Null or empty = all</param>
         [HttpGet("active-orders")]
-        public async Task<IActionResult> GetActiveOrders()
+        public async Task<IActionResult> GetActiveOrders([FromQuery] string? statusFilter = null)
         {
             try
             {
-                var orders = await _kitchenService.GetActiveOrdersAsync();
+                var orders = await _kitchenService.GetActiveOrdersAsync(statusFilter);
                 return Ok(new { success = true, data = orders });
             }
             catch (Exception ex)
@@ -84,6 +88,48 @@ namespace SapaFoRestRMSAPI.Controllers
                     OrderId = 0, // Will be filled from updated item
                     OrderDetailId = request.OrderDetailId,
                     NewStatus = request.NewStatus,
+                    Timestamp = DateTime.Now,
+                    ChangedBy = $"User {request.UserId}"
+                });
+
+                if (response.ReservationId > 0)
+                {
+                    await _tableHubContext.Clients.Group($"Reservation_{response.ReservationId}")
+                        .SendAsync("ReceiveItemStatusUpdate",
+                            request.OrderDetailId,
+                            request.OrderComboItemId,
+                            request.NewStatus);
+                }
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/start-cooking-with-quantity
+        /// Start cooking with specific quantity (split order detail if quantity < total)
+        /// </summary>
+        [HttpPost("start-cooking-with-quantity")]
+        public async Task<IActionResult> StartCookingWithQuantity([FromBody] StartCookingWithQuantityRequest request)
+        {
+            try
+            {
+                var response = await _kitchenService.StartCookingWithQuantityAsync(request);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                // Broadcast real-time update via SignalR
+                await _hubContext.Clients.All.SendAsync("ItemStatusChanged", new KitchenStatusChangeNotification
+                {
+                    OrderId = 0,
+                    OrderDetailId = response.UpdatedItem?.OrderDetailId ?? request.OrderDetailId,
+                    NewStatus = "Cooking",
                     Timestamp = DateTime.Now,
                     ChangedBy = $"User {request.UserId}"
                 });
@@ -142,15 +188,16 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         /// <summary>
-        /// GET: api/KitchenDisplay/grouped-by-item
+        /// GET: api/KitchenDisplay/grouped-by-item?statusFilter=Pending
         /// Get items grouped by menu item (theo từng món)
         /// </summary>
+        /// <param name="statusFilter">Optional: Filter by item status (Pending, Cooking, Late, Ready). Null or empty = all</param>
         [HttpGet("grouped-by-item")]
-        public async Task<IActionResult> GetGroupedItemsByMenuItem()
+        public async Task<IActionResult> GetGroupedItemsByMenuItem([FromQuery] string? statusFilter = null)
         {
             try
             {
-                var groupedItems = await _kitchenService.GetGroupedItemsByMenuItemAsync();
+                var groupedItems = await _kitchenService.GetGroupedItemsByMenuItemAsync(statusFilter);
                 return Ok(new { success = true, data = groupedItems });
             }
             catch (Exception ex)
@@ -251,8 +298,30 @@ namespace SapaFoRestRMSAPI.Controllers
         }
 
         /// <summary>
+        /// GET: api/KitchenDisplay/order-details/{orderId}
+        /// Get order details with all items including Done status (for modal display)
+        /// </summary>
+        [HttpGet("order-details/{orderId}")]
+        public async Task<IActionResult> GetOrderDetailsWithAllItems(int orderId)
+        {
+            try
+            {
+                var order = await _kitchenService.GetOrderDetailsWithAllItemsAsync(orderId);
+                if (order == null)
+                {
+                    return NotFound(new { success = false, message = "Order not found" });
+                }
+                return Ok(new { success = true, data = order });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// POST: api/KitchenDisplay/recall-order-detail
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         [HttpPost("recall-order-detail")]
         public async Task<IActionResult> RecallOrderDetail([FromBody] RecallOrderDetailRequest request)
@@ -283,5 +352,66 @@ namespace SapaFoRestRMSAPI.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/print-item-ticket
+        /// In ticket cho món đã hoàn thành
+        /// </summary>
+        [HttpPost("print-item-ticket")]
+        public async Task<IActionResult> PrintItemTicket([FromBody] PrintItemTicketRequest request)
+        {
+            try
+            {
+                // Lấy thông tin order detail và order
+                var orderDetail = await _kitchenService.GetOrderDetailForPrintAsync(request.OrderDetailId, request.OrderComboItemId);
+                
+                if (orderDetail == null)
+                {
+                    return NotFound(new { success = false, message = "Không tìm thấy món ăn" });
+                }
+
+                // Trả về thông tin để frontend in
+                return Ok(new 
+                { 
+                    success = true, 
+                    data = orderDetail 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST: api/KitchenDisplay/batch-cook
+        /// Gom nhiều hành động bắt đầu nấu vào một call để giảm số lượng fetch từ frontend
+        /// </summary>
+        [HttpPost("batch-cook")]
+        public async Task<IActionResult> BatchCook([FromBody] BatchCookRequest request)
+        {
+            try
+            {
+                if (request.Items == null || !request.Items.Any())
+                {
+                    return BadRequest(new { success = false, message = "Danh sách món trống" });
+                }
+
+                var result = await _kitchenService.BatchStartCookingAsync(request);
+
+                if (!result.Success)
+                {
+                    return Ok(new { success = false, message = result.Message, items = result.Items });
+                }
+
+                return Ok(new { success = true, message = result.Message, items = result.Items });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+
     }
 }

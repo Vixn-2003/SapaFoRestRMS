@@ -9,12 +9,14 @@ namespace BusinessAccessLayer.Services.Interfaces
     {
         Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct = default);
         Task<UserDto?> GetByIdAsync(int id, CancellationToken ct = default);
+        Task<UserDetailsResponse?> GetDetailsAsync(int id, CancellationToken ct = default);
         Task<UserListResponse> SearchAsync(UserSearchRequest request, CancellationToken ct = default);
         Task<UserDto> CreateAsync(UserCreateRequest request, CancellationToken ct = default);
         Task UpdateAsync(int id, UserUpdateRequest request, CancellationToken ct = default);
         Task<UserDto> UpdateProfileAsync(int id, UserProfileUpdateRequest request, CancellationToken ct = default);
         Task DeleteAsync(int id, CancellationToken ct = default);
         Task ChangeStatusAsync(int id, int status, CancellationToken ct = default);
+        Task<string> ResetPasswordAsync(int id, ResetUserPasswordRequest request, CancellationToken ct = default);
     }
 }
 

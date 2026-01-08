@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using WebSapaForestForStaff.DTOs;
 using WebSapaForestForStaff.DTOs.Auth;
 using WebSapaForestForStaff.DTOs.UserManagement;
+using WebSapaForestForStaff.DTOs.Customers;
 using WebSapaForestForStaff.DTOs.Positions;
 
 namespace WebSapaForestForStaff.Services
@@ -12,6 +14,8 @@ namespace WebSapaForestForStaff.Services
         private readonly HttpClient _httpClient;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public record ApiResult(bool Success, string? Message = null);
 
         public ApiService(HttpClient httpClient, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
@@ -99,7 +103,35 @@ namespace WebSapaForestForStaff.Services
 
                     return loginResponse;
                 }
+                
+                // Parse error message from response
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    try
+                    {
+                        var errorObj = JsonSerializer.Deserialize<Dictionary<string, object>>(errorContent, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+                        if (errorObj != null && errorObj.ContainsKey("message"))
+                        {
+                            var errorMessage = errorObj["message"]?.ToString() ?? "Email hoặc mật khẩu không đúng";
+                            throw new UnauthorizedAccessException(errorMessage);
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // If parsing fails, use default message
+                    }
+                    throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+                }
+                
                 return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Re-throw to preserve error message
             }
             catch
             {
@@ -107,7 +139,7 @@ namespace WebSapaForestForStaff.Services
             }
         }
 
-        private async Task<bool> TryRefreshTokenAsync()
+        public async Task<bool> TryRefreshTokenAsync()
         {
             try
             {
@@ -150,9 +182,65 @@ namespace WebSapaForestForStaff.Services
             return response;
         }
 
+        private static async Task<string?> ReadApiMessageAsync(HttpResponseMessage response)
+        {
+            if (response.Content == null) return null;
+            try
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(content)) return null;
+                using var document = JsonDocument.Parse(content);
+                if (document.RootElement.TryGetProperty("message", out var messageElement) &&
+                    messageElement.ValueKind == JsonValueKind.String)
+                {
+                    return messageElement.GetString();
+                }
+
+                return content;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public void Logout()
         {
             ClearToken();
+        }
+
+        // Password reset methods
+        public async Task<bool> ForgotPasswordAsync(string email)
+        {
+            try
+            {
+                var request = new { Email = email };
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"{GetApiBaseUrl()}/Auth/forgot-password", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"{GetApiBaseUrl()}/Auth/reset-password", content);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // User management methods
@@ -172,7 +260,7 @@ namespace WebSapaForestForStaff.Services
             }
         }
 
-        public async Task<bool> CreateStaffAsync(CreateStaffRequest request)
+        public async Task<ApiResult> CreateStaffAsync(CreateStaffRequest request)
         {
             try
             {
@@ -180,11 +268,40 @@ namespace WebSapaForestForStaff.Services
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/auth/manager/create-staff", content));
-                return response.IsSuccessStatusCode;
+                if (response.IsSuccessStatusCode)
+                {
+                    return new ApiResult(true, "Tạo nhân viên thành công!");
+                }
+
+                var error = await ReadApiMessageAsync(response) ?? "Không thể tạo nhân viên. Vui lòng kiểm tra lại thông tin.";
+                return new ApiResult(false, error);
             }
             catch
             {
-                return false;
+                return new ApiResult(false, "Không thể kết nối để tạo nhân viên. Vui lòng thử lại sau.");
+            }
+        }
+
+        public async Task<ApiResult> SendStaffVerificationCodeAsync(CreateStaffVerificationRequest request)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/auth/manager/create-staff/send-code", content));
+                if (response.IsSuccessStatusCode)
+                {
+                    var message = await ReadApiMessageAsync(response) ?? "Đã gửi mã xác minh tới email nhân viên.";
+                    return new ApiResult(true, message);
+                }
+
+                var error = await ReadApiMessageAsync(response) ?? "Không thể gửi mã xác minh. Vui lòng thử lại.";
+                return new ApiResult(false, error);
+            }
+            catch
+            {
+                return new ApiResult(false, "Không thể kết nối để gửi mã xác minh.");
             }
         }
 
@@ -389,7 +506,19 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                var json = JsonSerializer.Serialize(request);
+                var payload = new
+                {
+                    request.FullName,
+                    request.Email,
+                    request.Phone,
+                    request.RoleId,
+                    request.Status,
+                    Password = string.IsNullOrWhiteSpace(request.TemporaryPassword) ? null : request.TemporaryPassword,
+                    TemporaryPassword = request.TemporaryPassword,
+                    request.SendEmailNotification
+                };
+
+                var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/users", content));
@@ -482,8 +611,20 @@ namespace WebSapaForestForStaff.Services
         {
             try
             {
-                var json = JsonSerializer.Serialize(request);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var content = new MultipartFormDataContent();
+                content.Add(new StringContent(request.FullName), nameof(request.FullName));
+                content.Add(new StringContent(request.Phone ?? string.Empty), nameof(request.Phone));
+
+                if (request.AvatarFile != null && request.AvatarFile.Length > 0)
+                {
+                    var streamContent = new StreamContent(request.AvatarFile.OpenReadStream());
+                    streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(request.AvatarFile.ContentType);
+                    content.Add(streamContent, nameof(request.AvatarFile), request.AvatarFile.FileName);
+                }
+                else if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+                {
+                    content.Add(new StringContent(request.AvatarUrl), nameof(request.AvatarUrl));
+                }
 
                 var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/users/profile", content));
                 
@@ -500,6 +641,73 @@ namespace WebSapaForestForStaff.Services
             catch
             {
                 return null;
+            }
+        }
+
+        public async Task<ApiResult> RequestPasswordChangeAsync(string currentPassword)
+        {
+            if (string.IsNullOrWhiteSpace(currentPassword))
+            {
+                return new ApiResult(false, "Vui lòng nhập mật khẩu hiện tại.");
+            }
+
+            try
+            {
+                var payload = new
+                {
+                    UserId = 0,
+                    CurrentPassword = currentPassword
+                };
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/password/change/request", content));
+                if (response.IsSuccessStatusCode)
+                {
+                    var message = await ReadApiMessageAsync(response) ?? "Mã xác nhận đã được gửi tới email của bạn.";
+                    return new ApiResult(true, message);
+                }
+
+                var error = await ReadApiMessageAsync(response) ?? "Không thể gửi mã xác nhận. Vui lòng thử lại.";
+                return new ApiResult(false, error);
+            }
+            catch
+            {
+                return new ApiResult(false, "Không thể kết nối tới máy chủ. Vui lòng thử lại sau.");
+            }
+        }
+
+        public async Task<ApiResult> ConfirmPasswordChangeAsync(string code, string newPassword)
+        {
+            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(newPassword))
+            {
+                return new ApiResult(false, "Vui lòng nhập mã xác nhận và mật khẩu mới.");
+            }
+
+            try
+            {
+                var payload = new
+                {
+                    UserId = 0,
+                    Code = code,
+                    NewPassword = newPassword
+                };
+                var json = JsonSerializer.Serialize(payload);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync($"{GetApiBaseUrl()}/password/change/confirm", content));
+                if (response.IsSuccessStatusCode)
+                {
+                    var message = await ReadApiMessageAsync(response) ?? "Đổi mật khẩu thành công.";
+                    return new ApiResult(true, message);
+                }
+
+                var error = await ReadApiMessageAsync(response) ?? "Không thể đổi mật khẩu. Vui lòng kiểm tra lại thông tin.";
+                return new ApiResult(false, error);
+            }
+            catch
+            {
+                return new ApiResult(false, "Không thể kết nối tới máy chủ. Vui lòng thử lại sau.");
             }
         }
 
@@ -598,6 +806,75 @@ namespace WebSapaForestForStaff.Services
                 return response.IsSuccessStatusCode;
             }
             catch { return false; }
+        }
+
+        // Customer VIP Management
+        public async Task<List<CustomerVipListItemDto>?> GetVipCustomersAsync()
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/manager/customers"));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<List<CustomerVipListItemDto>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<CustomerVipStatisticsDto?> GetCustomerVipStatisticsAsync(int customerId)
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.GetAsync($"{GetApiBaseUrl()}/manager/customers/{customerId}/statistics"));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<CustomerVipStatisticsDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<CustomerVipStatisticsDto?> UpdateCustomerVipAsync(int customerId, bool isVip)
+        {
+            try
+            {
+                var payload = JsonSerializer.Serialize(new { isVip });
+                var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                var response = await SendWithAutoRefreshAsync(c => c.PutAsync($"{GetApiBaseUrl()}/manager/customers/{customerId}/vip", content));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<CustomerVipStatisticsDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public async Task<CustomerVipStatisticsDto?> RecalculateCustomerVipAsync(int customerId)
+        {
+            try
+            {
+                var response = await SendWithAutoRefreshAsync(c => c.PostAsync(
+                    $"{GetApiBaseUrl()}/manager/customers/{customerId}/recalculate",
+                    new StringContent(string.Empty)));
+                if (!response.IsSuccessStatusCode) return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<CustomerVipStatisticsDto>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

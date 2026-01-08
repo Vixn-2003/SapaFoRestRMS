@@ -1,4 +1,5 @@
-﻿using DomainAccessLayer.Models;
+﻿using BusinessAccessLayer.DTOs.Inventory;
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,8 +18,7 @@ namespace BusinessAccessLayer.DTOs.Manager
 
         public decimal QuantityNeeded { get; set; }
 
-        public virtual Ingredient Ingredient { get; set; } = null!;
+        public IngredientDTO Ingredient { get; set; } = null!;
 
-        public virtual MenuItem MenuItem { get; set; } = null!;
     }
 }

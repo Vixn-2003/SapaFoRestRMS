@@ -1,0 +1,126 @@
+@* Modal xác nhận thanh toán *@
+@{
+    var tableNumber = ViewBag.TableNumber ?? "N/A";
+    var orderId = ViewBag.OrderId ?? 0;
+    var totalAmount = ViewBag.TotalAmount ?? 0m;
+}
+
+<!-- Payment Confirmation Modal -->
+<div class="modal fade" id="paymentConfirmationModal" tabindex="-1" aria-labelledby="paymentConfirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title d-flex align-items-center" id="paymentConfirmationModalLabel">
+                    <i class="fa-solid fa-circle-check me-2"></i>
+                    Xác nhận thanh toán
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-4">
+                    <div class="confirmation-icon mb-3">
+                        <i class="fa-solid fa-utensils fa-3x text-primary"></i>
+                    </div>
+                    <h5 class="mb-3">Khách hàng tại <strong class="text-primary">bàn <span id="modalTableNumber">@tableNumber</span></strong> đã dùng bữa xong.</h5>
+                    <p class="text-muted mb-0">Bạn có muốn bắt đầu xử lý thanh toán cho đơn hàng này không?</p>
+                </div>
+
+                <!-- Order Summary -->
+                <div class="order-summary-box p-3 bg-light rounded-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Mã đơn hàng:</span>
+                        <span class="fw-bold" id="modalOrderCode">#<span id="modalOrderId">@orderId</span></span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Tổng tiền:</span>
+                        <span class="fw-bold fs-5 text-success" id="modalTotalAmount">@totalAmount.ToString("N0") ₫</span>
+                    </div>
+                </div>
+
+                <!-- Info Alert -->
+                <div class="alert alert-info d-flex align-items-start gap-2 mb-0">
+                    <i class="fa-solid fa-info-circle mt-1"></i>
+                    <div class="small">
+                        <strong>Lưu ý:</strong> Sau khi nhấn "Tiến hành thanh toán", bạn sẽ được chuyển đến màn hình chọn phương thức thanh toán.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-times me-1"></i>
+                    Hủy
+                </button>
+                <button type="button" class="btn btn-success px-4" id="confirmPaymentBtn">
+                    <i class="fa-solid fa-check-circle me-1"></i>
+                    Tiến hành thanh toán
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #paymentConfirmationModal .modal-content {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    #paymentConfirmationModal .confirmation-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-radius: 50%;
+    }
+
+    #paymentConfirmationModal .order-summary-box {
+        border: 2px solid #e3f2fd;
+    }
+
+    #paymentConfirmationModal .modal-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+
+    #paymentConfirmationModal .btn-success {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+        border: none;
+        transition: all 0.3s;
+    }
+
+        #paymentConfirmationModal .btn-success:hover {
+            background: linear-gradient(135deg, #146c43 0%, #0f5132 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.4);
+        }
+</style>
+
+<script>
+    /**
+     * 1️⃣ CREATE ORDER FOR PAYMENT
+     * Shows confirmation before creating payment order
+     */
+    async function showPaymentConfirmationModal(orderId, tableNumber, totalAmount, paymentUrl) {
+        const confirmed = await showConfirmPopup(
+            "🧾 Xác nhận tạo đơn thanh toán",
+            `<p class="mb-3">Bạn có chắc muốn tạo hóa đơn thanh toán cho bàn <strong>${tableNumber}</strong> không?</p>
+            <div class="alert alert-info d-flex align-items-start gap-2 mb-0">
+                <i class="fa-solid fa-info-circle mt-1"></i>
+                <div class="small">
+                    <div class="mb-2"><strong>Mã đơn:</strong> #${orderId}</div>
+                    <div><strong>Tổng tiền:</strong> <span class="text-success fw-bold">${totalAmount.toLocaleString('vi-VN')} ₫</span></div>
+                </div>
+            </div>`,
+            "Tạo đơn",
+            "Hủy"
+        );
+
+        if (confirmed) {
+            // ✅ Redirect to Payment page (workflow mới: bỏ qua ConfirmOrder)
+            window.location.href = paymentUrl;
+        }
+    }
+</script>
+

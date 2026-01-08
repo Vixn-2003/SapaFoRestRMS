@@ -25,7 +25,21 @@ namespace DataAccessLayer.Repositories
             await _context.SaveChangesAsync();
             return reservation;
         }
-      public async Task<(List<Reservation> Data, int TotalCount)> GetPendingAndConfirmedReservationsAsync(
+        public async Task<Reservation?> GetByIdAsync(int id)
+        {
+            return await _context.Reservations
+                .Include(r => r.Customer)
+                .ThenInclude(c => c.User)
+                .Include(r => r.ReservationDeposits)
+                .FirstOrDefaultAsync(r => r.ReservationId == id);
+        }
+
+        public async Task UpdateAsync(Reservation reservation)
+        {
+            _context.Reservations.Update(reservation);
+            await _context.SaveChangesAsync();
+        }
+        public async Task<(List<Reservation> Data, int TotalCount)> GetPendingAndConfirmedReservationsAsync(
     string? status = null,
     DateTime? date = null,
     string? customerName = null,
@@ -38,13 +52,14 @@ namespace DataAccessLayer.Repositories
         .Include(r => r.Customer)
             .ThenInclude(c => c.User)
         .Include(r => r.ReservationTables)
+        .Include(r => r.ReservationDeposits) // ✅ Include deposits để tính doanh thu
         .AsQueryable();
 
     // Lọc trạng thái
     if (!string.IsNullOrEmpty(status))
         query = query.Where(r => r.Status == status);
     else
-        query = query.Where(r => r.Status == "Pending" || r.Status == "Confirmed");
+        query = query.Where(r => r.Status == "Pending" || r.Status == "Confirmed" || r.Status == "Cancelled");
 
     // Lọc theo ngày
     if (date.HasValue)
@@ -69,6 +84,8 @@ namespace DataAccessLayer.Repositories
     var data = await query
         .OrderByDescending(r => r.ReservationDate)
         .ThenBy(r => r.ReservationTime)
+        .ThenByDescending(r => r.Customer.IsVip)
+        .ThenByDescending(r => r.Customer.LoyaltyPoints ?? 0)
         .Skip((page - 1) * pageSize)
         .Take(pageSize)
         .ToListAsync();
@@ -126,6 +143,24 @@ namespace DataAccessLayer.Repositories
                 .Select(rt => rt.TableId)
                 .ToListAsync();
         }
+        public async Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime reservationDate, string timeSlot)
+        {
+            return await _context.ReservationTables
+                .Where(rt => rt.Reservation.ReservationDate.Date == reservationDate.Date
+                          && rt.Reservation.TimeSlot == timeSlot
+                          && rt.Reservation.Status != "Cancelled")
+                .Select(rt => new BookedTableDetailDto
+                {
+                    TableId = rt.TableId,
+                    ReservationTime = rt.Reservation.ReservationTime
+                })
+                .ToListAsync();
+        }
+        public class BookedTableDetailDto
+        {
+            public int TableId { get; set; }
+            public DateTime ReservationTime { get; set; }
+        }
 
         public async Task<Reservation?> GetReservationByIdAsync(int reservationId)
         {
@@ -141,10 +176,37 @@ namespace DataAccessLayer.Repositories
                          && r.TimeSlot == slot)
                 .ToListAsync();
         }
+        public async Task<List<Reservation>> GetReservationsByCustomerAsync(int customerId)
+        {
+            return await _context.Reservations
+                .Include(r => r.Customer)
+                    .ThenInclude(c => c.User)
+                .Where(r => r.Customer.UserId == customerId)
+                .OrderByDescending(r => r.ReservationDate)
+                .ToListAsync();
+        }
+        public async Task<int> GetPendingCountAsync()
+        {
+            return await _context.Reservations
+                                 .CountAsync(r => r.Status == "Pending");
+        }
 
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
         }
+
+        public async Task<Reservation?> GetActiveByTableIdAsync(int tableId)
+        {
+            return await _context.Reservations
+                .Include(r => r.ReservationTables)
+                .Where(r =>
+                    r.ReservationTables.Any(rt => rt.TableId == tableId)
+                    && r.Status == "Guest Seated"
+                )
+                .OrderByDescending(r => r.ReservationDate)
+                .FirstOrDefaultAsync();
+        }
+
     }
 }

@@ -7,8 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SapaFoRestRMSAPI.Controllers
 {
+    /// <summary>
+    /// Controller quản lý Users
+    /// Chỉ Admin có quyền quản lý users (tạo, sửa, xóa)
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // default: authenticated
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
@@ -18,16 +23,22 @@ namespace SapaFoRestRMSAPI.Controllers
             _userService = userService;
         }
 
+        /// <summary>
+        /// Admin: Lấy danh sách tất cả users
+        /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {
             var users = await _userService.GetAllAsync(ct);
             return Ok(users);
         }
 
+        /// <summary>
+        /// Admin: Tìm kiếm users
+        /// </summary>
         [HttpGet("search")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Search(
             [FromQuery] string? searchTerm = null,
             [FromQuery] int? roleId = null,
@@ -53,8 +64,11 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// Admin: Lấy chi tiết user
+        /// </summary>
         [HttpGet("{id:int}")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Get(int id, CancellationToken ct)
         {
             var user = await _userService.GetByIdAsync(id, ct);
@@ -62,8 +76,23 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(user);
         }
 
+        /// <summary>
+        /// Admin: Lấy chi tiết user (bao gồm metadata)
+        /// </summary>
+        [HttpGet("{id:int}/details")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDetails(int id, CancellationToken ct)
+        {
+            var user = await _userService.GetDetailsAsync(id, ct);
+            if (user == null) return NotFound();
+            return Ok(user);
+        }
+
+        /// <summary>
+        /// Admin: Tạo user mới
+        /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] UserCreateRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
@@ -82,10 +111,25 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Admin: Cập nhật user
+        /// Supports both JSON (FromBody) and multipart/form-data (FromForm) for file upload
+        /// </summary>
         [HttpPut("{id:int}")]
-        [Authorize(Roles = "Admin,Manager")]
-        public async Task<IActionResult> Update(int id, [FromBody] UserUpdateRequest request, CancellationToken ct)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update(int id, [FromForm] UserUpdateRequest? formRequest, [FromBody] UserUpdateRequest? jsonRequest, CancellationToken ct)
         {
+            // Prefer form request if available (for file upload), otherwise use JSON request
+            var request = formRequest ?? jsonRequest;
+            
+            if (request == null)
+            {
+                return BadRequest(new { message = "Request body is required" });
+            }
+
+            // Note: RoleId in request is ignored in UpdateAsync (preserved from original user)
+            // The id parameter is the user ID to update
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
@@ -102,8 +146,11 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Admin: Xóa user
+        /// </summary>
         [HttpDelete("{id:int}")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             try
@@ -117,8 +164,11 @@ namespace SapaFoRestRMSAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Admin: Thay đổi trạng thái user
+        /// </summary>
         [HttpPatch("{id:int}/status/{status:int}")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ChangeStatus(int id, int status, CancellationToken ct)
         {
             try
@@ -133,6 +183,33 @@ namespace SapaFoRestRMSAPI.Controllers
             catch (System.InvalidOperationException ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Admin: Đặt lại mật khẩu user
+        /// </summary>
+        [HttpPost("{id:int}/reset-password")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetUserPasswordRequest request, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var newPassword = await _userService.ResetPasswordAsync(id, request, ct);
+                return Ok(new { newPassword });
+            }
+            catch (System.InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (System.ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -158,7 +235,7 @@ namespace SapaFoRestRMSAPI.Controllers
 
         [HttpPut("profile")]
         [Authorize]
-        public async Task<IActionResult> UpdateProfile([FromBody] UserProfileUpdateRequest request, CancellationToken ct)
+        public async Task<IActionResult> UpdateProfile([FromForm] UserProfileUpdateRequest request, CancellationToken ct)
         {
             if (!ModelState.IsValid)
             {

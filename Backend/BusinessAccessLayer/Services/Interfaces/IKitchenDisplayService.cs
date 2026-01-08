@@ -9,7 +9,8 @@ namespace BusinessAccessLayer.Services
         /// <summary>
         /// Get all active orders for Sous Chef KDS screen
         /// </summary>
-        Task<List<KitchenOrderCardDto>> GetActiveOrdersAsync();
+        /// <param name="statusFilter">Optional: Filter by item status (Pending, Cooking, Late, Ready). Null or empty = all</param>
+        Task<List<KitchenOrderCardDto>> GetActiveOrdersAsync(string? statusFilter = null);
 
         /// <summary>
         /// Get orders filtered by specific course type (for station screens)
@@ -21,6 +22,11 @@ namespace BusinessAccessLayer.Services
         /// This will trigger real-time update to Sous Chef screen
         /// </summary>
         Task<StatusUpdateResponse> UpdateItemStatusAsync(UpdateItemStatusRequest request);
+
+        /// <summary>
+        /// Start cooking with specific quantity (split order detail if quantity < total)
+        /// </summary>
+        Task<StatusUpdateResponse> StartCookingWithQuantityAsync(StartCookingWithQuantityRequest request);
 
         /// <summary>
         /// Mark entire order as completed (called by Sous Chef)
@@ -35,7 +41,8 @@ namespace BusinessAccessLayer.Services
         /// <summary>
         /// Get grouped items by menu item (theo từng món) - nhóm tất cả các món ăn từ tất cả các order
         /// </summary>
-        Task<List<GroupedMenuItemDto>> GetGroupedItemsByMenuItemAsync();
+        /// <param name="statusFilter">Optional: Filter by item status (Pending, Cooking, Late, Ready). Null or empty = all</param>
+        Task<List<GroupedMenuItemDto>> GetGroupedItemsByMenuItemAsync(string? statusFilter = null);
 
         /// <summary>
         /// Get station items by category name (theo MenuCategory) - có 2 luồng: tất cả và urgent
@@ -58,8 +65,28 @@ namespace BusinessAccessLayer.Services
         Task<List<KitchenOrderCardDto>> GetRecentlyFulfilledOrdersAsync(int minutesAgo = 10);
 
         /// <summary>
-        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Processing
+        /// Khôi phục (Recall) một order detail đã Done, đưa nó quay lại trạng thái Pending
         /// </summary>
         Task<StatusUpdateResponse> RecallOrderDetailAsync(RecallOrderDetailRequest request);
+
+        /// <summary>
+        /// Get order details with all items including Done status (for modal display)
+        /// </summary>
+        Task<KitchenOrderCardDto?> GetOrderDetailsWithAllItemsAsync(int orderId);
+
+        /// <summary>
+        /// Lấy thông tin order detail để in ticket khi hoàn thành món
+        /// </summary>
+        Task<PrintItemTicketDto?> GetOrderDetailForPrintAsync(int orderDetailId, int? orderComboItemId);
+
+        /// <summary>
+        /// Broadcast đơn mới đến tất cả màn hình bếp qua SignalR
+        /// </summary>
+        Task NotifyNewOrderAddedAsync(KitchenOrderCardDto order);
+
+        /// <summary>
+        /// Batch start cooking/update status cho nhiều món trong một lần
+        /// </summary>
+        Task<BatchCookResponse> BatchStartCookingAsync(BatchCookRequest request);
     }
 }

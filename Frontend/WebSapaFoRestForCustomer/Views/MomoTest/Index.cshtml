@@ -1,0 +1,71 @@
+﻿@{
+    Layout = "_Layout";
+}
+
+<h2>Test MoMo IPN</h2>
+
+<textarea id="ipnJson" class="form-control" rows="12">
+{
+  "partnerCode": "MOMO",
+  "orderId": "ORDER_TEST_123",
+  "requestId": "REQ_123",
+  "amount": "500000",
+  "orderInfo": "Thanh toan dat coc",
+  "orderType": "momo_wallet",
+  "transId": "123456789",
+  "resultCode": 0,
+  "message": "Success",
+  "payType": "qr",
+  "responseTime": 1733735343000,
+  "extraData": "",
+  "signature": ""
+}
+</textarea>
+
+<button id="sendBtn" class="btn btn-primary mt-2">Gửi IPN</button>
+
+<pre id="result" class="mt-3 bg-light p-2 border rounded"></pre>
+
+<script>
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+        const jsonText = document.getElementById("ipnJson").value;
+        const resultEl = document.getElementById("result");
+
+        try {
+            const res = await fetch("https://localhost:7096/api/Reservation/momo-ipn", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: jsonText
+            });
+
+            const text = await res.text();
+            resultEl.textContent = `Status: ${res.status}\n\n${text}`;
+
+            // Thử parse JSON từ API
+            let obj = null;
+            try {
+                obj = JSON.parse(text);
+            } catch { }
+
+            // Nếu IPN trả về message = "payment success, reservation created"
+            if (res.ok && obj && obj.message === "reservation created") {
+
+                // Lấy lại dữ liệu test trong textarea
+                const ipnData = JSON.parse(jsonText);
+
+                // call PaymentResult giống MoMo redirect
+                const url = '@Url.Action("PaymentResult", "Reservation")'
+                    + `?orderId=${encodeURIComponent(ipnData.orderId)}`
+                    + `&resultCode=${encodeURIComponent(ipnData.resultCode)}`
+                    + `&amount=${encodeURIComponent(ipnData.amount)}`
+                    + `&transId=${encodeURIComponent(ipnData.transId)}`
+                    + `&message=${encodeURIComponent(ipnData.message)}`;
+
+                window.location.href = url;
+            }
+        } catch (e) {
+            resultEl.textContent = "Error: " + e;
+        }
+    });
+</script>
+

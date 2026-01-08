@@ -1,0 +1,172 @@
+﻿@{
+    ViewData["Title"] = "Trang Quản Lý";
+    Layout = "_LayoutManager"; // nếu bạn có layout riêng, nếu không thì bỏ dòng này
+}
+
+<div class="dashboard-container">
+    <h1 class="dashboard-title">Trang Quản Lý</h1>
+
+    <div class="card-grid">
+
+        <a href="/ReservationStaff" class="card card-has-badge">
+            <span class="badge-pending">@ViewBag.PendingCount</span>
+
+            <div class="card-icon">
+                <i class="fas fa-concierge-bell"></i>
+            </div>
+
+            <h3>Quản lý đơn đặt bàn</h3>
+            <p>Xem, xác nhận, sắp xếp và quản lý thông tin đặt bàn của khách hàng.</p>
+        </a>
+
+
+
+    
+        <a href="/TableManage/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản Lí Bàn </h3>
+            <p>Xem Danh sách bàn , kiểm tra trạng thái bàn , thêm ,sửa , xóa bàn khi cần </p>
+        </a>
+       
+        <a href="/AreaManage/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản Lí Khu vực bàn  </h3>
+            <p>Xem danh sách Khu vực , thêm , sửa , xóa  khi cần </p>
+        </a> 
+        <a href="/EventManage/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản Lí Sự kiện  </h3>
+            <p>Xem danh sách Sự kiện , theo dõi trạng thái, thêm , cập nhật sự kiện , điều chỉnh hiển thị lên trang chủ của nhà hàng </p>
+        </a>
+        <a href="/SystemLogo/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản Lí Logo </h3>
+            <p>Xem danh sách Logo, theo dõi trạng thái, thêm , cập nhật logo , điều chỉnh hiển thị lên trang chủ của nhà hàng </p>
+        </a>
+        <a href="/StaffManagement/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản lí nhân viên </h3>
+            <p>Xem danh sách nhân viên, cập nhật trạng thái nhân viên</p>
+        </a>
+        <a href="/ManagerCustomer/index" class="card">
+            <div class="card-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3>Quản lí khách hàng </h3>
+            <p>Xem danh sách khách hàng , cập nhật trạng thái Vip của khách hàng </p>
+        </a>
+      
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+<style>
+    body {
+        background: #f4f6f9;
+        font-family: "Segoe UI", sans-serif;
+    }
+
+    .dashboard-container {
+        padding: 40px 50px;
+    }
+
+    .dashboard-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 30px;
+        color: #2c3e50;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+    }
+
+    .card {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        text-decoration: none;
+        color: #2c3e50;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.07);
+        transition: 0.3s;
+        border-left: 6px solid #27ae60;
+    }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.12);
+        }
+
+    .card-icon {
+        font-size: 40px;
+        color: #27ae60;
+        margin-bottom: 15px;
+    }
+
+    .card h3 {
+        margin-bottom: 10px;
+        font-size: 22px;
+        font-weight: 700;
+    }
+
+    .card p {
+        font-size: 15px;
+        color: #555;
+        line-height: 1.5;
+    }
+
+    /* Badge góc phải */
+    .card-has-badge {
+        position: relative;
+    }
+
+    .badge-pending {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #e74c3c;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-size: 15px;
+        font-weight: 800;
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.7);
+        animation: blinking 1.3s infinite;
+    }
+
+    /* Hiệu ứng nháy nháy */
+    @@keyframes blinking {
+        0%
+
+    {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.4;
+        transform: scale(1.1);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    }
+</style>

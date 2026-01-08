@@ -1,44 +1,261 @@
-/**
- * Create Manager Page - CSS
- * Specific styles for CreateManager view
+﻿/**
+ * =====================================================
+ * CREATE MANAGER PAGE (users/createManager.css)
+ * Styles specific to manager creation page
+ * =====================================================
  */
 
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--neutral-gray-300);
+/* ===== FORM LAYOUT ===== */
+#createManagerForm .row {
+    margin-bottom: 0;
 }
 
-.header-content .page-title {
-    margin: 0;
+    #createManagerForm .row .col-md-6 {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    #createManagerForm .row:first-child .col-md-6:first-child {
+        padding-left: 0;
+    }
+
+    #createManagerForm .row:first-child .col-md-6:last-child {
+        padding-right: 0;
+    }
+
+/* ===== FORM GROUPS ===== */
+#createManagerForm .mb-3 {
+    margin-bottom: 1.25rem;
 }
 
-.header-content .page-subtitle {
-    margin: 0.5rem 0 0 0;
+/* ===== ROLE SELECT - Special styling ===== */
+select[name="RoleId"] {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 3rem;
 }
 
-.page-actions {
-    display: flex;
-    gap: 0.5rem;
+    /* Highlight selected manager role */
+    select[name="RoleId"] option[value="3"] {
+        font-weight: 600;
+        color: #E65100;
+    }
+
+    select[name="RoleId"] option[value="2"] {
+        color: #C62828;
+    }
+
+    select[name="RoleId"] option[value="1"] {
+        color: #1565C0;
+    }
+
+/* Help text below role select */
+#createManagerForm small.text-gray-custom {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 13px;
+    color: var(--primary-600);
+    font-style: italic;
 }
 
-.required::after {
-    content: " *";
-    color: var(--semantic-error);
+/* ===== SIDEBAR GUIDANCE ===== */
+.col-lg-4 .card-custom {
+    position: sticky;
+    top: 1.5rem;
 }
 
+/* Info alert */
+.info-card .alert-info {
+    background-color: var(--primary-100);
+    border-color: var(--primary-300);
+}
+
+    .info-card .alert-info h6 {
+        color: var(--primary-700);
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    .info-card .alert-info ul {
+        margin-bottom: 0;
+        padding-left: 1.5rem;
+    }
+
+    .info-card .alert-info li {
+        margin-bottom: 0.5rem;
+        line-height: 1.6;
+        color: var(--neutral-black);
+    }
+
+        .info-card .alert-info li:last-child {
+            margin-bottom: 0;
+        }
+
+/* ===== ROLE INFO SECTION ===== */
 .role-info {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.875rem;
+    margin-top: 1rem;
 }
 
 .role-item {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: space-between;
+    padding: 0.875rem;
+    background-color: var(--neutral-gray-50);
+    border-radius: 8px;
+    border: 1px solid var(--neutral-gray-200);
+    transition: all 0.2s ease;
 }
 
+    .role-item:hover {
+        background-color: var(--primary-50);
+        border-color: var(--primary-300);
+        transform: translateX(2px);
+    }
+
+    /* Highlight default manager role */
+    .role-item:first-child {
+        background-color: #FFF3E0;
+        border-color: #FFB74D;
+    }
+
+        .role-item:first-child:hover {
+            background-color: #FFE0B2;
+            border-color: #FF9800;
+        }
+
+    .role-item .badge-custom {
+        flex-shrink: 0;
+    }
+
+    .role-item small {
+        flex: 1;
+        margin-left: 0.875rem;
+        font-size: 13px;
+        color: var(--neutral-gray-600);
+        line-height: 1.4;
+    }
+
+    /* Manager badge special emphasis */
+    .role-item:first-child .badge-custom {
+        animation: pulse 2s infinite;
+    }
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* ===== FORM BUTTONS ===== */
+#createManagerForm .d-flex.gap-2 {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--neutral-gray-200);
+}
+
+/* ===== MERMAID ICONS SUPPORT ===== */
+.mdi {
+    display: inline-block;
+    font-family: 'Material Design Icons';
+    font-size: inherit;
+    line-height: inherit;
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Icon in header */
+.card-title .mdi {
+    font-size: 20px;
+    color: var(--primary-500);
+}
+
+/* Icon in buttons */
+.btn-primary-custom .mdi,
+.btn-secondary-custom .mdi {
+    font-size: 16px;
+}
+
+/* ===== VALIDATION ===== */
+.form-control-custom.is-invalid {
+    border-color: var(--semantic-error-500);
+}
+
+    .form-control-custom.is-invalid:focus {
+        border-color: var(--semantic-error-500);
+        box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.1);
+    }
+
+.form-control-custom.is-valid {
+    border-color: var(--semantic-success-500);
+}
+
+    .form-control-custom.is-valid:focus {
+        border-color: var(--semantic-success-500);
+        box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+    }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .row > .col-lg-8,
+    .row > .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .col-lg-4 .card-custom {
+        position: static;
+        margin-top: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #createManagerForm .row .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    #createManagerForm .mb-3 {
+        margin-bottom: 1rem;
+    }
+
+    .role-info {
+        gap: 0.625rem;
+    }
+
+    .role-item {
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 576px) {
+    #createManagerForm .d-flex.gap-2 {
+        flex-direction: column;
+    }
+
+        #createManagerForm .d-flex.gap-2 a,
+        #createManagerForm .d-flex.gap-2 button {
+            width: 100%;
+        }
+
+    .role-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+        .role-item small {
+            margin-left: 0;
+        }
+}

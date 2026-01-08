@@ -1,4 +1,6 @@
-﻿using BusinessAccessLayer.DTOs.Manager;
+﻿using BusinessAccessLayer.DTOs.Inventory;
+using BusinessAccessLayer.DTOs.Manager;
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +13,21 @@ namespace BusinessAccessLayer.Services.Interfaces
     {
         Task<IEnumerable<ManagerMenuDTO>> GetManagerAllMenu();
         Task<ManagerMenuDTO> ManagerMenuById(int id);
-       
+
+        Task<bool> UpdateManagerMenu(ManagerMenuDTO formUpdateMenuDTO);
+
+        Task<IEnumerable<RecipeDTO>> GetRecipeByMenuItem(int id);
+
+
+        Task<bool> DeleteRecipeByMenuItemId(int menuItemId);
+
+        Task<bool> AddRecipe(RecipeDTO dto);
+        Task<List<MenuItemStatisticsDto>> GetMenuItemsWithStatisticsAsync();
+
+
+        Task<int> CreateManagerMenu(ManagerMenuDTO menuDTO); 
+        Task<ManagerMenuDTO?> GetMenuByName(string name);
+
+        
     }
 }

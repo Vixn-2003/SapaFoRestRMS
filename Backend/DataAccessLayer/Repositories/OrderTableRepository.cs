@@ -97,7 +97,7 @@ namespace DataAccessLayer.Repositories
         {
             // Dùng FindAsync là nhanh nhất để lấy theo Khóa chính
             return await _context.Tables
-                    .Include(t => t.Area) // <-- THÊM DÒNG NÀY
+                    .Include(t => t.Area) 
                     .FirstOrDefaultAsync(t => t.TableId == tableId);
         }
 
@@ -163,11 +163,90 @@ namespace DataAccessLayer.Repositories
             // Dùng int? phòng trường hợp Floor bị null
             return await _context.Areas
 
-                .Select(a => (int?)a.Floor) // Ép kiểu a.Floor (int) thành (int?)
-
+                .Select(a => (int?)a.Floor) 
                 .Distinct()
                 .OrderBy(f => f)
                 .ToListAsync();
         }
+        // gọi sử lý sự cố
+        public async Task<bool> HasPendingAssistanceRequestAsync(int tableId)
+        {
+            // Kiểm tra xem bàn này CÓ SẴN một yêu cầu đang "Pending" không
+            return await _context.AssistanceRequests
+                .AnyAsync(r => r.TableId == tableId && r.Status.Trim().ToLower() == "Pending");
+        }
+
+        public async Task CreateAssistanceRequestAsync(AssistanceRequest request)
+        {
+            await _context.AssistanceRequests.AddAsync(request);
+            // (Lưu ý: Hàm này không gọi SaveChanges, Service sẽ gọi)
+        }
+
+        // Đặt hàm này ở cuối file Repository
+        public async Task<Combo> GetComboWithDetailsAsync(int comboId)
+        {
+            // 1. Lấy danh sách ComboItems (bảng trung gian)
+            // 2. Từ ComboItems, lấy MenuItem (món ăn thật)
+            return await _context.Combos
+                .Include(c => c.ComboItems)
+                    .ThenInclude(ci => ci.MenuItem)
+                .Where(c => c.ComboId == comboId && c.IsAvailable == true)
+                .AsNoTracking() // Dùng AsNoTracking vì đây là thao tác đọc (read-only)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<MenuItem> GetMenuItemWithDetailsAsync(int menuItemId)
+        {
+            // Chúng ta Include(Category) để lấy tên Category
+            return await _context.MenuItems
+                .Include(m => m.Category)
+                .AsNoTracking() // Dùng AsNoTracking vì đây là thao tác đọc
+                .FirstOrDefaultAsync(m => m.MenuItemId == menuItemId);
+        }
+
+        // [CHO NHÂN VIÊN] Lấy danh sách
+        public async Task<(IEnumerable<AssistanceRequest> Items, int TotalCount)>
+GetPendingRequestsForStaffAsync(string? sort, int pageIndex, int pageSize)
+        {
+            // ❌ XÓA BỎ 2 DÒNG NÀY (Nguyên nhân gây lỗi qua ngày)
+            // DateTime today = DateTime.Today;
+            // DateTime tomorrow = today.AddDays(1);
+
+            var query = _context.AssistanceRequests
+                .Include(r => r.Table)
+                    .ThenInclude(t => t.Area)
+                //  CHỈ LỌC THEO STATUS (Bỏ lọc thời gian)
+                .Where(r => r.Status == "Pending")
+                .AsNoTracking();
+
+            // Sắp xếp
+            sort = sort?.ToLower();
+            query = sort switch
+            {
+                "oldest" => query.OrderBy(r => r.RequestTime), // Cũ nhất lên đầu (để xử lý trước)
+                _ => query.OrderByDescending(r => r.RequestTime)
+            };
+
+            // Tổng số dòng
+            int totalCount = await query.CountAsync();
+
+            // Phân trang
+            var items = await query
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+
+        // [CHO NHÂN VIÊN] Lấy chi tiết
+        public async Task<AssistanceRequest> GetRequestByIdAsync(int requestId)
+        {
+            return await _context.AssistanceRequests
+                .Include(r => r.Table) // Include để lấy TableId khi bắn SignalR
+                .FirstOrDefaultAsync(r => r.RequestId == requestId);
+        }
+
     }
 }

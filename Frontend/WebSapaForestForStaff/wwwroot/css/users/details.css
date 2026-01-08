@@ -1,120 +1,302 @@
-/**
- * User Details Page - CSS
- * Specific styles for Details view
- */
-
-.page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--neutral-gray-300);
+﻿**
+* =====================================================
+* DETAILS PAGE - User Details (users/details.css)
+* Styles specific to user details page
+* =====================================================
+*/
+/* ===== USER PROFILE CARD ===== */
+.card-custom .card-body-custom.text-center {
+    text-align: center;
 }
 
-.header-content .page-title {
-    margin: 0;
+.card-custom .card-body-custom.text-center h4 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--neutral-black);
+    margin-bottom: 0.5rem;
 }
 
-.header-content .page-subtitle {
-    margin: 0.5rem 0 0 0;
+.card-custom .card-body-custom.text-center .text-muted {
+    font-size: 14px;
+    color: var(--neutral-gray-600);
 }
 
-.page-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
+/* Avatar */
 .avatar-lg {
-    width: 80px;
-    height: 80px;
-    font-size: 2rem;
-    font-weight: 600;
+    width: 96px;
+    height: 96px;
+    font-size: 36px;
+    font-weight: 700;
+    background-color: var(--primary-500) !important;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
 }
 
+    .avatar-lg.rounded-circle {
+        border-radius: 50%;
+    }
+
+    .avatar-lg.mx-auto {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+/* User Info List */
 .user-info {
-    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--neutral-gray-200);
 }
 
 .info-item {
     display: flex;
     align-items: center;
+    gap: 0.875rem;
+    font-size: 14px;
+    color: var(--neutral-gray-700);
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+    .info-item:hover {
+        background-color: var(--neutral-gray-50);
+    }
+
+    .info-item i {
+        font-size: 18px;
+        color: var(--primary-500);
+        width: 24px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .info-item span {
+        flex: 1;
+        font-weight: 500;
+    }
+
+/* Badge group in profile */
+.d-flex.justify-content-center.gap-2 {
+    display: flex;
+    justify-content: center;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    color: var(--neutral-gray-600);
-}
-
-.info-item i {
-    width: 16px;
-    color: var(--primary-500);
-}
-
-.info-group {
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+/* ===== ACCOUNT DETAILS SECTION ===== */
+.info-group {
+    margin-bottom: 1.5rem;
 }
 
 .info-label {
     display: block;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-    color: var(--neutral-black);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--neutral-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 0.5rem;
 }
 
 .info-value {
-    color: var(--neutral-gray-600);
+    display: block;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--neutral-black);
+    line-height: 1.5;
 }
 
+/* Grid layout for info groups */
+.card-body-custom .row .col-md-6 {
+    margin-bottom: 1rem;
+}
+
+/* ===== LOGIN HISTORY TABLE ===== */
+.table-custom.table-sm {
+    font-size: 13px;
+}
+
+    .table-custom.table-sm thead th {
+        padding: 0.75rem;
+        font-size: 12px;
+    }
+
+    .table-custom.table-sm tbody td {
+        padding: 0.75rem;
+        font-size: 13px;
+    }
+
+.table-custom thead {
+    background-color: #fafafa;
+}
+
+    .table-custom thead th {
+        border-bottom: 2px solid var(--neutral-gray-300);
+        font-weight: 600;
+        color: var(--neutral-gray-700);
+    }
+
+.table-custom tbody td {
+    border-bottom: 1px solid var(--neutral-gray-200);
+    color: var(--neutral-black);
+    vertical-align: middle;
+}
+
+.table-custom tbody tr:hover {
+    background-color: var(--primary-50);
+}
+
+.table-custom tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ===== ACTIVITY TIMELINE ===== */
 .activity-timeline {
-    position: relative;
-    padding-left: 2rem;
-}
-
-.activity-timeline::before {
-    content: '';
-    position: absolute;
-    left: 0.75rem;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background-color: var(--neutral-gray-300);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .activity-item {
-    position: relative;
-    margin-bottom: 1rem;
-    padding-left: 1rem;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--neutral-gray-50);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-500);
+    transition: all 0.2s ease;
 }
 
-.activity-item::before {
-    content: '';
-    position: absolute;
-    left: -0.5rem;
-    top: 0.5rem;
-    width: 8px;
-    height: 8px;
-    background-color: var(--primary-500);
-    border-radius: 50%;
-}
+    .activity-item:hover {
+        background-color: var(--primary-50);
+        border-left-color: var(--primary-600);
+        transform: translateX(2px);
+    }
 
 .activity-time {
-    font-size: 0.875rem;
+    font-size: 12px;
+    font-weight: 600;
     color: var(--neutral-gray-600);
-    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    min-width: 130px;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
 }
 
 .activity-type {
+    font-size: 14px;
     font-weight: 600;
     color: var(--neutral-black);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.375rem;
 }
 
 .activity-description {
-    color: var(--neutral-gray-600);
+    font-size: 13px;
+    color: var(--neutral-gray-700);
+    line-height: 1.6;
     margin-bottom: 0.25rem;
 }
 
 .activity-ip {
-    font-size: 0.75rem;
-    color: var(--neutral-gray-600);
+    font-size: 12px;
+    color: var(--neutral-gray-500);
+    font-style: italic;
 }
 
+/* ===== PAGE ACTIONS SPECIFIC TO DETAILS ===== */
+.page-actions .btn-text-custom {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+    .page-actions .btn-text-custom:hover {
+        background-color: var(--primary-50);
+    }
+
+/* ===== CARDS LAYOUT ===== */
+.row.mt-4 {
+    margin-top: 2rem;
+}
+
+.card-custom + .row {
+    margin-top: 1.5rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .row > .col-lg-4,
+    .row > .col-lg-8 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 1.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .avatar-lg {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+    }
+
+    .card-custom .card-body-custom.text-center h4 {
+        font-size: 18px;
+    }
+
+    .user-info {
+        gap: 0.75rem;
+    }
+
+    .info-item {
+        padding: 0.375rem;
+    }
+
+    .info-group {
+        margin-bottom: 1rem;
+    }
+
+    .activity-item {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .activity-time {
+        min-width: auto;
+        white-space: normal;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 576px) {
+    .d-flex.justify-content-center.gap-2 {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .page-actions {
+        flex-wrap: wrap;
+    }
+
+        .page-actions a,
+        .page-actions button {
+            flex: 1 1 100%;
+            justify-content: center;
+        }
+}

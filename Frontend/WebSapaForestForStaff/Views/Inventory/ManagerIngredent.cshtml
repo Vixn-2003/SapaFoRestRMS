@@ -1,0 +1,5566 @@
+﻿@using WebSapaForestForStaff.DTOs;
+@using WebSapaForestForStaff.DTOs.Inventory;
+@using System.Security.Claims
+
+@{
+    Layout = "_LayoutInventory";
+    ViewData["Title"] = "Quản lý mặt hàng";
+
+    // ✅ LẤY THÔNG TIN TỪ CLAIMS
+    var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+    var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Không xác định";
+    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+    var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    var userPhone = User.FindFirst(ClaimTypes.MobilePhone)?.Value ?? ""; // ✅ THÊM DÒNG NÀY
+
+    // ✅ LẤY POSITIONS (nếu có)
+    var positionsJson = User.FindFirst("Positions")?.Value;
+    var userPosition = "Nhân viên kho";
+    if (!string.IsNullOrEmpty(positionsJson))
+    {
+        try
+        {
+            var positions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(positionsJson);
+            userPosition = positions != null && positions.Any() ? string.Join(", ", positions) : "Nhân viên";
+        }
+        catch
+        {
+            userPosition = "Nhân viên kho";
+        }
+    }
+}
+@model WebSapaForestForStaff.DTOs.InventoryPagedViewModel
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background-color: #f9fafb;
+        color: #111827;
+    }
+
+    .container {
+        min-height: 100vh;
+        padding: 0.2rem;
+    }
+
+    .max-width {
+        max-width: 100rem;
+        margin: 0 auto;
+    }
+
+    .card {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .header-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .header-subtitle {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    @@media (min-width: 768px) {
+        .filter-grid {
+            grid-template-columns: repeat(6, 1fr);
+        }
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-input, .form-select {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        outline: none;
+        transition: all 0.15s;
+    }
+
+    .form-input:focus, .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .button-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1.5rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #2563eb;
+    }
+
+    .btn-success {
+        background-color: #3b82f6;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #059669;
+    }
+
+    .btn-danger {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #dc2626;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .table-wrapper {
+        overflow-y: auto;
+        max-height: 600px; /* Chiều cao cho khoảng 9 dòng (~65px/dòng) */
+        position: relative;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #000000;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+    .table th {
+        padding: 0.75rem 1rem;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #ffffff;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.15s;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .table td {
+        text-align: center;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .table td.text-right {
+        text-align: right;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .action-btn {
+        padding: 0.25rem;
+        border: none;
+        background: transparent;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        transition: background-color 0.15s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .action-btn i {
+        font-size: 1rem;
+    }
+
+    .action-btn.view {
+        color: #9333ea;
+    }
+
+    .action-btn.view:hover {
+        background-color: #faf5ff;
+    }
+
+    .pagination {
+        padding: 0.75rem 1rem;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .pagination-text {
+        font-size: 0.875rem;
+        color: #374151;
+    }
+
+    .pagination-btn {
+        padding: 0.25rem 0.5rem;
+        border: 1px solid #d1d5db;
+        background: white;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: background-color 0.15s;
+        text-decoration: none;
+        color: #374151;
+    }
+
+    .pagination-btn:hover:not(.disabled) {
+        background-color: #f9fafb;
+    }
+
+    .pagination-btn.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+
+    .pagination-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .pagination-info {
+        font-size: 0.875rem;
+        color: #374151;
+    }
+
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .fa-spinner.fa-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 1400px;
+        max-width: 95%;
+        max-height: 100vh;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #5a5a5a 0%, #5a5a5a 100%);
+        border-radius: 12px 12px 0 0;
+    }
+
+    .modal-header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-body {
+        padding: 2rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer {
+        padding: 1rem 2rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .modal-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .btn-edit-header {
+        background-color: #3b82f6;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .btn-edit-header:hover {
+            background-color: #2563eb;
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+    .close-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+
+        .close-btn:hover {
+            background: rgba(239, 68, 68, 0.9);
+            border-color: #ef4444;
+            transform: rotate(90deg);
+        }
+
+    .info-header {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #3b82f6;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .info-header-content {
+        flex: 1;
+    }
+
+        .info-header-content p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            color: #1e40af;
+            display: flex;
+            align-items: center;
+        }
+
+        .info-header-content strong {
+            font-weight: 600;
+            color: #1e3a8a;
+            min-width: 140px;
+        }
+
+        .info-header-content span {
+            font-weight: 500;
+            color: #1f2937;
+            background: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+        }
+
+    .info-header-actions {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .btn-edit-info {
+        background-color: #3b82f6;
+        color: white;
+        padding: 0.6rem 1.25rem;
+        border-radius: 0.5rem;
+        border: none;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+        .btn-edit-info:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-edit-info:active {
+            transform: translateY(0);
+        }
+
+        @@media (max-width: 768px) {
+    .info-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .info-header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+
+    .batch-table-container {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .batch-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .batch-table thead {
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    }
+
+    .batch-table thead tr {
+        border-bottom: 2px solid #d1d5db;
+    }
+
+    .batch-table th {
+        padding: 1rem;
+        text-align: left;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #374151;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .batch-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s;
+    }
+
+    .batch-table tbody tr:hover {
+        background-color: #fef3c7;
+    }
+
+    .batch-table td {
+        padding: 1rem;
+        font-size: 0.875rem;
+        color: #4b5563;
+    }
+
+    /* Warehouse Select Styles */
+    .warehouse-select {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        background-color: white;
+        cursor: pointer;
+        min-width: 150px;
+        transition: all 0.2s;
+    }
+
+    .warehouse-select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .warehouse-select.changed {
+        border-color: #f59e0b;
+        background-color: #fffbeb;
+    }
+
+    .btn-save-warehouse {
+        padding: 0.4rem 0.8rem;
+        background-color: #10b981;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: none;
+    }
+
+    .btn-save-warehouse:hover {
+        background-color: #059669;
+        transform: translateY(-1px);
+    }
+
+    .btn-save-warehouse.show {
+        display: inline-block;
+    }
+
+    /* Confirmation popup */
+    .confirm-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+
+    .confirm-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        max-width: 400px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .confirm-content h3 {
+        margin-bottom: 1rem;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .confirm-content p {
+        margin-bottom: 1.5rem;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+
+    .confirm-buttons {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    /* Alert/Notification Styles */
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease-out;
+    position: relative;
+}
+
+.alert-error {
+    background-color: #fee2e2;
+    border-left: 4px solid #ef4444;
+    color: #991b1b;
+}
+
+.alert-info {
+    background-color: #dbeafe;
+    border-left: 4px solid #3b82f6;
+    color: #1e40af;
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    border-left: 4px solid #10b981;
+    color: #065f46;
+}
+
+.alert-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    /* ... */
+}
+
+@@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@@keyframes slideUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+    .action-btn.edit {
+        color: #3b82f6;
+    }
+
+        .action-btn.edit:hover {
+            background-color: #eff6ff;
+        }
+
+    /* Edit Modal Styles */
+    .edit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1001;
+        backdrop-filter: blur(4px);
+    }
+
+        .edit-modal-overlay.active {
+            display: flex;
+        }
+
+    .edit-modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 500px;
+        max-width: 95%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .edit-modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border-radius: 12px 12px 0 0;
+    }
+
+        .edit-modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+    .edit-modal-body {
+        padding: 2rem;
+    }
+
+    .edit-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .edit-form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .edit-form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+        .edit-form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .edit-form-input:disabled {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+        }
+
+    .edit-modal-footer {
+        padding: 1rem 2rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0 12px 12px;
+    }
+
+  /* Trạng thái mặt hàng */
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-normal {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-low-stock {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* ✅ THÊM: Style cho "Dưới tối thiểu" - Màu cam */
+.status-below-reorder {
+    background-color: #fed7aa;
+    color: #9a3412;
+}
+
+.status-expiring-soon {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+
+    /* ✅ THÊM: Style cho "Hết hạn" - Màu đen/xám đậm */
+    .status-expired {
+        background-color: #f3f4f6;
+        color: #1f2937;
+        border: 1px solid #6b7280;
+    }
+
+    /* Style cho lô hết hạn trong modal */
+    .batch-table tbody tr.batch-expired {
+        background-color: #fee2e2;
+        border-left: 4px solid #ef4444;
+    }
+
+        .batch-table tbody tr.batch-expired:hover {
+            background-color: #fecaca;
+        }
+
+    /* Style cho lô sắp hết hạn trong modal */
+    .batch-table tbody tr.batch-expiring-soon {
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
+    }
+
+        .batch-table tbody tr.batch-expiring-soon:hover {
+            background-color: #fde68a;
+        }
+
+    /* Badge cho trạng thái trong modal */
+    .batch-status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .batch-status-expired {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .batch-status-expiring {
+        background-color: #f59e0b;
+        color: white;
+    }
+
+    .batch-status-normal {
+        background-color: #10b981;
+        color: white;
+    }
+
+/* Utility classes */
+.inline-flex {
+    display: inline-flex;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.gap-1 {
+    gap: 0.25rem;
+}
+
+.gap-1\.5 {
+    gap: 0.375rem;
+}
+
+.px-3 {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.py-1\.5 {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.rounded-md {
+    border-radius: 0.375rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.border-2 {
+    border-width: 2px;
+}
+
+.shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+
+    @@keyframes pulse-red {
+        0%, 100% {
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+
+        50% {
+            opacity: 0.85;
+            box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.6);
+        }
+    }
+
+    .pulse-red-alert {
+        animation: pulse-red 2s ease-in-out infinite;
+    }
+
+/* Màu sắc */
+.bg-red-100 { background-color: #fee2e2; }
+.text-red-700 { color: #b91c1c; }
+.border-red-400 { border-color: #f87171; }
+.bg-orange-100 { background-color: #ffedd5; }
+.text-orange-700 { color: #c2410c; }
+.border-orange-400 { border-color: #fb923c; }
+.bg-yellow-100 { background-color: #fef3c7; }
+.text-yellow-700 { color: #a16207; }
+.border-yellow-400 { border-color: #facc15; }
+.bg-green-100 { background-color: #dcfce7; }
+.text-green-700 { color: #15803d; }
+.border-green-300 { border-color: #86efac; }
+
+
+    /* Audit Modal Styles */
+    .audit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1002;
+        backdrop-filter: blur(4px);
+    }
+
+        .audit-modal-overlay.active {
+            display: flex;
+        }
+
+    .audit-modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 1200px;
+        max-width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .audit-modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        border-radius: 12px 12px 0 0;
+    }
+
+        .audit-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+    .audit-modal-body {
+        padding: 2rem;
+    }
+
+    .audit-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+        .audit-table thead {
+            background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        }
+
+            .audit-table thead th {
+                padding: 1rem;
+                text-align: left;
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: white;
+            }
+
+                .audit-table thead th.text-right {
+                    text-align: right;
+                }
+
+        .audit-table tbody td {
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+        }
+
+            .audit-table tbody td.text-right {
+                text-align: right;
+            }
+
+    .audit-actions {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #93c5fd;
+    }
+
+    .audit-radio-group {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .audit-radio-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #374151;
+        transition: color 0.2s;
+    }
+
+        .audit-radio-label:hover {
+            color: #9333ea;
+        }
+
+        .audit-radio-label input[type="radio"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+    .audit-quantity-input {
+        width: 16rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+        .audit-quantity-input:focus {
+            outline: none;
+            border-color: #9333ea;
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+        }
+
+    .audit-preview {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #f59e0b;
+    }
+
+    .audit-preview-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d97706;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+        .audit-preview-table thead {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+            .audit-preview-table thead th {
+                padding: 1rem;
+                text-align: left;
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: white;
+            }
+
+        .audit-preview-table tbody td {
+            padding: 1rem;
+            border: 1px solid #fde68a;
+            background: white;
+        }
+
+    .audit-confirmer-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .audit-confirmer-box {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #93c5fd;
+    }
+
+    .audit-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 1rem;
+        transition: color 0.2s;
+    }
+
+        .audit-checkbox-label:hover {
+            color: #2563eb;
+        }
+
+        .audit-checkbox-label input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+    .audit-input-group {
+        margin-bottom: 1rem;
+    }
+
+    .audit-input-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .audit-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+        .audit-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .audit-input:read-only {
+            background-color: #eff6ff;
+            cursor: not-allowed;
+        }
+
+    .audit-placeholder {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #9ca3af;
+    }
+
+        .audit-placeholder i {
+            font-size: 3rem;
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+
+    .audit-success-note {
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        background: #d1fae5;
+        border: 1px solid #10b981;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #065f46;
+    }
+
+    .audit-image-box {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #6ee7b7;
+    }
+
+    .audit-upload-area {
+        border: 2px dashed #6ee7b7;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-upload-area:hover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+    .audit-image-preview {
+        max-width: 100%;
+        max-height: 12rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-bottom: 0.75rem;
+    }
+
+    .audit-modal-footer {
+        padding: 1rem 2rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0 12px 12px;
+    }
+
+  /* Trạng thái mặt hàng */
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-normal {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-low-stock {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* ✅ THÊM: Style cho "Dưới tối thiểu" - Màu cam */
+.status-below-reorder {
+    background-color: #fed7aa;
+    color: #9a3412;
+}
+
+.status-expiring-soon {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+
+    /* ✅ THÊM: Style cho "Hết hạn" - Màu đen/xám đậm */
+    .status-expired {
+        background-color: #f3f4f6;
+        color: #1f2937;
+        border: 1px solid #6b7280;
+    }
+
+    /* Style cho lô hết hạn trong modal */
+    .batch-table tbody tr.batch-expired {
+        border-left: 4px solid #ef4444;
+    }
+
+        .batch-table tbody tr.batch-expired:hover {
+            background-color: #fecaca;
+        }
+
+    /* Style cho lô sắp hết hạn trong modal */
+    .batch-table tbody tr.batch-expiring-soon {
+        border-left: 4px solid #f59e0b;
+    }
+
+        .batch-table tbody tr.batch-expiring-soon:hover {
+            background-color: #fde68a;
+        }
+
+    /* Badge cho trạng thái trong modal */
+    .batch-status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .batch-status-expired {
+        background-color: #ef4444;
+        color: white;
+    }
+
+    .batch-status-expiring {
+        background-color: #f59e0b;
+        color: white;
+    }
+
+    .batch-status-normal {
+        background-color: #10b981;
+        color: white;
+    }
+
+/* Utility classes */
+.inline-flex {
+    display: inline-flex;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.gap-1 {
+    gap: 0.25rem;
+}
+
+.gap-1\.5 {
+    gap: 0.375rem;
+}
+
+.px-3 {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.py-1\.5 {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.rounded-md {
+    border-radius: 0.375rem;
+}
+
+.text-sm {
+    font-size: 0.875rem;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+.border-2 {
+    border-width: 2px;
+}
+
+.shadow-sm {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+
+    @@keyframes pulse-red {
+        0%, 100% {
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+
+        50% {
+            opacity: 0.85;
+            box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.6);
+        }
+    }
+
+    .pulse-red-alert {
+        animation: pulse-red 2s ease-in-out infinite;
+    }
+
+/* Màu sắc */
+.bg-red-100 { background-color: #fee2e2; }
+.text-red-700 { color: #b91c1c; }
+.border-red-400 { border-color: #f87171; }
+.bg-orange-100 { background-color: #ffedd5; }
+.text-orange-700 { color: #c2410c; }
+.border-orange-400 { border-color: #fb923c; }
+.bg-yellow-100 { background-color: #fef3c7; }
+.text-yellow-700 { color: #a16207; }
+.border-yellow-400 { border-color: #facc15; }
+.bg-green-100 { background-color: #dcfce7; }
+.text-green-700 { color: #15803d; }
+.border-green-300 { border-color: #86efac; }
+
+
+    /* Audit Modal Styles */
+    .audit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1002;
+        backdrop-filter: blur(4px);
+    }
+
+        .audit-modal-overlay.active {
+            display: flex;
+        }
+
+    .audit-modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 1200px;
+        max-width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .audit-modal-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #313131;
+        border-radius: 12px 12px 0 0;
+    }
+
+        .audit-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+    .audit-modal-body {
+        padding: 2rem;
+    }
+
+    .audit-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+        .audit-table thead {
+            background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+        }
+
+            .audit-table thead th {
+                padding: 1rem;
+                text-align: left;
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: white;
+            }
+
+                .audit-table thead th.text-right {
+                    text-align: right;
+                }
+
+        .audit-table tbody td {
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+        }
+
+            .audit-table tbody td.text-right {
+                text-align: right;
+            }
+
+    .audit-actions {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #93c5fd;
+    }
+
+    .audit-radio-group {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 1rem;
+    }
+
+    .audit-radio-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #374151;
+        transition: color 0.2s;
+    }
+
+        .audit-radio-label:hover {
+            color: #9333ea;
+        }
+
+        .audit-radio-label input[type="radio"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+    .audit-quantity-input {
+        width: 16rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+        .audit-quantity-input:focus {
+            outline: none;
+            border-color: #9333ea;
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+        }
+
+    .audit-preview {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #f59e0b;
+    }
+
+    .audit-preview-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #d97706;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+        .audit-preview-table thead {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+            .audit-preview-table thead th {
+                padding: 1rem;
+                text-align: left;
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: white;
+            }
+
+        .audit-preview-table tbody td {
+            padding: 1rem;
+            border: 1px solid #fde68a;
+            background: white;
+        }
+
+    .audit-confirmer-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .audit-confirmer-box {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #93c5fd;
+    }
+
+    .audit-checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1e40af;
+        margin-bottom: 1rem;
+        transition: color 0.2s;
+    }
+
+        .audit-checkbox-label:hover {
+            color: #2563eb;
+        }
+
+        .audit-checkbox-label input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+    .audit-input-group {
+        margin-bottom: 1rem;
+    }
+
+    .audit-input-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .audit-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+
+        .audit-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .audit-input:read-only {
+            background-color: #eff6ff;
+            cursor: not-allowed;
+        }
+
+    .audit-placeholder {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #9ca3af;
+    }
+
+        .audit-placeholder i {
+            font-size: 3rem;
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+
+    .audit-success-note {
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        background: #d1fae5;
+        border: 1px solid #10b981;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #065f46;
+    }
+
+    .audit-image-box {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #6ee7b7;
+    }
+
+    .audit-upload-area {
+        border: 2px dashed #6ee7b7;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-upload-area:hover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+    .audit-image-preview {
+        max-width: 100%;
+        max-height: 12rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-bottom: 0.75rem;
+    }
+
+    .audit-modal-footer {
+        padding: 1rem 2rem;
+        border-top: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background-color: #f9fafb;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .text-increase {
+        color: #10b981;
+        font-weight: 700;
+    }
+
+    .text-decrease {
+        color: #ef4444;
+        font-weight: 700;
+    }
+
+    .text-diff {
+        font-size: 0.875rem;
+        margin-left: 0.5rem;
+    }
+
+    /* ===== AUDIT MODAL STYLES (ĐANG CÓ RỒI) ===== */
+    /* Code CSS cho audit modal đã có sẵn trong file,
+       chỉ cần kiểm tra xem đã đầy đủ chưa */
+
+    /* ✅ Bổ sung thêm các style này nếu chưa có: */
+
+    .audit-reason-section {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #f59e0b;
+        margin-bottom: 1.5rem;
+    }
+
+    .audit-reason-textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 0.75rem 1rem;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        resize: vertical;
+        transition: all 0.2s;
+    }
+
+        .audit-reason-textarea:focus {
+            outline: none;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        }
+
+    .audit-final-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #eff6ff;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-final-checkbox:hover {
+            background: #dbeafe;
+        }
+
+        .audit-final-checkbox input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+    /* ✅ THÊM: Style cho preview box 1 cột */
+    .audit-preview-single {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+        .audit-preview-single > div {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .audit-preview-single .preview-value {
+            font-size: 3rem;
+            font-weight: 800;
+            text-align: center;
+            color: #1f2937;
+            line-height: 1.2;
+        }
+
+        /* ✅ Animation cho preview số lượng */
+#auditPreviewQty {
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+#auditPreviewQty:hover {
+    transform: scale(1.05);
+}
+
+#auditDiffIndicator {
+    transition: all 0.3s ease;
+}
+
+/* Pulse effect khi số thay đổi */
+@@keyframes pulse-number {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.number-changed {
+    animation: pulse-number 0.3s ease;
+}
+
+/* ✅ Responsive cho layout mới */
+@@media (max-width: 1024px) {
+    .audit-actions > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    
+    .audit-actions > div > div:last-child {
+        min-width: 100% !important;
+    }
+}
+
+/* ✅ Animation mượt hơn cho số lượng */
+#auditPreviewQty {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#auditDiffIndicator {
+    transition: all 0.3s ease;
+}
+
+/* ✅ Hover effect cho preview box */
+.audit-actions > div > div:last-child {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.audit-actions > div > div:last-child:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.3);
+}
+
+@@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+/* Có thể thêm vào phần <style> nếu muốn tùy chỉnh thêm */
+#auditWarningPopup .confirm-content {
+    animation: slideUp 0.3s ease-out;
+}
+
+#auditWarningPopup h3 i {
+    animation: pulse-warning 1.5s ease-in-out infinite;
+}
+
+@@keyframes pulse-warning {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+    /* Checkbox IsActive Styles */
+    .isactive-checkbox-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .isactive-checkbox {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+        accent-color: #10b981;
+        transition: all 0.2s;
+    }
+
+        .isactive-checkbox:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .isactive-checkbox.changed {
+            accent-color: #f59e0b;
+        }
+
+/* Thêm vào phần <style> */
+
+/* ===== TRẠNG THÁI HẾT HÀNG ===== */
+.status-out-of-stock {
+    background-color: #1f2937;
+    color: white;
+    animation: pulse-dark 2s ease-in-out infinite;
+}
+
+@@keyframes pulse-dark {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(31, 41, 55, 0.7);
+    }
+    50% {
+        opacity: 0.85;
+        box-shadow: 0 0 12px 4px rgba(31, 41, 55, 0.9);
+    }
+}
+
+/* Row hết hàng trong bảng batch */
+.batch-table tbody tr.batch-out-of-stock {
+    background-color: #f3f4f6;
+    opacity: 0.7;
+}
+
+.batch-table tbody tr.batch-out-of-stock:hover {
+    background-color: #e5e7eb;
+    opacity: 0.85;
+}
+
+/* Badge hết hàng */
+.batch-status-badge.batch-status-out-of-stock {
+    background-color: #1f2937;
+    color: white;
+    animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(31, 41, 55, 0.7);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 8px 2px rgba(31, 41, 55, 0.9);
+    }
+}
+
+/* ===== PAGINATION CHO MODAL ===== */
+.batch-pagination {
+    padding: 1rem;
+    border-top: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f9fafb;
+}
+
+.batch-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.batch-pagination-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s;
+    color: #374151;
+}
+
+.batch-pagination-btn:hover:not(.disabled) {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+}
+}
+
+.batch-pagination-btn.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.batch-pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.batch-pagination-info {
+    font-size: 0.875rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+/* Responsive cho filter layout */
+@@media (max-width: 1024px) {
+    form.card > div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+}
+
+@@media (max-width: 768px) {
+    form.card > div > div > div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Tooltip cho Mức tối thiểu */
+.info-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5rem;
+    cursor: help;
+}
+
+.info-tooltip .fa-info-circle {
+    width: 20px;
+    height: 20px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.info-tooltip:hover .fa-info-circle {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
+.tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+/* Mũi tên tooltip */
+.tooltip-text::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1f2937;
+}
+
+.info-tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+    bottom: 135%;
+}
+
+/* Responsive cho tooltip */
+@@media (max-width: 768px) {
+    .tooltip-text {
+        white-space: normal;
+        max-width: 200px;
+    }
+}
+
+
+/* ===== FILTER SHORTCUT BUTTONS ===== */
+.filter-shortcut-btn {
+    padding: 0.875rem 1.5rem;
+    border: 2px solid #d1d5db;
+    background: white;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.filter-shortcut-btn i {
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+}
+
+.filter-shortcut-btn:hover i {
+    transform: scale(1.15);
+}
+
+.filter-shortcut-btn:hover {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: #1e40af;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.filter-shortcut-btn.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-color: #2563eb;
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px);
+}
+
+.filter-shortcut-btn.active i {
+    color: white;
+}
+
+.count-badge {
+    background: rgba(0, 0, 0, 0.15);
+    padding: 0.25rem 0.625rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: center;
+}
+
+.filter-shortcut-btn.active .count-badge {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ===== ANIMATION CHO DASHBOARD ===== */
+@@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#dashboardStats {
+    animation: slideInDown 0.5s ease-out;
+}
+
+#filterShortcuts {
+    animation: slideInDown 0.6s ease-out;
+}
+
+/* ===== HOVER EFFECT CHO CARDS ===== */
+.dashboard-card p:first-child {
+    transition: transform 0.2s ease;
+}
+
+.dashboard-card:hover p:first-child {
+    transform: translateX(4px);
+}
+
+    /* ===== STYLE CHO SELECT SẮP XẾP ===== */
+    #sortBySelect,
+    #sortOrderSelect {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        #sortBySelect:hover,
+        #sortOrderSelect:hover {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        #sortBySelect:focus,
+        #sortOrderSelect:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+
+        /* ===== LAYOUT 2 CỘT ===== */
+.main-content-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@@media (max-width: 1400px) {
+    .main-content-wrapper {
+        grid-template-columns: 1fr;
+    }
+    
+    .alert-panel {
+        order: -1;
+    }
+}
+
+/* ===== BẢNG CẢNH BÁO ===== */
+.alert-panel {
+    position: sticky;
+    top: 1rem;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+    .alert-panel-header {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        padding: 1.25rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .alert-panel-header-content {
+        flex: 1;
+    }
+
+    .alert-panel-header h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.125rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .alert-panel-header p {
+        margin: 0;
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+
+.alert-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.alert-item {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    border-left: 4px solid;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.alert-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.alert-item.out-of-stock {
+    background: #f3f4f6;
+    border-color: #1f2937;
+}
+
+.alert-item.low-stock {
+    background: #fee2e2;
+    border-color: #dc2626;
+}
+
+.alert-item.below-reorder {
+    background: #fed7aa;
+    border-color: #ea580c;
+}
+
+.alert-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.alert-item-code {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #1f2937;
+}
+
+.alert-item-name {
+    font-size: 0.875rem;
+    color: #4b5563;
+    margin-bottom: 0.5rem;
+}
+
+.alert-item-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+}
+
+.alert-quantity {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.alert-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9ca3af;
+}
+
+.alert-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+    .alert-item.urgent-restock {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left: 4px solid #f59e0b;
+    }
+
+        .alert-item.urgent-restock:hover {
+            background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+            transform: translateX(4px);
+        }
+
+    .status-badge.status-urgent-restock {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #f59e0b;
+        font-weight: 700;
+    }
+</style>
+
+<div class="container">
+    <div class="max-width">
+        <!-- Notification messages -->
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-error" id="alertMessage">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>@TempData["ErrorMessage"]</span>
+                <button class="alert-close" onclick="closeAlert()">&times;</button>
+            </div>
+        }
+
+        @if (TempData["InfoMessage"] != null)
+        {
+            <div class="alert alert-info" id="alertMessage">
+                <i class="fas fa-info-circle"></i>
+                <span>@TempData["InfoMessage"]</span>
+                <button class="alert-close" onclick="closeAlert()">&times;</button>
+            </div>
+        }
+
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success" id="alertMessage">
+                <i class="fas fa-check-circle"></i>
+                <span>@TempData["SuccessMessage"]</span>
+                <button class="alert-close" onclick="closeAlert()">&times;</button>
+            </div>
+        }
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 class="header-title">Quản lý mặt hàng</h1>
+                    <p class="header-subtitle">Quản lý thông tin mặt hàng</p>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <select class="form-select" id="ingredientReportPeriod" style="width: 150px;">
+                        <option value="today">Hôm nay</option>
+                    </select>
+                    <button id="exportIngredientReportBtn" class="btn btn-success" style="white-space: nowrap;">
+                         Xuất báo cáo
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== FILTER SHORTCUTS ===== -->
+        <div id="filterShortcuts" style="display: flex; gap: 0.75rem; flex-wrap: wrap; padding: 1.25rem; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); border-radius: 0.75rem; border: 1px solid #e5e7eb;">
+            <button class="filter-shortcut-btn active" data-filter="all" onclick="filterByStatus('all')">
+                <i class="fas fa-th-large"></i>
+                <span>Tất cả</span>
+                <span class="count-badge" id="totalCount">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="out-of-stock" onclick="filterByStatus('out-of-stock')">
+                <i class="fas fa-box-open"></i>
+                <span>Hết hàng</span>
+                <span class="count-badge" id="outOfStockBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="low-stock" onclick="filterByStatus('low-stock')">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Sắp hết</span>
+                <span class="count-badge" id="lowStockBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="below-reorder" onclick="filterByStatus('below-reorder')">
+                <i class="fas fa-box"></i>
+                <span>Dưới tối thiểu</span>
+                <span class="count-badge" id="belowReorderBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="expiring-soon" onclick="filterByStatus('expiring-soon')">
+                <i class="fas fa-clock"></i>
+                <span>Sắp hết hạn</span>
+                <span class="count-badge" id="expiringSoonBtn">0</span>
+            </button>
+
+            <button class="filter-shortcut-btn" data-filter="expired" onclick="filterByStatus('expired')">
+                <i class="fas fa-times-circle"></i>
+                <span>Hết hạn</span>
+                <span class="count-badge" id="expiredBtn">0</span>
+            </button>
+        </div>
+
+        <form method="post" asp-controller="ManagerIngredent" asp-action="FilterIngredent" class="card" id="filterForm">
+
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 0; align-items: end;">
+
+                <!-- Box 1: Tìm kiếm -->
+                <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #3b82f6;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: #1e40af; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-search"></i>
+                        Tìm kiếm
+                    </h3>
+                    <div style="display: flex; gap: 0.75rem; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; flex: 1;">
+                            <label class="form-label">
+                                <i class="fas fa-box"></i> Tìm kiếm mặt hàng
+                            </label>
+                            <input type="text"
+                                   placeholder="Nhập tên mặt hàng hoặc mã mặt hàng"
+                                   name="searchIngredent"
+                                   class="form-input"
+                                   value="@Model.SearchIngredent" />
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="height: 42px; flex-shrink: 0;">
+                            <i class="fas fa-search"></i> Tìm kiếm
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Box 2: Sắp xếp -->
+                <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #10b981;">
+                    <h3 style="font-size: 1rem; font-weight: 600; color: #065f46; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-sort"></i>
+                        Sắp xếp danh sách
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- Sắp xếp theo -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-sort-amount-down"></i> Sắp xếp theo
+                            </label>
+                            <select id="sortBySelect" class="form-select" onchange="sortTable()">
+                                <option value="code">Mã mặt hàng</option>
+                                <option value="name">Tên mặt hàng</option>
+                                <option value="quantity">Số lượng tồn</option>
+                            </select>
+                        </div>
+                        <!-- Thứ tự -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-arrows-alt-v"></i> Thứ tự
+                            </label>
+                            <select id="sortOrderSelect" class="form-select" onchange="sortTable()">
+                                <option value="asc">Tăng dần</option>
+                                <option value="desc">Giảm dần</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="main-content-wrapper">
+         <div>
+          <div class="table-container">
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Mã mặt hàng</th>
+                            <th>Tên mặt hàng</th>
+                            <th>Đơn vị tính</th>
+                            <th class="text-right">SL tồn</th>
+@*                             <th class="text-right">Tồn đầu kỳ</th>
+                            <th class="text-right">SL nhập</th>
+                            <th class="text-right">SL xuất</th> *@
+                            <th class="text-center">Trạng thái số lượng</th>
+                            <th class="text-center">Trạng thái chất lượng</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ingredientTableBody">
+                        @if (Model.Ingredients == null || !Model.Ingredients.Any())
+                        {
+                            <tr class="no-data-row">
+                                <td colspan="10" style="text-align:center; padding:3rem; color:#6b7280;">
+                                    <i class="fas fa-inbox" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
+                                    <br>
+                                    <strong style="font-size:1.1rem; color:#374151;">Không tìm thấy mặt hàng nào</strong>
+                                    <br>
+                                    <span style="font-size:0.875rem;">Vui lòng thử lại với điều kiện tìm kiếm khác</span>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            int stt = (Model.CurrentPage - 1) * Model.ItemsPerPage + 1;
+
+                            @foreach (var item in Model.Ingredients)
+                            {
+                                var rowClass = "";
+                                var dataStatus = "normal";
+
+                                if (item.IsExpired)
+                                {
+                                    rowClass = "expired";
+                                    dataStatus = "expired";
+                                }
+                                else if (item.IsLowStock)
+                                {
+                                    rowClass = "low-stock";
+                                    dataStatus = "low-stock";
+                                }
+                                else if (item.IsBelowReorderLevel)
+                                {
+                                    rowClass = "below-reorder";
+                                    dataStatus = "below-reorder";
+                                }
+                                else if (item.HasExpiringSoon)
+                                {
+                                    rowClass = "expiring-soon";
+                                    dataStatus = "expiring-soon";
+                                }
+
+                                        <tr class="@rowClass ingredient-row"
+                                            data-status="@dataStatus"
+                                            data-qty-excluding-expired="@item.QuantityExcludingExpired"
+                                            data-reorder-level="@(item.ReorderLevel ?? 0)"
+                                            data-need-urgent-restock="@item.NeedUrgentRestock.ToString().ToLower()">
+                                    <td>@stt</td>
+                                    <td>@item.IngredientCode</td>
+                                    <td>@item.Name</td>
+                                    <td>@(item.Unit?.UnitName ?? "---")</td>
+                                    <td class="text-right">@item.TotalQuantity</td>
+@*                                     <td class="text-right">@item.OriginalQuantity</td>
+                                    <td class="text-right">@item.TotalImport</td>
+                                    <td class="text-right">@item.TotalExport</td> *@
+                                    <td class="text-center">
+                                        @* Trạng thái số lượng *@
+
+                                        @if (item.TotalQuantity == 0)
+                                                {
+                                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded-md text-sm font-bold border-2 border-gray-700 shadow-sm pulse-dark">
+                                                <i class="fas fa-box-open"></i>
+                                                <span>Hết hàng</span>
+                                            </div>
+                                                }
+                                        else if (item.IsLowStock)
+                                        {
+                                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-md text-sm font-bold border-2 border-red-400 shadow-sm pulse-red-alert">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                <span>Sắp hết hàng</span>
+                                            </div>
+                                        }
+                                        else if (item.IsBelowReorderLevel)
+                                        {
+                                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-md text-sm font-bold border-2 border-orange-400 shadow-sm">
+                                                <i class="fas fa-box"></i>
+                                                <span>Dưới tối thiểu</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-md text-sm font-semibold border border-green-300">
+                                                <i class="fas fa-check-circle"></i>
+                                                Bình thường
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+    @* Trạng thái chất lượng *@
+    <div style="display: flex; flex-direction: column; gap: 0.375rem; align-items: center;">
+        @if (item.ExpiredBatchCount > 0)
+        {
+            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-md text-sm font-bold border-2 border-red-400 shadow-sm pulse-red-alert">
+                <i class="fas fa-times-circle"></i>
+                <span>Hết hạn: @item.ExpiredBatchCount</span>
+            </div>
+        }
+        @if (item.ExpiringSoonBatchCount > 0)
+        {
+            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-md text-sm font-bold border-2 border-yellow-400 shadow-sm">
+                <i class="fas fa-clock"></i>
+                <span>Sắp hết hạn: @item.ExpiringSoonBatchCount</span>
+            </div>
+        }
+        @if (item.ExpiredBatchCount == 0 && item.ExpiringSoonBatchCount == 0)
+        {
+            <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-md text-sm font-semibold border border-green-300">
+                <i class="fas fa-check-circle"></i>
+                Bình thường
+            </span>
+        }
+    </div>
+</td>
+                                    <td class="text-center">
+                                        <div class="action-buttons">
+                                            <a href="#"
+                                               data-ingredient-id="@item.IngredientId"
+                                               data-ingredient-code="@item.IngredientCode"
+                                               data-ingredient-name="@item.Name"
+                                               data-ingredient-unit="@(item.Unit?.UnitName ?? "---")"
+                                               data-ingredient-unit-id="@(item.Unit?.UnitId ?? 0)"
+                                               data-ingredient-unit-type="@((int)(item.Unit?.UnitType ?? UnitType.Integer))"
+                                               data-reorder-level="@(item.ReorderLevel?.ToString() ?? "")"
+                                               class="action-btn view"
+                                               title="Xem chi tiết"
+                                               onclick="showIngredientDetailFromRow(this); return false;">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                stt++;
+                            }
+                        }
+                    </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+            <!-- CỘT PHẢI: Bảng cảnh báo -->
+            <div class="alert-panel">
+                <div class="alert-panel-header">
+                    <div class="alert-panel-header-content">
+                        <h3>
+                            <i class="fas fa-exclamation-triangle"></i>
+                            mặt hàng cần nhập ngay
+                        </h3>
+                        <p>
+                            <span id="alertCount">0</span> mặt hàng cần chú ý
+                        </p>
+                    </div>
+                    <!-- ✅ THÊM BUTTON VÀO ĐÂY -->
+                    <a href="/ImportInventory" class="btn btn-success" style="padding: 0.75rem 1.25rem; font-size: 0.875rem; white-space: nowrap;">
+                        <i class="fas fa-plus"></i> Thêm mặt hàng
+                    </a>
+                </div>
+
+                <div class="alert-panel-body" id="alertPanelBody">
+                    <!-- Render bằng JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chi tiết mặt hàng -->
+    <div id="ingredientModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-info-circle"></i> Chi tiết mặt hàng</h2>
+                <button id="closeModal" class="close-btn">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="info-header">
+                    <div class="info-header-content">
+                        <p><strong>Tên mặt hàng:</strong> <span id="mName">---</span></p>
+                        <p><strong>Đơn vị tính:</strong> <span id="mUnit">---</span></p>
+                        <p style="position: relative;">
+                            <strong>Mức tối thiểu:</strong>
+                            <span id="mReorderLevel">---</span>
+                            <span class="info-tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">
+                                    Đây là số lượng trung bình mặt hàng này xuất ra trong 30 ngày gần nhất.
+                                </span>
+                            </span>
+                        </p>
+                    </div>
+                    <div class="info-header-actions">
+                        <button class="btn-edit-info" onclick="openEditModalFromDetail()">
+                            <i class="fas fa-edit"></i> Chỉnh sửa
+                        </button>
+                        <button class="btn-edit-info" style="background-color: #10b981; margin-left: 0.5rem;" onclick="toggleAuditButtons()">
+                            <i class="fas fa-clipboard-check"></i> Kiểm kê thực tế
+                        </button>
+                    </div>
+                </div>
+                <!-- Thêm vào sau div.info-header trong modal-body -->
+                <div class="batch-filter-container" style="background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 1rem; align-items: end;">
+                        <!-- Tìm kiếm theo mã lô -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-search"></i> Tìm kiếm mã lô
+                            </label>
+                            <input type="text"
+                                   id="batchCodeSearch"
+                                   class="form-input"
+                                   placeholder="Nhập mã lô..."
+                                   onkeyup="filterBatches()">
+                        </div>
+
+                        <!-- Filter trạng thái sử dụng -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label">
+                                <i class="fas fa-toggle-on"></i> Trạng thái sử dụng
+                            </label>
+                            <select id="isActiveFilter" class="form-select" onchange="filterBatches()">
+                                <option value="">Tất cả</option>
+                                <option value="true">Đang sử dụng</option>
+                                <option value="false">Ngừng sử dụng</option>
+                            </select>
+                        </div>
+
+                        <!-- Checkbox hiển thị lô hết hàng -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="opacity: 0;">.</label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                                <input type="checkbox"
+                                       id="showEmptyBatches"
+                                       onchange="filterBatches()"
+                                       style="width: 1.125rem; height: 1.125rem; cursor: pointer;">
+                                <span>Hiển thị lô hết hàng</span>
+                            </label>
+                        </div>
+
+                        <!-- Nút reset filter -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label class="form-label" style="opacity: 0;">.</label>
+                            <button class="btn btn-primary" onclick="resetBatchFilters()" style="width: 100%;">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h4 style="margin-top: 1rem; color:#1f2937;">Danh sách các lô nhập</h4>
+                <div class="batch-table-container">
+                    <table class="batch-table">
+                        <thead>
+                            <tr>
+                                <th>Mã lô</th>
+                                <th>Nhà cung cấp</th>
+                                <th>Ngày nhập</th>
+                                <th>Hạn sử dụng</th>
+                                <th>Số lượng còn</th>
+                                <th>Tình trạng</th>
+                                <th>Thuộc kho</th>
+                                <th>Đang sử dụng</th>
+                                <th>Thao tác</th>
+                                <th id="auditActionHeader" style="display: none;">Kiểm kê</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchTableBody">
+                            <tr><td colspan="8" style="text-align:center;">Chưa có dữ liệu</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+                <div style="flex: 1; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                padding: 0.75rem 1rem; border-radius: 0.5rem; border-left: 4px solid #dc2626;
+                margin-right: 1rem;">
+                    <p style="margin: 0; font-size: 0.875rem; color: #991b1b; line-height: 1.5;
+                  display: flex; align-items: start; gap: 0.5rem;">
+                        <i class="fas fa-exclamation-circle" style="margin-top: 0.125rem; flex-shrink: 0; font-size: 1rem;"></i>
+                        <span><strong>Lưu ý:</strong> Với các lô mặt hàng hết hạn sử dụng nhưng vẫn có trạng thái đang sử dụng, hệ thống sẽ không trừ mặt hàng để chất lượng mặt hàng luôn được đảm bảo.</span>
+                    </p>
+                </div>
+                <button id="closeModalFooter" class="btn btn-danger" style="flex-shrink: 0;">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chỉnh sửa mặt hàng -->
+    <div id="editIngredientModal" class="edit-modal-overlay">
+        <div class="edit-modal-content">
+            <div class="edit-modal-header">
+                <h2>
+                    <i class="fas fa-edit"></i>
+                    Chỉnh sửa mặt hàng
+                </h2>
+                <button id="closeEditModal" class="close-btn">&times;</button>
+            </div>
+
+            <div class="edit-modal-body">
+                <form id="editIngredientForm">
+                    <input type="hidden" id="editIngredientId">
+
+                    <div class="edit-form-group">
+                        <label class="edit-form-label">
+                            <i class="fas fa-hashtag"></i> Mã mặt hàng
+                        </label>
+                        <input type="text"
+                               id="editIngredientCode"
+                               class="edit-form-input"
+                               disabled>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label class="edit-form-label">
+                            <i class="fas fa-box"></i> Tên mặt hàng
+                        </label>
+                        <input type="text"
+                               id="editIngredientName"
+                               class="edit-form-input"
+                               placeholder="Nhập tên mặt hàng"
+                               required>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label class="edit-form-label">
+                            <i class="fas fa-ruler"></i> Đơn vị tính
+                        </label>
+                        <select id="editIngredientUnit"
+                                class="edit-form-input"
+                                required
+                                style="cursor: pointer;">
+                            <option value="">-- Chọn đơn vị tính --</option>
+                            @foreach (var unit in Model.Units)
+                            {
+                                <option value="@unit.UnitId">@unit.UnitName</option>
+                            }
+                        </select>
+                    </div>
+                </form>
+            </div>
+
+            <div class="edit-modal-footer">
+                <button class="btn btn-danger" onclick="closeEditIngredientModal()">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button class="btn btn-success" id="saveEditBtn">
+                    <i class="fas fa-save"></i> Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal kiểm kê thực tế - VERSION CẬP NHẬT -->
+    <div id="auditModal" class="audit-modal-overlay">
+        <div class="audit-modal-content">
+            <div class="audit-modal-header">
+                <h2>
+                    <i class="fas fa-clipboard-check"></i>
+                    Kiểm kê thực tế mặt hàng
+                </h2>
+                <button class="close-btn" onclick="closeAuditModal()">&times;</button>
+            </div>
+
+            <div class="audit-modal-body">
+                <!-- 1. Thông tin lô hiện tại -->
+                <div class="audit-section">
+                    <h3 style="font-size: 1.125rem; font-weight: 700; color: #374151; margin-bottom: 1rem;">
+                        <i class="fas fa-box" style="color: #9333ea;"></i>
+                        Thông tin lô mặt hàng hiện tại
+                    </h3>
+                    <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #9333ea;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
+                            <!-- Cột trái -->
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">
+                                        <i class="fas fa-hashtag"></i> Mã lô:
+                                    </div>
+                                    <div id="auditBatchCode" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; color: #9333ea;">---</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Mã mặt hàng:</div>
+                                    <div id="auditIngredientCode" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px;">---</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Tên mặt hàng:</div>
+                                    <div id="auditIngredientName" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">---</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Đơn vị tính:</div>
+                                    <div id="auditUnit" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px;">---</div>
+                                </div>
+                            </div>
+
+                            <!-- Cột phải -->
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">
+                                        Hạn sử dụng:
+                                    </div>
+                                    <div id="auditExpiryDate" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px;">---</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Số lượng:</div>
+                                    <div id="auditCurrentQty" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; text-align: left;">0</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">
+                                        Thời gian kiểm kê:
+                                    </div>
+                                    <div id="auditDateTime" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; color: #7c3aed;">---</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">
+                                        <i class="fas fa-warehouse"></i> Thuộc kho:
+                                    </div>
+                                    <div id="auditWarehouse" style="flex: 1; background: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500;">---</div>
+                                </div>
+                                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                    <div style="min-width: 140px; font-weight: 600; color: #6b21a8;">Tình trạng:</div>
+                                    <div id="auditStatus" style="flex: 1;">---</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Thao tác kiểm kê + Lý do (Grid 2 cột) -->
+                <div style="margin-bottom: 1.5rem;">
+                    <div class="audit-section">
+                        <div class="audit-actions">
+                            <h3 style="font-size: 1.125rem; font-weight: 700; color: #1e40af; margin-bottom: 1rem;">
+                                Thao tác kiểm kê
+                            </h3>
+
+                            <div style="display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: start;">
+                                <!-- Cột trái: Radio buttons + Input -->
+                                <div>
+                                    <!-- Radio buttons -->
+                                    <div class="audit-radio-group" style="margin-bottom: 1.5rem;">
+                                        <label class="audit-radio-label">
+                                            <input type="radio" name="auditType" value="add" checked onchange="handleAuditTypeChange()">
+                                            <span>Thêm số lượng</span>
+                                        </label>
+                                        <label class="audit-radio-label">
+                                            <input type="radio" name="auditType" value="remove" onchange="handleAuditTypeChange()">
+                                            <span>Hủy số lượng</span>
+                                        </label>
+                                        <label class="audit-radio-label">
+                                            <input type="radio" name="auditType" value="removeAll" onchange="handleAuditTypeChange()">
+                                            <span>Hủy tất cả</span>
+                                        </label>
+                                        <label class="audit-radio-label">
+                                            <input type="radio" name="auditType" value="noChange" onchange="handleAuditTypeChange()">
+                                            <span>Không thay đổi</span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Input số lượng -->
+                                    <div id="auditQuantityInput">
+                                        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                            Nhập số lượng <span id="auditTypeLabel">thêm</span>
+                                        </label>
+                                        <input type="number"
+                                               id="auditQuantity"
+                                               class="audit-quantity-input"
+                                               placeholder="Nhập số lượng"
+                                               min="0"
+                                               step="any"
+                                               oninput="updateAuditPreview()">
+                                    </div>
+
+                                    <div style="margin-top: 1rem;">
+                                        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                            <i class="fas fa-calendar-alt" style="color: #f59e0b;"></i>
+                                            Ngày hết hạn mới (tùy chọn)
+                                        </label>
+                                        <input type="date"
+                                               id="auditNewExpiryDate"
+                                               class="audit-quantity-input"
+                                               style="width: 100%;">
+                                        <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+                                            <i class="fas fa-info-circle"></i>
+                                            Để trống nếu giữ nguyên hạn sử dụng hiện tại
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Cột phải: Preview số lượng -->
+                                <div style="min-width: 280px; padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border-left: 4px solid #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 0.875rem; font-weight: 600; color: #92400e; margin-bottom: 0.75rem;">
+                                            <i class="fas fa-calculator" style="margin-right: 0.5rem;"></i>
+                                            Số lượng sau kiểm kê
+                                        </div>
+                                        <div id="auditPreviewQty" style="font-size: 2.5rem; font-weight: 800; color: #1f2937; margin-bottom: 0.5rem;">
+                                            0
+                                        </div>
+                                        <div id="auditDiffIndicator" style="font-size: 0.875rem; font-weight: 600; min-height: 1.25rem;">
+                                            <span style="color: #6b7280;">
+                                                <i class="fas fa-minus"></i> Không thay đổi
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Lý do kiểm kê (Full Width - Xuống dưới) -->
+                    <div class="audit-section">
+                        <div class="audit-reason-section" style="width: 100%;">
+                            <h3 style="font-size: 1.125rem; font-weight: 700; color: #92400e; margin-bottom: 1rem;">
+                                <i class="fas fa-comment-alt" style="margin-right: 0.5rem;"></i>
+                                Lý do kiểm kê
+                            </h3>
+                            <textarea id="auditReason"
+                                      class="audit-reason-textarea"
+                                      placeholder="Nhập lý do kiểm kê...&#10;Ví dụ: Hàng bị hư hỏng, Sai sót trong nhập liệu, Kiểm tra định kỳ, v.v."
+                                      style="width: 100%;"></textarea>
+                            <p style="font-size: 0.75rem; color: #92400e; margin-top: 0.5rem;">
+                                <i class="fas fa-info-circle"></i> Vui lòng mô tả rõ lý do thêm/hủy mặt hàng
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- 4. Thông tin xác nhận & Upload ảnh -->
+                <div class="audit-confirmer-section">
+                    <!-- Thông tin người xác nhận -->
+                    <div class="audit-confirmer-box">
+                        <label class="audit-checkbox-label">
+                            <input type="checkbox" id="useMyInfo" onchange="handleConfirmerCheckbox(this.checked)">
+                            <i class="fas fa-user"></i>
+                            <span>Sử dụng thông tin của tôi</span>
+                        </label>
+
+                        <div id="confirmerInfoForm" style="display: none;">
+                            <div class="audit-input-group">
+                                <label class="audit-input-label">
+                                    <i class="fas fa-user"></i> Tên người xác nhận
+                                </label>
+                                <input type="text" id="confirmerName" class="audit-input" readonly>
+                            </div>
+                            <div class="audit-input-group">
+                                <label class="audit-input-label">
+                                    <i class="fas fa-briefcase"></i> Chức vụ
+                                </label>
+                                <input type="text" id="confirmerPosition" class="audit-input" readonly>
+                            </div>
+                            <div class="audit-input-group">
+                                <label class="audit-input-label">
+                                    <i class="fas fa-phone"></i> Số điện thoại
+                                </label>
+                                <input type="tel" id="confirmerPhone" class="audit-input" readonly>
+                            </div>
+                        </div>
+
+                        <div id="confirmerPlaceholder" class="audit-placeholder">
+                            <i class="fas fa-user"></i>
+                            <p style="font-size: 0.875rem;">Tick checkbox để sử dụng thông tin của bạn</p>
+                        </div>
+                    </div>
+
+                    <!-- Upload hình ảnh -->
+                    <div class="audit-image-box">
+                        <h4 style="font-size: 1.125rem; font-weight: 700; color: #065f46; margin-bottom: 1rem;">
+                            <i class="fas fa-camera"></i> Hình ảnh chứng cứ
+                        </h4>
+                        <label for="auditImageUpload" class="audit-upload-area">
+                            <div id="imagePreviewContainer">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #10b981; margin-bottom: 0.5rem;"></i>
+                                <p style="color: #065f46; font-weight: 600;">Nhấn để tải lên hình ảnh</p>
+                                <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">PNG, JPG, JPEG (Max 5MB)</p>
+                            </div>
+                        </label>
+                        <input type="file" id="auditImageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="audit-modal-footer">
+                <button class="btn btn-danger" onclick="closeAuditModal()">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </button>
+                <button class="btn btn-success" id="submitAuditBtn" onclick="submitAudit()">
+                    <i class="fas fa-check-circle"></i> Xác nhận kiểm kê
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+
+<script>
+    let warehouseList = [];
+
+    // ===== BIẾN TOÀN CỤC CHO PHÂN TRANG =====
+    let allBatches = []; // Lưu toàn bộ batches
+    let filteredBatches = []; // Batches sau khi filter
+    let currentBatchPage = 1;
+    const batchesPerPage = 5;
+
+    // Load warehouse list khi trang được tải
+    async function loadWarehouses() {
+        try {
+            const response = await fetch('/api/Warehouse/GetAll');
+            if (response.ok) {
+                warehouseList = await response.json();
+                console.log('Loaded warehouses:', warehouseList);
+            }
+        } catch (error) {
+            console.error('Error loading warehouses:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadWarehouses();
+        const alert = document.getElementById('alertMessage');
+        if (alert) {
+            setTimeout(() => closeAlert(), 5000);
+        }
+
+        const searchInput = document.querySelector('input[name="searchIngredent"]');
+        const tableBody = document.querySelector('.table tbody');
+        const modal = document.getElementById("ingredientModal");
+        const closeBtns = [document.getElementById("closeModal"), document.getElementById("closeModalFooter")];
+
+        closeBtns.forEach(btn => {
+            if (btn) {
+                btn.addEventListener("click", () => modal.style.display = "none");
+            }
+        });
+
+        window.addEventListener("click", e => {
+            if (e.target === modal) modal.style.display = "none";
+        });
+
+        const auditQuantityInput = document.getElementById('auditQuantity');
+        if (auditQuantityInput) {
+            auditQuantityInput.addEventListener('input', function (e) {
+                validateAuditQuantity(this);
+            });
+
+            auditQuantityInput.addEventListener('blur', function (e) {
+                validateAuditQuantity(this);
+            });
+        }
+
+        updateDashboard();
+        currentStatusFilter = 'all';
+
+        // ✅ THÊM: Render bảng cảnh báo
+        renderAlertPanel();
+
+        // ✅ THÊM: Sắp xếp mặc định theo mã mặt hàng
+        sortTable();
+    });
+
+
+    function validateAuditQuantity(input) {
+        if (!currentAuditBatch) return;
+
+        const value = input.value.trim();
+        if (!value) return;
+
+        const numValue = parseFloat(value);
+
+        // ✅ THÊM: KIỂM TRA SỐ ÂM
+        if (numValue < 0) {
+            showWarningMessage('Số lượng không được nhỏ hơn 0!');
+            input.value = 0;
+            updateAuditPreview();
+            return false;
+        }
+
+        if (numValue < 0) {
+            showWarningMessage('Số lượng không được nhỏ hơn 0!');
+            input.value = 0;
+            updateAuditPreview();
+            return false;
+        }
+
+        // ✅ THÊM: KIỂM TRA HỦY VƯỢT QUÁ SỐ LƯỢNG HIỆN CÓ
+        const auditType = document.querySelector('input[name="auditType"]:checked').value;
+        if (auditType === 'remove' && numValue > currentAuditBatch.quantity) {
+            showWarningMessage(`Số lượng hủy không được lớn hơn số lượng hiện tại (${formatNumber(currentAuditBatch.quantity)} ${currentAuditBatch.unit})!`);
+            input.value = currentAuditBatch.quantity; // Tự động set về số lượng tối đa
+            updateAuditPreview();
+            return false;
+        }
+
+        // UnitType: 1 = Integer (số nguyên), 2 = Decimal (thập phân)
+        if (currentAuditBatch.unitType === 1) {
+            // Kiểm tra có phải số nguyên không
+            if (!Number.isInteger(numValue) || value.includes('.') || value.includes(',')) {
+                showWarningMessage(`Đơn vị "${currentAuditBatch.unit}" chỉ cho phép nhập số nguyên!`);
+
+                // Tự động làm tròn
+                input.value = Math.floor(numValue);
+                updateAuditPreview();
+                return false;
+            }
+        }
+
+        updateAuditPreview();
+        return true;
+    }
+
+
+    function showWarningMessage(message) {
+        const warningHtml = `
+            <div style="position: fixed; top: 20px; right: 20px; background: #f59e0b; color: white;
+                        padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        z-index: 10001; animation: slideIn 0.3s ease-out;" id="warningMsg">
+                <i class="fas fa-exclamation-triangle"></i> ${message}
+            </div>
+        `;
+
+        // Xóa warning cũ nếu có
+        const oldWarning = document.getElementById('warningMsg');
+        if (oldWarning) oldWarning.remove();
+
+        document.body.insertAdjacentHTML('beforeend', warningHtml);
+
+        setTimeout(() => {
+            const msg = document.getElementById('warningMsg');
+            if (msg) msg.remove();
+        }, 3000);
+    }
+
+
+
+    function openEditModalFromDetail() {
+        const modal = document.getElementById("ingredientModal");
+
+        // Lấy thông tin đã lưu trong modal
+        const ingredientId = modal.getAttribute('data-ingredient-id');
+        const ingredientCode = modal.getAttribute('data-ingredient-code');
+        const ingredientName = modal.getAttribute('data-ingredient-name');
+        const ingredientUnit = modal.getAttribute('data-ingredient-unit');
+        const ingredientUnitId = modal.getAttribute('data-ingredient-unit-id'); // ← THÊM DÒNG NÀY
+
+        // Điền dữ liệu vào form edit
+        document.getElementById('editIngredientId').value = ingredientId;
+        document.getElementById('editIngredientCode').value = ingredientCode;
+        document.getElementById('editIngredientName').value = ingredientName;
+
+        // Set UnitId (int) vào select
+        document.getElementById('editIngredientUnit').value = ingredientUnitId; // ← SỬA DÒNG NÀY
+
+        // Đóng modal detail
+        modal.style.display = "none";
+
+        // Mở modal edit
+        document.getElementById('editIngredientModal').classList.add('active');
+    }
+
+    async function showIngredientDetail(ingredientId) {
+        const modal = document.getElementById("ingredientModal");
+        const tbody = document.getElementById("batchTableBody");
+        const url = `/api/InventoryIngredient/BatchIngredient/${ingredientId}`;
+
+        try {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:2rem;">
+                        <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...
+                    </td>
+                </tr>
+            `;
+            modal.style.display = "flex";
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+            const data = await response.json();
+            console.log("Batch data received:", data);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                displayNoData(tbody);
+                return;
+            }
+
+            // Display ingredient info
+            const firstBatch = data[0];
+            document.getElementById("mName").textContent = firstBatch.ingredientName || "---";
+            document.getElementById("mUnit").textContent = firstBatch.ingredientUnit || "---";
+
+            // Clear and populate table
+            tbody.innerHTML = "";
+
+            data.forEach((batch) => {
+                const row = document.createElement("tr");
+                row.dataset.batchId = batch.batchId;
+                row.dataset.originalWarehouseId = batch.warehouseId;
+
+                const createdDate = formatDate(batch.createdAt);
+                const expiryDate = formatDate(batch.expiryDate);
+                const quantity = formatNumber(batch.quantityRemaining);
+
+                // Tạo options cho select từ warehouse list
+                const warehouseOptions = warehouseList
+                    .filter(w => w.isActive)
+                    .map(w => `<option value="${w.warehouseId}" ${w.warehouseId === batch.warehouseId ? 'selected' : ''}>${w.name}</option>`)
+                    .join('');
+
+                row.innerHTML = `
+                        <td style="font-weight: 600; color: #3b82f6;">${batch.purchaseOrderId}</td>
+                    <td>${batch.supplierName || 'N/A'}</td>
+                    <td>${createdDate}</td>
+                    <td>${expiryDate}</td>
+                    <td style="text-align: right; font-weight: 500;">${quantity}</td>
+                    <td>
+                        <select class="warehouse-select" data-batch-id="${batch.batchId}">
+                            ${warehouseOptions}
+                        </select>
+                    </td>
+                    <td style="text-align: center;">
+                        <button class="btn-save-warehouse" data-batch-id="${batch.batchId}">
+                            <i class="fas fa-save"></i> Lưu
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+
+            attachWarehouseEventListeners();
+            console.log(`Successfully displayed ${data.length} batches`);
+
+        } catch (error) {
+            console.error("Error:", error);
+            displayError(tbody, error.message);
+        }
+    }
+
+    function attachWarehouseEventListeners() {
+        // Lắng nghe sự kiện thay đổi warehouse
+        document.querySelectorAll('.warehouse-select').forEach(select => {
+            select.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const originalWarehouseId = parseInt(row.dataset.originalWarehouseId);
+                const newWarehouseId = parseInt(this.value);
+                const saveBtn = row.querySelector('.btn-save-warehouse');
+                const checkbox = row.querySelector('.isactive-checkbox');
+
+                const hasWarehouseChange = newWarehouseId !== originalWarehouseId;
+                const hasIsActiveChange = checkbox && checkbox.checked !== (row.dataset.originalIsActive === 'true');
+
+                if (hasWarehouseChange) {
+                    this.classList.add('changed');
+                } else {
+                    this.classList.remove('changed');
+                }
+
+                // Hiển thị nút Lưu nếu có bất kỳ thay đổi nào
+                if (hasWarehouseChange || hasIsActiveChange) {
+                    saveBtn.classList.add('show');
+                } else {
+                    saveBtn.classList.remove('show');
+                }
+            });
+        });
+
+        // Lắng nghe sự kiện click nút Lưu
+        document.querySelectorAll('.btn-save-warehouse').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const batchId = this.dataset.batchId;
+                const row = this.closest('tr');
+                const purchaseOrderId = row.querySelector('td:first-child').textContent;
+                const select = row.querySelector('.warehouse-select');
+                const checkbox = row.querySelector('.isactive-checkbox');
+
+                const newWarehouseId = parseInt(select.value);
+                const newWarehouseName = select.options[select.selectedIndex].text;
+                const newIsActive = checkbox.checked;
+
+                showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, newIsActive, row);
+            });
+        });
+    }
+
+    function showConfirmDialog(batchId, purchaseOrderId, newWarehouseId, newWarehouseName, newIsActive, row) {
+        const originalIsActive = row.dataset.originalIsActive === 'true';
+        const statusText = newIsActive ? 'ĐANG SỬ DỤNG' : 'NGỪNG SỬ DỤNG';
+        const statusColor = newIsActive ? '#10b981' : '#ef4444';
+
+        // Kiểm tra xem có thay đổi gì không
+        const hasWarehouseChange = parseInt(row.dataset.originalWarehouseId) !== newWarehouseId;
+        const hasIsActiveChange = originalIsActive !== newIsActive;
+
+        let confirmMessage = `Bạn có chắc chắn muốn cập nhật lô <strong>#${purchaseOrderId}</strong>?<br><br>`;
+
+        if (hasWarehouseChange) {
+            confirmMessage += `• Chuyển sang kho: <strong>${newWarehouseName}</strong><br>`;
+        }
+
+        if (hasIsActiveChange) {
+            confirmMessage += `• Trạng thái: <strong style="color: ${statusColor}">${statusText}</strong>`;
+        }
+
+        const confirmHtml = `
+            <div class="confirm-popup" id="confirmPopup">
+                <div class="confirm-content">
+                    <h3>
+                        <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
+                        Xác nhận cập nhật
+                    </h3>
+                    <p>${confirmMessage}</p>
+                    <div class="confirm-buttons">
+                        <button class="btn btn-danger" id="cancelBtn">
+                            <i class="fas fa-times"></i> Hủy
+                        </button>
+                        <button class="btn btn-success" id="confirmBtn">
+                            <i class="fas fa-check"></i> Xác nhận
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', confirmHtml);
+
+        const popup = document.getElementById('confirmPopup');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+
+        cancelBtn.addEventListener('click', () => {
+            popup.remove();
+        });
+
+        confirmBtn.addEventListener('click', async () => {
+            try {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+
+                await updateBatchWarehouse(batchId, newWarehouseId, newIsActive, row);
+
+                popup.remove();
+            } catch (error) {
+                showToast('Có lỗi xảy ra: ' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check"></i> Xác nhận';
+            }
+        });
+    }
+
+    async function updateBatchWarehouse(batchId, newWarehouseId, newIsActive, row) {
+        try {
+            const response = await fetch('/ManagerIngredent/UpdateBatchWarehouse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    batchId: batchId,
+                    warehouseId: newWarehouseId,
+                    isActive: newIsActive  // ✅ Thêm IsActive
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể cập nhật thông tin lô');
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Cập nhật giá trị gốc
+                row.dataset.originalWarehouseId = newWarehouseId;
+                row.dataset.originalIsActive = newIsActive;
+
+                const select = row.querySelector('.warehouse-select');
+                const checkbox = row.querySelector('.isactive-checkbox');
+                const saveBtn = row.querySelector('.btn-save-warehouse');
+
+                select.classList.remove('changed');
+                checkbox.classList.remove('changed');
+                saveBtn.classList.remove('show');
+
+                showSuccessMessage('Cập nhật thông tin lô thành công!');
+            } else {
+                throw new Error(result.message || 'Có lỗi xảy ra');
+            }
+
+        } catch (error) {
+            console.error('Error updating batch:', error);
+            throw error;
+        }
+    }
+
+    function showSuccessMessage(message) {
+        const successHtml = `
+            <div style="position: fixed; top: 20px; right: 20px; background: #10b981; color: white;
+                        padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        z-index: 10000; animation: slideIn 0.3s ease-out;" id="successMsg">
+                <i class="fas fa-check-circle"></i> ${message}
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', successHtml);
+
+        setTimeout(() => {
+            const msg = document.getElementById('successMsg');
+            if (msg) msg.remove();
+        }, 3000);
+    }
+
+    // ✅ HÀM HIỂN THỊ THÔNG BÁO CHUNG (Thay thế alert)
+    function showToast(message, type = 'success') {
+        let backgroundColor, icon;
+
+        // Cấu hình màu sắc và icon dựa trên loại thông báo
+        switch (type) {
+            case 'error':
+                backgroundColor = '#ef4444'; // Đỏ
+                icon = '<i class="fas fa-times-circle"></i>';
+                break;
+            case 'warning':
+                backgroundColor = '#f59e0b'; // Cam
+                icon = '<i class="fas fa-exclamation-triangle"></i>';
+                break;
+            default: // success
+                backgroundColor = '#10b981'; // Xanh lá
+                icon = '<i class="fas fa-check-circle"></i>';
+                break;
+        }
+
+        const toastHtml = `
+            <div class="custom-toast" style="
+                position: fixed; top: 20px; right: 20px;
+                background: ${backgroundColor}; color: white;
+                padding: 1rem 1.5rem; border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 99999; animation: slideIn 0.3s ease-out;
+                display: flex; align-items: center; gap: 10px; font-weight: 500;">
+                ${icon} <span>${message}</span>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', toastHtml);
+
+        // Tự động xóa sau 3 giây
+        const toast = document.body.lastElementChild;
+        setTimeout(() => {
+            if (toast && toast.classList.contains('custom-toast')) {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 3000);
+    }
+
+    function formatDate(dateValue) {
+        if (!dateValue) return 'N/A';
+
+        try {
+            let date;
+            if (typeof dateValue === 'string') {
+                if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    date = new Date(dateValue + 'T00:00:00');
+                } else {
+                    date = new Date(dateValue);
+                }
+            } else {
+                date = new Date(dateValue);
+            }
+
+            if (isNaN(date.getTime())) return 'N/A';
+
+            return date.toLocaleDateString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return 'N/A';
+        }
+    }
+
+    function parseVietnameseNumber(text) {
+        if (!text) return 0;
+
+        const str = text.toString().trim();
+
+        if (str.includes('.') && str.includes(',')) {
+            const cleaned = str
+                .replace(/\./g, '')  
+                .replace(',', '.');  
+            return parseFloat(cleaned) || 0;
+        }
+
+        if (str.includes(',') && !str.includes('.')) {
+            const cleaned = str.replace(',', '.'); 
+            return parseFloat(cleaned) || 0;
+        }
+
+        if (str.includes('.')) {
+            const parts = str.split('.');
+
+            if (parts.length === 2 && parts[1].length === 3) {
+
+                return parseFloat(str.replace(/\./g, '')) || 0;
+            }
+
+            return parseFloat(str) || 0;
+        }
+
+        return parseFloat(str) || 0;
+    }
+
+    function formatNumber(value) {
+        if (value === null || value === undefined) return '0,00';
+
+        try {
+            const num = Number(value);
+            if (isNaN(num)) return '0,00';
+
+            // Dùng de-DE locale: 1.234.567,89
+            return num.toLocaleString('de-DE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        } catch (e) {
+            return '0,00';
+        }
+    }
+
+    
+
+
+    function displayNoData(tbody) {
+        document.getElementById("mName").textContent = "---";
+        document.getElementById("mUnit").textContent = "---";
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" style="text-align:center;padding:2rem;color:#9ca3af;">
+                    <i class="fas fa-inbox"></i><br>
+                    Không có dữ liệu lô nhập
+                </td>
+            </tr>
+        `;
+    }
+
+    function displayError(tbody, message) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="10" style="text-align:center;padding:2rem;color:#ef4444;">
+                    <i class="fas fa-exclamation-circle"></i><br>
+                    Có lỗi xảy ra: ${message}
+                </td>
+            </tr>
+        `;
+    }
+
+    // Function to close alert
+function closeAlert() {
+    const alert = document.getElementById('alertMessage');
+    if (alert) {
+        alert.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => alert.remove(), 300);
+    }
+}
+
+
+    // ===== EDIT INGREDIENT FUNCTIONS =====
+
+    function openEditModal(ingredientId, ingredientName, ingredientUnit, ingredientUnitId) {
+        const row = event.target.closest('tr');
+        const ingredientCode = row.cells[1].textContent;
+
+        document.getElementById('editIngredientId').value = ingredientId;
+        document.getElementById('editIngredientCode').value = ingredientCode;
+        document.getElementById('editIngredientName').value = ingredientName;
+
+        // Trực tiếp set value = UnitId
+        document.getElementById('editIngredientUnit').value = ingredientUnitId;
+
+        document.getElementById('editIngredientModal').classList.add('active');
+    }
+
+    function closeEditIngredientModal() {
+        document.getElementById('editIngredientModal').classList.remove('active');
+        document.getElementById('editIngredientForm').reset();
+    }
+
+    // Đóng modal khi click vào nút X
+    document.getElementById('closeEditModal')?.addEventListener('click', closeEditIngredientModal);
+
+    // Đóng modal khi click ra ngoài
+    document.getElementById('editIngredientModal')?.addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeEditIngredientModal();
+        }
+    });
+
+    // Xử lý lưu thay đổi
+    document.getElementById('saveEditBtn')?.addEventListener('click', async function () {
+        const ingredientId = document.getElementById('editIngredientId').value;
+        const ingredientName = document.getElementById('editIngredientName').value.trim();
+        const ingredientUnitId = document.getElementById('editIngredientUnit').value; // ← Đổi tên biến
+
+        // Validation
+        if (!ingredientName) {
+            showToast('Vui lòng nhập tên mặt hàng!', 'warning'); // MỚI
+            document.getElementById('editIngredientName').focus();
+            return;
+        }
+
+        if (!ingredientUnitId) {
+            showToast('Vui lòng chọn đơn vị tính!', 'warning'); // MỚI
+            document.getElementById('editIngredientUnit').focus();
+            return;
+        }
+
+        // Hiển thị loading
+        const saveBtn = document.getElementById('saveEditBtn');
+        const originalText = saveBtn.innerHTML;
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+
+        try {
+            const response = await fetch('/ManagerIngredent/UpdateIngredient', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ingredientId: parseInt(ingredientId),
+                    name: ingredientName,
+                    unitId: parseInt(ingredientUnitId) 
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể kết nối đến server');
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                showSuccessMessage(result.message || 'Cập nhật mặt hàng thành công!');
+                closeEditIngredientModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                throw new Error(result.message || 'Có lỗi xảy ra');
+            }
+
+        } catch (error) {
+            showToast('Có lỗi xảy ra: ' + error.message, 'error');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
+    });
+
+    // Xử lý phím ESC để đóng modal
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeEditIngredientModal();
+        }
+    });
+
+
+    function showIngredientDetailFromRow(button) {
+        // Lấy thông tin từ data attributes
+        const ingredientId = button.getAttribute('data-ingredient-id');
+        const ingredientCode = button.getAttribute('data-ingredient-code');
+        const ingredientName = button.getAttribute('data-ingredient-name');
+        const ingredientUnit = button.getAttribute('data-ingredient-unit');
+        const ingredientUnitId = button.getAttribute('data-ingredient-unit-id');
+        const ingredientUnitType = parseInt(button.getAttribute('data-ingredient-unit-type'));
+
+        const reorderLevel = button.getAttribute('data-reorder-level');
+
+        // Hiển thị thông tin mặt hàng ngay lập tức
+        document.getElementById("mName").textContent = ingredientName || "---";
+        document.getElementById("mUnit").textContent = ingredientUnit || "---";
+
+        const reorderLevelEl = document.getElementById("mReorderLevel");
+        if (reorderLevel && reorderLevel !== "null" && reorderLevel !== "") {
+            reorderLevelEl.textContent = formatNumber(parseFloat(reorderLevel));
+        } else {
+            reorderLevelEl.textContent = "Chưa thiết lập";
+        }
+
+        // Lưu thông tin vào modal để dùng cho Edit
+        const modal = document.getElementById("ingredientModal");
+        modal.setAttribute('data-ingredient-id', ingredientId);
+        modal.setAttribute('data-ingredient-code', ingredientCode);
+        modal.setAttribute('data-ingredient-name', ingredientName);
+        modal.setAttribute('data-ingredient-unit', ingredientUnit);
+        modal.setAttribute('data-ingredient-unit-id', ingredientUnitId);
+        modal.setAttribute('data-ingredient-unit-type', ingredientUnitType); // ← THÊM DÒNG NÀY
+
+        // Gọi function load batch
+        loadBatchList(ingredientId);
+    }
+
+    // ===== LOAD DANH SÁCH BATCH =====
+    async function loadBatchList(ingredientId) {
+        const modal = document.getElementById("ingredientModal");
+        const tbody = document.getElementById("batchTableBody");
+        const url = `/api/InventoryIngredient/BatchIngredient/${ingredientId}`;
+
+        try {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align:center;padding:2rem;">
+                        <i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...
+                    </td>
+                </tr>
+            `;
+            modal.style.display = "flex";
+
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+            const data = await response.json();
+            console.log("Batch data received:", data);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                displayNoData(tbody);
+                allBatches = [];
+                filteredBatches = [];
+                return;
+            }
+
+            // ✅ LƯU TOÀN BỘ BATCHES VÀO BIẾN TOÀN CỤC
+            allBatches = data;
+
+            // ✅ RESET FILTERS VÀ HIỂN THỊ TRANG ĐẦU TIÊN
+            resetBatchFilters();
+
+        } catch (error) {
+            console.error("Error:", error);
+            displayError(tbody, error.message);
+            allBatches = [];
+            filteredBatches = [];
+        }
+    }
+
+    function filterBatches() {
+        const searchText = document.getElementById('batchCodeSearch').value.toLowerCase();
+        const isActiveFilter = document.getElementById('isActiveFilter').value;
+        const showEmpty = document.getElementById('showEmptyBatches').checked;
+
+        filteredBatches = allBatches.filter(batch => {
+            const matchSearch = batch.purchaseOrderId.toLowerCase().includes(searchText);
+
+            let matchIsActive = true;
+            if (isActiveFilter !== '') {
+                matchIsActive = batch.isActive.toString() === isActiveFilter;
+            }
+
+            const matchQuantity = showEmpty || batch.quantityRemaining > 0;
+
+            return matchSearch && matchIsActive && matchQuantity;
+        });
+
+        // ✅ THÊM: Sắp xếp sau khi filter
+        filteredBatches = sortBatches(filteredBatches);
+
+        currentBatchPage = 1;
+        renderBatchTable();
+    }
+
+    function resetBatchFilters() {
+        document.getElementById('batchCodeSearch').value = '';
+        document.getElementById('isActiveFilter').value = '';
+        document.getElementById('showEmptyBatches').checked = false;
+
+        // Mặc định không hiển thị lô hết hàng
+        filteredBatches = allBatches.filter(b => b.quantityRemaining > 0);
+
+        // ✅ THÊM: Sắp xếp
+        filteredBatches = sortBatches(filteredBatches);
+
+        currentBatchPage = 1;
+        renderBatchTable();
+    }
+
+    function sortBatches(batches) {
+        return batches.sort((a, b) => {
+            // 1. Ưu tiên lô đang sử dụng lên trước
+            if (a.isActive !== b.isActive) {
+                return b.isActive - a.isActive; // true (1) lên trước false (0)
+            }
+
+            // 2. Ưu tiên lô còn hàng lên trước lô hết hàng
+            const aHasStock = a.quantityRemaining > 0;
+            const bHasStock = b.quantityRemaining > 0;
+            if (aHasStock !== bHasStock) {
+                return bHasStock - aHasStock;
+            }
+
+            // 3. Trong các lô còn hàng: sắp xếp theo hạn sử dụng (FEFO)
+            if (aHasStock && bHasStock) {
+                const dateA = new Date(a.expiryDate);
+                const dateB = new Date(b.expiryDate);
+
+                // Lô hết hạn sớm hơn lên trước
+                if (dateA.getTime() !== dateB.getTime()) {
+                    return dateA - dateB;
+                }
+
+                // Nếu cùng hạn sử dụng, sắp xếp theo ngày nhập (FIFO)
+                const createdA = new Date(a.createdAt);
+                const createdB = new Date(b.createdAt);
+                return createdA - createdB;
+            }
+
+            // 4. Các lô hết hàng: sắp xếp theo ngày nhập mới nhất lên trước
+            const createdA = new Date(a.createdAt);
+            const createdB = new Date(b.createdAt);
+            return createdB - createdA;
+        });
+    }
+
+    function renderBatchTable() {
+        const tbody = document.getElementById("batchTableBody");
+        const modal = document.getElementById("ingredientModal");
+
+        if (filteredBatches.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="10" style="text-align:center;padding:2rem;color:#9ca3af;">
+                        <i class="fas fa-inbox" style="font-size:2rem; margin-bottom:0.5rem;"></i><br>
+                        Không tìm thấy lô nào phù hợp với điều kiện lọc
+                    </td>
+                </tr>
+            `;
+
+            // Ẩn pagination nếu không có data
+            const existingPagination = document.querySelector('.batch-pagination');
+            if (existingPagination) existingPagination.remove();
+            return;
+        }
+
+        // Tính toán phân trang
+        const totalPages = Math.ceil(filteredBatches.length / batchesPerPage);
+        const startIndex = (currentBatchPage - 1) * batchesPerPage;
+        const endIndex = startIndex + batchesPerPage;
+        const currentBatches = filteredBatches.slice(startIndex, endIndex);
+
+        // ✅ KHÔNG CẬP NHẬT LẠI - Thông tin đã được set khi mở modal
+        // Tên mặt hàng và đơn vị tính đã hiển thị từ function showIngredientDetailFromRow()
+        // và không cần thay đổi khi filter/phân trang batch
+
+        // Clear và render bảng
+        tbody.innerHTML = "";
+
+        currentBatches.forEach((batch) => {
+            const batchStatus = getBatchStatus(batch);
+            const row = document.createElement("tr");
+
+            // ✅ THÊM CLASS CHO LÔ HẾT HÀNG
+            if (batch.quantityRemaining === 0) {
+                row.className = 'batch-out-of-stock';
+            } else if (batchStatus.isExpired) {
+                row.className = 'batch-expired';
+            } else if (batchStatus.isExpiringSoon) {
+                row.className = 'batch-expiring-soon';
+            }
+
+            row.dataset.batchId = batch.batchId;
+            row.dataset.originalWarehouseId = batch.warehouseId;
+            row.dataset.originalIsActive = batch.isActive;
+
+            const createdDate = formatDate(batch.createdAt);
+            const expiryDate = formatDate(batch.expiryDate);
+            const quantity = formatNumber(batch.quantityRemaining);
+
+            const warehouseOptions = warehouseList
+                .filter(w => w.isActive)
+                .map(w => `<option value="${w.warehouseId}" ${w.warehouseId === batch.warehouseId ? 'selected' : ''}>${w.name}</option>`)
+                .join('');
+
+            // ✅ CẬP NHẬT BADGE TRẠNG THÁI
+            let statusBadge = batchStatus.badge;
+            if (batch.quantityRemaining === 0) {
+                statusBadge = '<span class="batch-status-badge batch-status-out-of-stock"><i class="fas fa-box-open"></i> Hết hàng</span>';
+            }
+
+            row.innerHTML = `
+                <td style="font-weight: 600; color: #3b82f6;">${batch.purchaseOrderId}</td>
+                <td>${batch.supplierName || 'N/A'}</td>
+                <td>${createdDate}</td>
+                <td>${expiryDate}</td>
+                <td style="text-align: right; font-weight: 500;">${quantity}</td>
+                <td style="text-align: center;">
+                    ${statusBadge}
+                </td>
+                <td>
+                    <select class="warehouse-select" data-batch-id="${batch.batchId}" ${batch.quantityRemaining === 0 ? 'disabled' : ''}>
+                        ${warehouseOptions}
+                    </select>
+                </td>
+                <td class="isactive-checkbox-container">
+                    <input type="checkbox"
+                           class="isactive-checkbox"
+                           data-batch-id="${batch.batchId}"
+                           ${batch.isActive ? 'checked' : ''}
+                           ${batch.quantityRemaining === 0 ? 'disabled' : ''}>
+                </td>
+                <td style="text-align: center;">
+                    <button class="btn-save-warehouse"
+                            data-batch-id="${batch.batchId}"
+                            ${batch.quantityRemaining === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                        <i class="fas fa-save"></i> Lưu
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+
+            if (showAuditColumnFlag && batch.quantityRemaining > 0) {
+                const cell = document.createElement('td');
+                cell.style.textAlign = 'center';
+                cell.innerHTML = `
+                    <button class="btn btn-primary" style="background-color: #9333ea; padding: 0.5rem 1rem;" onclick="openAuditModal('${batch.batchId}')">
+                        <i class="fas fa-clipboard-check"></i> Kiểm kê
+                    </button>
+                `;
+                row.appendChild(cell);
+            }
+        });
+
+        attachWarehouseEventListeners();
+        attachIsActiveEventListeners();
+
+        // ✅ RENDER PAGINATION
+        renderBatchPagination(totalPages);
+    }
+
+    function renderBatchPagination(totalPages) {
+        // Xóa pagination cũ nếu có
+        const existingPagination = document.querySelector('.batch-pagination');
+        if (existingPagination) existingPagination.remove();
+
+        if (totalPages <= 1) return; // Không cần pagination nếu chỉ có 1 trang
+
+        const batchTableContainer = document.querySelector('.batch-table-container');
+
+        const paginationHTML = `
+            <div class="batch-pagination">
+                <div class="batch-pagination-controls">
+                    <button class="batch-pagination-btn ${currentBatchPage === 1 ? 'disabled' : ''}"
+                            onclick="changeBatchPage(${currentBatchPage - 1})"
+                            ${currentBatchPage === 1 ? 'disabled' : ''}>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="batch-pagination-btn active">${currentBatchPage}</span>
+                    <span style="color: #6b7280; font-size: 0.875rem;">/ ${totalPages}</span>
+                    <button class="batch-pagination-btn ${currentBatchPage === totalPages ? 'disabled' : ''}"
+                            onclick="changeBatchPage(${currentBatchPage + 1})"
+                            ${currentBatchPage === totalPages ? 'disabled' : ''}>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="batch-pagination-info">
+                    Hiển thị ${((currentBatchPage - 1) * batchesPerPage) + 1} - ${Math.min(currentBatchPage * batchesPerPage, filteredBatches.length)}
+                    trên ${filteredBatches.length} lô
+                </div>
+            </div>
+        `;
+
+        batchTableContainer.insertAdjacentHTML('beforeend', paginationHTML);
+    }
+
+    // ===== HÀM THAY ĐỔI TRANG =====
+    function changeBatchPage(newPage) {
+        const totalPages = Math.ceil(filteredBatches.length / batchesPerPage);
+
+        if (newPage < 1 || newPage > totalPages) return;
+
+        currentBatchPage = newPage;
+        renderBatchTable();
+
+        // Scroll lên đầu bảng
+        document.querySelector('.batch-table-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+
+    function filterByQuantityAndQuality() {
+        const quantityStatus = document.getElementById('quantityStatusFilter').value;
+        const qualityStatus = document.getElementById('qualityStatusFilter').value;
+
+        // ✅ NẾU ĐANG DÙNG SHORTCUT FILTER, ƯU TIÊN SHORTCUT
+        if (currentStatusFilter !== 'all') {
+            filterByStatus(currentStatusFilter);
+            return;
+        }
+
+        // ✅ NẾU KHÔNG CÓ FILTER NÀO, HIỂN THỊ TẤT CẢ
+        if (quantityStatus === '' && qualityStatus === '') {
+            filterByStatus('all');
+            return;
+        }
+
+        const rows = document.querySelectorAll('.ingredient-row');
+        const noDataRow = document.querySelector('.no-data-row');
+
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            let showRow = true;
+
+            // ✅ FILTER THEO SỐ LƯỢNG
+            if (quantityStatus !== '') {
+                const qtyCell = row.querySelector('td:nth-child(9)'); // Cột trạng thái số lượng
+                const qtyText = qtyCell.textContent.toLowerCase();
+
+                if (quantityStatus === 'normal') {
+                    showRow = showRow && qtyText.includes('bình thường');
+                } else if (quantityStatus === 'below-reorder') {
+                    showRow = showRow && qtyText.includes('dưới tối thiểu');
+                } else if (quantityStatus === 'low-stock') {
+                    showRow = showRow && qtyText.includes('sắp hết hàng');
+                } else if (quantityStatus === 'out-of-stock') {
+                    showRow = showRow && qtyText.includes('hết hàng');
+                }
+            }
+
+            // ✅ FILTER THEO CHẤT LƯỢNG
+            if (qualityStatus !== '') {
+                const qualityCell = row.querySelector('td:nth-child(10)'); // Cột trạng thái chất lượng
+                const qualityText = qualityCell.textContent.toLowerCase();
+
+                if (qualityStatus === 'quality-normal') {
+                    showRow = showRow && qualityText.includes('bình thường');
+                } else if (qualityStatus === 'expiring-soon') {
+                    showRow = showRow && qualityText.includes('sắp hết hạn');
+                } else if (qualityStatus === 'expired') {
+                    showRow = showRow && qualityText.includes('hết hạn');
+                }
+            }
+
+            // Hiển thị hoặc ẩn row
+            if (showRow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Hiển thị thông báo nếu không có kết quả
+        if (visibleCount === 0 && !noDataRow) {
+            const tbody = document.getElementById('ingredientTableBody');
+            const noResultRow = document.createElement('tr');
+            noResultRow.className = 'no-result-row';
+            noResultRow.innerHTML = `
+                <td colspan="11" style="text-align:center; padding:3rem; color:#6b7280;">
+                    <i class="fas fa-filter" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
+                    <br>
+                    <strong style="font-size:1.1rem; color:#374151;">Không có mặt hàng nào phù hợp với bộ lọc</strong>
+                    <br>
+                    <span style="font-size:0.875rem;">Vui lòng thay đổi điều kiện lọc</span>
+                </td>
+            `;
+            tbody.appendChild(noResultRow);
+        } else {
+            const noResultRow = document.querySelector('.no-result-row');
+            if (noResultRow) {
+                noResultRow.remove();
+            }
+        }
+
+        updatePaginationInfo(visibleCount);
+        updateDashboard();
+    }
+
+    function resetFilters() {
+        document.getElementById('quantityStatusFilter').value = '';
+        document.getElementById('qualityStatusFilter').value = '';
+
+        // ✅ RESET LẠI SẮP XẾP VỀ MẶC ĐỊNH
+        document.getElementById('sortBySelect').value = 'code';
+        document.getElementById('sortOrderSelect').value = 'asc';
+        currentSortBy = 'code';
+        currentSortOrder = 'asc';
+
+        currentStatusFilter = 'all';
+        filterByStatus('all');
+    }
+
+
+    // ✅ THÊM: Lắng nghe sự kiện thay đổi dropdown
+    document.addEventListener('DOMContentLoaded', function () {
+        loadWarehouses();
+        const alert = document.getElementById('alertMessage');
+        if (alert) {
+            setTimeout(() => closeAlert(), 5000);
+        }
+
+        const searchInput = document.querySelector('input[name="searchIngredent"]');
+        const tableBody = document.querySelector('.table tbody');
+        const modal = document.getElementById("ingredientModal");
+        const closeBtns = [document.getElementById("closeModal"), document.getElementById("closeModalFooter")];
+
+        closeBtns.forEach(btn => {
+            if (btn) {
+                btn.addEventListener("click", () => modal.style.display = "none");
+            }
+        });
+
+        window.addEventListener("click", e => {
+            if (e.target === modal) modal.style.display = "none";
+        });
+
+        // ✅ THÊM: Lắng nghe sự kiện thay đổi status filter
+        const statusFilterDropdown = document.getElementById('statusFilter');
+        if (statusFilterDropdown) {
+            statusFilterDropdown.addEventListener('change', filterByStatus);
+        }
+
+        const quantityFilter = document.getElementById('quantityStatusFilter');
+        const qualityFilter = document.getElementById('qualityStatusFilter');
+
+        if (quantityFilter) {
+            quantityFilter.addEventListener('change', filterByQuantityAndQuality);
+        }
+
+        if (qualityFilter) {
+            qualityFilter.addEventListener('change', filterByQuantityAndQuality);
+        }
+
+    });
+
+    // ✅ Function kiểm tra trạng thái của batch
+    // ✅ Function kiểm tra trạng thái của batch
+    function getBatchStatus(batch) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (!batch.expiryDate || !batch.createdAt) {
+            return {
+                isExpired: false,
+                isExpiringSoon: false,
+                badge: '<span class="batch-status-badge batch-status-normal"><i class="fas fa-check-circle"></i> Bình thường</span>'
+            };
+        }
+
+        // Parse dates
+        const createdDate = new Date(batch.createdAt);
+        createdDate.setHours(0, 0, 0, 0);
+
+        const expiryDate = new Date(batch.expiryDate);
+        expiryDate.setHours(0, 0, 0, 0);
+
+        // Kiểm tra hết hạn
+        if (today >= expiryDate) {
+            return {
+                isExpired: true,
+                isExpiringSoon: false,
+                badge: '<span class="batch-status-badge batch-status-expired"><i class="fas fa-times-circle"></i> Hết hạn</span>'
+            };
+        }
+
+        // Kiểm tra sắp hết hạn (2/3 thời gian)
+        const totalDays = (expiryDate - createdDate) / (1000 * 60 * 60 * 24);
+        const twoThirdsPoint = new Date(createdDate.getTime() + (totalDays * 2 / 3 * 24 * 60 * 60 * 1000));
+
+        if (today >= twoThirdsPoint) {
+            const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            return {
+                isExpired: false,
+                isExpiringSoon: true,
+                badge: `<span class="batch-status-badge batch-status-expiring"><i class="fas fa-exclamation-triangle"></i> Còn ${daysLeft} ngày</span>`
+            };
+        }
+
+        return {
+            isExpired: false,
+            isExpiringSoon: false,
+            badge: '<span class="batch-status-badge batch-status-normal"><i class="fas fa-check-circle"></i> Bình thường</span>'
+        };
+    }
+
+    // ===== AUDIT FUNCTIONALITY =====
+    let showAuditColumnFlag = false;
+    let currentAuditBatch = null;
+
+    // Mock user data - TODO: thay bằng session data thật
+    // ✅ Lấy thông tin user từ Claims (xử lý tiếng Việt)
+    const currentUserData = {
+        userId: '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value',
+        name: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? ""))'),
+        email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value',
+        role: '@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value',
+        position: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst("Positions")?.Value ?? "Nhân viên kho"))'),
+        phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value'
+    };
+
+    // ✅ Xử lý position nếu là JSON array
+    (function () {
+        try {
+            const positions = JSON.parse(currentUserData.position);
+            if (Array.isArray(positions) && positions.length > 0) {
+                currentUserData.position = positions[0]; // Lấy position đầu tiên
+            }
+        } catch (e) {
+            // Nếu không phải JSON, giữ nguyên string
+            console.log('Position is a simple string:', currentUserData.position);
+        }
+    })();
+
+    // ✅ Log để kiểm tra
+    console.log('✅ Current User Data:', currentUserData);
+
+    function toggleAuditButtons() {
+        showAuditColumnFlag = !showAuditColumnFlag;
+        const header = document.getElementById('auditActionHeader');
+        const rows = document.querySelectorAll('#batchTableBody tr');
+
+        if (showAuditColumnFlag) {
+            header.style.display = 'table-cell';
+            rows.forEach(row => {
+                const batchId = row.dataset.batchId;
+                if (batchId) {
+                    const cell = document.createElement('td');
+                    cell.style.textAlign = 'center';
+                    cell.innerHTML = `
+                        <button class="btn btn-primary" style="background-color: #9333ea; padding: 0.5rem 1rem;" onclick="openAuditModal('${batchId}')">
+                            <i class="fas fa-clipboard-check"></i> Kiểm kê
+                        </button>
+                    `;
+                    row.appendChild(cell);
+                }
+            });
+        } else {
+            header.style.display = 'none';
+            rows.forEach(row => {
+                const lastCell = row.lastElementChild;
+                if (lastCell && lastCell.querySelector('.fas.fa-clipboard-check')) {
+                    lastCell.remove();
+                }
+            });
+        }
+    }
+
+    // Thay thế function openAuditModal cũ bằng code mới này:
+
+    async function openAuditModal(batchId) {
+        try {
+            // ✅ KIỂM TRA ĐƠN KIỂM KÊ ĐANG XỬ LÝ
+            const checkResponse = await fetch(`/ManagerIngredent/CheckAuditStatus?batchId=${batchId}`);
+            if (!checkResponse.ok) {
+                throw new Error('Không thể kiểm tra trạng thái đơn kiểm kê');
+            }
+            const checkResult = await checkResponse.json();
+            if (checkResult.hasUnprocessedAudit && checkResult.auditId) {
+                showAuditWarningPopup(checkResult.auditId);
+                return;
+            }
+
+            const modal = document.getElementById('auditModal');
+            const ingredientModal = document.getElementById('ingredientModal');
+            const row = document.querySelector(`tr[data-batch-id="${batchId}"]`);
+
+            if (!row) {
+                showToast('Không tìm thấy thông tin lô hàng', 'error');
+                return;
+            }
+
+            // Lấy dữ liệu từ row
+            const batchCode = row.cells[0].textContent;
+            const supplierName = row.cells[1].textContent;
+            const createdDate = row.cells[2].textContent;
+            const expiryDate = row.cells[3].textContent;
+            const quantity = parseVietnameseNumber(row.cells[4].textContent);
+            const statusBadge = row.cells[5].innerHTML;
+
+            // ✅ LẤY THÔNG TIN KHO TỪ SELECT
+            const warehouseSelect = row.querySelector('.warehouse-select');
+            const warehouseName = warehouseSelect.options[warehouseSelect.selectedIndex].text;
+            const warehouseId = warehouseSelect.value;
+
+            // Lấy thông tin từ modal ingredient
+            const ingredientCode = ingredientModal.getAttribute('data-ingredient-code');
+            const ingredientName = ingredientModal.getAttribute('data-ingredient-name');
+            const ingredientUnit = ingredientModal.getAttribute('data-ingredient-unit');
+            const ingredientUnitType = parseInt(ingredientModal.getAttribute('data-ingredient-unit-type'));
+
+            const currentDateTime = new Date();
+            const formattedDateTime = formatDateTime(currentDateTime);
+
+            // ✅ PARSE NGÀY TẠO TỪ STRING "DD/MM/YYYY" SANG DATE OBJECT
+            const createdDateParts = createdDate.split('/');
+            const createdDateObj = new Date(
+                parseInt(createdDateParts[2]), // year
+                parseInt(createdDateParts[1]) - 1, // month (0-indexed)
+                parseInt(createdDateParts[0]) // day
+            );
+
+            // Lưu thông tin batch hiện tại
+            currentAuditBatch = {
+                batchId: batchId,
+                batchCode: batchCode,
+                ingredientCode: ingredientCode,
+                ingredientName: ingredientName,
+                unit: ingredientUnit,
+                unitType: ingredientUnitType,
+                quantity: quantity,
+                expiryDate: expiryDate,
+                createdDate: createdDate,
+                createdDateObj: createdDateObj, 
+                warehouseName: warehouseName, 
+                warehouseId: warehouseId, 
+                status: statusBadge,
+                auditDateTime: currentDateTime
+            };
+
+            // Điền thông tin vào form audit modal
+            document.getElementById('auditBatchCode').textContent = batchCode;
+            document.getElementById('auditIngredientCode').textContent = ingredientCode;
+            document.getElementById('auditIngredientName').textContent = ingredientName;
+            document.getElementById('auditUnit').textContent = ingredientUnit;
+            document.getElementById('auditExpiryDate').textContent = expiryDate;
+            document.getElementById('auditDateTime').textContent = formattedDateTime;
+            document.getElementById('auditCurrentQty').textContent = formatNumber(quantity);
+            document.getElementById('auditStatus').innerHTML = statusBadge;
+
+            // ✅ HIỂN THỊ THÔNG TIN KHO
+            document.getElementById('auditWarehouse').textContent = warehouseName;
+
+            // ✅ SET MIN DATE CHO INPUT NGÀY HẾT HẠN
+            const minDateStr = createdDateObj.toISOString().split('T')[0]; // "YYYY-MM-DD"
+            document.getElementById('auditNewExpiryDate').setAttribute('min', minDateStr);
+            document.getElementById('auditNewExpiryDate').value = ''; // Reset value
+
+            // Cập nhật preview ban đầu
+            document.getElementById('auditPreviewQty').textContent = formatNumber(quantity);
+            document.getElementById('auditPreviewQty').style.color = '#1f2937';
+            document.getElementById('auditDiffIndicator').innerHTML = `<span style="color: #6b7280;">
+                <i class="fas fa-minus"></i> Không thay đổi
+            </span>`;
+
+            // Reset form về trạng thái ban đầu
+            resetAuditForm();
+
+            // Đóng modal ingredient, mở modal audit
+            ingredientModal.style.display = 'none';
+            modal.classList.add('active');
+
+        } catch (error) {
+            console.error('Error opening audit modal:', error);
+            showToast('Lỗi kiểm tra trạng thái: ' + error.message, 'error');
+        }
+    }
+
+    // ✅ FUNCTION MỚI: Hiển thị popup cảnh báo
+    function showAuditWarningPopup(auditId) {
+        const warningHtml = `
+            <div class="confirm-popup" id="auditWarningPopup" style="z-index: 10000;">
+                <div class="confirm-content" style="max-width: 500px;">
+                    <h3 style="color: #dc2626; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem;"></i>
+                        Lô mặt hàng đang có đơn kiểm kê chưa xử lý
+                    </h3>
+                    <div style="background: #fef3c7; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 1.5rem;">
+                        <p style="color: #92400e; line-height: 1.6; margin: 0;">
+                            <strong>Đơn kiểm kê:</strong> <span style="font-weight: 700; color: #dc2626;">#${auditId}</span>
+                        </p>
+                        <p style="color: #92400e; line-height: 1.6; margin-top: 0.75rem;">
+                            Vui lòng xử lý đơn này hoàn thành trước khi tạo đơn kiểm kê mới.
+                        </p>
+                    </div>
+                    <div class="confirm-buttons" style="justify-content: center;">
+                        <button class="btn btn-primary" id="closeWarningBtn" style="min-width: 120px;">
+                            <i class="fas fa-check"></i> OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Thêm popup vào body
+        document.body.insertAdjacentHTML('beforeend', warningHtml);
+
+        // Lắng nghe sự kiện đóng popup
+        const popup = document.getElementById('auditWarningPopup');
+        const closeBtn = document.getElementById('closeWarningBtn');
+
+        closeBtn.addEventListener('click', () => {
+            popup.remove();
+        });
+
+        // Đóng khi click ra ngoài
+        popup.addEventListener('click', (e) => {
+            if (e.target === popup) {
+                popup.remove();
+            }
+        });
+
+        // Đóng khi nhấn ESC
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                popup.remove();
+                document.removeEventListener('keydown', handleEsc);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+    }
+
+    function formatDateTime(dateTime) {
+        if (!dateTime) return 'N/A';
+
+        try {
+            const date = new Date(dateTime);
+            if (isNaN(date.getTime())) return 'N/A';
+
+            // Format: DD/MM/YYYY HH:mm:ss
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+
+            return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+        } catch (e) {
+            return 'N/A';
+        }
+    }
+
+    function resetAuditForm() {
+        document.getElementById('auditQuantity').value = '';
+        document.getElementById('auditReason').value = '';
+
+        // Reset radio buttons về "Thêm số lượng"
+        document.querySelector('input[name="auditType"][value="add"]').checked = true;
+
+        // Reset checkbox
+        document.getElementById('useMyInfo').checked = false;
+
+        // ✅ KHÔNG CẦN disable nút submit nữa
+        // document.getElementById('submitAuditBtn').disabled = false;
+
+        // Ẩn form thông tin người xác nhận
+        document.getElementById('confirmerInfoForm').style.display = 'none';
+        document.getElementById('confirmerPlaceholder').style.display = 'block';
+
+        // Reset preview ảnh
+        document.getElementById('imagePreviewContainer').innerHTML = `
+            <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #10b981; margin-bottom: 0.5rem;"></i>
+            <p style="color: #065f46; font-weight: 600;">Nhấn để tải lên hình ảnh</p>
+            <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">PNG, JPG, JPEG (Max 5MB)</p>
+        `;
+
+        // Reset file input
+        document.getElementById('auditImageUpload').value = '';
+
+        // Hiển thị lại phần nhập số lượng
+        document.getElementById('auditQuantityInput').style.display = 'block';
+        document.getElementById('auditTypeLabel').textContent = 'thêm';
+
+        // Cập nhật preview
+        if (currentAuditBatch) {
+            updateAuditPreview();
+        }
+    }
+
+    function closeAuditModal() {
+        const modal = document.getElementById('auditModal');
+        const ingredientModal = document.getElementById('ingredientModal');
+
+        modal.classList.remove('active');
+        ingredientModal.style.display = 'flex';
+        currentAuditBatch = null;
+    }
+
+    function handleAuditTypeChange() {
+        const auditType = document.querySelector('input[name="auditType"]:checked').value;
+        const quantityInput = document.getElementById('auditQuantityInput');
+        const typeLabel = document.getElementById('auditTypeLabel');
+
+        if (auditType === 'removeAll' || auditType === 'noChange') {
+            quantityInput.style.display = 'none';
+        } else {
+            quantityInput.style.display = 'block';
+            typeLabel.textContent = auditType === 'add' ? 'thêm' : 'hủy';
+        }
+
+        updateAuditPreview();
+    }
+
+    function updateAuditPreview() {
+        if (!currentAuditBatch) return;
+
+        const auditType = document.querySelector('input[name="auditType"]:checked').value;
+        const quantity = parseFloat(document.getElementById('auditQuantity').value) || 0;
+
+        let newQuantity = currentAuditBatch.quantity;
+
+        // Tính toán số lượng mới
+        if (auditType === 'add') {
+            newQuantity = currentAuditBatch.quantity + quantity;
+        } else if (auditType === 'remove') {
+            newQuantity = Math.max(0, currentAuditBatch.quantity - quantity);
+        } else if (auditType === 'removeAll') {
+            newQuantity = 0;
+        } else if (auditType === 'noChange') {
+            // ✅ KHÔNG THAY ĐỔI - GIỮ NGUYÊN
+            newQuantity = currentAuditBatch.quantity;
+        }
+
+        const diff = newQuantity - currentAuditBatch.quantity;
+        const qtyCell = document.getElementById('auditPreviewQty');
+        const diffIndicator = document.getElementById('auditDiffIndicator');
+
+        qtyCell.textContent = formatNumber(newQuantity);
+
+        if (diff > 0) {
+            qtyCell.style.color = '#10b981';
+            diffIndicator.innerHTML = `<span style="color: #10b981;">
+                <i class="fas fa-arrow-up"></i> +${formatNumber(Math.abs(diff))}
+            </span>`;
+        } else if (diff < 0) {
+            qtyCell.style.color = '#ef4444';
+            diffIndicator.innerHTML = `<span style="color: #ef4444;">
+                <i class="fas fa-arrow-down"></i> -${formatNumber(Math.abs(diff))}
+            </span>`;
+        } else {
+            qtyCell.style.color = '#1f2937';
+            diffIndicator.innerHTML = `<span style="color: #6b7280;">
+                <i class="fas fa-minus"></i> Không thay đổi
+            </span>`;
+        }
+    }
+
+    function handleConfirmerCheckbox(checked) {
+        const form = document.getElementById('confirmerInfoForm');
+        const placeholder = document.getElementById('confirmerPlaceholder');
+
+        if (checked) {
+            // ✅ Kiểm tra xem có dữ liệu user không
+            if (!currentUserData || !currentUserData.userId) {
+                showToast('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại!', 'error');
+                document.getElementById('useMyInfo').checked = false;
+                return;
+            }
+
+            // ✅ Điền thông tin từ currentUserData
+            document.getElementById('confirmerName').value = currentUserData.name || '';
+            document.getElementById('confirmerPosition').value = currentUserData.position || '';
+            document.getElementById('confirmerPhone').value = currentUserData.phone || '';
+
+            form.style.display = 'block';
+            placeholder.style.display = 'none';
+
+            console.log(' Filled confirmer info:', {
+                name: currentUserData.name,
+                position: currentUserData.position,
+                phone: currentUserData.phone
+            });
+        } else {
+            document.getElementById('confirmerName').value = '';
+            document.getElementById('confirmerPosition').value = '';
+            document.getElementById('confirmerPhone').value = '';
+
+            form.style.display = 'none';
+            placeholder.style.display = 'block';
+        }
+    }
+
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Kích thước file không được vượt quá 5MB', 'warning');
+            event.target.value = '';
+            return;
+        }
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            showToast('Vui lòng chọn file hình ảnh (PNG, JPG, JPEG)', 'warning');
+            event.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const container = document.getElementById('imagePreviewContainer');
+            container.innerHTML = `
+                <img src="${e.target.result}" class="audit-image-preview" alt="Preview">
+                <p style="font-size: 0.875rem; color: #065f46; font-weight: 600;">
+                    Nhấn để thay đổi hình ảnh
+                </p>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function submitAudit() {
+        if (!currentAuditBatch) {
+            showToast('Không có thông tin lô hàng để kiểm kê', 'error');
+            return;
+        }
+
+        // ✅ 1. VALIDATE INPUT
+        const auditType = document.querySelector('input[name="auditType"]:checked').value;
+        const quantity = parseFloat(document.getElementById('auditQuantity').value) || 0;
+        const reason = document.getElementById('auditReason').value.trim();
+        const newExpiryDate = document.getElementById('auditNewExpiryDate').value; // ✅ LẤY NGÀY MỚI
+
+
+        if (auditType === 'remove' && quantity > currentAuditBatch.quantity) {
+            showToast(`Số lượng hủy (${formatNumber(quantity)}) không được lớn hơn số lượng hiện tại (${formatNumber(currentAuditBatch.quantity)})!`, 'error');
+            document.getElementById('auditQuantity').focus();
+            return;
+        }
+
+        if (auditType !== 'removeAll' && auditType !== 'noChange') {
+            if (quantity < 0) {
+                showToast('Số lượng không được nhỏ hơn 0!', 'warning');
+                document.getElementById('auditQuantity').focus();
+                return;
+            }
+
+            if (quantity <= 0) {
+                showToast('Vui lòng nhập số lượng hợp lệ', 'warning');
+                document.getElementById('auditQuantity').focus();
+                return;
+            }
+        }
+
+        // Validate số lượng (trừ trường hợp removeAll)
+        if (auditType !== 'removeAll' && auditType !== 'noChange' && quantity <= 0) {
+            showToast('Vui lòng nhập số lượng hợp lệ', 'warning');
+            document.getElementById('auditQuantity').focus();
+            return;
+        }
+
+        // Validate lý do
+        if (!reason) {
+            showToast('Vui lòng nhập lý do kiểm kê', 'warning');
+            document.getElementById('auditReason').focus();
+            return;
+        }
+
+        // ✅ VALIDATE NGÀY HẾT HẠN MỚI (nếu có nhập)
+        if (newExpiryDate) {
+            const selectedDate = new Date(newExpiryDate);
+            const minDate = currentAuditBatch.createdDateObj;
+
+            if (selectedDate < minDate) {
+                showToast('Ngày hết hạn mới không được nhỏ hơn ngày tạo lô!', 'warning');
+                document.getElementById('auditNewExpiryDate').focus();
+                return;
+            }
+        }
+
+        // Validate thông tin người kiểm kê
+        const useMyInfo = document.getElementById('useMyInfo').checked;
+        if (!useMyInfo) {
+            showToast('Vui lòng xác nhận thông tin người kiểm kê', 'warning');
+            return;
+        }
+
+        // Validate ảnh minh chứng
+        const imageFile = document.getElementById('auditImageUpload').files[0];
+        if (!imageFile) {
+            showToast('Vui lòng tải lên hình ảnh minh chứng', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+
+        // BatchId
+        formData.append('BatchId', currentAuditBatch.batchId);
+
+        // Mã lô (PurchaseOrderId)
+        formData.append('PurchaseOrderId', currentAuditBatch.batchCode);
+
+        // Mã mặt hàng
+        formData.append('IngredientCode', currentAuditBatch.ingredientCode);
+        formData.append('IngredientName', currentAuditBatch.ingredientName);
+        formData.append('Unit', currentAuditBatch.unit);
+
+        // Số lượng gốc
+        formData.append('OriginalQuantity', currentAuditBatch.quantity);
+
+        // ✅ HẠN SỬ DỤNG
+        if (newExpiryDate) {
+            formData.append('ExpiryDate', newExpiryDate);
+        } else if (currentAuditBatch.expiryDate && currentAuditBatch.expiryDate !== 'N/A') {
+            const parts = currentAuditBatch.expiryDate.split('/');
+            if (parts.length === 3) {
+                const formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                formData.append('ExpiryDate', formattedDate);
+            }
+        }
+
+        // ✅ THÔNG TIN NGƯỜI TẠO (từ Claims)
+        formData.append('CreatorId', currentUserData.userId);
+        formData.append('CreatorName', currentUserData.name);
+        formData.append('CreatorEmail', currentUserData.email); // ✅ THÊM
+        formData.append('CreatorPosition', currentUserData.position);
+        formData.append('CreatorRole', currentUserData.role); // ✅ THÊM
+        formData.append('CreatorPhone', document.getElementById('confirmerPhone').value || 'N/A');
+
+        // Thời gian tạo đơn
+        formData.append('CreatedAt',
+            new Date().toLocaleString('sv-SE', {
+                timeZone: 'Asia/Ho_Chi_Minh'
+            }).replace(' ', 'T')
+        );
+
+        // Lý do kiểm kê
+        formData.append('Reason', reason);
+
+        // Số lượng điều chỉnh
+        let adjustmentQty = quantity;
+        let isAddition = false;
+
+        if (auditType === 'add') {
+            adjustmentQty = quantity;
+            isAddition = true;
+        } else if (auditType === 'remove') {
+            adjustmentQty = quantity;
+            isAddition = false;
+        } else if (auditType === 'removeAll') {
+            adjustmentQty = currentAuditBatch.quantity;
+            isAddition = false;
+        } else if (auditType === 'noChange') {
+            adjustmentQty = 0;
+            isAddition = false;
+        }
+
+        formData.append('AdjustmentQuantity', adjustmentQty.toString());
+        formData.append('IsAddition', isAddition.toString());
+
+        // ✅ XÁC ĐỊNH IngredientStatus
+        const statusBadgeHTML = currentAuditBatch.status;
+        let ingredientStatus = 'normal';
+
+        if (statusBadgeHTML.includes('Hết hạn') || statusBadgeHTML.includes('expired')) {
+            ingredientStatus = 'expired';
+        } else if (statusBadgeHTML.includes('Sắp hết hạn') || statusBadgeHTML.includes('expiring')) {
+            ingredientStatus = 'expiring';
+        } else {
+            ingredientStatus = 'normal';
+        }
+
+        formData.append('IngredientStatus', ingredientStatus);
+
+        // ✅ FILE ẢNH MINH CHỨNG
+        formData.append('ImageFile', imageFile);
+
+        // ✅ LOG DỮ LIỆU
+        console.log('=== AUDIT SUBMISSION DATA ===');
+        console.log('UserId:', currentUserData.userId);
+        console.log('UserName:', currentUserData.name);
+        console.log('UserEmail:', currentUserData.email);
+        console.log('UserPosition:', currentUserData.position);
+        console.log('BatchId:', currentAuditBatch.batchId);
+        console.log('AdjustmentQuantity:', adjustmentQty);
+        console.log('IsAddition:', isAddition);
+
+        // ✅ 8. GỬI REQUEST
+        try {
+            const submitBtn = document.getElementById('submitAuditBtn');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
+
+            const response = await fetch('/api/Audit/SubmitAudit', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                showSuccessMessage(result.message || 'Tạo đơn kiểm kê thành công!');
+                closeAuditModal();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                throw new Error(result.message || 'Có lỗi xảy ra');
+            }
+
+        } catch (error) {
+            console.error('Error submitting audit:', error);
+            showToast('Có lỗi xảy ra khi tạo đơn kiểm kê: ' + error.message, 'error');
+
+            const submitBtn = document.getElementById('submitAuditBtn');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Xác nhận kiểm kê';
+        }
+    }
+
+    // ✅ HELPER FUNCTION: Hiển thị thông báo thành công
+    function showSuccessMessage(message) {
+        const successHtml = `
+            <div style="position: fixed; top: 20px; right: 20px; background: #10b981; color: white;
+                        padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        z-index: 10000; animation: slideIn 0.3s ease-out;" id="successMsg">
+                <i class="fas fa-check-circle"></i> ${message}
+            </div>
+        `;
+
+        // Xóa message cũ nếu có
+        const oldMsg = document.getElementById('successMsg');
+        if (oldMsg) oldMsg.remove();
+
+        document.body.insertAdjacentHTML('beforeend', successHtml);
+
+        setTimeout(() => {
+            const msg = document.getElementById('successMsg');
+            if (msg) {
+                msg.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => msg.remove(), 300);
+            }
+        }, 3000);
+    }
+
+
+    // ✅ HELPER FUNCTION: Đóng modal audit
+    function closeAuditModal() {
+        const modal = document.getElementById('auditModal');
+        const ingredientModal = document.getElementById('ingredientModal');
+
+        modal.classList.remove('active');
+        ingredientModal.style.display = 'flex';
+        currentAuditBatch = null;
+    }
+
+    // ✅ Function mới: Lắng nghe sự kiện checkbox IsActive
+    function attachIsActiveEventListeners() {
+        document.querySelectorAll('.isactive-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const row = this.closest('tr');
+                const saveBtn = row.querySelector('.btn-save-warehouse');
+
+                // Kiểm tra nếu có thay đổi
+                const hasWarehouseChange = row.querySelector('.warehouse-select').classList.contains('changed');
+                const hasIsActiveChange = this.checked !== (row.dataset.originalIsActive === 'true');
+
+                // Hiển thị nút Lưu nếu có thay đổi bất kỳ
+                if (hasWarehouseChange || hasIsActiveChange) {
+                    if (hasIsActiveChange) {
+                        this.classList.add('changed');
+                    }
+                    saveBtn.classList.add('show');
+                } else {
+                    this.classList.remove('changed');
+                    if (!hasWarehouseChange) {
+                        saveBtn.classList.remove('show');
+                    }
+                }
+            });
+        });
+    }
+
+    // ===== BIẾN TOÀN CỤC LƯU TRẠNG THÁI FILTER =====
+    let currentStatusFilter = 'all';
+
+    // ===== HÀM ĐẾM SỐ LƯỢNG mặt hàng THEO TRẠNG THÁI =====
+    function countIngredientsByStatus() {
+        const rows = document.querySelectorAll('.ingredient-row');
+
+        let counts = {
+            total: 0,
+            outOfStock: 0,
+            lowStock: 0,
+            belowReorder: 0,
+            expiringSoon: 0,
+            expired: 0
+        };
+
+        rows.forEach(row => {
+            // Chỉ đếm các row đang hiển thị
+            if (row.style.display === 'none') return;
+
+            counts.total++;
+
+            // Lấy số lượng từ cột thứ 5 (index 4)
+            const qtyText = row.cells[4].textContent.trim();
+            const qty = parseVietnameseNumber(qtyText);
+
+            // Lấy trạng thái số lượng từ cột thứ 6 (index 5)
+            const qtyStatusCell = row.cells[5];
+            const qtyStatusText = qtyStatusCell ? qtyStatusCell.textContent.toLowerCase() : '';
+
+            // Lấy trạng thái chất lượng từ cột thứ 7 (index 6)
+            const qualityStatusCell = row.cells[6];
+            const qualityStatusText = qualityStatusCell ? qualityStatusCell.textContent.toLowerCase() : '';
+
+            // 1. Đếm hết hàng
+            if (qty === 0) {
+                counts.outOfStock++;
+            }
+
+            // 2. Đếm sắp hết hàng
+            if (qtyStatusText.includes('sắp hết hàng')) {
+                counts.lowStock++;
+            }
+
+            // 3. Đếm dưới tối thiểu
+            if (qtyStatusText.includes('dưới tối thiểu')) {
+                counts.belowReorder++;
+            }
+
+            // 4. Đếm sắp hết hạn
+            if (qualityStatusText.includes('sắp hết hạn:')) {
+                counts.expiringSoon++;
+            }
+
+            // 5. Đếm hết hạn
+            if (qualityStatusText.includes('hết hạn:')) {
+                counts.expired++;
+            }
+        });
+
+        return counts;
+    }
+
+    // ===== CẬP NHẬT DASHBOARD VÀ BUTTONS =====
+    function updateDashboard() {
+        const counts = countIngredientsByStatus();
+
+        // CHỈ cập nhật Filter Buttons (bỏ phần cập nhật Dashboard Cards)
+        document.getElementById('totalCount').textContent = counts.total;
+        document.getElementById('outOfStockBtn').textContent = counts.outOfStock;
+        document.getElementById('lowStockBtn').textContent = counts.lowStock;
+        document.getElementById('belowReorderBtn').textContent = counts.belowReorder;
+        document.getElementById('expiringSoonBtn').textContent = counts.expiringSoon;
+        document.getElementById('expiredBtn').textContent = counts.expired;
+    }
+
+    // ===== LỌC mặt hàng THEO TRẠNG THÁI =====
+    function filterByStatus(status) {
+        currentStatusFilter = status;
+
+        const rows = document.querySelectorAll('.ingredient-row');
+        const noDataRow = document.querySelector('.no-data-row');
+        let visibleCount = 0;
+
+        // Xóa "no result" row cũ nếu có
+        const oldNoResult = document.querySelector('.no-result-row');
+        if (oldNoResult) oldNoResult.remove();
+
+        // Cập nhật active state cho buttons
+        document.querySelectorAll('.filter-shortcut-btn').forEach(btn => {
+            if (btn.getAttribute('data-filter') === status) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Nếu filter = "all", hiển thị tất cả
+        if (status === 'all') {
+            rows.forEach(row => {
+                row.style.display = '';
+                visibleCount++;
+            });
+            updatePaginationInfo(visibleCount);
+
+            // ✅ SẮP XẾP LẠI SAU KHI FILTER
+            sortTable();
+            return;
+        }
+
+        // Lọc theo từng loại trạng thái
+        rows.forEach(row => {
+            let shouldShow = false;
+
+            // Lấy số lượng từ cột 5 (cells[4])
+            const qtyText = row.cells[4].textContent.trim();
+            const qty = parseVietnameseNumber(qtyText);
+
+            // Lấy trạng thái số lượng từ cột 6 (cells[5])
+            const qtyStatusCell = row.cells[5];
+            const qtyStatusText = qtyStatusCell ? qtyStatusCell.textContent.toLowerCase() : '';
+
+            // Lấy trạng thái chất lượng từ cột 7 (cells[6])
+            const qualityStatusCell = row.cells[6];
+            const qualityStatusText = qualityStatusCell ? qualityStatusCell.textContent.toLowerCase() : '';
+
+            switch (status) {
+                case 'out-of-stock':
+                    shouldShow = qty === 0;
+                    break;
+
+                case 'low-stock':
+                    shouldShow = qtyStatusText.includes('sắp hết hàng');
+                    break;
+
+                case 'below-reorder':
+                    shouldShow = qtyStatusText.includes('dưới tối thiểu');
+                    break;
+
+                case 'expiring-soon':
+                    shouldShow = qualityStatusText.includes('sắp hết hạn:');
+                    break;
+
+                case 'expired':
+                    shouldShow = qualityStatusText.includes('hết hạn:');
+                    break;
+            }
+
+            if (shouldShow) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Hiển thị thông báo nếu không có kết quả
+        if (visibleCount === 0 && !noDataRow) {
+            const tbody = document.getElementById('ingredientTableBody');
+            const statusNames = {
+                'out-of-stock': 'Hết hàng',
+                'low-stock': 'Sắp hết hàng',
+                'below-reorder': 'Dưới tối thiểu',
+                'expiring-soon': 'Sắp hết hạn',
+                'expired': 'Hết hạn'
+            };
+
+            const noResultRow = document.createElement('tr');
+            noResultRow.className = 'no-result-row';
+            noResultRow.innerHTML = `
+                <td colspan="11" style="text-align:center; padding:3rem; color:#6b7280;">
+                    <i class="fas fa-filter" style="font-size:3rem; color:#d1d5db; margin-bottom:1rem;"></i>
+                    <br>
+                    <strong style="font-size:1.1rem; color:#374151;">Không có mặt hàng nào ở trạng thái "${statusNames[status]}"</strong>
+                    <br>
+                    <span style="font-size:0.875rem;">Nhấn "Tất cả" để xem toàn bộ danh sách</span>
+                </td>
+            `;
+            tbody.appendChild(noResultRow);
+        }
+
+        updatePaginationInfo(visibleCount);
+
+        // ✅ SẮP XẾP LẠI SAU KHI FILTER
+        sortTable();
+    }
+
+    // ===== CẬP NHẬT THÔNG TIN PAGINATION =====
+    function updatePaginationInfo(visibleCount) {
+        const paginationInfo = document.querySelector('.pagination-info');
+        if (paginationInfo && visibleCount > 0) {
+            const totalItems = document.querySelectorAll('.ingredient-row').length;
+            paginationInfo.innerHTML = `Hiển thị ${visibleCount} trên ${totalItems} kết quả`;
+        }
+    }
+
+    let currentSortBy = 'code';
+    let currentSortOrder = 'asc';
+
+    // ===== HÀM SẮP XẾP BẢNG =====
+    function sortTable() {
+        const sortBy = document.getElementById('sortBySelect').value;
+        const sortOrder = document.getElementById('sortOrderSelect').value;
+
+        currentSortBy = sortBy;
+        currentSortOrder = sortOrder;
+
+        const tbody = document.getElementById('ingredientTableBody');
+        const rows = Array.from(tbody.querySelectorAll('.ingredient-row'));
+
+        // Nếu không có dòng nào, return
+        if (rows.length === 0) return;
+
+        // Xóa dòng "no-data" hoặc "no-result" nếu có
+        const noDataRow = tbody.querySelector('.no-data-row');
+        const noResultRow = tbody.querySelector('.no-result-row');
+        if (noDataRow) noDataRow.remove();
+        if (noResultRow) noResultRow.remove();
+
+        // Sắp xếp rows
+        rows.sort((rowA, rowB) => {
+            let valueA, valueB;
+
+            switch (sortBy) {
+                case 'code':
+                    // Cột 2: Mã mặt hàng
+                    valueA = rowA.cells[1].textContent.trim();
+                    valueB = rowB.cells[1].textContent.trim();
+                    break;
+
+                case 'name':
+                    // Cột 3: Tên mặt hàng
+                    valueA = rowA.cells[2].textContent.trim().toLowerCase();
+                    valueB = rowB.cells[2].textContent.trim().toLowerCase();
+                    break;
+
+                case 'quantity':
+                    // Cột 5: Số lượng tồn (SL tồn)
+                    valueA = parseVietnameseNumber(rowA.cells[4].textContent.trim());
+                    valueB = parseVietnameseNumber(rowB.cells[4].textContent.trim());
+                    break;
+
+                default:
+                    valueA = rowA.cells[1].textContent.trim();
+                    valueB = rowB.cells[1].textContent.trim();
+            }
+
+            // So sánh
+            let comparison = 0;
+
+            if (sortBy === 'quantity') {
+                // So sánh số
+                comparison = valueA - valueB;
+            } else {
+                // So sánh chuỗi
+                comparison = valueA.localeCompare(valueB, 'vi');
+            }
+
+            // Đảo ngược nếu giảm dần
+            return sortOrder === 'asc' ? comparison : -comparison;
+        });
+
+        // Cập nhật lại STT sau khi sắp xếp
+        rows.forEach((row, index) => {
+            row.cells[0].textContent = index + 1;
+        });
+
+        // Clear tbody và append lại các rows đã sắp xếp
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+
+        // Cập nhật lại bảng cảnh báo
+        renderAlertPanel();
+    }
+
+    // ===== RENDER BẢNG CẢNH BÁO =====
+    function renderAlertPanel() {
+        const rows = document.querySelectorAll('.ingredient-row');
+        const alertBody = document.getElementById('alertPanelBody');
+        const alertCount = document.getElementById('alertCount');
+
+        let alertItems = [];
+
+        rows.forEach((row, index) => {
+            if (row.style.display === 'none') return;
+
+            const code = row.cells[1].textContent.trim();
+            const name = row.cells[2].textContent.trim();
+            const unit = row.cells[3].textContent.trim();
+            const qtyText = row.cells[4].textContent.trim();
+            const qty = parseVietnameseNumber(qtyText);
+
+            const qtyStatusCell = row.cells[5];
+            const statusText = qtyStatusCell ? qtyStatusCell.textContent.toLowerCase() : '';
+
+            // ✅ ĐỌC CHÍNH XÁC TỪ DATA ATTRIBUTES
+            const qtyExcludingExpired = parseFloat(row.dataset.qtyExcludingExpired);
+            const reorderLevel = parseFloat(row.dataset.reorderLevel);
+            const needUrgentRestock = row.dataset.needUrgentRestock === 'true';
+
+            console.log(`Row ${index + 1} (${code}):`, {
+                qty,
+                qtyExcludingExpired,
+                reorderLevel,
+                needUrgentRestock,
+                statusText
+            });
+
+            let alertType = null;
+            let statusLabel = '';
+            let priority = 0;
+            let extraInfo = null;
+
+            // ✅ LOGIC PHÂN LOẠI (ƯU TIÊN THEO THỨ TỰ)
+            if (qty === 0) {
+                // Ưu tiên 0: Hết hàng hoàn toàn
+                alertType = 'out-of-stock';
+                statusLabel = 'Hết hàng';
+                priority = 0;
+            }
+            else if (statusText.includes('sắp hết hàng')) {
+                // Ưu tiên 1: Sắp hết hàng
+                alertType = 'low-stock';
+                statusLabel = 'Sắp hết hàng';
+                priority = 1;
+            }
+            else if (needUrgentRestock) {
+                // ✅ Ưu tiên 2: CẦN NHẬP GẤP (có lô hết hạn làm giảm số lượng)
+                alertType = 'urgent-restock';
+                statusLabel = 'Cần nhập gấp';
+                priority = 2;
+
+                // ✅ Đảm bảo hiển thị đúng số liệu
+                if (!isNaN(qtyExcludingExpired) && !isNaN(reorderLevel)) {
+                    extraInfo = {
+                        qtyExcludingExpired: formatNumber(qtyExcludingExpired),
+                        reorderLevel: formatNumber(reorderLevel)
+                    };
+                    console.log(` Found urgent restock: ${code}`, extraInfo);
+                }
+            }
+            else if (statusText.includes('dưới tối thiểu')) {
+                // Ưu tiên 3: Dưới tối thiểu
+                alertType = 'below-reorder';
+                statusLabel = 'Dưới tối thiểu';
+                priority = 3;
+            }
+
+            if (alertType) {
+                alertItems.push({
+                    code,
+                    name,
+                    unit,
+                    qty: formatNumber(qty),
+                    status: statusLabel,
+                    alertType,
+                    priority,
+                    rowIndex: index,
+                    extraInfo // ✅ Thêm thông tin chi tiết
+                });
+            }
+        });
+
+        // Sắp xếp theo priority
+        alertItems.sort((a, b) => a.priority - b.priority);
+
+        // Cập nhật số lượng
+        alertCount.textContent = alertItems.length;
+
+        // Render
+        if (alertItems.length === 0) {
+            alertBody.innerHTML = `
+                <div class="alert-empty">
+                    <i class="fas fa-check-circle"></i>
+                    <p><strong>Tuyệt vời!</strong></p>
+                    <p>Không có mặt hàng nào cần chú ý</p>
+                </div>
+            `;
+            return;
+        }
+
+        alertBody.innerHTML = alertItems.map((item, index) => `
+            <div class="alert-item ${item.alertType}" onclick="scrollToIngredient(${item.rowIndex})">
+                <div class="alert-item-header">
+                    <span class="alert-item-code">#${index + 1} - ${item.code}</span>
+                    <span class="status-badge status-${item.alertType}" style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">
+                        ${item.status}
+                    </span>
+                </div>
+                <div class="alert-item-name">${item.name}</div>
+                <div class="alert-item-footer">
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1;">
+                        <span class="alert-quantity">
+                            <i class="fas fa-box"></i> <strong>${item.qty}</strong> ${item.unit}
+                        </span>
+                        ${item.extraInfo ? `
+                            <span style="font-size: 0.75rem; color: #dc2626; font-weight: 600; line-height: 1.4;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Còn ${item.extraInfo.qtyExcludingExpired} ${item.unit} (sau trừ hết hạn)
+                            </span>
+                            <span style="font-size: 0.75rem; color: #6b7280; line-height: 1.4;">
+                                <i class="fas fa-chart-line"></i>
+                                Tối thiểu: ${item.extraInfo.reorderLevel} ${item.unit}
+                            </span>
+                        ` : ''}
+                    </div>
+                    <span style="color: #6b7280; flex-shrink: 0;">
+                        <i class="fas fa-arrow-right"></i>
+                    </span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ===== SCROLL ĐẾN mặt hàng =====
+    function scrollToIngredient(rowIndex) {
+        const rows = document.querySelectorAll('.ingredient-row');
+        const targetRow = rows[rowIndex];
+
+        if (targetRow && targetRow.style.display !== 'none') {
+            // Xóa highlight cũ
+            rows.forEach(r => r.style.backgroundColor = '');
+
+            // Highlight row
+            targetRow.style.backgroundColor = '#fef3c7';
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Xóa highlight sau 2s
+            setTimeout(() => {
+                targetRow.style.backgroundColor = '';
+            }, 2000);
+        }
+    }
+
+    // ===== XUẤT BÁO CÁO PDF MẶT HÀNG =====
+    document.getElementById('exportIngredientReportBtn')?.addEventListener('click', async function () {
+        const period = document.getElementById('ingredientReportPeriod').value;
+        const btn = this;
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo báo cáo...';
+
+            const response = await fetch('/api/Ingredient/ExportReport', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ period: period })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Không thể tạo báo cáo');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Tạo tên file với timestamp
+            const timestamp = new Date().getTime();
+            const periodText = period === 'today' ? 'HomNay' :
+                period === '7days' ? '7Ngay' : '30Ngay';
+            a.download = `BaoCaoMatHang_${periodText}_${timestamp}.pdf`;
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            // Hiển thị thông báo thành công
+            btn.innerHTML = 'Tải thành công!';
+            showToast('Tải báo cáo thành công!', 'success');
+
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-file-pdf"></i> Xuất báo cáo PDF';
+                btn.disabled = false;
+            }, 2000);
+
+        } catch (error) {
+            console.error('Lỗi xuất báo cáo:', error);
+            showToast('Không thể tạo báo cáo: ' + error.message, 'error');
+
+            btn.innerHTML = '<i class="fas fa-file-pdf"></i> Xuất báo cáo PDF';
+            btn.disabled = false;
+        }
+    });
+
+</script>

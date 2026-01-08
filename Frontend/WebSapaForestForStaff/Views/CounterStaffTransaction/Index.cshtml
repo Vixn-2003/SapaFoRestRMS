@@ -1,0 +1,172 @@
+@model WebSapaForestForStaff.ViewModels.CounterStaff.TransactionHistoryViewModel
+
+@{
+    ViewData["Title"] = "Lịch sử giao dịch";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Lịch sử giao dịch</h2>
+            <small class="text-muted">Xem và xuất lịch sử giao dịch</small>
+        </div>
+        <div>
+            <a href="@Url.Action("Index", "CounterStaffDashboard")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index")" id="filterForm" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="fromDate" class="form-label">Từ ngày</label>
+                    <input type="date" class="form-control" id="fromDate" name="fromDate"
+                           value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-3">
+                    <label for="toDate" class="form-label">Đến ngày</label>
+                    <input type="date" class="form-control" id="toDate" name="toDate"
+                           value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-md-2">
+                    <label for="paymentMethod" class="form-label">Phương thức thanh toán</label>
+                    <select class="form-select" id="paymentMethod" name="paymentMethod">
+                        <option value="">Tất cả</option>
+                        <option value="Cash" selected="@(Model.Filter.PaymentMethod == "Cash")">Tiền mặt</option>
+                        <option value="QRBankTransfer" selected="@(Model.Filter.PaymentMethod == "QRBankTransfer")">Chuyển khoản QR</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Trạng thái</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">Tất cả</option>
+                        <option value="Paid" selected="@(Model.Filter.Status == "Paid")">Đã thanh toán</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search me-1"></i>Lọc
+                    </button>
+                </div>
+            </form>
+            <div class="mt-3">
+                <form method="post" action="@Url.Action("ExportToExcel")" id="exportForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="FromDate" value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="ToDate" value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="PaymentMethod" value="@Model.Filter.PaymentMethod" />
+                    <input type="hidden" name="Status" value="@Model.Filter.Status" />
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            @if (Model.TransactionList.Transactions.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mã hóa đơn</th>
+                                <th>Mã đơn hàng</th>
+                                <th>Reservation ID</th>
+                                <th>Số tiền</th>
+                                <th>Phương thức thanh toán</th>
+                                <th>Thu ngân</th>
+                                <th>Thời gian</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var transaction in Model.TransactionList.Transactions)
+                            {
+                                <tr>
+                                    <td><strong>@transaction.TransactionCode</strong></td>
+                                    <td>@transaction.OrderCode</td>
+                                    <td>
+                                        @if (transaction.ReservationId.HasValue && transaction.ReservationId.Value > 0)
+                                        {
+                                            <span class="badge bg-primary">RES@(transaction.ReservationId.Value.ToString("D6"))</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                    <td><strong>@transaction.Amount.ToString("N0") ₫</strong></td>
+                                    <td>
+                                        @if (transaction.PaymentMethod == "Cash")
+                                        {
+                                            <span class="badge bg-success">Tiền mặt</span>
+                                        }
+                                        else if (transaction.PaymentMethod == "QRBankTransfer")
+                                        {
+                                            <span class="badge bg-info">QR</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">@transaction.PaymentMethod</span>
+                                        }
+                                    </td>
+                                    <td>@transaction.CashierName</td>
+                                    <td>@transaction.CompletedAt?.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td>
+                                        @if (transaction.Status == "Paid" || transaction.Status == "Completed")
+                                        {
+                                            <span class="badge bg-success">@transaction.Status</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@transaction.Status</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                @if (Model.TransactionList.TotalPages > 1)
+                {
+                    <nav class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            @for (int i = 1; i <= Model.TransactionList.TotalPages; i++)
+                            {
+                                <li class="page-item @(i == Model.TransactionList.PageNumber ? "active" : "")">
+                                    <a class="page-link" href="@Url.Action("Index", new
+                                    {
+                                        fromDate = Model.Filter.FromDate?.ToString("yyyy-MM-dd"),
+                                        toDate = Model.Filter.ToDate?.ToString("yyyy-MM-dd"),
+                                        paymentMethod = Model.Filter.PaymentMethod,
+                                        status = Model.Filter.Status,
+                                        pageNumber = i
+                                    })">@i</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                }
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox fs-1 text-muted"></i>
+                    <p class="text-muted mt-3">Không tìm thấy giao dịch nào</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+

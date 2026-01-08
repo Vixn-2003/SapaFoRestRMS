@@ -1,0 +1,96 @@
+@startuml Main_Workflow_RMS
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 11
+
+title Main Workflow - Restaurant Management System (RMS)\nTừ đặt bàn đến in hóa đơn
+
+|#LightBlue|**Khách hàng**|
+start
+:Khách hàng đặt bàn\n(ReservationService.CreateReservationAsync);
+note right
+  - Tạo Reservation với Status = "Pending"
+  - Tạo User/Customer nếu chưa có
+  - Kiểm tra trùng đơn theo phone + ngày + ca
+end note
+
+|#LightGreen|**Quản lý**|
+:Quản lý xếp bàn\n(ReservationService.AssignTablesAsync);
+note right
+  - Chọn bàn phù hợp với số lượng khách
+  - Gán bàn vào ReservationTables
+  - Cập nhật Status = "Confirmed"
+end note
+
+|#LightYellow|**Counter Staff**|
+:Counter Staff xác nhận\nkhách hàng đến\n(DashboardTableService.SeatGuestAsync);
+note right
+  - Kiểm tra Reservation Status = "Confirmed"
+  - Cập nhật Status = "Guest Seated"
+  - Ghi ArrivalAt = DateTime.Now
+  - SignalR notify realtime
+end note
+
+|#LightCoral|**Phục vụ / Khách hàng**|
+:Phục vụ bàn gọi món +\nKhách hàng gọi món\n(OrderTableService.CreateOrderAsync);
+note right
+  - Tạo Order với Status = "Pending"
+  - Thêm OrderDetails (MenuItem/Combo)
+  - Reserve inventory cho ConsumptionBased items
+end note
+
+|#Orange|**Bếp**|
+:Bếp nấu món\n(KitchenDisplayService.UpdateItemStatusAsync);
+note right
+  - Pending → Cooking
+  - Kiểm tra đủ nguyên liệu
+  - Cooking → Ready
+  - Consume inventory khi Ready
+end note
+
+|#LightCoral|**Phục vụ**|
+:Phục vụ bê món\n(WaiterOrderTrackingService.MarkAsServedAsync);
+note right
+  - Kiểm tra món đã Ready
+  - Cập nhật Status = "Done"
+  - SignalR notify realtime
+end note
+
+:Phục vụ xác nhận hóa đơn\nđể thanh toán\n(PaymentService.ConfirmOrderAsync);
+note right
+  - Xác nhận QuantityUsed cho từng món
+  - Tính toán: Subtotal + VAT (10%) + ServiceFee (5%) - Discount
+  - Lưu TotalAmount vào Orders
+  - Cập nhật Order.Status = "Confirmed"
+  - Ghi OrderHistory
+end note
+
+|#Pink|**Thu ngân**|
+:Thu ngân thanh toán hóa đơn\n(PaymentService.ProcessCashPaymentAsync);
+note right
+  - Kiểm tra Order.Status = "Confirmed"
+  - Tạo Transaction với PaymentMethod (Cash/QR/Combined)
+  - Cập nhật Order.Status = "Paid"
+  - Trigger post-payment actions:
+    * VIP Status Update
+    * Loyalty Points +1
+    * Inventory Deduction
+    * Revenue Recording
+  - Giải phóng bàn (Release Tables)
+  - Hoàn thành Reservation
+end note
+
+:Thu ngân in hóa đơn\n(ReceiptService.GenerateReceiptPdfAsync);
+note right
+  - Kiểm tra Order.Status = "Paid"
+  - Tính toán lại tổng tiền
+  - Generate PDF bằng QuestPDF
+  - Lưu tại /receipts/{orderCode}.pdf
+  - Upload lên Cloudinary (nếu có)
+end note
+
+stop
+
+@enduml
+

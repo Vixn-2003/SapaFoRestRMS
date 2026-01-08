@@ -92,10 +92,12 @@ body {
     margin-bottom: 24px;
 }
 
-.form-group label {
+/* Label trong form đăng nhập - tách biệt khỏi reservation.css */
+.login-container .form-group label,
+.login-box .form-group label {
     display: block;
     font-weight: 500;
-    color: #2d3748;
+    color: #ffffff !important;
     margin-bottom: 8px;
     font-size: 14px;
 }

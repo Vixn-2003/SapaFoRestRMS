@@ -9,9 +9,22 @@ namespace DataAccessLayer.Repositories.Interfaces
 {
     public interface IManagerMenuRepository : IRepository<MenuItem>
     {
-
         Task<IEnumerable<MenuItem>> GetManagerAllMenus();     
         Task<MenuItem> ManagerMenuByIds(int id);
+        
+        Task<bool> ManagerUpdateMenu(MenuItem menuItem);
 
-}
+        Task<IEnumerable<Recipe>> GetRecipeByMenuItem(int id);
+
+        Task<bool> DeleteRecipeByMenuItemId(int menuItemId);
+
+        Task<bool> AddRecipe(Recipe recipe);
+
+        Task<List<string>> GetCourseTypesAsync();
+
+        Task<List<MenuItem>> GetAllMenuItemsWithOrderDetailsAsync(DateTime fromDate);
+
+        Task<int> CreateManagerMenuRe(MenuItem menuDTO);
+        Task<MenuItem?> GetMenuByNameRe(string name);
+    }
 }

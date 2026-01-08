@@ -1,0 +1,358 @@
+@model WebSapaForestForStaff.Models.UserManagement.UserDetailViewModel
+
+@{
+    ViewData["Title"] = "Chi tiết người dùng";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+@if (Model?.UserDetails == null)
+{
+    <div class="alert alert-danger">
+        <h4>Không tìm thấy người dùng</h4>
+        <p>Không thể tìm thấy người dùng yêu cầu.</p>
+        <a asp-action="Index" class="btn btn-primary">Quay lại danh sách</a>
+    </div>
+}
+else
+{
+    var user = Model.UserDetails;
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h3 class="page-title">Chi tiết người dùng</h3>
+                <ul class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Tổng quan</a></li>
+                    <li class="breadcrumb-item"><a asp-action="Index">Quản lý người dùng</a></li>
+                    <li class="breadcrumb-item active">Chi tiết</li>
+                </ul>
+            </div>
+            <div class="col-auto">
+                <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Chỉnh sửa
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- User Information Card -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                    {
+                        <img src="@user.AvatarUrl" alt="Avatar" class="img-thumbnail rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px; font-size: 48px;">
+                            @{
+                                var lastWord = user.FullName?.Split(' ').LastOrDefault();
+                                var initial = !string.IsNullOrEmpty(lastWord) && lastWord.Length > 0 
+                                    ? lastWord.Substring(0, 1).ToUpper() 
+                                    : !string.IsNullOrEmpty(user.FullName) && user.FullName.Length > 0 
+                                        ? user.FullName.Substring(0, 1).ToUpper() 
+                                        : "?";
+                            }
+                            <span>@initial</span>
+                        </div>
+                    }
+                    <h4>@user.FullName</h4>
+                    <p class="text-muted">@user.Email</p>
+                    <div class="mb-3">
+                        @if (user.Status == 0)
+                        {
+                            <span class="badge badge-success">Hoạt động</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-danger">Ngừng hoạt động</span>
+                        }
+                        <span class="badge badge-info ml-2">@user.RoleName</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Card -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                        <h4 class="card-title mb-0">Thông tin người dùng</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th width="30%">ID người dùng</th>
+                                <td>@user.UserId</td>
+                            </tr>
+                            <tr>
+                                <th>Họ và tên</th>
+                                <td>@user.FullName</td>
+                            </tr>
+                            <tr>
+                                <th>Email</th>
+                                <td>@user.Email</td>
+                            </tr>
+                            <tr>
+                                <th>Số điện thoại</th>
+                                <td>@(user.Phone ?? "Không có")</td>
+                            </tr>
+                            <tr>
+                                <th>Vai trò</th>
+                                <td>
+                                    <span class="badge badge-info">@user.RoleName</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Trạng thái</th>
+                                <td>
+                                    @if (user.Status == 0)
+                                    {
+                                        <span class="badge badge-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Ngừng hoạt động</span>
+                                    }
+                                </td>
+                            </tr>
+                            @if (user.CreatedAt.HasValue)
+                            {
+                                <tr>
+                                    <th>Ngày tạo</th>
+                                    <td>@user.CreatedAt.Value.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                            @if (user.ModifiedAt.HasValue)
+                            {
+                                <tr>
+                                    <th>Sửa lần cuối</th>
+                                    <td>@user.ModifiedAt.Value.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                            @if (user.LastLoginAt.HasValue)
+                            {
+                                <tr>
+                                    <th>Đăng nhập gần nhất</th>
+                                    <td>@user.LastLoginAt.Value.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(user.CreatedByName))
+                            {
+                                <tr>
+                                    <th>Tạo bởi</th>
+                                    <td>@user.CreatedByName</td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(user.ModifiedByName))
+                            {
+                                <tr>
+                                    <th>Sửa bởi</th>
+                                    <td>@user.ModifiedByName</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (user.LoginHistory != null && user.LoginHistory.Any())
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Lịch sử đăng nhập</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Thời gian</th>
+                                        <th>Địa chỉ IP</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var login in user.LoginHistory.Take(10))
+                                    {
+                                        <tr>
+                                            <td>@login.LoginTime.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                            <td>@(login.IpAddress ?? "N/A")</td>
+                                            <td>
+                                                @if (login.IsSuccessful)
+                                                {
+                                                    <span class="badge badge-success">Thành công</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge badge-danger">Thất bại</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (user.RecentActivities != null && user.RecentActivities.Any())
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h4 class="card-title mb-0">Hoạt động gần đây</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Thời gian</th>
+                                        <th>Hoạt động</th>
+                                        <th>Mô tả</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var activity in user.RecentActivities.Take(10))
+                                    {
+                                        <tr>
+                                            <td>@activity.ActivityTime.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                            <td>@activity.ActivityType</td>
+                                            <td>@activity.Description</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
+            <a asp-action="Edit" asp-route-id="@user.UserId" class="btn btn-primary">Chỉnh sửa</a>
+            @if (user.Status == 0)
+            {
+                <button type="button" class="btn btn-warning" onclick="openDeactivateModal(@user.UserId, '@user.FullName')">
+                    <i class="fas fa-ban"></i> Ngừng hoạt động
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-success" onclick="openActivateModal(@user.UserId, '@user.FullName')">
+                    <i class="fas fa-check"></i> Kích hoạt
+                </button>
+            }
+            <button type="button" class="btn btn-danger" onclick="openDeleteModal(@user.UserId, '@user.FullName')">
+                <i class="fas fa-trash"></i> Xóa
+            </button>
+        </div>
+    </div>
+}
+
+<!-- Deactivate Modal -->
+<div class="modal fade" id="deactivateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ngừng hoạt động người dùng</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn ngừng hoạt động người dùng này?</p>
+                <p><strong>Tên:</strong> <span id="deactivateUserName"></span></p>
+                <div class="form-group">
+                    <label for="deactivateReason">Lý do (không bắt buộc)</label>
+                    <textarea id="deactivateReason" class="form-control" rows="3" placeholder="Nhập lý do ngừng hoạt động..."></textarea>
+                </div>
+                <input type="hidden" id="deactivateUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="submitDeactivate()">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Xóa người dùng</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-danger"><strong>Cảnh báo: Thao tác này không thể hoàn tác!</strong></p>
+                <p>Bạn có chắc chắn muốn xóa vĩnh viễn người dùng này?</p>
+                <p><strong>Tên:</strong> <span id="deleteUserName"></span></p>
+                <div class="form-group">
+                    <label for="deleteReason">Lý do (không bắt buộc)</label>
+                    <textarea id="deleteReason" class="form-control" rows="3" placeholder="Nhập lý do xóa..."></textarea>
+                </div>
+                <input type="hidden" id="deleteUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="submitDelete()">Xóa vĩnh viễn</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin-user-management.js"></script>
+    <script>
+        // Activate Modal Functions
+        function openActivateModal(userId, userName) {
+            document.getElementById('activateUserId').value = userId;
+            document.getElementById('activateUserName').textContent = userName;
+            $('#activateModal').modal('show');
+        }
+
+        function submitActivate() {
+            const userId = document.getElementById('activateUserId').value;
+            changeStatus(userId, 0);
+            $('#activateModal').modal('hide');
+        }
+    </script>
+}
+
+<!-- Activate Modal -->
+<div class="modal fade" id="activateModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Kích hoạt người dùng</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn kích hoạt người dùng này?</p>
+                <p><strong>Tên:</strong> <span id="activateUserName"></span></p>
+                <input type="hidden" id="activateUserId" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-success" onclick="submitActivate()">
+                    <i class="fas fa-check me-1"></i>Kích hoạt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

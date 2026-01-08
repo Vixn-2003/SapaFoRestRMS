@@ -1,0 +1,282 @@
+@model WebSapaForestForStaff.Models.StaffViewModels.StaffIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý Nhân viên";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="row align-items-center">
+        <div class="col">
+            <h3 class="page-title">Quản lý thông tin Nhân viên</h3>
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="HomeManager" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Quản lý Nhân viên</li>
+            </ul>
+        </div>
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Thêm nhân viên mới
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" asp-action="Index" id="filterForm">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchKeyword">Tìm kiếm</label>
+                        <input type="text" 
+                               id="searchKeyword" 
+                               name="searchKeyword"
+                               class="form-control" 
+                               placeholder="Tên, số điện thoại, email..."
+                               value="@Model.Filter.SearchKeyword"
+                               autocomplete="off">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="position">Chức vụ</label>
+                        <select id="position" name="position" class="form-control">
+                            <option value="">Tất cả</option>
+                            @foreach (var p in Model.AvailablePositions)
+                            {
+                                <option value="@p.PositionName" selected="@(Model.Filter.Position == p.PositionName ? "selected" : null)">
+                                    @p.PositionName
+                                </option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="status">Trạng thái</label>
+                        <select id="status" name="status" class="form-control">
+                            <option value="">Tất cả</option>
+                            <option value="0" selected="@(Model.Filter.Status == 0 ? "selected" : null)">Đang hoạt động</option>
+                            <option value="1" selected="@(Model.Filter.Status == 1 ? "selected" : null)">Ngừng hoạt động</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="sortBy">Sắp xếp theo</label>
+                        <select id="sortBy" name="sortBy" class="form-control">
+                            <option value="HireDate" selected="@(Model.Filter.SortBy == "HireDate" ? "selected" : null)">Ngày vào làm</option>
+                            <option value="FullName" selected="@(Model.Filter.SortBy == "FullName" ? "selected" : null)">Tên</option>
+                            <option value="BaseSalary" selected="@(Model.Filter.SortBy == "BaseSalary" ? "selected" : null)">Lương</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="sortDirection">Thứ tự</label>
+                        <select id="sortDirection" name="sortDirection" class="form-control">
+                            <option value="desc" selected="@(Model.Filter.SortDirection == "desc" ? "selected" : null)">Giảm dần</option>
+                            <option value="asc" selected="@(Model.Filter.SortDirection == "asc" ? "selected" : null)">Tăng dần</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary btn-block" title="Tìm kiếm">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Hidden fields for pagination -->
+            <input type="hidden" name="page" id="pageInput" value="@Model.Filter.Page" />
+            <input type="hidden" name="pageSize" value="@Model.Filter.PageSize" />
+        </form>
+    </div>
+</div>
+
+<!-- Staff Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-center mb-0">
+                <thead>
+                    <tr>
+                        <th>Ảnh đại diện</th>
+                        <th>Tên</th>
+                        <th>Số điện thoại</th>
+                        <th>Email</th>
+                        <th>Chức vụ</th>
+                        <th>Lương cơ bản</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày vào làm</th>
+                        <th class="text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.StaffList?.Data != null && Model.StaffList.Data.Any())
+                    {
+                        @foreach (var staff in Model.StaffList.Data)
+                        {
+                            <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(staff.AvatarUrl))
+                                    {
+                                        <img src="@staff.AvatarUrl" alt="@staff.FullName" class="avatar" 
+                                             style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                                    }
+                                    else
+                                    {
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px; font-size: 16px;">
+                                            @{
+                                                var initial = !string.IsNullOrEmpty(staff.FullName) && staff.FullName.Length > 0 
+                                                    ? staff.FullName.Substring(0, 1).ToUpper() 
+                                                    : "?";
+                                            }
+                                            @initial
+                                        </div>
+                                    }
+                                </td>
+                                <td>@staff.FullName</td>
+                                <td>@(staff.Phone ?? "N/A")</td>
+                                <td>@staff.Email</td>
+                                <td>@(staff.Positions ?? "N/A")</td>
+                                <td>@staff.BaseSalary.ToString("N0") ₫</td>
+                                <td>
+                                    @if (staff.Status == 0)
+                                    {
+                                        <span class="badge badge-success">Đang hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Ngừng hoạt động</span>
+                                    }
+                                </td>
+                                <td>@staff.HireDate.ToString("dd/MM/yyyy")</td>
+                                <td class="text-right">
+                                    <a href="@Url.Action("Details", new { id = staff.StaffId })" class="btn btn-sm btn-info">
+                                        <i class="far fa-eye"></i> Xem chi tiết
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Không tìm thấy nhân viên nào</h5>
+                                <p class="text-muted">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.StaffList != null && Model.StaffList.TotalPages > 1)
+        {
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="dataTables_info">
+                        @{
+                            var start = (Model.StaffList.Page - 1) * Model.StaffList.PageSize + 1;
+                            var end = Math.Min(Model.StaffList.Page * Model.StaffList.PageSize, Model.StaffList.TotalCount);
+                        }
+                        Hiển thị @start đến @end trong tổng số @Model.StaffList.TotalCount bản ghi
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="dataTables_paginate paging_simple_numbers float-right">
+                        <ul class="pagination">
+                            @if (Model.StaffList.Page > 1)
+                            {
+                                <li class="paginate_button page-item previous">
+                                    <a href="#" class="page-link" onclick="goToPage(@(Model.StaffList.Page - 1)); return false;">Trước</a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="paginate_button page-item previous disabled">
+                                    <span class="page-link">Trước</span>
+                                </li>
+                            }
+
+                            @{
+                                var maxPagesToShow = 5;
+                                var startPage = Math.Max(1, Model.StaffList.Page - maxPagesToShow / 2);
+                                var endPage = Math.Min(Model.StaffList.TotalPages, startPage + maxPagesToShow - 1);
+                                
+                                if (endPage - startPage < maxPagesToShow - 1)
+                                {
+                                    startPage = Math.Max(1, endPage - maxPagesToShow + 1);
+                                }
+                            }
+
+                            @for (int i = startPage; i <= endPage; i++)
+                            {
+                                <li class="paginate_button page-item @(i == Model.StaffList.Page ? "active" : "")">
+                                    <a href="#" class="page-link" onclick="goToPage(@i); return false;">@i</a>
+                                </li>
+                            }
+
+                            @if (Model.StaffList.Page < Model.StaffList.TotalPages)
+                            {
+                                <li class="paginate_button page-item next">
+                                    <a href="#" class="page-link" onclick="goToPage(@(Model.StaffList.Page + 1)); return false;">Sau</a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="paginate_button page-item next disabled">
+                                    <span class="page-link">Sau</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (Model.StaffList != null)
+        {
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="dataTables_info">
+                        Hiển thị 0 đến 0 trong tổng số 0 bản ghi
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Pagination helper function
+        function goToPage(page) {
+            document.getElementById('pageInput').value = page;
+            document.getElementById('filterForm').submit();
+        }
+
+        // Show success/error messages from TempData
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>
+            toastr.success('@Html.Raw(TempData["SuccessMessage"])');
+            </text>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+            toastr.error('@Html.Raw(TempData["ErrorMessage"])');
+            </text>
+        }
+    </script>
+}

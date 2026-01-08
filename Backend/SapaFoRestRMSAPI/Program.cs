@@ -1,33 +1,65 @@
 
-using Microsoft.EntityFrameworkCore;
+using BusinessAccessLayer.Hubs;
+using BusinessAccessLayer.Mapping;
+using BusinessAccessLayer.Services;
+using BusinessAccessLayer.Services.Interfaces;
+using BusinessLogicLayer.Services;
+using BusinessLogicLayer.Services.Interfaces;
 using DataAccessLayer;
 using DataAccessLayer.Dbcontext;
-using BusinessAccessLayer.Mapping;
-using BusinessAccessLayer.Services.Interfaces;
-using BusinessAccessLayer.Services;
-using DataAccessLayer.UnitOfWork.Interfaces;
-using DataAccessLayer.UnitOfWork;
 using DataAccessLayer.Repositories;
 using DataAccessLayer.Repositories.Interfaces;
-using SapaFoRestRMSAPI.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using DataAccessLayer.UnitOfWork;
+using DataAccessLayer.UnitOfWork.Interfaces;
 using DomainAccessLayer.Enums;
-using BusinessLogicLayer.Services.Interfaces;
-using BusinessLogicLayer.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using SapaFoRestRMSAPI.Services;
+using System.Text;
 using SapaFoRestRMSAPI.Hubs;
+using BusinessAccessLayer.Services.Inventory;
+using QuestPDF.Infrastructure;
 
+using OfficeOpenXml;
+
+//  FIX: Configure QuestPDF License (Community - Free for commercial use)
+QuestPDF.Settings.License = LicenseType.Community;
+
+// FIX: Configure EPPlus license (required from EPPlus 8+)
+// Choose the appropriate license type for your usage:
+// - Commercial: ExcelPackage.License.SetCommercial("YOUR_LICENSE_KEY");
+// - Non-commercial: SetNonCommercialPersonal/SetNonCommercialOrganization
+ExcelPackage.License.SetNonCommercialOrganization("SapaFoRestRMS");
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
-options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase")));
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("MyDatabase"), sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(60); // 60 seconds command timeout
+    });
+});
 
 //Show connection string in console
 Console.WriteLine(builder.Configuration.GetConnectionString("MyDatabase"));
 
+
+//check error sql
+builder.Logging.AddConsole();
+builder.Services.AddDbContext<SapaFoRestRmsContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("MyDatabase"),
+        sqlOptions =>
+        {
+            sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        })
+           .EnableSensitiveDataLogging()
+           .LogTo(Console.WriteLine, LogLevel.Information));
 
 builder.Services.AddEndpointsApiExplorer();
 // Bật middleware Swagger
@@ -35,7 +67,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
-        Title = "CellPhoneShop API",
+        Title = "SapaFoRestSMS API",
         Version = "v1"
     });
 
@@ -78,7 +110,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.AccessDeniedPath = "/Auth/AccessDenied";
 
     // Tên của cookie lưu trữ thông tin đăng nhập
-    options.Cookie.Name = "CellPhoneShop.Auth";
+    options.Cookie.Name = "SapaFoRestRMS.Auth";
 
     // Cookie chỉ cho server đọc (client JS không đọc được) → tăng bảo mật
     options.Cookie.HttpOnly = true;
@@ -109,6 +141,7 @@ builder.Services.AddControllers();
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddAutoMapper(typeof(CounterStaffMappingProfile));
 
 
 // Add Repositories
@@ -143,9 +176,29 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IManagerMenuService, ManagerMenuService>();
 builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
+builder.Services.AddScoped<IRestaurantIntroRepository, RestaurantIntroRepository>();
+builder.Services.AddScoped<IRestaurantIntroService, RestaurantIntroService>();
+
+builder.Services.AddScoped<IManagerCategoryService, ManagerCategoryService>();
+builder.Services.AddScoped<IInventoryIngredientService, InventoryIngredientService>();
+builder.Services.AddScoped<IManagerSupplierService, ManagerSupplierService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+builder.Services.AddScoped<IStockTransactionService, StockTransactionService>();
+builder.Services.AddScoped<IUnitService, UnitService>();
+builder.Services.AddScoped<IInventoryAnalyticsService, InventoryAnalyticsService>();
+builder.Services.AddHostedService<ReorderLevelBackgroundJob>();
+
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IPurchaseOrderDetailService, PurchaseOrderDetailService>();
+
+
+
+
 builder.Services.AddScoped<IMarketingCampaignRepository, MarketingCampaignRepository>();
 builder.Services.AddScoped<IMarketingCampaignService, MarketingCampaignService>();
 builder.Services.AddScoped<IKitchenDisplayService, KitchenDisplayService>();
+builder.Services.AddScoped<IWaiterOrderTrackingService, WaiterOrderTrackingService>();
 
 builder.Services.AddScoped<ICloudinaryService, BusinessAccessLayer.Services.CloudinaryService>();
 
@@ -155,7 +208,10 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<IReservationDepositRepository, ReservationDepositRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
+builder.Services.AddScoped<ReservationDepositService>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 
 // Unit of Work and User Repository mapping
@@ -191,6 +247,8 @@ builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 builder.Services.AddScoped<IAreaService, AreaService>();
 
+builder.Services.AddScoped<IManagerComboRepository, ManagerComboRepository>();
+builder.Services.AddScoped<IManagerComboService, ManagerComboService>();
 
 //voucher
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
@@ -200,20 +258,120 @@ builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
 builder.Services.AddScoped<IPayrollService, PayrollService>();
 
+builder.Services.AddScoped<ICounterStaffRepository, CounterStaffRepository>();
+builder.Services.AddScoped<ICounterStaffService, CounterStaffService>();
+
+
 // Area Repository
 builder.Services.AddScoped<IOrderTableRepository, OrderTableRepository>();
 builder.Services.AddScoped<IOrderTableService, OrderTableService>();
 
-builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
+//DashBoardTable
+builder.Services.AddScoped<IDashboardTableRepository, DashboardTableRepository>();
+builder.Services.AddScoped<IDashboardTableService, DashboardTableService>();
+builder.Services.AddScoped<ISupplierManagerService, SupplierManagerService>();
+// capacityStatistic
+builder.Services.AddScoped<ICapacityStatisticsRepository, CapacityStatisticsRepository>();
+builder.Services.AddScoped<ICapacityStatisticsService, CapacityStatisticsService>();
 
+//
+builder.Services.Configure<MomoOptions>(builder.Configuration.GetSection("Momo"));
+builder.Services.AddSingleton<IMomoService, MomoService>();
+
+//payos
+builder.Services.AddHttpClient<IPayosService, PayosService>();
+builder.Services.AddScoped<IStaffProfileService, StaffProfileService>();
+//daytype
+builder.Services.AddScoped<IDayTypeRepository, DayTypeRepository>();
+builder.Services.AddScoped<IDayTypeService, DayTypeService>();
+//shifttemplate
+builder.Services.AddScoped<IShiftTemplateRepository, ShiftTemplateRepository>();
+builder.Services.AddScoped<IShiftTemplateService, ShiftTemplateService>();
+//department
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+//shift 
+builder.Services.AddScoped<IShiftRepository, ShiftRepository>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+//shiftassignment
+builder.Services.AddScoped<IShiftAssignmentRepository, ShiftAssignmentRepository>();
+builder.Services.AddScoped<IShiftAssignmentService, ShiftAssignmentService>();
 // Payment Service/Repository
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ICustomerVipService, CustomerVipService>();
+
+// AuditLog Service
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+builder.Services.AddScoped<IShiftManagementService, ShiftManagementService>();
+
+// Customer Management Service
+builder.Services.AddScoped<ICustomerManagementService, CustomerManagementService>();
+
+// Staff Management Service
+builder.Services.AddScoped<IStaffManagementService, StaffManagementService>();
+
+// Owner Dashboard Services
+builder.Services.AddScoped<IOwnerDashboardService, OwnerDashboardService>();
+builder.Services.AddScoped<IOwnerRevenueService, OwnerRevenueService>();
+builder.Services.AddScoped<IOwnerWarehouseAlertService, OwnerWarehouseAlertService>();
+
+// Counter Staff Dashboard Services
+builder.Services.AddScoped<ICounterStaffDashboardRepository, CounterStaffDashboardRepository>();
+builder.Services.AddScoped<ICounterStaffDashboardService, CounterStaffDashboardService>();
+builder.Services.AddScoped<ICounterStaffOrderRepository, CounterStaffOrderRepository>();
+builder.Services.AddScoped<ICounterStaffOrderService, CounterStaffOrderService>();
+builder.Services.AddScoped<ICounterTransactionRepository, CounterTransactionRepository>();
+builder.Services.AddScoped<ICounterTransactionService, CounterTransactionService>();
+
+// Admin Dashboard Services
+builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+
+// Receipt Service - Pass WebRootPath from IWebHostEnvironment
+builder.Services.AddScoped<IReceiptService>(sp =>
+{
+    var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    var logger = sp.GetRequiredService<ILogger<ReceiptService>>();
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var serviceProvider = sp; // Pass service provider to access ICloudinaryService
+    var webRootPath = string.IsNullOrWhiteSpace(env.WebRootPath)
+        ? Path.Combine(env.ContentRootPath, "wwwroot")
+        : env.WebRootPath;
+
+    if (!Directory.Exists(webRootPath))
+    {
+        Directory.CreateDirectory(webRootPath);
+    }
+
+    return new ReceiptService(unitOfWork, webRootPath, logger, configuration, serviceProvider);
+});
+
+// SalaryChangeRequest Service/Repository
+builder.Services.AddScoped<ISalaryChangeRequestRepository, SalaryChangeRequestRepository>();
+builder.Services.AddScoped<ISalaryChangeRequestService, SalaryChangeRequestService>();
 
 builder.Services.AddSingleton<SapaFoRestRMSAPI.Services.CloudinaryService>();
+
+
+
+builder.Services.AddSignalR();
 // Đăng ký dịch vụ chạy ngầm của chúng ta
 builder.Services.AddHostedService<OrderStatusUpdaterService>();
 builder.Services.AddSignalR();
+
+//  Đảm bảo hỗ trợ multipart form data
+builder.Services.AddControllers()
+    .AddNewtonsoftJson(); // Nếu dùng Newtonsoft.Json
+
+//  Cấu hình kích thước file upload (nếu cần)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 52428800; // 50MB
+});
+
 
 
 builder.Services.AddAuthorization(options =>
@@ -225,6 +383,41 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(Roles.Owner, p => p.RequireRole(Roles.Owner));
     options.AddPolicy("AdminOrManager", p => p.RequireRole(Roles.Admin, Roles.Manager));
     options.AddPolicy("StaffOrManager", p => p.RequireRole(Roles.Staff, Roles.Manager));
+
+    // Position-based policies for Staff (Owner/Admin/Manager always pass)
+    bool HasManagementRole(ClaimsPrincipal user) =>
+        user.IsInRole(Roles.Owner) || user.IsInRole(Roles.Admin) || user.IsInRole(Roles.Manager);
+
+    bool HasPositionClaim(ClaimsPrincipal user, int positionId)
+    {
+        var positionValue = positionId.ToString();
+        var hasSingle = user.Claims.Any(c =>
+            string.Equals(c.Type, "positionId", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(c.Value, positionValue, StringComparison.OrdinalIgnoreCase));
+
+        var hasFromList = user.Claims.Any(c =>
+            string.Equals(c.Type, "positionIds", StringComparison.OrdinalIgnoreCase) &&
+            c.Value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Any(v => string.Equals(v.Trim(), positionValue, StringComparison.OrdinalIgnoreCase)));
+
+        return hasSingle || hasFromList;
+    }
+
+    options.AddPolicy("Position:Waiter", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 1))));
+
+    options.AddPolicy("Position:Cashier", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 2))));
+
+    options.AddPolicy("Position:Kitchen", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 3))));
+
+    options.AddPolicy("Position:Inventory", policy =>
+        policy.RequireAssertion(ctx => HasManagementRole(ctx.User) ||
+            (ctx.User.IsInRole(Roles.Staff) && HasPositionClaim(ctx.User, 4))));
 });
 
 // JWT Authentication
@@ -251,25 +444,36 @@ builder.Services
         };
     });
 
+// ================================
+//  CORS CONFIGURATION (Centralized)
+// ================================
+// Đọc danh sách origins từ appsettings.json
+// Mỗi dev chỉ cần chỉnh sửa appsettings.Development.json với IP của mình
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-// === 1. THÊM DỊCH VỤ CORS ===
-// === THAY THẾ TOÀN BỘ KHỐI NÀY ===
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins, policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:5054",    // 👈 Frontend bạn đang chạy
-            "http://localhost:5123",    // Razor nội bộ
-            "http://192.168.1.47:5123", // IP Razor
-            "http://192.168.1.47:5180"  // Swagger
-        )
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials(); // 👈 Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
+        // Đọc từ appsettings.json hoặc appsettings.Development.json
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>() 
+            ?? new[] { "http://localhost:5123"
+           }; // Fallback mặc định nếu không có config
+
+        // Log để dễ debug
+        Console.WriteLine("🔒 CORS Allowed Origins:");
+        foreach (var origin in allowedOrigins)
+        {
+            Console.WriteLine($"    {origin}");
+        }
+
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Bắt buộc nếu frontend dùng fetch hoặc jQuery.ajax
     });
 });
+
 
 var app = builder.Build();
 
@@ -280,25 +484,37 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 //app.UseHttpsRedirection();
+app.UseRouting();
 
 app.UseCors(MyAllowSpecificOrigins); // <-- THÊM DÒNG NÀY
-// Bật CORS
+//// Bật CORS
 //app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<KitchenHub>("/kitchenHub");
-
+app.MapHub<TableHub>("/tableHub");     // Hub mới cho khách 
+app.MapHub<ReservationHub>("/reservationHub");
+app.MapHub<RestaurantHub>("/restaurantHub");
 app.MapControllers();
 
-// Upsert Admin from configuration (Development)
+//await app.EnsureSeededAsync();
+
+// Upsert Admin + seed demo data for development/testing
 using (var scope = app.Services.CreateScope())
 {
     var ctx = scope.ServiceProvider.GetRequiredService<SapaFoRestRmsContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     // Seed core lookup data
-    await DataSeeder.SeedPositionsAsync(ctx);
-    await DataSeeder.SeedTestCustomerAsync(ctx);
-    await DataSeeder.SeedKitchenOrdersAsync(ctx);
+    //await DataSeeder.SeedPositionsAsync(ctx);
+    //await DataSeeder.SeedTestStaffAndManagerAsync(ctx);
+    //await DataSeeder.SeedTestCustomerAsync(ctx);
+    //await MenuDataSeeder.SeedMenuItemsAsync(ctx); // Seed menu items first (always runs)
+    //await MenuDataSeeder.SeedInventoryDataAsync(ctx); // Seed ingredients, recipes, batches, and export transactions
+    //await MenuDataSeeder.SeedKitchenOrdersAsync(ctx);
+
+    // 🔹 Seed thêm dữ liệu workflow thu ngân + combo cho bếp (gồm Order 3–8)
+    //await DataSeeder.SeedCashierWorkflowTestAsync(ctx);
+    //await MenuDataSeeder.SeedStaffWithAllPositionsAsync(ctx); // Seed staff with all positions for testing
     var adminEmail = config["AdminAccount:Email"];
     var adminPassword = config["AdminAccount:Password"];
     Console.WriteLine("AdminAccount Email: " + builder.Configuration["AdminAccount:Email"]);

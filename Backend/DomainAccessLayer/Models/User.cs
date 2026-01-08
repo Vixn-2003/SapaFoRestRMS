@@ -17,6 +17,8 @@ public partial class User
 
     public int RoleId { get; set; }
 
+    public string? AvatarUrl { get; set; }
+
     // Replaced string? Status with int
     public int Status { get; set; }
 

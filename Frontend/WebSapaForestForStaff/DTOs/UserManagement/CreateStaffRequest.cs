@@ -15,19 +15,15 @@ namespace WebSapaForestForStaff.DTOs.UserManagement
         [Display(Name = "Email")]
         public string Email { get; set; } = null!;
 
-        [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
-        [StringLength(20, ErrorMessage = "Số điện thoại không được quá 20 ký tự")]
-        [Display(Name = "Số điện thoại")]
-        public string? Phone { get; set; }
+        [Required(ErrorMessage = "Vui lòng nhập mã xác minh được gửi tới email")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "Mã xác minh gồm 6 ký tự")]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "Mã xác minh chỉ gồm 6 chữ số")]
+        [Display(Name = "Mã xác minh")]
+        public string VerificationCode { get; set; } = null!;
 
-        [Required(ErrorMessage = "Ngày tuyển dụng là bắt buộc")]
-        [Display(Name = "Ngày tuyển dụng")]
-        public DateOnly HireDate { get; set; }
+        public DateOnly? HireDate { get; set; }
 
-        [Required(ErrorMessage = "Lương cơ bản là bắt buộc")]
-        [Range(0, double.MaxValue, ErrorMessage = "Lương cơ bản phải lớn hơn 0")]
-        [Display(Name = "Lương cơ bản")]
-        public decimal SalaryBase { get; set; }
+        public decimal? SalaryBase { get; set; }
 
         [Display(Name = "Vị trí")]
         public List<int> PositionIds { get; set; } = new();

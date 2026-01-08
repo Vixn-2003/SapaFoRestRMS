@@ -1,0 +1,205 @@
+<div class="modal fade" id="splitBillModal" tabindex="-1" aria-labelledby="splitBillModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <style>
+                /* Split bill error styling */
+                .split-part-error {
+                    color: #dc3545;
+                    font-size: 12px;
+                    margin-top: 4px;
+                    display: none;
+                }
+
+                .split-part-error.show {
+                    display: block;
+                }
+
+                .split-part .form-control.is-invalid {
+                    border-color: #dc3545;
+                    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+                }
+
+                .split-part .input-group.is-invalid .form-control {
+                    border-color: #dc3545;
+                }
+
+                .split-part .input-group.is-invalid .input-group-text {
+                    border-color: #dc3545;
+                    background-color: #f8d7da;
+                    color: #721c24;
+                }
+
+                /* QR Preview styling */
+                .qr-preview-section {
+                    border: 1px solid #e9ecef;
+                    border-radius: 8px;
+                    padding: 12px;
+                    background-color: #f8f9fa;
+                    margin-top: 8px;
+                }
+
+                .qr-preview-section .qr-loading,
+                .qr-preview-section .qr-content {
+                    min-height: 80px;
+                }
+
+                .qr-preview-section img {
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+
+                .qr-preview-section .qr-info {
+                    margin-top: 8px;
+                    padding-top: 8px;
+                    border-top: 1px solid #dee2e6;
+                }
+
+                .qr-preview-section .qr-info small {
+                    line-height: 1.4;
+                }
+            </style>
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="splitBillModalLabel">
+                    <i class="bi bi-scissors me-2"></i>Chia hóa đơn
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="bi bi-receipt me-2"></i>Tổng hóa đơn
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Mã đơn:</strong> <span id="splitOrderCode">-</span></p>
+                                <p class="mb-1"><strong>Bàn:</strong> <span id="splitTableNumber">-</span></p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <h4 class="mb-0 text-primary" id="splitTotalAmount">0 ₫</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-sliders me-2"></i>Chọn cách chia
+                    </label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="splitType" id="splitEqual" value="equal" checked onchange="changeSplitType()">
+                        <label class="btn btn-outline-primary" for="splitEqual">
+                            <i class="bi bi-equal me-1"></i>Chia đều
+                        </label>
+
+                        <input type="radio" class="btn-check" name="splitType" id="splitCustom" value="custom" onchange="changeSplitType()">
+                        <label class="btn btn-outline-primary" for="splitCustom">
+                            <i class="bi bi-pencil me-1"></i>Tùy chỉnh
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-3" id="equalSplitSection">
+                    <label for="numberOfParts" class="form-label">
+                        <i class="bi bi-123 me-2"></i>Số phần chia
+                    </label>
+                    <div class="input-group">
+                        <input type="number"
+                               class="form-control"
+                               id="numberOfParts"
+                               min="2"
+                               max="10"
+                               value="2"
+                               onchange="calculateEqualSplit()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="decreaseParts()">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" onclick="increaseParts()">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-list-ul me-2"></i>Chi tiết các phần
+                    </label>
+                    <div id="splitPartsList" class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                    </div>
+                </div>
+
+                <div id="splitTotalValidation" class="alert alert-danger d-none">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Tổng các phần không khớp với tổng hóa đơn!</strong>
+                    <p class="mb-0 mt-1">Tổng các phần: <span id="splitPartsTotal">0 ₫</span> | Tổng hóa đơn: <span id="splitBillTotal">0 ₫</span></p>
+                </div>
+
+                <div class="mb-3">
+                    <label for="splitNotes" class="form-label">
+                        <i class="bi bi-sticky me-2"></i>Ghi chú (tùy chọn)
+                    </label>
+                    <textarea class="form-control"
+                              id="splitNotes"
+                              rows="2"
+                              placeholder="Nhập ghi chú nếu có..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Hủy
+                </button>
+                <button type="button"
+                        class="btn btn-info"
+                        id="confirmSplitBillBtn"
+                        onclick="confirmSplitBill()"
+                        disabled>
+                    <i class="bi bi-check-circle me-1"></i>Xác nhận chia hóa đơn
+                </button>
+            </div>
+
+            <!-- Error message display area -->
+            <div id="modal-error-message" class="modal-error-container d-none">
+                <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <span id="modal-error-text"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Split Bill Loading Modal -->
+<div class="modal fade" id="splitBillLoadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Đang xử lý...</span>
+                </div>
+                <h5 id="splitBillLoadingTitle">Đang xác nhận thanh toán</h5>
+                <p class="text-muted mb-0" id="splitBillLoadingMessage">Vui lòng đợi trong giây lát...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Split Bill Result Modal -->
+<div class="modal fade" id="splitBillResultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div id="splitBillResultIcon" class="mb-3">
+                    <!-- Success or Error icon will be inserted here -->
+                </div>
+                <h5 id="splitBillResultTitle"></h5>
+                <p class="text-muted mb-3" id="splitBillResultMessage"></p>
+                <button type="button" class="btn btn-primary" id="splitBillResultBtn" onclick="closeSplitBillResultModal()">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

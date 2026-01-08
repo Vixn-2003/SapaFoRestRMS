@@ -1,0 +1,310 @@
+@model WebSapaForestForStaff.DTOs.ShiftManagement.ShiftHistoryListDto
+
+@{
+    ViewData["Title"] = "Lịch sử ca làm việc";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    
+    // Get shifts from model
+    var shifts = Model?.Shifts ?? new List<WebSapaForestForStaff.DTOs.ShiftManagement.ShiftDto>();
+}
+
+<style>
+    .history-container {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        border-radius: 18px;
+        padding: 32px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(99, 102, 241, 0.2);
+    }
+
+    .filter-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        margin-bottom: 24px;
+    }
+
+    .history-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border-left: 5px solid #6366f1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .history-card:hover {
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-badge.open {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-badge.closed {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #9ca3af;
+    }
+
+    /* Pagination Styles */
+    .pagination {
+        gap: 8px;
+    }
+
+    .pagination .page-item .page-link {
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        color: #4f46e5;
+        font-weight: 500;
+        padding: 8px 16px;
+        transition: all 0.2s;
+    }
+
+    .pagination .page-item .page-link:hover {
+        background: #eef2ff;
+        border-color: #6366f1;
+        color: #4338ca;
+        transform: translateY(-1px);
+    }
+
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        border-color: #4f46e5;
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .pagination .page-item.disabled .page-link {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>
+
+<div class="history-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h2 class="mb-2"><i class="bi bi-clock-history me-3"></i>Lịch sử ca làm việc</h2>
+                <p class="mb-0 opacity-90">Xem lại các ca làm việc đã hoàn thành</p>
+            </div>
+            <a asp-action="Index" class="btn btn-light btn-lg">
+                <i class="bi bi-arrow-left me-2"></i>Quay lại
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="filter-card">
+        <h5 class="mb-3"><i class="bi bi-funnel me-2 text-primary"></i>Bộ lọc</h5>
+        
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Từ ngày:</label>
+                <input type="date" class="form-control" id="fromDate" value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Đến ngày:</label>
+                <input type="date" class="form-control" id="toDate" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Trạng thái:</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tất cả</option>
+                    <option value="Open">Đang mở</option>
+                    <option value="Closed">Đã đóng</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-primary" onclick="applyFilter()">
+                <i class="bi bi-search me-2"></i>Tìm kiếm
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="resetFilter()">
+                <i class="bi bi-arrow-counterclockwise me-2"></i>Đặt lại
+            </button>
+        </div>
+    </div>
+
+    <!-- History List -->
+    <div id="historyList">
+        @if (shifts == null || !shifts.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-inbox fs-1 mb-3"></i>
+                <h5>Không có lịch sử ca làm việc</h5>
+                <p class="text-muted">Bạn chưa có ca làm việc nào trong khoảng thời gian được chọn.</p>
+            </div>
+        }
+        else
+        {
+            foreach (var shift in shifts)
+            {
+                <div class="history-card" onclick="viewShiftDetails(@shift.ShiftId)">
+                    <div class="d-flex align-items-start justify-content-between">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-3">
+                                    <i class="bi bi-calendar-day me-2 text-primary"></i>
+                                    @shift.Date.ToString("dd/MM/yyyy")
+                                </h5>
+                                <span class="status-badge @shift.Status.ToLower()">
+                                    @(shift.Status == "Open" ? "Đang mở" : "Đã đóng")
+                                </span>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Giờ bắt đầu:</div>
+                                    <div class="fw-bold">@shift.StartTime?.ToString("HH:mm")</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Giờ kết thúc:</div>
+                                    <div class="fw-bold">@(shift.EndTime?.ToString("HH:mm") ?? "-")</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Số dư đầu ca:</div>
+                                    <div class="fw-bold text-success">@shift.OpeningBalance?.ToString("N0") ₫</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-muted small">Số dư cuối ca:</div>
+                                    <div class="fw-bold text-danger">@(shift.ClosingBalance?.ToString("N0") ?? "-") ₫</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ms-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="viewShiftDetails(@shift.ShiftId); event.stopPropagation();">
+                                <i class="bi bi-eye me-1"></i>Xem chi tiết
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Pagination -->
+    @if (Model != null && Model.TotalPages > 1)
+    {
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <div class="text-muted">
+                Hiển thị @shifts.Count / @Model.TotalCount ca làm việc
+            </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination mb-0">
+                    @if (Model.PageNumber > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="?PageNumber=@(Model.PageNumber - 1)&PageSize=@Model.PageSize">
+                                <i class="bi bi-chevron-left"></i> Trước
+                            </a>
+                        </li>
+                    }
+                    
+                    @for (int i = 1; i <= Model.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                            <a class="page-link" href="?PageNumber=@i&PageSize=@Model.PageSize">@i</a>
+                        </li>
+                    }
+                    
+                    @if (Model.PageNumber < Model.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="?PageNumber=@(Model.PageNumber + 1)&PageSize=@Model.PageSize">
+                                Sau <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function applyFilter() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const status = document.getElementById('statusFilter').value;
+            
+            const params = new URLSearchParams({
+                fromDate: fromDate,
+                toDate: toDate,
+                status: status
+            });
+            
+            window.location.href = `/shift-management/history?${params.toString()}`;
+        }
+
+        function resetFilter() {
+            document.getElementById('fromDate').value = '@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")';
+            document.getElementById('toDate').value = '@DateTime.Now.ToString("yyyy-MM-dd")';
+            document.getElementById('statusFilter').value = '';
+            applyFilter();
+        }
+
+        function viewShiftDetails(shiftId) {
+            window.location.href = `/shift-management/details/${shiftId}`;
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+    </script>
+}
+

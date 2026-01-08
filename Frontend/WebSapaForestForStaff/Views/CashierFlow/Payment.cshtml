@@ -1,0 +1,798 @@
+@model dynamic
+
+@using System.Collections.Generic
+@using System.Linq
+@using System.Text.Json
+@using WebSapaForestForStaff.Controllers
+@using WebSapaForestForStaff.DTOs.Payment
+
+@{
+    ViewData["Title"] = "Thanh toán";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    
+    // ✅ Kiểm tra xem Model là OrderDetailDto hay ReservationPaymentDto
+    var isReservationPayment = Model is ReservationPaymentDto;
+    var reservationPayment = Model as ReservationPaymentDto;
+    var orderDetail = Model as OrderDetailDto;
+    
+    // ✅ Lấy thông tin từ Model (hỗ trợ cả 2 loại)
+    var orderId = isReservationPayment ? reservationPayment!.OrderId : orderDetail!.OrderId;
+    var orderCode = isReservationPayment ? reservationPayment!.OrderCode : orderDetail!.OrderCode;
+    var subtotal = isReservationPayment ? reservationPayment!.Subtotal : orderDetail!.Subtotal;
+    var vatAmount = isReservationPayment ? reservationPayment!.VatAmount : orderDetail!.VatAmount;
+    var serviceFee = isReservationPayment ? reservationPayment!.ServiceFee : orderDetail!.ServiceFee;
+    var discountAmount = isReservationPayment ? reservationPayment!.DiscountAmount : orderDetail!.DiscountAmount;
+    var totalAmount = isReservationPayment ? reservationPayment!.TotalAmount : orderDetail!.TotalAmount;
+    var depositAmount = isReservationPayment ? reservationPayment!.DepositAmount : orderDetail!.DepositAmount;
+    var depositPaid = isReservationPayment ? reservationPayment!.DepositPaid : orderDetail!.DepositPaid;
+    var status = isReservationPayment ? reservationPayment!.Status : orderDetail!.Status;
+    var customerName = isReservationPayment ? reservationPayment!.CustomerName : orderDetail!.CustomerName;
+    var customerPhone = isReservationPayment ? reservationPayment!.CustomerPhone : orderDetail!.CustomerPhone;
+    var waiterName = isReservationPayment ? reservationPayment!.WaiterName : orderDetail!.WaiterName;
+    var staffName = isReservationPayment ? reservationPayment!.StaffName : orderDetail!.StaffName;
+    
+    // ✅ Lấy danh sách items
+    var items = isReservationPayment 
+        ? (reservationPayment!.AllOrderItems ?? new List<OrderItemDto>())
+        : (orderDetail!.Items ?? new List<OrderItemDto>());
+    
+    // ✅ Lấy thông tin bàn
+    var tables = isReservationPayment
+        ? (reservationPayment!.TableNumbers != null && reservationPayment.TableNumbers.Any()
+            ? string.Join(", ", reservationPayment.TableNumbers)
+            : reservationPayment.TableNumber ?? "—")
+        : (orderDetail!.TableNumbers != null && orderDetail.TableNumbers.Any()
+            ? string.Join(", ", orderDetail.TableNumbers)
+            : orderDetail.TableNumber ?? "—");
+    
+    // ✅ Lấy ReservationId nếu có
+    var reservationId = isReservationPayment ? reservationPayment!.ReservationId : (int?)null;
+    var reservationIdFromViewData = ViewData["ReservationId"] as int?;
+    reservationId = reservationId ?? reservationIdFromViewData;
+
+    string GetStatusBadgeClass(string? status)
+    {
+        var normalized = status?.ToLowerInvariant();
+        return normalized switch
+        {
+            "waitingconfirmation" => "bg-warning text-dark",
+            "confirmed" => "bg-primary",
+            "pendingpayment" => "bg-info text-dark",
+            "paid" => "bg-success",
+            "completed" => "bg-success",
+            "cancelled" => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+
+    string GetStatusDisplayText(string? status)
+    {
+        var normalized = status?.ToLowerInvariant();
+        return normalized switch
+        {
+            "waitingconfirmation" => "Chờ xác nhận",
+            "confirmed" => "Đã xác nhận",
+            "pendingpayment" => "Chờ thanh toán",
+            "paid" => "Đã thanh toán",
+            "completed" => "Hoàn tất",
+            "cancelled" => "Đã hủy",
+            _ => status ?? "Không rõ"
+        };
+    }
+
+    // ✅ Lấy OrderCount và OrderCodes cho reservation
+    var orderCount = 1;
+    var orderCodes = new List<string>();
+    if (isReservationPayment && reservationPayment != null)
+    {
+        orderCount = reservationPayment.OrderCount;
+        orderCodes = reservationPayment.Orders?.Select(o => o.OrderCode ?? $"#{o.OrderId}").ToList() ?? new List<string>();
+    }
+
+    var orderJson = JsonSerializer.Serialize(new
+    {
+        OrderId = orderId,
+        OrderCode = orderCode,
+        OrderCodes = orderCodes, // ✅ Danh sách tất cả order codes trong reservation
+        ReservationId = reservationId,
+        IsReservationPayment = isReservationPayment,
+        OrderCount = orderCount,
+        Tables = tables,
+        Subtotal = subtotal,
+        Vat = vatAmount,
+        ServiceFee = serviceFee,
+        Discount = discountAmount,
+        DepositAmount = depositAmount,
+        DepositPaid = depositPaid,
+        DepositRefundAmount = isReservationPayment && reservationPayment != null ? reservationPayment.DepositRefundAmount : null,
+        Total = totalAmount,
+        Items = items.Select(i => new
+        {
+            Name = i.MenuItemName ?? i.Name,
+            Quantity = i.Quantity,
+            QuantityUsed = i.QuantityUsed,
+            UnitPrice = i.UnitPrice,
+            TotalPrice = i.TotalPrice
+        })
+    });
+
+    // Pass voucher list to JavaScript context (for initial load)
+    var availableVouchersJson = ViewData["AvailableVouchers"] != null
+        ? JsonSerializer.Serialize(ViewData["AvailableVouchers"])
+        : "[]";
+}
+
+<!-- Load CSS directly in view to avoid layout conflicts -->
+<link href="~/css/cashier/payment.css" rel="stylesheet" />
+
+<div class="cashier-shell">
+    <!-- ✅ HIỂN THỊ TOAST NOTIFICATION TỪ TEMPDATA -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast('@Html.Raw(TempData["SuccessMessage"])', 'success');
+            });
+        </script>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                showToast('@Html.Raw(TempData["ErrorMessage"])', 'error');
+            });
+        </script>
+    }
+    
+    <!-- HEADER FULL-WIDTH: Thông tin đơn + khách + trạng thái -->
+    <div class="payment-page-header">
+        <div class="payment-header-card">
+            <div class="payment-header-main">
+                <div class="payment-header-icon">
+                    <i class="bi bi-receipt-cutoff"></i>
+                </div>
+                <div class="payment-header-text">
+                    <h2 class="page-title mb-1">@(isReservationPayment ? "Thanh toán Reservation" : "Thanh toán đơn hàng")</h2>
+                    <div class="payment-header-sub">
+                        @if (isReservationPayment && reservationPayment!.Orders != null && reservationPayment.Orders.Any())
+                        {
+                            <span>
+                                Đơn: 
+                                @foreach (var order in reservationPayment.Orders)
+                                {
+                                    <strong>#@(order.OrderCode ?? $"#{order.OrderId}")</strong>
+                                    @if (order != reservationPayment.Orders.Last())
+                                    {
+                                        <text>, </text>
+                                    }
+                                }
+                            </span>
+                            @if (reservationPayment.OrderCount > 1)
+                            {
+                                <span class="badge bg-info ms-2">@reservationPayment.OrderCount đơn</span>
+                            }
+                        }
+                        else
+                        {
+                            <span>Đơn <strong>#@(orderCode ?? $"#{orderId}")</strong></span>
+                        }
+                        <span>Bàn <strong class="text-warning">@tables</strong></span>
+                        @if (!string.IsNullOrEmpty(waiterName))
+                        {
+                            <span>
+                                <i class="bi bi-people me-1"></i>
+                                Phục vụ: <strong>@waiterName</strong>
+                            </span>
+                        }
+                    </div>
+                    <div class="customer-info mt-1">
+                        <span>
+                            <i class="bi bi-person-circle me-1"></i>
+                           Thông tin khách hàng : 
+                        </span>
+                        <span>
+                            <i class="bi bi-person-circle me-1"></i>
+                            @(Model.CustomerName ?? "Khách lẻ")
+                        </span>
+                        <span>
+                            <i class="bi bi-telephone me-1"></i>
+                            @(Model.CustomerPhone ?? "Không có số điện thoại")
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="payment-header-right">
+                @* Hiển thị trạng thái Order (lấy từ Order đầu tiên nếu là Reservation) *@
+                @{
+                    string? orderStatusToDisplay = null;
+                    if (isReservationPayment && reservationPayment!.Orders != null && reservationPayment.Orders.Any())
+                    {
+                        // Lấy status từ Order đầu tiên trong Reservation
+                        orderStatusToDisplay = reservationPayment.Orders.First().Status;
+                    }
+                    else
+                    {
+                        // Lấy status từ OrderDetailDto
+                        orderStatusToDisplay = status;
+                    }
+                }
+                @if (!string.IsNullOrWhiteSpace(orderStatusToDisplay))
+                {
+                    <span class="badge @GetStatusBadgeClass(orderStatusToDisplay) px-3 py-2">
+                        @GetStatusDisplayText(orderStatusToDisplay)
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- LEFT: Payment area -->
+    <div class="payment-area">
+        <!-- Thông tin quy trình thanh toán -->
+        <div class="alert alert-info mb-2">
+            <div class="d-flex">
+                <i class="bi bi-lightning-charge me-2 fs-4"></i>
+                <div>
+                    <strong>Quy trình thanh toán:</strong>
+                    <p class="mb-0 small">
+                        Chọn phương thức → Thu thập thông tin qua modal → Hệ thống gửi yêu cầu khởi tạo thanh toán
+                        → Nếu cần xác nhận QR, màn hình chuyển sang bước Confirm → Hoàn tất và xem hóa đơn.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lưới phương thức thanh toán -->
+        <div class="payment-grid row g-3">
+            <div class="col-sm-12">
+                <button type="button" class="payment-card" onclick="openPromotionModal()">
+                    <div class="icon mb-3">🎁</div>
+                    <h5>Ưu đãi / Khuyến mãi</h5>
+                    <p class="text-muted mb-0">Áp dụng mã giảm giá, chương trình khuyến mãi trước khi thu tiền.</p>
+                </button>
+            </div>
+            <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openCashPaymentModal()">
+                    <div class="icon mb-3">💵</div>
+                    <h5>Tiền mặt</h5>
+                    <p class="text-muted mb-0">Nhập số tiền khách đưa, tính tiền thối tự động.</p>
+                </button>
+            </div>
+            <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openQrPaymentModal()">
+                    <div class="icon mb-3">📱</div>
+                    <h5>QR / Ví điện tử</h5>
+                    <p class="text-muted mb-0">Sinh mã VietQR, xác nhận sau khi khách chuyển khoản.</p>
+                </button>
+            </div>
+            <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openCombinedPaymentModal()">
+                    <div class="icon mb-3">💳</div>
+                    <h5>Thanh toán kết hợp</h5>
+                    <p class="text-muted mb-0">Chia tổng tiền giữa tiền mặt và QR.</p>
+                </button>
+            </div>
+          @*   <div class="col-sm-6">
+                <button type="button" class="payment-card" onclick="openSplitBillModal()">
+                    <div class="icon mb-3">🧾</div>
+                    <h5>Chia hóa đơn</h5>
+                    <p class="text-muted mb-0">Chia đều hoặc tùy chỉnh theo nhóm khách.</p>
+                </button>
+            </div> *@
+        </div>
+    </div>
+
+    <!-- RIGHT: Order sidebar -->
+    <div class="order-sidebar">
+        <!-- Quick info: nhấn mạnh áp dụng ưu đãi trước khi thanh toán -->
+        <div class="quick-info mb-2">
+            <strong>Lưu ý:</strong> Hãy áp dụng <strong>Ưu đãi / Khuyến mãi</strong> trước khi chọn phương thức thanh toán
+            để tổng tiền được cập nhật chính xác theo chương trình khuyến mãi.
+        </div>
+
+        <div class="card flex-grow-1">
+            <div class="card-header fw-bold">
+                Danh sách món ăn / đồ uống
+                @{
+                    var billableCount = items?.Where(i =>
+                    {
+                        var status = (i.KitchenStatus ?? "").Trim().ToLower();
+                        
+                        // Bỏ qua các món đã bị hủy
+                        if (status == "cancelled" || status == "đã hủy" || status == "removed")
+                        {
+                            return false;
+                        }
+                        
+                        // ✅ Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                        if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
+                        {
+                            return false;
+                        }
+                        
+                        // ✅ Các món có trạng thái khác "Pending" và không bị hủy → đếm
+                        return true;
+                    }).Count() ?? 0;
+                }
+                <span class="badge bg-primary ms-2">@billableCount món</span>
+            </div>
+            <div class="card-body p-0 d-flex flex-column">
+                <div class="table-responsive order-items-scroll">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead class="table-light text-center">
+                        <tr>
+                                <th>STT</th>
+                                <th>Tên món</th>
+                                <th>SL</th>
+                                <th class="text-end">Đơn giá</th>
+                                <th class="text-end">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var index = 1;
+                                if (items == null || !items.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Đơn hàng chưa có món.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    // ✅ Filter logic:
+                                    // 1. Bỏ qua các món đã bị hủy (cancelled/removed)
+                                    // 2. Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                                    // 3. Chỉ hiển thị các món có trạng thái khác "Pending" và không bị hủy
+                                    var billableItems = items.Where(i =>
+                                    {
+                                        var status = (i.KitchenStatus ?? "").Trim().ToLower();
+                                        
+                                        // Bỏ qua các món đã bị hủy
+                                        if (status == "cancelled" || status == "đã hủy" || status == "removed")
+                                        {
+                                            return false;
+                                        }
+                                        
+                                        // ✅ Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+                                        if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
+                                        {
+                                            return false;
+                                        }
+                                        
+                                        // ✅ Các món có trạng thái khác "Pending" và không bị hủy → hiển thị
+                                        return true;
+                                    }).ToList();
+
+                                    if (!billableItems.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">Không có món nào cần thanh toán.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var item in billableItems)
+                                        {
+                                            var usedQuantity = item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity;
+                                            <tr>
+                                                <td class="text-center">@index</td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(item.ComboName))
+                                                    {
+                                                        <div>@item.ComboName</div>
+                                                        <div class="text-muted small fst-italic">Combo</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @item.MenuItemName
+                                                    }
+                                                </td>
+                                                <td class="text-center">@usedQuantity</td>
+                                                <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
+                                                <td class="text-end fw-bold">@item.TotalPrice.ToString("N0") ₫</td>
+                                            </tr>
+                                            index++;
+                                        }
+                                    }
+                                }
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                    <i class="bi bi-receipt-cutoff me-2 text-secondary"></i>
+                                    Tạm tính
+                                    <small class="text-muted d-block">
+                                        Giá món trước thuế và phí
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold align-middle">@subtotal.ToString("N0") ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                    <i class="bi bi-percent me-2 text-secondary"></i>
+                                    VAT (10%)
+                                    <i class="bi bi-info-circle ms-1 text-primary"
+                                       data-bs-toggle="tooltip"
+                                       title="Thuế Giá Trị Gia Tăng 10% theo quy định nhà nước."></i>
+                                    <small class="text-muted d-block">
+                                        Thuế VAT (10%): Thuế giá trị gia tăng theo quy định
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold align-middle">@vatAmount.ToString("N0") ₫</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                    <i class="bi bi-hand-index-thumb me-2 text-secondary"></i>
+                                    Phí phục vụ (5%)
+                                    <i class="bi bi-info-circle ms-1 text-primary"
+                                       data-bs-toggle="tooltip"
+                                       title="Phụ thu 5% khi khách sử dụng dịch vụ phục vụ tại bàn."></i>
+                                    <small class="text-muted d-block">
+                                        Phí phục vụ (5%): Phụ thu phục vụ tại bàn
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold align-middle">@serviceFee.ToString("N0") ₫</td>
+                            </tr>
+                            
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="bi bi-tags me-2 text-secondary"></i>
+                                        Giảm giá
+                                        <i class="bi bi-info-circle ms-1 text-primary"
+                                           data-bs-toggle="tooltip"
+                                           title="Giảm giá theo chương trình khuyến mãi hoặc mã ưu đãi áp dụng."></i>, 
+                                        <small class="text-muted d-block">
+                                            Giảm giá – theo chương trình khuyến mãi / mã giảm giá đã áp dụng
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-danger align-middle">-@discountAmount.ToString("N0") ₫</td>
+                                </tr>
+                            
+                            @{
+                                // ✅ Lấy DepositRefundAmount từ Model
+                                var depositRefundAmount = isReservationPayment 
+                                    ? reservationPayment!.DepositRefundAmount 
+                                    : orderDetail!.DepositRefundAmount;
+                            }
+                          
+                            @{
+                                var totalBeforeDeposit = subtotal + vatAmount + serviceFee - discountAmount;
+                            }
+                            <tr class="table-info">
+                                <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#e7f3ff;">
+                                    <span class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-calculator text-info fs-4"></i>
+                                        <span class="fs-5">Tổng cộng thanh toán</span>
+                                    </span>
+                                    <small class="text-muted d-block mt-1">
+                                        Tạm tính + VAT + Phí phục vụ - Giảm giá
+                                    </small>
+                                </td>
+                                <td class="text-end fw-bold text-info align-middle" style="background:#e7f3ff; font-size:1.6rem;">
+                                    @totalBeforeDeposit.ToString("N0") ₫
+                                </td>
+                            </tr>
+                            @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
+                            {
+                                <tr class="table-info">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+                                        Đã đặt cọc
+                                        <small class="text-muted d-block">
+                                            Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-success align-middle">-@depositAmount.Value.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                            @if (depositRefundAmount.HasValue && depositRefundAmount.Value > 0)
+                            {
+                                <tr class="table-warning">
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
+                                        Tiền cần trả lại cho khách
+                                        <small class="text-muted d-block">
+                                            Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
+                                        +@depositRefundAmount.Value.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
+                            @{
+                                // ✅ Lấy thông tin deposit và payment từ Model (hỗ trợ cả 2 loại)
+                                var amountReceived = isReservationPayment ? (decimal?)null : orderDetail!.AmountReceived;
+                                var changeAmount = isReservationPayment ? (decimal?)null : orderDetail!.ChangeAmount;
+                            }
+                            @if (depositPaid == true && depositAmount.HasValue && depositAmount.Value > 0)
+                            {
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            Tổng cộng thanh toán - Đặt cọc (@depositAmount.Value.ToString("N0") ₫)
+                                            @if (amountReceived.HasValue && amountReceived.Value > 0)
+                                            {
+                                                <span class="text-info d-block mt-1">
+                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @amountReceived.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                            @if (changeAmount.HasValue && changeAmount.Value > 0)
+                                            {
+                                                <span class="text-warning d-block mt-1">
+                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @changeAmount.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @totalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            Tổng cộng thanh toán (không có đặt cọc)
+                                            @if (amountReceived.HasValue && amountReceived.Value > 0)
+                                            {
+                                                <span class="text-info d-block mt-1">
+                                                    <i class="bi bi-cash-stack me-1"></i>Số tiền khách đưa: @amountReceived.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                            @if (changeAmount.HasValue && changeAmount.Value > 0)
+                                            {
+                                                <span class="text-warning d-block mt-1">
+                                                    <i class="bi bi-arrow-left-right me-1"></i>Tiền thối lại: @changeAmount.Value.ToString("N0") ₫
+                                                </span>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @totalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                            }
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="paymentActionForm"
+      asp-action="InitiatePayment"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="OrderId" value="@orderId" />
+    <input type="hidden" name="PaymentMethod" id="paymentMethodInput" />
+    <input type="hidden" name="Amount" id="paymentAmountInput" value="@totalAmount" />
+</form>
+
+@if (isReservationPayment && reservationId.HasValue)
+{
+    <!-- ✅ Form cho Reservation Payment (Cash) -->
+    <form id="cashPaymentForm"
+          asp-action="ProcessCashPaymentByReservation"
+          asp-controller="CashierPaymentFlow"
+          asp-route-reservationId="@reservationId"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReservationId" value="@reservationId" />
+        <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
+        <input type="hidden" name="Notes" id="cashPaymentNotes" />
+    </form>
+}
+else
+{
+    <!-- Form cho Order Payment (Cash) - Backward compatible -->
+    <form id="cashPaymentForm"
+          asp-action="ProcessCashPayment"
+          asp-controller="CashierPaymentFlow"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OrderId" id="cashPaymentOrderId" />
+        <input type="hidden" name="AmountReceived" id="cashPaymentAmountReceived" />
+        <input type="hidden" name="Notes" id="cashPaymentNotes" />
+    </form>
+}
+
+@if (isReservationPayment && reservationId.HasValue)
+{
+    <!-- ✅ Form cho Reservation Payment (QR) -->
+    <form id="qrConfirmForm"
+          asp-action="ConfirmQrPaymentByReservation"
+          asp-controller="CashierPaymentFlow"
+          asp-route-reservationId="@reservationId"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReservationId" value="@reservationId" />
+        <input type="hidden" name="Notes" id="qrConfirmNotes" />
+    </form>
+}
+else
+{
+    <!-- Form cho Order Payment (QR) - Backward compatible -->
+    <form id="qrConfirmForm"
+          asp-action="ConfirmQrPayment"
+          asp-controller="CashierPaymentFlow"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OrderId" id="qrConfirmOrderId" />
+        <input type="hidden" name="Notes" id="qrConfirmNotes" />
+    </form>
+}
+
+<script>
+    // ✅ DEBUG: Add event listener để trace form submit
+    document.addEventListener('DOMContentLoaded', function() {
+        const cashPaymentForm = document.getElementById('cashPaymentForm');
+        if (cashPaymentForm) {
+            // Log khi form được submit
+            cashPaymentForm.addEventListener('submit', function(e) {
+                console.log('[DEBUG] Form submit event triggered');
+                console.log('[DEBUG] Form action:', this.action);
+                console.log('[DEBUG] Form method:', this.method);
+                console.log('[DEBUG] Form data:', {
+                    OrderId: document.getElementById('cashPaymentOrderId').value,
+                    AmountReceived: document.getElementById('cashPaymentAmountReceived').value,
+                    Notes: document.getElementById('cashPaymentNotes').value
+                });
+                
+                // Kiểm tra xem có event nào đang preventDefault không
+                if (e.defaultPrevented) {
+                    console.warn('[WARNING] Form submit was prevented by another handler!');
+                }
+            });
+            
+            // Log khi form submit hoàn tất (nếu có)
+            cashPaymentForm.addEventListener('submit', function() {
+                console.log('[DEBUG] Form submit completed');
+            }, { once: true });
+        }
+    });
+</script>
+
+@if (isReservationPayment && reservationId.HasValue)
+{
+    <!-- ✅ Form cho Reservation Payment (Combined) -->
+    <form id="combinedPaymentForm"
+          asp-action="ProcessCombinedPaymentByReservation"
+          asp-controller="CashierPaymentFlow"
+          asp-route-reservationId="@reservationId"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReservationId" value="@reservationId" />
+        <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
+        <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
+        <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
+        <input type="hidden" name="Notes" id="combinedPaymentNotes" />
+    </form>
+}
+else
+{
+    <!-- Form cho Order Payment (Combined) - Backward compatible -->
+    <form id="combinedPaymentForm"
+          asp-action="ProcessCombinedPayment"
+          asp-controller="CashierPaymentFlow"
+          method="post"
+          class="d-none">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="OrderId" id="combinedPaymentOrderId" />
+        <input type="hidden" name="CashAmount" id="combinedPaymentCashAmount" />
+        <input type="hidden" name="CashReceived" id="combinedPaymentCashReceived" />
+        <input type="hidden" name="QrAmount" id="combinedPaymentQrAmount" />
+        <input type="hidden" name="Notes" id="combinedPaymentNotes" />
+    </form>
+}
+
+<form id="splitBillForm"
+      asp-action="ProcessSplitBill"
+      asp-controller="CashierPaymentFlow"
+      method="post"
+      class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="orderId" id="splitBillOrderId" />
+    <input type="hidden" name="partsJson" id="splitBillPartsJson" />
+    <input type="hidden" name="notes" id="splitBillNotes" />
+</form>
+</div>
+
+@{
+    // ✅ Pass thông tin reservation vào modal
+    ViewData["IsReservationPayment"] = isReservationPayment;
+    ViewData["ReservationId"] = reservationId;
+}
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_CashPaymentModal.cshtml")
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_QRPaymentModal.cshtml")
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_CombinedPaymentModal.cshtml")
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_SplitBillModal.cshtml")
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_PromotionModal.cshtml")
+
+@section Scripts {
+    <script src="~/js/cashier/toast.js"></script>
+    <script src="~/js/cashier/payment-core.js"></script>
+    <script src="~/js/cashier/cash-payment.js"></script>
+    <script src="~/js/cashier/qr-payment.js"></script>
+    <script src="~/js/cashier/combined-payment.js"></script>
+    <script src="~/js/cashier/promotion-voucher.js"></script>
+    <script src="~/js/cashier/split-bill.js"></script>
+
+    <script>
+        // Initialize payment modules when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize PaymentCore with order context
+            if (window.PaymentCore) {
+                window.PaymentCore.init(@Html.Raw(orderJson));
+            }
+        });
+
+        // Split bill logic (delegates to dedicated split-bill.js)
+        function openSplitBillModal() {
+            // Use SplitBill module (wwwroot/js/split-bill.js)
+            if (window.SplitBill && typeof window.SplitBill.openSplitBill === 'function') {
+                // ✅ FIX: Truyền đầy đủ thông tin để tính Total nếu cần
+                window.SplitBill.openSplitBill(window.PaymentCore.orderContext.OrderId, {
+                    orderCode: window.PaymentCore.orderContext.OrderCode,
+                    tableNumber: window.PaymentCore.orderContext.Tables,
+                    total: window.PaymentCore.orderContext.Total || 0,
+                    subtotal: window.PaymentCore.orderContext.Subtotal || 0,
+                    vat: window.PaymentCore.orderContext.Vat || 0,
+                    serviceFee: window.PaymentCore.orderContext.ServiceFee || 0,
+                    discount: window.PaymentCore.orderContext.Discount || 0,
+                    depositAmount: window.PaymentCore.orderContext.DepositAmount || 0,
+                    depositPaid: window.PaymentCore.orderContext.DepositPaid || false
+                });
+            } else {
+                if (window.PaymentCore) {
+                    window.PaymentCore.showToast('Không thể mở chức năng chia hóa đơn. Vui lòng tải lại trang.', 'error');
+                }
+            }
+        }
+
+        // Auto open promotion modal if there's an error from server
+        @if (!string.IsNullOrEmpty(ViewData["DiscountErrorMessage"] as string))
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                if (window.PromotionVoucher) {
+                    window.PromotionVoucher.openPromotionModal();
+                }
+            });
+            </text>
+        }
+
+        // Show success toast if available
+        @if (!string.IsNullOrEmpty(ViewData["DiscountSuccessMessage"] as string))
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                if (window.PaymentCore) {
+                    window.PaymentCore.showToast('@ViewData["DiscountSuccessMessage"]', 'success');
+                }
+            });
+            </text>
+        }
+    </script>
+}
+}
+

@@ -1,14 +1,23 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using WebSapaForestForStaff.Models.Kitchen;
+using WebSapaForestForStaff.Services;
 
 namespace WebSapaFoRestForStaff.Controllers
 {
+    [Authorize(Policy = "Position:Kitchen")]
     public class KitchenDisplayController : Controller
     {
         private readonly IConfiguration _configuration;
+        private readonly KitchenDisplayService _kitchenDisplayService;
 
-        public KitchenDisplayController(IConfiguration configuration)
+        public KitchenDisplayController(
+            IConfiguration configuration,
+            KitchenDisplayService kitchenDisplayService)
         {
             _configuration = configuration;
+            _kitchenDisplayService = kitchenDisplayService;
         }
 
         /// <summary>
@@ -17,10 +26,21 @@ namespace WebSapaFoRestForStaff.Controllers
         /// </summary>
         public IActionResult Index()
         {
-            ViewBag.ApiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
-            var apiBase = ViewBag.ApiBaseUrl.ToString().Replace("/api", "");
-            ViewBag.SignalRHubUrl = $"{apiBase}/kitchenHub";
-            return View();
+            var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
+            var apiBase = apiBaseUrl.Replace("/api", "");
+            var signalRHubUrl = $"{apiBase}/kitchenHub";
+
+            // OPTIMIZED: Không load data ở server-side, để client-side load để tránh double loading
+            // Chỉ truyền config cần thiết
+            var viewModel = new KitchenDisplayViewModel
+            {
+                ActiveOrders = new(), // Empty list - sẽ load từ client
+                CourseTypes = new(), // Empty list - sẽ load từ client nếu cần
+                ApiBaseUrl = apiBaseUrl,
+                SignalRHubUrl = signalRHubUrl
+            };
+
+            return View(viewModel);
         }
 
         /// <summary>
@@ -29,10 +49,42 @@ namespace WebSapaFoRestForStaff.Controllers
         /// </summary>
         public IActionResult Station(string categoryName)
         {
-            ViewBag.CategoryName = categoryName;
-            ViewBag.ApiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
-            var apiBase = ViewBag.ApiBaseUrl.ToString().Replace("/api", "");
-            ViewBag.SignalRHubUrl = $"{apiBase}/kitchenHub";
+            var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
+            var apiBase = apiBaseUrl.Replace("/api", "");
+            var signalRHubUrl = $"{apiBase}/kitchenHub";
+
+            // Set ViewBag for View compatibility
+            ViewBag.CategoryName = categoryName ?? "";
+            ViewBag.ApiBaseUrl = apiBaseUrl;
+            ViewBag.SignalRHubUrl = signalRHubUrl;
+
+            // OPTIMIZED: Không load data ở server-side, để client-side load
+            var viewModel = new KitchenStationViewModel
+            {
+                CategoryName = categoryName ?? "",
+                StationItems = null, // Sẽ load từ client
+                ApiBaseUrl = apiBaseUrl,
+                SignalRHubUrl = signalRHubUrl
+            };
+
+            return View(viewModel);
+        }
+
+        /// <summary>
+        /// Ingredient pickup screen (filtered by category name)
+        /// GET: /KitchenDisplay/IngredientPickup?categoryName=Xào
+        /// </summary>
+        public IActionResult IngredientPickup(string categoryName)
+        {
+            var apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096/api";
+            var apiBase = apiBaseUrl.Replace("/api", "");
+            var signalRHubUrl = $"{apiBase}/kitchenHub";
+
+            // Set ViewBag for View compatibility
+            ViewBag.CategoryName = categoryName ?? "";
+            ViewBag.ApiBaseUrl = apiBaseUrl;
+            ViewBag.SignalRHubUrl = signalRHubUrl;
+
             return View();
         }
     }

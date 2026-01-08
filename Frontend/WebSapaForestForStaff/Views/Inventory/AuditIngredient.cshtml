@@ -1,0 +1,2670 @@
+﻿@model WebSapaForestForStaff.DTOs.Inventory.AuditInventoryPagedViewModel
+@{
+    Layout = "_LayoutInventory";
+    ViewData["Title"] = "Quản lý đơn kiểm kê";
+}
+
+<style>
+    /* ========================================
+       MINIMALIST AUDIT INVENTORY STYLESHEET
+       Tập trung vào nội dung, giảm màu mè
+       ======================================== */
+
+    /* === RESET & BASE === */
+    .audit-list-container {
+        min-height: 100vh;
+        background-color: #fafafa;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #333;
+    }
+
+    /* === HEADER === */
+    .audit-list-header {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e8e8e8;
+    }
+
+    .audit-list-title-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #f5f5f5;
+    }
+
+    .audit-list-title-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .audit-list-title h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0;
+    }
+
+    .audit-list-subtitle {
+        font-size: 0.875rem;
+        color: #666;
+        margin: 0.25rem 0 0 0;
+    }
+
+    .audit-list-stats {
+        text-align: right;
+    }
+
+    .audit-list-stats-label {
+        font-size: 0.75rem;
+        color: #999;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .audit-list-stats-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+    }
+
+    /* === TABS === */
+    .audit-tabs-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #e8e8e8;
+    }
+
+    .audit-tab {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-tab:hover {
+            color: #1a1a1a;
+            background: #fafafa;
+        }
+
+        .audit-tab.active {
+            color: #1a1a1a;
+            border-bottom-color: #1a1a1a;
+            background: transparent;
+        }
+
+    .audit-tab-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 0.5rem;
+        background: #f0f0f0;
+        color: #666;
+        border-radius: 11px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-left: 0.5rem;
+    }
+
+    .audit-tab.active .audit-tab-badge {
+        background: #1a1a1a;
+        color: white;
+    }
+
+    /* === FILTERS === */
+    .audit-filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .audit-form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .audit-form-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .audit-form-input,
+    .audit-form-select {
+        padding: 0.65rem 0.85rem;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        background: white;
+    }
+
+        .audit-form-input:focus,
+        .audit-form-select:focus {
+            outline: none;
+            border-color: #666;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+
+    .audit-search-wrapper {
+        position: relative;
+    }
+
+    .audit-search-icon {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #999;
+    }
+
+    .audit-form-input.with-icon {
+        padding-left: 2.5rem;
+    }
+
+    /* === TABLE === */
+    .audit-table-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        border: 1px solid #e8e8e8;
+    }
+
+    .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .audit-table thead {
+            background: #000000;
+            border-bottom: 2px solid #e8e8e8;
+        }
+
+        .audit-table th {
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+            .audit-table th.text-center {
+                text-align: center;
+            }
+
+        .audit-table tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.15s;
+        }
+
+            .audit-table tbody tr:hover {
+                background-color: #fafafa;
+            }
+
+            .audit-table tbody tr.hidden {
+                display: none;
+            }
+
+        .audit-table td {
+            padding: 1rem 1.25rem;
+            font-size: 0.875rem;
+            color: #333;
+        }
+
+    .audit-code {
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .audit-batch-code {
+        font-weight: 500;
+        color: #666;
+    }
+
+    .audit-ingredient-name {
+        font-weight: 600;
+        color: #1a1a1a;
+    }
+
+    .audit-ingredient-code {
+        font-size: 0.75rem;
+        color: #999;
+    }
+
+    .audit-adjustment {
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+        .audit-adjustment.positive {
+            color: #059669;
+        }
+
+        .audit-adjustment.negative {
+            color: #dc2626;
+        }
+
+    .audit-creator-name {
+        font-weight: 500;
+        color: #1a1a1a;
+    }
+
+    .audit-creator-position {
+        font-size: 0.75rem;
+        color: #999;
+    }
+
+    /* === STATUS BADGES - MINIMAL === */
+    .audit-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .audit-status-processing {
+        background-color: #fff8e1;
+        color: #f57c00;
+        border: 1px solid #ffe0b2;
+    }
+
+    .audit-status-completed {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
+
+    .audit-status-cancelled {
+        background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
+    }
+
+    /* === BUTTONS === */
+    .audit-btn-view {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.5rem 1rem;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-btn-view:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+    /* === PAGINATION === */
+    .audit-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        background-color: #fafafa;
+        border-top: 1px solid #e8e8e8;
+    }
+
+    .audit-pagination-info {
+        font-size: 0.875rem;
+        color: #666;
+    }
+
+    .audit-pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .audit-pagination-btn {
+        padding: 0.5rem 0.85rem;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: #333;
+    }
+
+        .audit-pagination-btn:hover:not(.disabled) {
+            border-color: #1a1a1a;
+            color: #1a1a1a;
+        }
+
+        .audit-pagination-btn.active {
+            background: #1a1a1a;
+            color: white;
+            border-color: #1a1a1a;
+        }
+
+        .audit-pagination-btn.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+    /* === MODAL === */
+    .audit-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 2rem;
+        backdrop-filter: blur(2px);
+    }
+
+        .audit-modal-overlay.active {
+            display: flex;
+        }
+
+        .audit-modal-overlay.with-image-viewer {
+            justify-content: flex-start;
+            padding-left: 2rem;
+        }
+
+    .audit-modal-content {
+        background: white;
+        border-radius: 8px;
+        max-width: 1200px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        animation: modalSlideIn 0.3s ease-out;
+    }
+
+    .audit-modal-overlay.with-image-viewer .audit-modal-content {
+        max-width: 48%;
+        width: 48%;
+    }
+
+    .audit-modal-header {
+        background: #1a1a1a;
+        padding: 1.75rem 2rem;
+        border-radius: 8px 8px 0 0;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+
+    .audit-modal-header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+    }
+
+    .audit-modal-title {
+        color: white;
+    }
+
+        .audit-modal-title h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .audit-modal-title p {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+    .audit-modal-close {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        font-size: 1.5rem;
+    }
+
+        .audit-modal-close:hover {
+            background: #dc2626;
+            transform: rotate(90deg);
+        }
+
+    .audit-modal-body {
+        padding: 2rem;
+    }
+
+    /* === INFO SECTIONS - MINIMAL === */
+    .audit-info-section {
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e8e8e8;
+        background: #fafafa;
+    }
+
+        .audit-info-section h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #1a1a1a;
+        }
+
+    .audit-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .audit-info-item label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .audit-info-item value {
+        display: block;
+        font-size: 1rem;
+        color: #1a1a1a;
+        font-weight: 500;
+    }
+
+    /* Colored sections - subtle */
+    .audit-section-purple {
+        background: #fafafa;
+        border-left: 3px solid #9333ea;
+    }
+
+    .audit-section-blue {
+        background: #fafafa;
+        border-left: 3px solid #3b82f6;
+    }
+
+    .audit-section-indigo {
+        background: #fafafa;
+        border-left: 3px solid #6366f1;
+    }
+
+    .audit-section-green {
+        background: #fafafa;
+        border-left: 3px solid #10b981;
+    }
+
+    .audit-section-red {
+        background: #fafafa;
+        border-left: 3px solid #ef4444;
+    }
+
+    /* === QUANTITY CARDS === */
+    .audit-quantity-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .audit-quantity-card {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 8px;
+        text-align: center;
+        border: 1px solid #e8e8e8;
+    }
+
+        .audit-quantity-card label {
+            display: block;
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .audit-quantity-card value {
+            display: block;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+    .audit-reason-box {
+        background: #fff8e1;
+        border: 1px solid #ffe0b2;
+        border-radius: 8px;
+        padding: 1.25rem;
+    }
+
+        .audit-reason-box label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #f57c00;
+            margin-bottom: 0.5rem;
+        }
+
+        .audit-reason-box value {
+            display: block;
+            color: #333;
+            line-height: 1.6;
+        }
+
+    /* === INGREDIENT STATUS === */
+    .audit-ingredient-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .audit-ingredient-status-expired {
+        background-color: #ffebee;
+        color: #c62828;
+        border: 1px solid #ffcdd2;
+    }
+
+    .audit-ingredient-status-expiring {
+        background-color: #fff8e1;
+        color: #f57c00;
+        border: 1px solid #ffe0b2;
+    }
+
+    .audit-ingredient-status-normal {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
+
+    /* === MODAL FOOTER === */
+    .audit-modal-footer {
+        background: #fafafa;
+        padding: 1.5rem 2rem;
+        border-radius: 0 0 8px 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        border-top: 1px solid #e8e8e8;
+    }
+
+    .audit-btn-close {
+        padding: 0.65rem 1.5rem;
+        background: #e0e0e0;
+        color: #333;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-btn-close:hover {
+            background: #bdbdbd;
+        }
+
+    .audit-btn-confirm {
+        padding: 0.65rem 1.5rem;
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .audit-btn-confirm:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .audit-btn-confirm:disabled {
+            background: #bdbdbd;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    .audit-btn-reject {
+        padding: 0.65rem 1.5rem;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .audit-btn-reject:hover:not(:disabled) {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .audit-btn-reject:disabled {
+            background: #bdbdbd;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    .audit-btn-view-image {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1.25rem;
+        background: #1a1a1a;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .audit-btn-view-image:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+    .audit-no-image-text {
+        color: #999;
+        font-style: italic;
+    }
+
+    /* === IMAGE VIEWER === */
+    .audit-image-viewer {
+        position: fixed;
+        top: 50%;
+        right: 2rem;
+        transform: translateY(-50%) translateX(150%);
+        width: 48%;
+        max-height: 90vh;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        transition: transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+    }
+
+        .audit-image-viewer.active {
+            transform: translateY(-50%) translateX(0);
+            opacity: 1;
+        }
+
+    .audit-image-viewer-header {
+        background: #1a1a1a;
+        padding: 1.25rem 1.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 8px 8px 0 0;
+        flex-shrink: 0;
+    }
+
+    .audit-image-viewer-title {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .audit-image-viewer-close {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        font-size: 1.5rem;
+    }
+
+        .audit-image-viewer-close:hover {
+            background: #dc2626;
+            transform: rotate(90deg);
+        }
+
+    .audit-image-viewer-body {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        background: #f5f5f5;
+        overflow: hidden;
+        border-radius: 0 0 8px 8px;
+    }
+
+        .audit-image-viewer-body img {
+            max-width: 100%;
+            max-height: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+    /* === CONFIRM MODAL === */
+    .confirm-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        backdrop-filter: blur(2px);
+    }
+
+        .confirm-modal-overlay.active {
+            display: flex;
+        }
+
+    .confirm-modal-content {
+        background: white;
+        border-radius: 8px;
+        max-width: 480px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+
+    .confirm-modal-header {
+        padding: 2rem 2rem 1rem 2rem;
+        text-align: center;
+    }
+
+    .confirm-modal-icon {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 1rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+    }
+
+        .confirm-modal-icon.warning {
+            background: #fff8e1;
+            border: 2px solid #ffe0b2;
+        }
+
+        .confirm-modal-icon.danger {
+            background: #ffebee;
+            border: 2px solid #ffcdd2;
+        }
+
+        .confirm-modal-icon.success {
+            background: #e8f5e9;
+            border: 2px solid #c8e6c9;
+        }
+
+    .confirm-modal-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+
+    .confirm-modal-body {
+        padding: 0 2rem 2rem 2rem;
+    }
+
+    .confirm-modal-message {
+        text-align: center;
+        color: #666;
+        line-height: 1.6;
+        font-size: 0.95rem;
+    }
+
+    .confirm-modal-warning-text {
+        background: #fff8e1;
+        border: 1px solid #ffe0b2;
+        border-radius: 6px;
+        padding: 0.85rem;
+        margin-top: 1rem;
+        color: #f57c00;
+        font-weight: 600;
+        text-align: center;
+        font-size: 0.85rem;
+    }
+
+    .confirm-modal-footer {
+        padding: 1.25rem 2rem;
+        background: #fafafa;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        border-top: 1px solid #e8e8e8;
+    }
+
+    .confirm-modal-btn {
+        padding: 0.65rem 1.75rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 110px;
+        justify-content: center;
+    }
+
+    .confirm-modal-btn-cancel {
+        background: #e0e0e0;
+        color: #333;
+    }
+
+        .confirm-modal-btn-cancel:hover {
+            background: #bdbdbd;
+            transform: translateY(-1px);
+        }
+
+    .confirm-modal-btn-confirm {
+        background: #10b981;
+        color: white;
+    }
+
+        .confirm-modal-btn-confirm:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+    .confirm-modal-btn-reject {
+        background: #ef4444;
+        color: white;
+    }
+
+        .confirm-modal-btn-reject:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+    /* === TOAST NOTIFICATIONS === */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        pointer-events: none;
+    }
+
+    .toast {
+        background: white;
+        padding: 14px 18px;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 300px;
+        max-width: 420px;
+        animation: slideInRight 0.3s ease-out;
+        pointer-events: auto;
+        border-left: 3px solid;
+    }
+
+        .toast.toast-success {
+            border-left-color: #10b981;
+        }
+
+        .toast.toast-error {
+            border-left-color: #ef4444;
+        }
+
+        .toast.toast-warning {
+            border-left-color: #f59e0b;
+        }
+
+        .toast.toast-info {
+            border-left-color: #3b82f6;
+        }
+
+        .toast.slide-out {
+            animation: slideOutRight 0.3s ease-out forwards;
+        }
+
+    .toast-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .toast.toast-success .toast-icon {
+        background: #10b981;
+        color: white;
+    }
+
+    .toast.toast-error .toast-icon {
+        background: #ef4444;
+        color: white;
+    }
+
+    .toast.toast-warning .toast-icon {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .toast.toast-info .toast-icon {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .toast-content {
+        flex: 1;
+    }
+
+    .toast-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-bottom: 3px;
+        color: #1a1a1a;
+    }
+
+    .toast-message {
+        font-size: 0.85rem;
+        line-height: 1.4;
+        color: #666;
+    }
+
+    .toast-close {
+        background: transparent;
+        border: none;
+        color: #999;
+        cursor: pointer;
+        font-size: 18px;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+
+        .toast-close:hover {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+    /* === NO DATA === */
+    .audit-no-data {
+        text-align: center;
+        padding: 3rem;
+        color: red;
+    }
+
+    /* === REPORT SECTION === */
+.audit-report-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.audit-report-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.audit-report-filter-btn {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.audit-report-filter-btn:hover {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+    background: #fafafa;
+}
+
+.audit-report-filter-btn.active {
+    background: #1a1a1a;
+    color: white;
+    border-color: #1a1a1a;
+}
+
+.audit-btn-export-report {
+    padding: 0.6rem 1.5rem;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    white-space: nowrap;
+}
+
+.audit-btn-export-report:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.audit-btn-export-report:active {
+    transform: translateY(0);
+}
+
+/* Responsive cho mobile */
+@@media (max-width: 768px) {
+    .audit-list-title-section {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .audit-report-section {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .audit-report-filters {
+        width: 100%;
+    }
+    
+    .audit-btn-export-report {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}
+
+
+</style>
+<div class="toast-container" id="toastContainer"></div>
+<div class="audit-list-container">
+    <div class="audit-list-header">
+        <!-- TIÊU ĐỀ -->
+        <!-- TIÊU ĐỀ -->
+        <div class="audit-list-title-section">
+            <div class="audit-list-title-left">
+                <div class="audit-list-title">
+                    <h1>Quản lý đơn kiểm kê</h1>
+                    <p class="audit-list-subtitle">Quản lý các đơn kiểm kê mặt hàng</p>
+                </div>
+            </div>
+
+            <!-- ✅ THÊM PHẦN BÁO CÁO -->
+            <div class="audit-report-section">
+                <div class="audit-report-filters">
+                    <div class="audit-form-group" style="min-width: 200px;">
+                        <select id="reportPeriodSelect" class="audit-form-select" onchange="handleReportPeriodChange(this.value)">
+                            <option value="0"> Hôm nay</option>
+                            <option value="3"> 3 ngày qua</option>
+                            <option value="7" selected> 7 ngày qua</option>
+                            <option value="7" selected> 7 ngày qua</option>
+                            <option value="30"> 30 ngày qua</option>
+                            <option value="custom"> Tùy chọn ngày</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="audit-btn-export-report" onclick="exportReport()">
+                    Xuất báo cáo
+                </button>
+            </div>
+
+            <!-- ✅ MODAL CHỌN NGÀY TÙY CHỈNH -->
+            <div id="customDateModal" class="confirm-modal-overlay">
+                <div class="confirm-modal-content" style="max-width: 400px;">
+                    <div class="confirm-modal-header">
+                        <h3 class="confirm-modal-title">Chọn khoảng thời gian</h3>
+                    </div>
+                    <div class="confirm-modal-body">
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Từ ngày:</label>
+                                <input type="date" id="customDateFrom" class="audit-form-input" style="width: 100%;" />
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Đến ngày:</label>
+                                <input type="date" id="customDateTo" class="audit-form-input" style="width: 100%;" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="confirm-modal-footer">
+                        <button class="confirm-modal-btn confirm-modal-btn-cancel" onclick="closeCustomDatePicker()">
+                            Hủy
+                        </button>
+                        <button class="confirm-modal-btn confirm-modal-btn-confirm" onclick="applyCustomDate()">
+                            Áp dụng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ✅ THÊM MODAL CHỌN NGÀY TÙY CHỈNH -->
+        <div id="customDateModal" class="confirm-modal-overlay">
+            <div class="confirm-modal-content" style="max-width: 400px;">
+                <div class="confirm-modal-header">
+                    <h3 class="confirm-modal-title">Chọn khoảng thời gian</h3>
+                </div>
+                <div class="confirm-modal-body">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Từ ngày:</label>
+                            <input type="date" id="customDateFrom" class="audit-form-input" style="width: 100%;" />
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #333;">Đến ngày:</label>
+                            <input type="date" id="customDateTo" class="audit-form-input" style="width: 100%;" />
+                        </div>
+                    </div>
+                </div>
+                <div class="confirm-modal-footer">
+                    <button class="confirm-modal-btn confirm-modal-btn-cancel" onclick="closeCustomDatePicker()">
+                        Hủy
+                    </button>
+                    <button class="confirm-modal-btn confirm-modal-btn-confirm" onclick="applyCustomDate()">
+                        Áp dụng
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="audit-tabs-container">
+            <button class="audit-tab" data-tab="processing" onclick="switchTab('processing')">
+                Đang xử lý
+                <span class="audit-tab-badge" id="processingCount">0</span>
+            </button>
+            <button class="audit-tab" data-tab="completed" onclick="switchTab('completed')">
+                Đã xác nhận
+                <span class="audit-tab-badge" id="completedCount">0</span>
+            </button>
+            <button class="audit-tab" data-tab="cancelled" onclick="switchTab('cancelled')">
+                Đã từ chối
+                <span class="audit-tab-badge" id="cancelledCount">0</span>
+            </button>
+            <button class="audit-tab active" data-tab="all" onclick="switchTab('all')">
+                Tất cả
+                <span class="audit-tab-badge" id="allCount">0</span>
+            </button>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="audit-filter-grid">
+            <div class="audit-form-group" style="grid-column: span 2;">
+                <label class="audit-form-label">Tìm kiếm</label>
+                <div class="audit-search-wrapper">
+                    <input type="text"
+                           id="searchInput"
+                           placeholder="Mã đơn, tên mặt hàng, mã lô..."
+                           class="audit-form-input with-icon" />
+                </div>
+            </div>
+
+            <!-- SẮP XẾP THEO -->
+            <div class="audit-form-group">
+                <label class="audit-form-label">Sắp xếp theo</label>
+                <select id="sortByFilter" class="audit-form-select">
+                    <option value="time">Thời gian (Mới nhất)</option>
+                    <option value="code">Mã đơn (A-Z)</option>
+                    <option value="ingredient">Tên mặt hàng (A-Z)</option>
+                </select>
+            </div>
+
+            <div class="audit-form-group">
+                <label class="audit-form-label">Từ ngày</label>
+                <input type="date"
+                       id="dateFromFilter"
+                       class="audit-form-input" />
+            </div>
+
+            <div class="audit-form-group">
+                <label class="audit-form-label">Đến ngày</label>
+                <input type="date"
+                       id="dateToFilter"
+                       class="audit-form-input" />
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU -->
+    <div class="audit-table-container">
+        <table class="audit-table">
+            <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Mã lô</th>
+                    <th>mặt hàng</th>
+                    <th>Điều chỉnh</th>
+                    <th>Người tạo</th>
+                    <th>Thời gian</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="auditTableBody">
+                @if (Model.Audits == null || !Model.Audits.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="audit-no-data">
+                            <div style="font-size: 3rem; color: #d1d5db; margin-bottom: 1rem;">&#128230;</div>
+                            <strong style="font-size: 1.1rem; color: #374151;">Không tìm thấy đơn kiểm kê nào</strong>
+                            <br>
+                            <span style="font-size: 0.875rem;">Vui lòng thử lại với điều kiện tìm kiếm khác</span>
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var audit in Model.Audits)
+                    {
+                        <tr class="audit-row"
+                            data-audit-id="@audit.AuditId"
+                            data-audit-code="@audit.AuditId"
+                            data-purchase-order-id="@audit.PurchaseOrderId"
+                            data-ingredient-code="@audit.IngredientCode"
+                            data-ingredient-name="@audit.IngredientName"
+                            data-original-quantity="@audit.OriginalQuantity"
+                            data-adjustment-quantity="@audit.AdjustmentQuantity"
+                            data-is-addition="@audit.IsAddition.ToString().ToLower()"
+                            data-new-quantity="@audit.NewQuantity"
+                            data-unit="@audit.Unit"
+                            data-reason="@audit.Reason"
+                            data-audit-status="@audit.AuditStatus"
+                            data-created-at="@audit.CreatedAt.ToString("dd/MM/yyyy HH:mm")"
+                            data-creator-name="@audit.CreatorName"
+                            data-creator-position="@audit.CreatorPosition"
+                            data-creator-phone="@audit.CreatorPhone"
+                            data-confirmed-at="@(audit.ConfirmedAt?.ToString("dd/MM/yyyy HH:mm") ?? "")"
+                            data-confirmer-name="@(audit.ConfirmerName ?? "")"
+                            data-confirmer-position="@(audit.ConfirmerPosition ?? "")"
+                            data-confirmer-phone="@(audit.ConfirmerPhone ?? "")"
+                            data-image-path="@(audit.ImagePath ?? "")"
+                            data-ingredient-status="@(audit.IngredientStatus ?? "normal")"
+                            data-expiry-date="@(audit.ExpiryDate ?? "")">
+                            <td>
+                                <span class="audit-code">@audit.AuditId</span>
+                            </td>
+                            <td>
+                                <span class="audit-batch-code">@audit.PurchaseOrderId</span>
+                            </td>
+                            <td>
+                                <div class="audit-ingredient-name">@audit.IngredientName</div>
+                                <div class="audit-ingredient-code">@audit.IngredientCode</div>
+                            </td>
+                            <td class="text-center">
+                                <span class="audit-adjustment @(audit.IsAddition ? "positive" : "negative")">
+                                    @(audit.IsAddition ? "+" : "-")@audit.AdjustmentQuantity @audit.Unit
+                                </span>
+                            </td>
+                            <td>
+                                <div class="audit-creator-name">@audit.CreatorName</div>
+                                <div class="audit-creator-position">@audit.CreatorPosition</div>
+                            </td>
+                            <td>
+                                @audit.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td class="text-center">
+                                @if (audit.AuditStatus == "processing")
+                                {
+                                    <span class="audit-status-badge audit-status-processing">
+                                         Đang xử lý
+                                    </span>
+                                }
+                                else if (audit.AuditStatus == "completed")
+                                {
+                                    <span class="audit-status-badge audit-status-completed">
+                                        Đã xác nhận
+                                    </span>
+                                }
+                                else if (audit.AuditStatus == "cancelled")
+                                {
+                                    <span class="audit-status-badge audit-status-cancelled">
+                                         Đã từ chối
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <button class="audit-btn-view" onclick="showAuditDetail(this.closest('tr'))">
+                                     Xem
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="audit-pagination">
+            <div class="audit-pagination-info" id="paginationInfo">
+                Hiển thị <span id="showingFrom">0</span> - <span id="showingTo">0</span> trong số <span id="totalVisible">0</span> đơn
+            </div>
+            <div class="audit-pagination-controls">
+                <button class="audit-pagination-btn" id="prevBtn" onclick="changePage(-1)">
+                    &#8249;
+                </button>
+                <span class="audit-pagination-btn active" id="currentPageBtn">1</span>
+                <button class="audit-pagination-btn" id="nextBtn" onclick="changePage(1)">
+                    &#8250;
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chi tiết -->
+<div id="auditDetailModal" class="audit-modal-overlay">
+    <!-- Modal content will be loaded dynamically -->
+</div>
+
+<!-- Image Viewer Sidebar -->
+<div id="imageViewer" class="audit-image-viewer">
+    <div class="audit-image-viewer-header">
+        <h3 class="audit-image-viewer-title">Hình ảnh minh chứng</h3>
+        <button class="audit-image-viewer-close" onclick="closeImageViewer()">
+            &times;
+        </button>
+    </div>
+    <div class="audit-image-viewer-body">
+        <img id="imageViewerImg" src="" alt="Evidence Image" />
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="confirm-modal-overlay">
+    <div class="confirm-modal-content">
+        <div class="confirm-modal-header">
+            <div class="confirm-modal-icon" id="confirmModalIcon">
+                <!-- Icon sẽ được set động -->
+            </div>
+            <h3 class="confirm-modal-title" id="confirmModalTitle">Xác nhận</h3>
+        </div>
+        <div class="confirm-modal-body">
+            <p class="confirm-modal-message" id="confirmModalMessage">
+                <!-- Message sẽ được set động -->
+            </p>
+            <div class="confirm-modal-warning-text" id="confirmModalWarning" style="display: none;">
+                <!-- Warning text sẽ được set động -->
+            </div>
+        </div>
+        <div class="confirm-modal-footer" id="confirmModalFooter">
+            <!-- Buttons sẽ được set động -->
+        </div>
+    </div>
+</div>
+
+<script>
+    function showToast(type, title, message, duration = 4000) {
+        const container = document.getElementById('toastContainer');
+
+        // Tạo toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+
+        // Icon theo loại
+        const icons = {
+            success: '✓',
+            error: '✕',
+            warning: '⚠',
+            info: 'ℹ'
+        };
+
+        toast.innerHTML = `
+                <div class="toast-icon">${icons[type] || 'ℹ'}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="toast-close" onclick="this.closest('.toast').remove()">×</button>
+            `;
+
+        container.appendChild(toast);
+
+        // Auto remove sau duration
+        setTimeout(() => {
+            toast.classList.add('slide-out');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+
+
+    const currentUser = {
+        userId: parseInt('@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value' || '0'),
+        fullName: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? ""))'),
+        phone: '@User.FindFirst(System.Security.Claims.ClaimTypes.MobilePhone)?.Value',
+        email: '@User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value',
+        position: decodeURIComponent('@Html.Raw(System.Uri.EscapeDataString(User.FindFirst("Positions")?.Value ?? "Nhân viên kho"))')
+    };
+
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let allRows = [];
+        let filteredRows = [];
+        let currentTab = 'all'; // Mặc định tab "Tất cả"
+
+        document.addEventListener('DOMContentLoaded', function () {
+            allRows = Array.from(document.querySelectorAll('.audit-row'));
+
+            // Sắp xếp mặc định theo thời gian (mới nhất lên đầu)
+            sortRowsByTime(allRows, true);
+
+            filteredRows = [...allRows];
+
+            // Cập nhật số lượng cho các tab
+            updateTabCounts();
+
+            // Mặc định hiển thị tab "Tất cả"
+            switchTab('all');
+
+            // Event listeners
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+            document.getElementById('sortByFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateFromFilter').addEventListener('change', applyFilters);
+            document.getElementById('dateToFilter').addEventListener('change', applyFilters);
+        });
+
+        // Đếm số lượng đơn theo trạng thái
+        function updateTabCounts() {
+    const processingCount = allRows.filter(row => row.dataset.auditStatus === 'processing').length;
+    const completedCount = allRows.filter(row => row.dataset.auditStatus === 'completed').length;
+    const cancelledCount = allRows.filter(row => row.dataset.auditStatus === 'cancelled').length;
+    const allCount = allRows.length;
+
+    document.getElementById('processingCount').textContent = processingCount;
+    document.getElementById('completedCount').textContent = completedCount;
+    document.getElementById('cancelledCount').textContent = cancelledCount;
+    document.getElementById('allCount').textContent = allCount;
+}
+
+        // Chuyển tab
+        function switchTab(tab) {
+            currentTab = tab;
+
+            // Cập nhật active state cho tabs
+            document.querySelectorAll('.audit-tab').forEach(tabEl => {
+                if (tabEl.dataset.tab === tab) {
+                    tabEl.classList.add('active');
+                } else {
+                    tabEl.classList.remove('active');
+                }
+            });
+
+            // Reset về trang 1 và áp dụng filters
+            currentPage = 1;
+            applyFilters();
+        }
+
+        // Áp dụng filters
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const sortBy = document.getElementById('sortByFilter').value;
+            const dateFrom = document.getElementById('dateFromFilter').value;
+            const dateTo = document.getElementById('dateToFilter').value;
+
+            filteredRows = allRows.filter(row => {
+                // Lọc theo tab
+                if (currentTab !== 'all') {
+                    const status = row.dataset.auditStatus;
+                    if (status !== currentTab) return false;
+                }
+
+                // Lấy các giá trị từ data attributes
+                const auditCode = (row.dataset.auditCode || '').toLowerCase();
+                const purchaseOrderId = (row.dataset.purchaseOrderId || '').toLowerCase();
+                const ingredientName = (row.dataset.ingredientName || '').toLowerCase();
+                const ingredientCode = (row.dataset.ingredientCode || '').toLowerCase();
+                const createdAt = row.dataset.createdAt || '';
+
+                // Search filter
+                const matchSearch = !searchTerm ||
+                    auditCode.includes(searchTerm) ||
+                    purchaseOrderId.includes(searchTerm) ||
+                    ingredientName.includes(searchTerm) ||
+                    ingredientCode.includes(searchTerm);
+
+                // Date filter
+                let matchDate = true;
+                if (dateFrom || dateTo) {
+                    const rowDate = parseDate(createdAt);
+                    if (!rowDate) {
+                        matchDate = false;
+                    } else {
+                        if (dateFrom) {
+                            const fromDate = new Date(dateFrom);
+                            fromDate.setHours(0, 0, 0, 0);
+                            matchDate = matchDate && rowDate >= fromDate;
+                        }
+                        if (dateTo) {
+                            const toDate = new Date(dateTo);
+                            toDate.setHours(23, 59, 59, 999);
+                            matchDate = matchDate && rowDate <= toDate;
+                        }
+                    }
+                }
+
+                return matchSearch && matchDate;
+            });
+
+            // Sắp xếp
+            sortFilteredRows(sortBy);
+
+            currentPage = 1;
+            updatePagination();
+        }
+
+        // Sắp xếp rows đã lọc
+        function sortFilteredRows(sortBy) {
+            switch (sortBy) {
+                case 'time':
+                    sortRowsByTime(filteredRows, true); // true = mới nhất lên đầu
+                    break;
+                case 'code':
+                    filteredRows.sort((a, b) => {
+                        const codeA = a.dataset.auditCode || '';
+                        const codeB = b.dataset.auditCode || '';
+                        return codeA.localeCompare(codeB);
+                    });
+                    break;
+                case 'ingredient':
+                    filteredRows.sort((a, b) => {
+                        const nameA = a.dataset.ingredientName || '';
+                        const nameB = b.dataset.ingredientName || '';
+                        return nameA.localeCompare(nameB, 'vi');
+                    });
+                    break;
+            }
+        }
+
+        // Sắp xếp theo thời gian
+        function sortRowsByTime(rows, newestFirst = true) {
+            rows.sort((a, b) => {
+                const dateA = parseDate(a.dataset.createdAt);
+                const dateB = parseDate(b.dataset.createdAt);
+
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+
+                return newestFirst ? dateB - dateA : dateA - dateB;
+            });
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+
+            try {
+                const parts = dateStr.split(' ');
+                if (parts.length < 1) return null;
+
+                const dateParts = parts[0].split('/');
+                if (dateParts.length !== 3) return null;
+
+                const day = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]) - 1;
+                const year = parseInt(dateParts[2]);
+
+                // Nếu có giờ phút
+                let hours = 0, minutes = 0;
+                if (parts.length > 1) {
+                    const timeParts = parts[1].split(':');
+                    if (timeParts.length === 2) {
+                        hours = parseInt(timeParts[0]);
+                        minutes = parseInt(timeParts[1]);
+                    }
+                }
+
+                const date = new Date(year, month, day, hours, minutes);
+
+                if (isNaN(date.getTime())) return null;
+
+                return date;
+            } catch (error) {
+                console.error('Error parsing date:', dateStr, error);
+                return null;
+            }
+        }
+
+        function updatePagination() {
+            // Hide all rows
+            allRows.forEach(row => row.classList.add('hidden'));
+
+            // Show filtered rows for current page
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, filteredRows.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                filteredRows[i].classList.remove('hidden');
+            }
+
+            // Update pagination info
+            document.getElementById('showingFrom').textContent = filteredRows.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('showingTo').textContent = endIndex;
+            document.getElementById('totalVisible').textContent = filteredRows.length;
+
+            // Cập nhật số ở tab hiện tại
+            const currentTabElement = document.querySelector(`.audit-tab[data-tab="${currentTab}"]`);
+            if (currentTabElement) {
+                const badge = currentTabElement.querySelector('.audit-tab-badge');
+                if (badge) {
+                    document.getElementById('totalAuditsCount').textContent = filteredRows.length;
+                }
+            }
+
+            // Update page number
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+            document.getElementById('currentPageBtn').textContent = filteredRows.length > 0 ? currentPage : 0;
+
+            // Enable/disable pagination buttons
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            if (currentPage <= 1) {
+                prevBtn.classList.add('disabled');
+            } else {
+                prevBtn.classList.remove('disabled');
+            }
+
+            if (currentPage >= totalPages) {
+                nextBtn.classList.add('disabled');
+            } else {
+                nextBtn.classList.remove('disabled');
+            }
+        }
+
+        function changePage(direction) {
+            const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+            const newPage = currentPage + direction;
+
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                updatePagination();
+            }
+        }
+
+    function showAuditDetail(row) {
+        const originalQuantity = parseFloat(row.dataset.originalQuantity);
+        const adjustmentQuantity = parseFloat(row.dataset.adjustmentQuantity);
+        const isAddition = row.dataset.isAddition === 'true';
+
+        // Luôn tính toán số lượng mới để đảm bảo chính xác
+        const newQuantity = isAddition
+            ? originalQuantity + adjustmentQuantity
+            : originalQuantity - adjustmentQuantity;
+
+        const audit = {
+            auditId: row.dataset.auditId,
+            auditCode: row.dataset.auditCode,
+            purchaseOrderId: row.dataset.purchaseOrderId,
+            ingredientCode: row.dataset.ingredientCode,
+            ingredientName: row.dataset.ingredientName,
+            originalQuantity: originalQuantity,
+            adjustmentQuantity: adjustmentQuantity,
+            isAddition: isAddition,
+            newQuantity: newQuantity,
+            unit: row.dataset.unit,
+            reason: row.dataset.reason,
+            auditStatus: row.dataset.auditStatus,
+            createdAt: row.dataset.createdAt,
+            creatorName: row.dataset.creatorName,
+            creatorPosition: row.dataset.creatorPosition,
+            creatorPhone: row.dataset.creatorPhone,
+            confirmedAt: row.dataset.confirmedAt,
+            confirmerName: row.dataset.confirmerName,
+            confirmerPosition: row.dataset.confirmerPosition,
+            confirmerPhone: row.dataset.confirmerPhone,
+            imagePath: row.dataset.imagePath,
+            ingredientStatus: row.dataset.ingredientStatus,
+            expiryDate: row.dataset.expiryDate
+        };
+
+        renderAuditModal(audit);
+    }
+
+    function renderAuditModal(audit) {
+        const modal = document.getElementById('auditDetailModal');
+
+        const ingredientStatusBadge = getIngredientStatusBadge(audit.ingredientStatus);
+
+        const confirmerSection = (audit.auditStatus === 'completed' || audit.auditStatus === 'cancelled') ? `
+        <div class="audit-info-section ${audit.auditStatus === 'completed' ? 'audit-section-green' : 'audit-section-red'}">
+            <h3>
+                ${audit.auditStatus === 'completed' ? '✅ Người xác nhận' : '❌ Người từ chối'}
+            </h3>
+            <div class="audit-info-grid">
+                <div class="audit-info-item">
+                    <label>Họ tên</label>
+                    <value>${audit.confirmerName || 'Chưa có thông tin'}</value>
+                </div>
+                <div class="audit-info-item">
+                    <label>Chức vụ</label>
+                    <value>${audit.confirmerPosition || 'Chưa có thông tin'}</value>
+                </div>
+                <div class="audit-info-item">
+                    <label>SĐT</label>
+                    <value>${audit.confirmerPhone || 'Chưa có thông tin'}</value>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; font-size: 0.875rem; color: ${audit.auditStatus === 'completed' ? '#047857' : '#991b1b'};">
+                📅 Thời gian: ${audit.confirmedAt || 'Chưa có thông tin'}
+            </div>
+        </div>
+    ` : '';
+
+        const imageSection = `
+        <div class="audit-info-section" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-left: 4px solid #8b5cf6;">
+            <h3 style="color: #7c3aed; font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                🖼️ Hình ảnh minh chứng
+            </h3>
+            ${audit.imagePath ? `
+                <button class="audit-btn-view-image" onclick="openImageViewer('${audit.imagePath}')">
+                    👁️ Xem hình ảnh
+                </button>
+            ` : `
+                <span class="audit-no-image-text">Không có hình ảnh đính kèm</span>
+            `}
+        </div>
+    `;
+
+        // Footer động dựa trên trạng thái
+        const footerSection = audit.auditStatus === 'processing' ? `
+        <div class="audit-modal-footer" style="display: block;">
+            <!-- Checkbox xác nhận -->
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 2px solid #10b981;">
+                <input type="checkbox" id="confirmCheckbox" style="width: 20px; height: 20px; cursor: pointer;" />
+                <label for="confirmCheckbox" style="cursor: pointer; font-weight: 600; color: #374151; flex: 1;">
+                    Tôi xác nhận đã kiểm tra thông tin kiểm kê này
+                </label>
+            </div>
+
+            <!-- Thông tin người xác nhận -->
+            <div id="confirmerInfoSection" style="display: none; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border: 2px solid #10b981;">
+                <h4 style="color: #047857; margin-bottom: 1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                    &#128100; Thông tin người xử lý
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                    <div style="display: none;">
+                        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #047857; margin-bottom: 0.25rem;">ID</label>
+                        <value id="confirmerIdDisplay" style="display: block; font-size: 1rem; color: #065f46; font-weight: 600;">---</value>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #047857; margin-bottom: 0.25rem;">Họ và tên</label>
+                        <value id="confirmerNameDisplay" style="display: block; font-size: 1rem; color: #065f46; font-weight: 600;">---</value>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #047857; margin-bottom: 0.25rem;">Số điện thoại</label>
+                        <value id="confirmerPhoneDisplay" style="display: block; font-size: 1rem; color: #065f46; font-weight: 600;">---</value>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #047857; margin-bottom: 0.25rem;">Chức vụ</label>
+                        <value id="confirmerPositionDisplay" style="display: block; font-size: 1rem; color: #065f46; font-weight: 600;">---</value>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; text-align: center;">
+                    <span style="color: #047857; font-size: 0.875rem; font-weight: 600;">
+                        &#128100; Bạn đang xử lý với tư cách: <span id="confirmerRoleHighlight" style="color: #065f46; font-weight: 700;">---</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                <div style="flex: 1;"></div>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="audit-btn-close" onclick="closeAuditModal()">
+                        Đóng
+                    </button>
+                    <button class="audit-btn-reject" onclick="rejectAudit('${audit.auditId}')" disabled id="rejectBtn">
+                        ❌ Từ chối
+                    </button>
+                    <button class="audit-btn-confirm" onclick="confirmAudit('${audit.auditId}')" disabled id="confirmBtn">
+                        ✅ Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    ` : `
+        <div class="audit-modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+            <!-- Checkbox đã xử lý -->
+            <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: ${audit.auditStatus === 'completed' ? '#d1fae5' : '#ffebee'}; border-radius: 8px; border: 2px solid ${audit.auditStatus === 'completed' ? '#10b981' : '#ef4444'};">
+                <input type="checkbox" checked disabled style="width: 20px; height: 20px;" />
+                <label style="font-weight: 600; color: ${audit.auditStatus === 'completed' ? '#047857' : '#991b1b'};">
+                    ${audit.auditStatus === 'completed' ? 'Đơn kiểm kê đã được xác nhận' : 'Đơn kiểm kê đã bị từ chối'}
+                </label>
+            </div>
+
+            <!-- Buttons -->
+            <div style="display: flex; gap: 1rem;">
+                <button class="audit-btn-close" onclick="closeAuditModal()">
+                    Đóng
+                </button>
+                ${audit.auditStatus === 'completed' ? `
+                    <button class="audit-btn-confirm" onclick="printAudit('${audit.auditId}')" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                        In đơn kiểm kê
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+        modal.innerHTML = `
+            <div class="audit-modal-content">
+                <div class="audit-modal-header">
+                    <div class="audit-modal-header-content">
+                        <div class="audit-modal-title">
+                            <h2>Chi tiết đơn kiểm kê</h2>
+                            <p>Mã đơn: ${audit.auditId}</p>
+                        </div>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+        ${audit.auditStatus === 'processing' ?
+                '<span class="audit-status-badge audit-status-processing"> Đang xử lý</span>' :
+                audit.auditStatus === 'completed' ?
+                    '<span class="audit-status-badge audit-status-completed"> Đã xử lý</span>' :
+                    '<span class="audit-status-badge audit-status-cancelled"> Đã từ chối</span>'
+            }
+        <button class="audit-modal-close" onclick="closeAuditModal()">
+            &times;
+        </button>
+    </div>
+                    </div>
+                </div>
+
+                <div class="audit-modal-body">
+                    <!-- Thông tin lô -->
+                    <div class="audit-info-section audit-section-purple">
+                        <h3>
+                            &#128230; Thông tin lô mặt hàng
+                        </h3>
+                        <div class="audit-info-grid">
+                            <div class="audit-info-item">
+                                <label>Mã lô (PO)</label>
+                                <value>${audit.purchaseOrderId}</value>
+                            </div>
+                            <div class="audit-info-item">
+                                <label>Mã mặt hàng</label>
+                                <value>${audit.ingredientCode}</value>
+                            </div>
+                            <div class="audit-info-item">
+                                <label>Tên mặt hàng</label>
+                                <value>${audit.ingredientName}</value>
+                            </div>
+                            <div class="audit-info-item">
+                                <label>Đơn vị tính</label>
+                                <value>${audit.unit}</value>
+                            </div>
+                            <div class="audit-info-item">
+                                <label>Hạn sử dụng</label>
+                                <value>${audit.expiryDate || '---'}</value>
+                            </div>
+                            <div class="audit-info-item">
+                                <label>Tình trạng</label>
+                                <value>${ingredientStatusBadge}</value>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chi tiết kiểm kê -->
+                    <div class="audit-info-section audit-section-blue">
+                        <h3>
+                            &#128221; Chi tiết kiểm kê
+                        </h3>
+                        <div class="audit-quantity-cards">
+                            <div class="audit-quantity-card">
+                                <label>Số lượng gốc</label>
+                                <value style="color: #6b7280;">${formatNumber(audit.originalQuantity)}</value>
+                            </div>
+                            <div class="audit-quantity-card">
+                                <label>Điều chỉnh</label>
+                                <value style="color: ${audit.isAddition ? '#10b981' : '#ef4444'};">
+                                    ${audit.isAddition ? '+' : '-'}${formatNumber(audit.adjustmentQuantity)}
+                                </value>
+                            </div>
+                            <div class="audit-quantity-card">
+                                <label>Số lượng mới</label>
+                                <value style="color: #3b82f6;">${formatNumber(audit.newQuantity)}</value>
+                            </div>
+                        </div>
+                        <div class="audit-reason-box">
+                            <label>Lý do kiểm kê:</label>
+                            <value>${audit.reason}</value>
+                        </div>
+                    </div>
+
+                    <!-- Hình ảnh -->
+                    ${imageSection}
+
+                    <!-- Người tạo đơn -->
+                    <div class="audit-info-section audit-section-indigo">
+                        <h3>
+                            &#128100; Người tạo đơn
+                        </h3>
+                        <div class="audit-info-grid">
+                            <div class="audit-info-item">
+                                <label>Họ tên</label>
+                                <value>${audit.creatorName}</value>
+                            </div>
+                            <div class="audit-info-item">
+                                <label>Chức vụ</label>
+                                <value>${audit.creatorPosition}</value>
+                            </div>
+                            <div class="audit-info-item">
+                                <label>SĐT</label>
+                                <value>${audit.creatorPhone}</value>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: #4338ca;">
+                            &#128197; Thời gian: ${audit.createdAt}
+                        </div>
+                    </div>
+
+                    <!-- Người xác nhận -->
+                    ${confirmerSection}
+                </div>
+
+                ${footerSection}
+            </div>
+        `;
+
+        modal.classList.add('active');
+
+        if (audit.auditStatus === 'processing') {
+            const checkbox = document.getElementById('confirmCheckbox');
+            const confirmBtn = document.getElementById('confirmBtn');
+            const rejectBtn = document.getElementById('rejectBtn');
+            const confirmerInfoSection = document.getElementById('confirmerInfoSection');
+
+            checkbox.addEventListener('change', async function () {
+                if (this.checked) {
+                    // Hiển thị loading
+                    confirmerInfoSection.style.display = 'block';
+                    document.getElementById('confirmerIdDisplay').textContent = '⏳ Đang tải...';
+                    document.getElementById('confirmerNameDisplay').textContent = '⏳ Đang tải...';
+                    document.getElementById('confirmerPhoneDisplay').textContent = '⏳ Đang tải...';
+                    document.getElementById('confirmerPositionDisplay').textContent = '⏳ Đang tải...';
+                    document.getElementById('confirmerRoleHighlight').textContent = '⏳ Đang tải...';
+
+                    try {
+                        //  LẤY THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT VÌ ĐÃ CÓ SẴN)
+                        const user = await getCurrentUserFromSession();
+
+                        // Hiển thị thông tin
+                        document.getElementById('confirmerIdDisplay').textContent = user.userId;
+                        document.getElementById('confirmerNameDisplay').textContent = user.fullName;
+                        document.getElementById('confirmerPhoneDisplay').textContent = user.phone;
+                        document.getElementById('confirmerPositionDisplay').textContent = user.position;
+                        document.getElementById('confirmerRoleHighlight').textContent = user.position;
+
+                        // Enable cả 2 nút
+                        confirmBtn.disabled = false;
+                        rejectBtn.disabled = false;
+                    } catch (error) {
+                        console.error('Error loading user info:', error);
+                        showToast('error', 'Lỗi tải thông tin', error.message || 'Không thể tải thông tin người dùng');
+                        this.checked = false;
+                        confirmerInfoSection.style.display = 'none';
+                    }
+                } else {
+                    // Ẩn thông tin và disable cả 2 nút
+                    confirmerInfoSection.style.display = 'none';
+                    confirmBtn.disabled = true;
+                    rejectBtn.disabled = true;
+                }
+            });
+        }
+    }
+
+
+    async function getCurrentUserFromSession() {
+        //  VALIDATE DỮ LIỆU TỪ CLAIMS
+        if (!currentUser || !currentUser.userId || currentUser.userId === 0) {
+            throw new Error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+        }
+
+        //  PARSE POSITION NẾU LÀ JSON ARRAY
+        let position = currentUser.position;
+        try {
+            // Nếu position là JSON array (VD: ["Nhân viên kho", "Thu ngân"])
+            const positions = JSON.parse(position);
+            if (Array.isArray(positions) && positions.length > 0) {
+                position = positions[0]; // Lấy position đầu tiên
+            }
+        } catch (e) {
+            // Nếu không phải JSON, giữ nguyên string
+            console.log('Position is a simple string:', position);
+        }
+
+        //  TRẢ VỀ THÔNG TIN TỪ CLAIMS (KHÔNG CẦN AWAIT)
+        return {
+            userId: currentUser.userId,
+            fullName: currentUser.fullName,
+            phone: currentUser.phone,
+            position: position,
+            email: currentUser.email
+        };
+    }
+
+    function closeAuditModal() {
+        const modal = document.getElementById('auditDetailModal');
+        modal.classList.remove('active');
+
+        closeImageViewer();
+    }
+
+    function getIngredientStatusBadge(status) {
+        const statusMap = {
+            'expired': '<span class="audit-ingredient-status-badge audit-ingredient-status-expired">Hết hạn</span>',
+            'expiring': '<span class="audit-ingredient-status-badge audit-ingredient-status-expiring">Sắp hết hạn</span>',
+            'normal': '<span class="audit-ingredient-status-badge audit-ingredient-status-normal">Bình thường</span>'
+        };
+        return statusMap[status] || statusMap['normal'];
+    }
+
+    function formatNumber(value) {
+        if (value === null || value === undefined) return '0,00';
+        return parseFloat(value).toLocaleString('de-DE', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    async function confirmAudit(auditId) {
+        const confirmBtn = document.getElementById('confirmBtn');
+        const checkbox = document.getElementById('confirmCheckbox');
+
+        if (!checkbox.checked) {
+            showToast('warning', 'Chưa xác nhận', 'Vui lòng tick vào ô checkbox để xác nhận!');
+            return;
+        }
+
+        const isConfirmed = await showConfirmModal({
+            type: 'success',
+            icon: '',
+            title: 'Xác nhận đơn kiểm kê',
+            message: 'Bạn có chắc chắn muốn XÁC NHẬN đơn kiểm kê này?',
+            warning: null,
+            buttonText: 'Xác nhận',
+            buttonClass: 'confirm-modal-btn-confirm'
+        });
+
+        if (!isConfirmed) return;
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = '⏳ Đang xử lý...';
+
+        try {
+            //  LẤY THÔNG TIN TỪ CLAIMS
+            const user = await getCurrentUserFromSession();
+
+            const requestData = {
+                auditId: auditId,
+                auditStatus: 'completed',
+                confirmerId: user.userId,
+                confirmerName: user.fullName,
+                confirmerPhone: user.phone,
+                confirmerPosition: user.position,
+                confirmedAt: new Date().toISOString()
+            };
+
+            console.log('Sending confirm request:', requestData);
+
+            const response = await fetch(`/AuditInventory/ConfirmAudit/${auditId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                await showConfirmModal({
+                    type: 'success',
+                    icon: '',
+                    title: 'Thành công!',
+                    message: 'Xác nhận đơn kiểm kê thành công!',
+                    warning: null,
+                    buttonText: ' Đóng',
+                    buttonClass: 'confirm-modal-btn-confirm',
+                        showCancelButton: false
+                });
+                closeAuditModal();
+                location.reload();
+            } else {
+                await showConfirmModal({
+                    type: 'danger',
+                    icon: '❌',
+                    title: 'Lỗi',
+                    message: result.message || 'Không thể xác nhận đơn kiểm kê',
+                    warning: null,
+                    buttonText: ' Đóng',
+                    buttonClass: 'confirm-modal-btn-reject'
+                });
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = ' Xác nhận';
+            }
+        } catch (error) {
+            console.error('Error confirming audit:', error);
+            await showConfirmModal({
+                type: 'danger',
+                icon: '❌',
+                title: 'Lỗi',
+                message: error.message || 'Có lỗi xảy ra khi xác nhận',
+                warning: null,
+                buttonText: ' Đóng',
+                buttonClass: 'confirm-modal-btn-reject'
+            });
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = ' Xác nhận';
+        }
+    }
+
+
+    async function rejectAudit(auditId) {
+        const rejectBtn = document.getElementById('rejectBtn');
+        const checkbox = document.getElementById('confirmCheckbox');
+
+        if (!checkbox.checked) {
+            showToast('warning', 'Chưa xác nhận', 'Vui lòng tick vào ô checkbox để xác nhận!');
+            return;
+        }
+
+        const isConfirmed = await showConfirmModal({
+            type: 'danger',
+            icon: '⚠️',
+            title: 'Từ chối đơn kiểm kê',
+            message: 'Bạn có chắc chắn muốn TỪ CHỐI đơn kiểm kê này?',
+            warning: ' Hành động này không thể hoàn tác!',
+            buttonText: ' Từ chối',
+            buttonClass: 'confirm-modal-btn-reject'
+            
+        });
+
+        if (!isConfirmed) return;
+
+        rejectBtn.disabled = true;
+        rejectBtn.textContent = ' Đang xử lý...';
+
+        try {
+            //  LẤY THÔNG TIN TỪ CLAIMS
+            const user = await getCurrentUserFromSession();
+
+            const requestData = {
+                auditId: auditId,
+                auditStatus: 'cancelled',
+                confirmerId: user.userId,
+                confirmerName: user.fullName,
+                confirmerPhone: user.phone,
+                confirmerPosition: user.position,
+                confirmedAt: new Date().toISOString()
+            };
+
+            console.log('Sending reject request:', requestData);
+
+            const response = await fetch(`/AuditInventory/ConfirmAudit/${auditId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                await showConfirmModal({
+                    type: 'success',
+                    icon: '✅',
+                    title: 'Thành công!',
+                    message: 'Từ chối đơn kiểm kê thành công!',
+                    warning: null,
+                    buttonText: ' Đóng',
+                    buttonClass: 'confirm-modal-btn-confirm',
+                    showCancelButton: false
+                });
+                closeAuditModal();
+                location.reload();
+            } else {
+                await showConfirmModal({
+                    type: 'danger',
+                    icon: '❌',
+                    title: 'Lỗi',
+                    message: result.message || 'Không thể từ chối đơn kiểm kê',
+                    warning: null,
+                    buttonText: ' Đóng',
+                    buttonClass: 'confirm-modal-btn-reject'
+                });
+                rejectBtn.disabled = false;
+                rejectBtn.innerHTML = ' Từ chối';
+            }
+        } catch (error) {
+            console.error('Error rejecting audit:', error);
+            await showConfirmModal({
+                type: 'danger',
+                icon: '❌',
+                title: 'Lỗi',
+                message: error.message || 'Có lỗi xảy ra khi từ chối',
+                warning: null,
+                buttonText: ' Đóng',
+                buttonClass: 'confirm-modal-btn-reject'
+            });
+            rejectBtn.disabled = false;
+            rejectBtn.innerHTML = ' Từ chối';
+        }
+    }
+
+    function printAudit(auditId) {
+        window.print();
+    }
+
+    function openImageViewer(imagePath) {
+        const viewer = document.getElementById('imageViewer');
+        const modalOverlay = document.getElementById('auditDetailModal');
+        const img = document.getElementById('imageViewerImg');
+
+        // Set image source
+        img.src = imagePath;
+
+        // Add classes to shift modal and show viewer
+        modalOverlay.classList.add('with-image-viewer');
+        viewer.classList.add('active');
+    }
+
+    function closeImageViewer() {
+        const viewer = document.getElementById('imageViewer');
+        const modalOverlay = document.getElementById('auditDetailModal');
+
+        // Remove classes
+        modalOverlay.classList.remove('with-image-viewer');
+        viewer.classList.remove('active');
+    }
+
+    // Confirmation Modal Helper
+    function showConfirmModal(config) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('confirmModal');
+            const icon = document.getElementById('confirmModalIcon');
+            const title = document.getElementById('confirmModalTitle');
+            const message = document.getElementById('confirmModalMessage');
+            const warning = document.getElementById('confirmModalWarning');
+            const footer = document.getElementById('confirmModalFooter');
+
+            // Set icon
+            icon.className = 'confirm-modal-icon ' + config.type;
+            icon.innerHTML = config.icon;
+
+            // Set title
+            title.textContent = config.title;
+
+            // Set message
+            message.textContent = config.message;
+
+            // Set warning (optional)
+            if (config.warning) {
+                warning.textContent = config.warning;
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+
+            // Set buttons
+            footer.innerHTML = '';
+
+            // ✅ THÊM: Kiểm tra nếu có tham số showCancelButton (mặc định là true)
+            const showCancelButton = config.showCancelButton !== false;
+
+            // ✅ CHỈ HIỂN THỊ NÚT HỦY NẾU showCancelButton = true
+            if (showCancelButton) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'confirm-modal-btn confirm-modal-btn-cancel';
+                cancelBtn.innerHTML = 'Hủy bỏ';
+                cancelBtn.onclick = () => {
+                    closeConfirmModal();
+                    resolve(false);
+                };
+                footer.appendChild(cancelBtn);
+            }
+
+            // Confirm/Reject button
+            const actionBtn = document.createElement('button');
+            actionBtn.className = 'confirm-modal-btn ' + config.buttonClass;
+            actionBtn.innerHTML = config.buttonText;
+            actionBtn.onclick = () => {
+                closeConfirmModal();
+                resolve(true);
+            };
+            footer.appendChild(actionBtn);
+
+            // Show modal
+            modal.classList.add('active');
+        });
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirmModal');
+        modal.classList.remove('active');
+    }
+
+    async function generateReport(data) {
+        try {
+            const requestBody = {
+                dateFrom: reportPeriod.dateFrom.toISOString(),
+                dateTo: reportPeriod.dateTo.toISOString(),
+                status: currentTab === 'all' ? null : currentTab,
+                reporterName: currentUser.fullName,
+                reporterPosition: currentUser.position
+            };
+
+            const response = await fetch('/AuditInventory/ExportReportPdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Không thể tạo báo cáo PDF');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BaoCaoKiemKe_${formatDateForInput(reportPeriod.dateFrom)}_${formatDateForInput(reportPeriod.dateTo)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            console.error('Error generating report:', error);
+            throw error;
+        }
+    }
+
+    let reportPeriod = {
+        dateFrom: new Date(),
+        dateTo: new Date(),
+        selectedDays: 7 // Mặc định 7 ngày
+    };
+
+    // ✅ XỬ LÝ KHI THAY ĐỔI SELECT
+    function handleReportPeriodChange(value) {
+        if (value === 'custom') {
+            openCustomDatePicker();
+        } else {
+            const days = parseInt(value);
+            selectReportPeriod(days);
+        }
+    }
+
+    // ✅ CHỌN KỲ BÁO CÁO
+    function selectReportPeriod(days) {
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+
+        let fromDate = new Date();
+        fromDate.setHours(0, 0, 0, 0);
+
+        if (days > 0) {
+            fromDate.setDate(today.getDate() - days);
+        }
+
+        reportPeriod = {
+            dateFrom: fromDate,
+            dateTo: today,
+            selectedDays: days
+        };
+
+        console.log('Selected period:', reportPeriod);
+    }
+
+    // ✅ MỞ MODAL CHỌN NGÀY TÙY CHỈNH
+    function openCustomDatePicker() {
+        // Set default dates
+        const today = new Date();
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(today.getDate() - 7);
+
+        document.getElementById('customDateFrom').value = formatDateForInput(sevenDaysAgo);
+        document.getElementById('customDateTo').value = formatDateForInput(today);
+
+        // Show modal
+        document.getElementById('customDateModal').classList.add('active');
+    }
+
+    // ✅ ĐÓNG MODAL CHỌN NGÀY
+    function closeCustomDatePicker() {
+        document.getElementById('customDateModal').classList.remove('active');
+
+        // Reset select về giá trị trước đó
+        const select = document.getElementById('reportPeriodSelect');
+        select.value = reportPeriod.selectedDays === 'custom' ? '7' : reportPeriod.selectedDays.toString();
+    }
+
+    // ✅ ÁP DỤNG NGÀY TÙY CHỈNH
+    function applyCustomDate() {
+        const fromInput = document.getElementById('customDateFrom').value;
+        const toInput = document.getElementById('customDateTo').value;
+
+        if (!fromInput || !toInput) {
+            showToast('warning', 'Thiếu thông tin', 'Vui lòng chọn đầy đủ từ ngày và đến ngày');
+            return;
+        }
+
+        const fromDate = new Date(fromInput);
+        const toDate = new Date(toInput);
+
+        fromDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+
+        if (fromDate > toDate) {
+            showToast('error', 'Ngày không hợp lệ', 'Từ ngày phải nhỏ hơn hoặc bằng đến ngày');
+            return;
+        }
+
+        reportPeriod = {
+            dateFrom: fromDate,
+            dateTo: toDate,
+            selectedDays: 'custom'
+        };
+
+        document.getElementById('customDateModal').classList.remove('active');
+
+    }
+
+    // ✅ XUẤT BÁO CÁO
+    async function exportReport() {
+        try {
+            // Kiểm tra đã chọn kỳ báo cáo chưa
+            if (!reportPeriod || !reportPeriod.dateFrom || !reportPeriod.dateTo) {
+                showToast('warning', 'Chưa chọn kỳ báo cáo', 'Vui lòng chọn khoảng thời gian báo cáo');
+                return;
+            }
+
+            // Show loading
+            const exportBtn = document.querySelector('.audit-btn-export-report');
+            const originalText = exportBtn.innerHTML;
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '⏳ Đang tạo báo cáo...';
+
+            // Prepare request data
+            const requestData = {
+                dateFrom: reportPeriod.dateFrom.toISOString(),
+                dateTo: reportPeriod.dateTo.toISOString(),
+                status: currentTab === 'all' ? null : currentTab,
+                reporterName: currentUser.fullName,
+                reporterPosition: currentUser.position
+            };
+
+            console.log('Exporting report with data:', requestData);
+
+            // Call API
+            const response = await fetch('/AuditInventory/ExportReportPdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = 'Không thể tạo báo cáo';
+
+                try {
+                    const error = JSON.parse(errorText);
+                    errorMessage = error.message || errorMessage;
+                } catch (e) {
+                    console.error('Error parsing response:', errorText);
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            // Download PDF
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BaoCaoKiemKe_${formatDateForFilename(reportPeriod.dateFrom)}_${formatDateForFilename(reportPeriod.dateTo)}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showToast('success', 'Xuất báo cáo thành công', 'File PDF đã được tải về');
+
+            // Reset button
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = originalText;
+
+        } catch (error) {
+            console.error('Error exporting report:', error);
+            showToast('error', 'Lỗi xuất báo cáo', error.message || 'Không thể tạo báo cáo PDF');
+
+            // Reset button
+            const exportBtn = document.querySelector('.audit-btn-export-report');
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = 'Xuất báo cáo';
+        }
+    }
+
+    // ✅ HELPER: FORMAT DATE CHO INPUT (YYYY-MM-DD)
+    function formatDateForInput(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // ✅ HELPER: FORMAT DATE CHO FILENAME (YYYYMMDD)
+    function formatDateForFilename(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    }
+
+    // ✅ HELPER: FORMAT DATE CHO HIỂN THỊ (DD/MM/YYYY)
+    function formatDate(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+
+    // ✅ KHỞI TẠO MẶC ĐỊNH KHI LOAD TRANG
+    document.addEventListener('DOMContentLoaded', function () {
+        // Khởi tạo mặc định cho báo cáo (7 ngày qua)
+        selectReportPeriod(7);
+    });
+
+</script>

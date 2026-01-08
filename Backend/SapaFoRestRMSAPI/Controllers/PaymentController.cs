@@ -2,39 +2,58 @@ using BusinessAccessLayer.DTOs.Payment;
 using BusinessAccessLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace SapaFoRestRMSAPI.Controllers;
 
 /// <summary>
 /// Controller xử lý các API thanh toán
+/// Owner/Manager/Staff: Xử lý thanh toán
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Yêu cầu authentication
 public class PaymentController : ControllerBase
 {
     private readonly IPaymentService _paymentService;
+    private readonly IConfiguration _configuration;
+    private readonly IReceiptService _receiptService;
+    private readonly IWebHostEnvironment _env;
+    private readonly ILogger<PaymentController> _logger;
 
-    public PaymentController(IPaymentService paymentService)
+    public PaymentController(IPaymentService paymentService, IConfiguration configuration, IReceiptService receiptService, IWebHostEnvironment env, ILogger<PaymentController> logger)
     {
         _paymentService = paymentService;
+        _configuration = configuration;
+        _receiptService = receiptService;
+        _env = env;
+        _logger = logger;
     }
 
     /// <summary>
-    /// Lấy danh sách đơn hàng chờ thanh toán
+    /// Owner/Manager/Staff: Lấy danh sách đơn hàng chờ thanh toán
     /// GET /api/payment/orders?status=pending-payment
     /// </summary>
     [HttpGet("orders")]
     public async Task<IActionResult> GetPendingOrders(
-        [FromQuery] string status = "pending-payment",
+        [FromQuery] DateOnly? date = null,
+        [FromQuery] string? status = "all",
+        [FromQuery] string sortOrder = "desc",
         CancellationToken ct = default)
     {
         try
         {
-            var orders = await _paymentService.GetPendingOrdersAsync(ct);
+            var orders = await _paymentService.GetOrdersAsync(date, status, sortOrder, ct);
+            
+        
+            
             return Ok(orders);
         }
         catch (Exception ex)
@@ -44,7 +63,7 @@ public class PaymentController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy chi tiết đơn hàng
+    /// Owner/Manager/Staff: Lấy chi tiết đơn hàng
     /// GET /api/payment/orders/{id}/details
     /// </summary>
     [HttpGet("orders/{id}/details")]
@@ -59,6 +78,10 @@ public class PaymentController : ControllerBase
                 return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {id}" });
             }
 
+            //  DEBUG: Log để trace customer info
+            _logger.LogInformation("[GetOrderDetail] Order {OrderId} - CustomerId: {CustomerId}, CustomerName: {CustomerName}, CustomerPhone: {CustomerPhone}", 
+                id, order.CustomerId, order.CustomerName, order.CustomerPhone);
+
             return Ok(order);
         }
         catch (Exception ex)
@@ -68,11 +91,197 @@ public class PaymentController : ControllerBase
     }
 
     /// <summary>
-    /// Áp dụng ưu đãi/giảm giá
+    /// Owner/Manager/Staff: Khách xác nhận món trước khi thanh toán
+    /// PUT /api/payment/orders/{orderId}/confirm
+    /// </summary>
+    [HttpPut("orders/{orderId}/confirm")]
+    public async Task<IActionResult> ConfirmOrder(int orderId, [FromBody] CustomerConfirmRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            request.OrderId = orderId;
+
+            // Lấy userId từ claims
+            var userId = GetUserIdFromClaims();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(new { message = "Không thể xác định người dùng" });
+            }
+
+            var result = await _paymentService.ConfirmOrderAsync(request, userId.Value, ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xác nhận món", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Xác nhận Reservation (confirm tất cả Orders trong Reservation)
+    /// POST /api/payment/reservations/{reservationId}/confirm
+    /// </summary>
+    [HttpPost("reservations/{reservationId}/confirm")]
+    [Authorize(Roles = "Owner,Manager,Staff")]
+    public async Task<IActionResult> ConfirmReservation(int reservationId, [FromBody] ReservationConfirmRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            request.ReservationId = reservationId;
+
+            // Lấy userId từ claims
+            var userId = GetUserIdFromClaims();
+            if (!userId.HasValue)
+            {
+                return Unauthorized(new { message = "Không thể xác định người dùng" });
+            }
+
+            var result = await _paymentService.ConfirmReservationAsync(request, userId.Value, ct);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xác nhận Reservation", error = ex.Message });
+        }
+    }
+
+    [HttpPut("orders/{orderId}/undo-confirm")]
+    public async Task<IActionResult> UndoConfirmOrder(int orderId, [FromBody] UndoConfirmRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Dữ liệu không hợp lệ" });
+            }
+
+            await _paymentService.UndoConfirmOrderAsync(orderId, request, ct);
+            return Ok(new { message = "Đã hoàn tác xác nhận thành công." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi hoàn tác xác nhận", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Hủy toàn bộ đơn hàng và giải phóng bàn (khi khách rời đi trước khi món làm)
+    /// DELETE /api/payment/orders/{orderId}/cancel
+    /// </summary>
+    [HttpDelete("orders/{orderId}/cancel")]
+    public async Task<IActionResult> CancelOrder(int orderId, [FromBody] CancelOrderRequestDto? request = null, CancellationToken ct = default)
+    {
+        try
+        {
+            var reason = request?.Reason ?? "Khách rời đi trước khi món làm";
+            var userId = GetUserIdFromClaims();
+
+            await _paymentService.CancelOrderAsync(orderId, reason, userId, ct);
+            return Ok(new { message = "Đã hủy đơn hàng và giải phóng bàn thành công." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi hủy đơn hàng", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Lấy tóm tắt đơn hàng cho payment screen
+    /// GET /api/payment/order/{orderId}
+    /// Step 1-2: Load order summary with calculated totals
+    /// </summary>
+    [HttpGet("order/{orderId}")]
+    public async Task<IActionResult> GetOrderSummary(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            var order = await _paymentService.GetOrderDetailAsync(orderId, ct);
+            
+            if (order == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {orderId}" });
+            }
+
+            // Return order summary with calculated totals
+            // Step 2: total = subtotal + tax + serviceFee - discount
+            var itemsList = order.OrderItems != null && order.OrderItems.Any()
+                ? order.OrderItems.Select(item => new
+                {
+                    name = item.MenuItemName,
+                    quantity = item.Quantity,
+                    price = item.UnitPrice,
+                    total = item.TotalPrice
+                }).Cast<object>().ToList()
+                : new List<object>();
+
+            var summary = new
+            {
+                orderId = order.OrderId,
+                orderCode = order.OrderCode,
+                subtotal = order.Subtotal ?? 0,
+                tax = order.VatAmount ?? 0,
+                serviceFee = order.ServiceFee ?? 0,
+                discount = order.DiscountAmount ?? 0,
+                total = order.TotalAmount ?? 0,
+                items = itemsList
+            };
+
+            return Ok(summary);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi lấy tóm tắt đơn hàng", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Áp dụng ưu đãi/giảm giá
     /// POST /api/payment/discounts/validate
     /// </summary>
     [HttpPost("discounts/validate")]
-    public async Task<IActionResult> ValidateDiscount([FromBody] DiscountRequestDto request, CancellationToken ct = default)
+        public async Task<IActionResult> ValidateDiscount([FromBody] DiscountRequestDto request, CancellationToken ct = default)
     {
         try
         {
@@ -88,6 +297,10 @@ public class PaymentController : ControllerBase
                 order = order 
             });
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
@@ -99,7 +312,45 @@ public class PaymentController : ControllerBase
     }
 
     /// <summary>
-    /// Khởi tạo giao dịch thanh toán
+    /// Owner/Manager/Staff: Áp dụng ưu đãi/giảm giá cho Reservation
+    /// POST /api/payment/reservations/{reservationId}/discounts/apply
+    /// </summary>
+    [HttpPost("reservations/{reservationId}/discounts/apply")]
+    [Authorize(Roles = "Owner,Manager,Staff")]
+    public async Task<IActionResult> ApplyDiscountByReservation(int reservationId, [FromBody] ReservationDiscountRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            request.ReservationId = reservationId;
+
+            var reservationPayment = await _paymentService.ApplyDiscountByReservationAsync(request, ct);
+            return Ok(new { 
+                success = true, 
+                message = "Áp dụng ưu đãi thành công cho Reservation",
+                reservationPayment = reservationPayment 
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi áp dụng ưu đãi", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Khởi tạo giao dịch thanh toán
     /// POST /api/payment/payments/initiate
     /// </summary>
     [HttpPost("payments/initiate")]
@@ -113,7 +364,38 @@ public class PaymentController : ControllerBase
             }
 
             var transaction = await _paymentService.InitiatePaymentAsync(request, ct);
-            return Ok(transaction);
+            
+            // If payment method is QR, generate QR code URL
+            string? qrCodeUrl = null;
+            if (transaction.PaymentMethod != null && 
+                (transaction.PaymentMethod.Equals("QR", StringComparison.OrdinalIgnoreCase) || 
+                 transaction.PaymentMethod.Equals("QRBankTransfer", StringComparison.OrdinalIgnoreCase)))
+            {
+                try
+                {
+                    // Get bank configuration from appsettings.json
+                    var bankCode = _configuration["BankSettings:BankCode"] ?? "VCB";
+                    var account = _configuration["BankSettings:Account"] ?? "0123456789";
+
+                    // Generate VietQR URL
+                    var qrResponse = await _paymentService.GenerateVietQRAsync(request.OrderId, bankCode, account, null, ct);
+                    qrCodeUrl = qrResponse.QrUrl;
+                }
+                catch (Exception qrEx)
+                {
+                    _logger.LogWarning("Failed to generate QR code for order {OrderId}: {Error}", request.OrderId, qrEx.Message);
+                    // Continue without QR code - transaction is still created
+                }
+            }
+
+            // Return response in PaymentSessionDto format for frontend
+            return Ok(new
+            {
+                SessionId = transaction.SessionId ?? string.Empty,
+                QrCodeUrl = qrCodeUrl,
+                Amount = transaction.Amount,
+                PaymentMethod = transaction.PaymentMethod
+            });
         }
         catch (KeyNotFoundException ex)
         {
@@ -126,7 +408,7 @@ public class PaymentController : ControllerBase
     }
 
     /// <summary>
-    /// Xác nhận thanh toán
+    /// Owner/Manager/Staff: Xác nhận thanh toán
     /// POST /api/payment/payments/confirm
     /// </summary>
     [HttpPost("payments/confirm")]
@@ -138,8 +420,12 @@ public class PaymentController : ControllerBase
             {
                 return BadRequest(ModelState);
             }
-
-            var transaction = await _paymentService.ProcessPaymentAsync(request, ct);
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+            var transaction = await _paymentService.ProcessPaymentAsync(request, userId.Value,ct);
             return Ok(new { 
                 success = true, 
                 message = "Thanh toán thành công",
@@ -161,7 +447,7 @@ public class PaymentController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy kết quả thanh toán theo sessionId
+    /// Owner/Manager/Staff: Lấy kết quả thanh toán theo sessionId
     /// GET /api/payment/payments/result/{sessionId}
     /// </summary>
     [HttpGet("payments/result/{sessionId}")]
@@ -183,5 +469,1026 @@ public class PaymentController : ControllerBase
             return StatusCode(500, new { message = "Lỗi khi lấy kết quả thanh toán", error = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Tạo VietQR cho đơn hàng
+    /// GET /api/payment/vietqr/{orderId}?amount={optionalAmount}
+    /// </summary>
+    [HttpGet("vietqr/{orderId}")]
+    public async Task<IActionResult> GenerateVietQR(int orderId, [FromQuery] decimal? amount = null, CancellationToken ct = default)
+    {
+        try
+        {
+            // Lấy cấu hình từ appsettings.json
+            var bankCode = _configuration["BankSettings:BankCode"] ?? "VCB";
+            var account = _configuration["BankSettings:Account"] ?? "0123456789";
+
+            var qrResponse = await _paymentService.GenerateVietQRAsync(orderId, bankCode, account, amount, ct);
+            
+            return Ok(new
+            {
+                qrUrl = qrResponse.QrUrl,
+                orderId = qrResponse.OrderId,
+                total = qrResponse.Total,
+                orderCode = qrResponse.OrderCode,
+                description = qrResponse.Description
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi tạo VietQR", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xác nhận thanh toán VietQR
+    /// POST /api/payment/vietqr/{orderId}/confirm
+    /// </summary>
+    [HttpPost("vietqr/{orderId}/confirm")]
+    public async Task<IActionResult> ConfirmVietQRPayment(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            // Lấy thông tin order để tính tổng tiền
+            var order = await _paymentService.GetOrderDetailAsync(orderId, ct);
+            if (order == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {orderId}" });
+            }
+
+            var totalAmount = order.TotalAmount ?? 0;
+
+            // Tạo payment request với phương thức VietQR
+            var paymentRequest = new PaymentRequestDto
+            {
+                OrderId = orderId,
+                PaymentMethod = "VietQR",
+                Amount = totalAmount,
+                Notes = "Thanh toán qua VietQR"
+            };
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+            var transaction = await _paymentService.ProcessPaymentAsync(paymentRequest,userId.Value, ct);
+            
+            return Ok(new
+            {
+                success = true,
+                message = "Xác nhận thanh toán thành công",
+                transaction = transaction
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xác nhận thanh toán", error = ex.Message });
+        }
+    }
+
+    // ========== PHASE 1: Payment Flow Extensions ==========
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xử lý thanh toán tiền mặt
+    /// POST /api/payment/cash
+    /// </summary>
+    [HttpPost("cash")]
+    public async Task<IActionResult> ProcessCashPayment([FromBody] CashPaymentRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            var transaction = await _paymentService.ProcessCashPaymentAsync(request, userId.Value, ct);
+            return Ok(transaction);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xử lý thanh toán tiền mặt", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xử lý thanh toán kết hợp (Cash + QR)
+    /// POST /api/payment/combined
+    /// </summary>
+    [HttpPost("combined")]
+    public async Task<IActionResult> ProcessCombinedPayment([FromBody] CombinedPaymentRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            var transactions = await _paymentService.ProcessCombinedPaymentAsync(request, userId.Value, ct);
+            return Ok(new
+            {
+                success = true,
+                message = "Thanh toán kết hợp thành công",
+                transactions = transactions
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xử lý thanh toán kết hợp", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Kiểm tra trạng thái thanh toán
+    /// GET /api/payment/status/{orderId}
+    /// </summary>
+    [HttpGet("status/{orderId}")]
+    public async Task<IActionResult> CheckPaymentStatus(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            var status = await _paymentService.CheckPaymentStatusAsync(orderId, ct);
+            return Ok(status);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi kiểm tra trạng thái thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Retry payment
+    /// POST /api/payment/retry
+    /// </summary>
+    [HttpPost("retry")]
+    public async Task<IActionResult> RetryPayment([FromBody] PaymentRetryRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            var transaction = await _paymentService.RetryPaymentAsync(request, userId.Value, ct);
+            return Ok(transaction);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi thử lại thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Sync offline payments
+    /// POST /api/payment/sync
+    /// </summary>
+    [HttpPost("sync")]
+    public async Task<IActionResult> SyncPayments([FromBody] SyncPaymentsRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (request.TransactionIds == null || !request.TransactionIds.Any())
+            {
+                return BadRequest(new { message = "TransactionIds không được để trống" });
+            }
+
+            var transactions = await _paymentService.SyncPaymentsAsync(request.TransactionIds, ct);
+            return Ok(transactions);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi đồng bộ thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Gateway callback notification
+    /// SIMPLIFIED: Not used in Cash/QR manual confirmation system
+    /// Kept for backward compatibility but returns not implemented
+    /// </summary>
+    [HttpPost("notify")]
+    [AllowAnonymous]
+    [Obsolete("Gateway callbacks not used in simplified Cash/QR payment system")]
+    public async Task<IActionResult> NotifyPayment([FromBody] PaymentNotifyRequestDto request, CancellationToken ct = default)
+    {
+        // Simplified payment system: No gateway callbacks needed
+        // Cash and QR payments use manual confirmation only
+        return BadRequest(new { message = "Hệ thống thanh toán đơn giản không hỗ trợ gateway callbacks. Vui lòng sử dụng xác nhận thủ công." });
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Lock order
+    /// POST /api/payment/lock
+    /// </summary>
+    [HttpPost("lock")]
+    public async Task<IActionResult> LockOrder([FromBody] OrderLockRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            var success = await _paymentService.LockOrderAsync(request, userId.Value, ct);
+            return Ok(new { success, message = "Đã khóa đơn hàng thành công" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi lock order", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Unlock order
+    /// POST /api/payment/unlock/{orderId}
+    /// </summary>
+    [HttpPost("unlock/{orderId}")]
+    public async Task<IActionResult> UnlockOrder(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            var success = await _paymentService.UnlockOrderAsync(orderId, ct);
+            return Ok(new { success, message = "Đã mở khóa đơn hàng thành công" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi unlock order", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Check if order is locked
+    /// GET /api/payment/lock/{orderId}
+    /// </summary>
+    [HttpGet("lock/{orderId}")]
+    public async Task<IActionResult> IsOrderLocked(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            var isLocked = await _paymentService.IsOrderLockedAsync(orderId, ct);
+            return Ok(new { isLocked });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi kiểm tra lock status", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Split bill
+    /// POST /api/payment/split-bill
+    /// </summary>
+    [HttpPost("split-bill")]
+    public async Task<IActionResult> SplitBill([FromBody] SplitBillRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            var transactions = await _paymentService.ProcessSplitBillAsync(request, userId.Value, ct);
+            return Ok(transactions);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi chia hóa đơn", error = ex.Message });
+        }
+    }
+
+    // ========== QR VIETQR MANUAL CONFIRMATION ==========
+
+    /// <summary>
+    /// Owner/Manager/Staff: Tạo VietQR cho thanh toán thủ công
+    /// GET /api/payment/qr/{orderId}
+    /// 
+    /// Integration: Frontend calls this when cashier clicks "Thanh toán QR"
+    /// Returns: { qrUrl, amount, description, orderId, orderCode, transactionId, transactionCode }
+    /// </summary>
+    [HttpGet("qr/{orderId}")]
+    public async Task<IActionResult> GenerateQRForManualConfirmation(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            // Step 1: Get bank configuration from appsettings.json
+            var bankCode = _configuration["BankSettings:BankCode"] ?? "VCB";
+            var account = _configuration["BankSettings:Account"] ?? "0123456789";
+
+            // Step 2: Validate order exists
+            var order = await _paymentService.GetOrderDetailAsync(orderId, ct);
+            if (order == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {orderId}" });
+            }
+
+            // Step 3: Start payment flow - creates transaction with status "PaymentProcessing"
+            var transaction = await _paymentService.StartPaymentAsync(orderId, "QRBankTransfer", ct);
+
+            // Step 4: Generate VietQR URL using bank settings and order details
+            var qrResponse = await _paymentService.GenerateVietQRAsync(orderId, bankCode, account, null, ct);
+
+            // Step 5: Return QR data for frontend to display
+            // Response structure matches frontend expectations
+            return Ok(new
+            {
+                qrUrl = qrResponse.QrUrl,              // QR image URL
+                amount = qrResponse.Total,              // Total amount to pay
+                description = qrResponse.Description,   // Transfer description (e.g., "RMS#ORD1024")
+                orderId = qrResponse.OrderId,           // Order ID for confirmation
+                orderCode = qrResponse.OrderCode,       // Order code for display
+                transactionId = transaction.TransactionId,     // Transaction ID for confirmation
+                transactionCode = transaction.TransactionCode   // Transaction code for display
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi tạo VietQR", error = ex.Message });
+        }
+    }
+
+    // ========== REVISED PAYMENT WORKFLOW ENDPOINTS ==========
+
+    /// <summary>
+    /// Owner/Manager/Staff: Bắt đầu thanh toán
+    /// GET /api/payments/start/{orderId}?paymentMethod={method}
+    /// </summary>
+    [HttpGet("start/{orderId}")]
+    public async Task<IActionResult> StartPayment(
+        int orderId,
+        [FromQuery] string paymentMethod,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(paymentMethod))
+            {
+                return BadRequest(new { message = "PaymentMethod là bắt buộc" });
+            }
+
+            var transaction = await _paymentService.StartPaymentAsync(orderId, paymentMethod, ct);
+            return Ok(transaction);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi bắt đầu thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xác nhận thanh toán
+    /// POST /api/payments/confirm
+    /// 
+    /// Integration: Frontend calls this after cashier confirms payment manually
+    /// Expected request: { orderId, transactionId, gatewayReference?, notes? }
+    /// Returns: { success: true, message: "...", transaction: {...} }
+    /// </summary>
+    [HttpPost("confirm")]
+    public async Task<IActionResult> ConfirmPayment([FromBody] PaymentConfirmRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            // Validate request model
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Get authenticated user ID
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            // Confirm payment in backend - updates order status to PAID
+            var transaction = await _paymentService.ConfirmManualAsync(request, userId.Value, ct);
+            
+            // Return success response for frontend
+            return Ok(new
+            {
+                success = true,
+                message = "Xác nhận thanh toán thành công",
+                status = "PAID",
+                transaction = transaction
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xác nhận thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Hủy thanh toán
+    /// POST /api/payments/cancel
+    /// </summary>
+    [HttpPost("cancel")]
+    public async Task<IActionResult> CancelPayment([FromBody] PaymentCancelRequestDto request, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            var success = await _paymentService.CancelPaymentAsync(request, userId.Value, ct);
+            return Ok(new
+            {
+                success = success,
+                message = "Hủy thanh toán thành công"
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi hủy thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Kiểm tra trạng thái thanh toán (revised endpoint)
+    /// GET /api/payments/check-status/{orderId}
+    /// </summary>
+    [HttpGet("check-status/{orderId}")]
+    public async Task<IActionResult> CheckPaymentStatusRevised(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            var status = await _paymentService.CheckPaymentStatusAsync(orderId, ct);
+            return Ok(status);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi kiểm tra trạng thái thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Gateway callback notification
+    /// SIMPLIFIED: Not used in Cash/QR manual confirmation system
+    /// Removed - use manual confirmation endpoints instead
+    /// </summary>
+    [HttpPost("notify-callback")]
+    [AllowAnonymous]
+    [Obsolete("Gateway callbacks not used in simplified Cash/QR payment system")]
+    public async Task<IActionResult> NotifyPaymentRevised([FromBody] PaymentNotifyRequestDto request, CancellationToken ct = default)
+    {
+        // Simplified payment system: No gateway callbacks needed
+        return BadRequest(new { message = "Không hỗ trợ gateway callbacks. Vui lòng sử dụng POST /api/payment/confirm để xác nhận thủ công." });
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Download receipt PDF for a paid order
+    /// GET /api/payment/receipt/{orderId}
+    /// </summary>
+    [HttpGet("receipt/{orderId}")]
+    public async Task<IActionResult> GetReceipt(int orderId, CancellationToken ct = default)
+    {
+        try
+        {
+            _logger.LogInformation("Receipt download requested for order {OrderId}", orderId);
+
+            // Get order to verify it exists and is paid
+            var order = await _paymentService.GetOrderDetailAsync(orderId, ct);
+            if (order == null)
+            {
+                _logger.LogWarning("Receipt download failed for order {OrderId}: order not found", orderId);
+                return NotFound(new { message = $"Không tìm thấy đơn hàng với ID: {orderId}" });
+            }
+
+            // Check if order is paid
+            if (!IsPaidStatus(order.Status))
+            {
+                _logger.LogWarning("Receipt download blocked for order {OrderId}: status {Status}", orderId, order.Status);
+                return BadRequest(new { message = $"Đơn hàng chưa được thanh toán. Trạng thái hiện tại: {order.Status}" });
+            }
+
+            // Generate order code
+            var orderCode = $"RMS{orderId:D6}";
+            var pdfFileName = $"{orderCode}.pdf";
+            var pdfPath = Path.Combine(_env.WebRootPath, "receipts", pdfFileName);
+            _logger.LogInformation("Using receipt file path {PdfPath} for order {OrderId}", pdfPath, orderId);
+
+            // Check if PDF exists, if not generate it
+            string receiptUrl;
+            if (!System.IO.File.Exists(pdfPath))
+            {
+                // Generate receipt (may return Cloudinary URL or local path)
+                _logger.LogInformation("Receipt PDF not found for order {OrderId}. Generating new file.", orderId);
+                receiptUrl = await _receiptService.GenerateReceiptPdfAsync(orderId, ct);
+            }
+            else
+            {
+                // PDF exists locally, but check if it's also on Cloudinary
+                receiptUrl = $"/receipts/{pdfFileName}";
+            }
+
+            //  Check if receipt URL is Cloudinary URL (starts with https://)
+            if (!string.IsNullOrEmpty(receiptUrl) && receiptUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Receipt PDF is stored on Cloudinary for order {OrderId}. Redirecting to: {CloudinaryUrl}", orderId, receiptUrl);
+                // Redirect to Cloudinary URL
+                return Redirect(receiptUrl);
+            }
+
+            //  Fallback to local file
+            if (!System.IO.File.Exists(pdfPath))
+            {
+                _logger.LogError("Receipt generation failed for order {OrderId}. File missing at {PdfPath}", orderId, pdfPath);
+                return NotFound(new { message = "Không thể tạo hóa đơn. Vui lòng thử lại." });
+            }
+
+            // Return PDF file from local storage
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(pdfPath, ct);
+            _logger.LogInformation("Returning receipt PDF from local storage for order {OrderId}. Size: {ByteCount} bytes.", orderId, fileBytes.Length);
+            return File(fileBytes, "application/pdf", pdfFileName);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Receipt download failed for order {OrderId}: not found", orderId);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Receipt download failed for order {OrderId}: invalid state", orderId);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when downloading receipt for order {OrderId}. Exception: {ExceptionType}, Message: {Message}, StackTrace: {StackTrace}", 
+                orderId, ex.GetType().Name, ex.Message, ex.StackTrace);
+            
+            // Trả về error message chi tiết hơn để frontend có thể hiển thị
+            var errorMessage = $"Lỗi khi tải hóa đơn: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" Chi tiết: {ex.InnerException.Message}";
+            }
+            
+            return StatusCode(500, new { message = errorMessage, error = ex.Message, orderId = orderId });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Download receipt PDF for a paid reservation
+    /// GET /api/payment/receipt/reservation/{reservationId}
+    /// </summary>
+    [HttpGet("receipt/reservation/{reservationId}")]
+    public async Task<IActionResult> GetReceiptByReservation(int reservationId, CancellationToken ct = default)
+    {
+        try
+        {
+            _logger.LogInformation("Receipt download requested for reservation {ReservationId}", reservationId);
+
+            // Get reservation payment to verify it exists and is paid
+            var reservationPayment = await _paymentService.GetReservationPaymentAsync(reservationId, ct);
+            if (reservationPayment == null)
+            {
+                _logger.LogWarning("Receipt download failed for reservation {ReservationId}: reservation not found", reservationId);
+                return NotFound(new { message = $"Không tìm thấy Reservation với ID: {reservationId}" });
+            }
+
+            // Check if all orders are paid
+            var unpaidOrders = reservationPayment.Orders.Where(o => !IsPaidStatus(o.Status)).ToList();
+            if (unpaidOrders.Any())
+            {
+                _logger.LogWarning("Receipt download blocked for reservation {ReservationId}: {Count} orders not paid", reservationId, unpaidOrders.Count);
+                return BadRequest(new { message = $"Có {unpaidOrders.Count} đơn hàng chưa được thanh toán. Vui lòng thanh toán tất cả đơn hàng trước khi tạo hóa đơn." });
+            }
+
+            // Generate reservation code
+            var reservationCode = $"RES{reservationId:D6}";
+            var pdfFileName = $"{reservationCode}.pdf";
+            var pdfPath = Path.Combine(_env.WebRootPath, "receipts", pdfFileName);
+            _logger.LogInformation("Using receipt file path {PdfPath} for reservation {ReservationId}", pdfPath, reservationId);
+
+            // Check if PDF exists, if not generate it
+            string receiptUrl;
+            if (!System.IO.File.Exists(pdfPath))
+            {
+                // Generate receipt (may return Cloudinary URL or local path)
+                _logger.LogInformation("Receipt PDF not found for reservation {ReservationId}. Generating new file.", reservationId);
+                receiptUrl = await _receiptService.GenerateReceiptPdfByReservationAsync(reservationId, ct);
+            }
+            else
+            {
+                // PDF exists locally, but check if it's also on Cloudinary
+                receiptUrl = $"/receipts/{pdfFileName}";
+            }
+
+            // Check if receipt URL is Cloudinary URL (starts with https://)
+            if (!string.IsNullOrEmpty(receiptUrl) && receiptUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Receipt PDF is stored on Cloudinary for reservation {ReservationId}. Redirecting to: {CloudinaryUrl}", reservationId, receiptUrl);
+                // Redirect to Cloudinary URL
+                return Redirect(receiptUrl);
+            }
+
+            // Fallback to local file
+            if (!System.IO.File.Exists(pdfPath))
+            {
+                _logger.LogError("Receipt generation failed for reservation {ReservationId}. File missing at {PdfPath}", reservationId, pdfPath);
+                return NotFound(new { message = "Không thể tạo hóa đơn. Vui lòng thử lại." });
+            }
+
+            // Return PDF file from local storage
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(pdfPath, ct);
+            _logger.LogInformation("Returning receipt PDF from local storage for reservation {ReservationId}. Size: {ByteCount} bytes.", reservationId, fileBytes.Length);
+            return File(fileBytes, "application/pdf", pdfFileName);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Receipt download failed for reservation {ReservationId}: not found", reservationId);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Receipt download blocked for reservation {ReservationId}: invalid operation", reservationId);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating receipt for reservation {ReservationId}", reservationId);
+            return StatusCode(500, new { message = "Lỗi khi tạo hóa đơn. Vui lòng thử lại." });
+        }
+    }
+
+    // ========== RESERVATION-CENTRIC PAYMENT ENDPOINTS ==========
+
+    /// <summary>
+    /// Owner/Manager/Staff: Lấy thông tin thanh toán theo ReservationId (tổng hợp tất cả Orders)
+    /// GET /api/payment/reservations/{reservationId}/payment
+    /// </summary>
+    [HttpGet("reservations/{reservationId}/payment")]
+    public async Task<IActionResult> GetReservationPayment(int reservationId, CancellationToken ct = default)
+    {
+        try
+        {
+            var reservationPayment = await _paymentService.GetReservationPaymentAsync(reservationId, ct);
+            
+            if (reservationPayment == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy Reservation với ID: {reservationId}" });
+            }
+
+            return Ok(reservationPayment);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi lấy thông tin thanh toán", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xử lý thanh toán tiền mặt theo ReservationId
+    /// POST /api/payment/reservations/{reservationId}/cash
+    /// </summary>
+    [HttpPost("reservations/{reservationId}/cash")]
+    public async Task<IActionResult> ProcessCashPaymentByReservation(
+        int reservationId,
+        [FromBody] ReservationCashPaymentRequestDto request,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            var transaction = await _paymentService.ProcessCashPaymentByReservationAsync(
+                reservationId,
+                request.AmountReceived,
+                request.Notes,
+                userId.Value,
+                ct);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Thanh toán tiền mặt thành công",
+                transaction = transaction,
+                refundAmount = transaction.RefundAmount
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xử lý thanh toán tiền mặt", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xác nhận thanh toán QR theo ReservationId
+    /// POST /api/payment/reservations/{reservationId}/qr
+    /// </summary>
+    [HttpPost("reservations/{reservationId}/qr")]
+    public async Task<IActionResult> ConfirmQrPaymentByReservation(
+        int reservationId,
+        [FromBody] ReservationQrPaymentRequestDto request,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            // Lấy thông tin Reservation payment để lấy totalAmount
+            var reservationPayment = await _paymentService.GetReservationPaymentAsync(reservationId, ct);
+            if (reservationPayment == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy Reservation với ID: {reservationId}" });
+            }
+
+            // Sử dụng method mới ProcessQrPaymentByReservationAsync để xử lý tất cả orders cùng lúc
+            var transaction = await _paymentService.ProcessQrPaymentByReservationAsync(
+                reservationId,
+                request.Notes,
+                userId.Value,
+                ct);
+
+            return Ok(new
+            {
+                success = true,
+                message = "✅ Đã xác nhận thanh toán QR thành công!",
+                transaction = transaction
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xác nhận thanh toán QR", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Owner/Manager/Staff: Xử lý thanh toán kết hợp (Cash + QR) theo ReservationId
+    /// POST /api/payment/reservations/{reservationId}/combined
+    /// </summary>
+    [HttpPost("reservations/{reservationId}/combined")]
+    public async Task<IActionResult> ProcessCombinedPaymentByReservation(
+        int reservationId,
+        [FromBody] ReservationCombinedPaymentRequestDto request,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userId = GetUserIdFromClaims();
+            if (userId == null)
+            {
+                return Unauthorized(new { message = "Người dùng chưa được xác thực" });
+            }
+
+            // Lấy thông tin Reservation payment
+            var reservationPayment = await _paymentService.GetReservationPaymentAsync(reservationId, ct);
+            if (reservationPayment == null)
+            {
+                return NotFound(new { message = $"Không tìm thấy Reservation với ID: {reservationId}" });
+            }
+
+            // Validate: Tất cả Orders phải đã được xác nhận
+            var unconfirmedOrders = reservationPayment.Orders.Where(o => 
+                string.IsNullOrEmpty(o.Status) || 
+                !o.Status.Equals("Confirmed", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (unconfirmedOrders.Any())
+            {
+                return BadRequest(new { 
+                    message = $"Có {unconfirmedOrders.Count} đơn hàng chưa được xác nhận. Vui lòng xác nhận tất cả đơn hàng trước khi thanh toán." 
+                });
+            }
+
+            var totalAmount = reservationPayment.TotalAmount;
+
+            // Validate amounts
+            if (request.CashAmount <= 0 || request.QrAmount <= 0)
+            {
+                return BadRequest(new { message = "Số tiền tiền mặt và QR phải lớn hơn 0" });
+            }
+
+            if (request.CashAmount + request.QrAmount != totalAmount)
+            {
+                return BadRequest(new { 
+                    message = $"Tổng tiền không khớp. Tổng cần thanh toán: {totalAmount:N0} VND, Nhập vào: {(request.CashAmount + request.QrAmount):N0} VND" 
+                });
+            }
+
+            // Sử dụng method mới ProcessCombinedPaymentByReservationAsync để xử lý tất cả orders cùng lúc
+            var transactions = await _paymentService.ProcessCombinedPaymentByReservationAsync(
+                reservationId,
+                request.CashAmount,
+                request.QrAmount,
+                request.CashReceived,
+                request.Notes,
+                userId.Value,
+                ct);
+
+            return Ok(new
+            {
+                success = true,
+                message = "✅ Thanh toán kết hợp thành công!",
+                transactions = transactions.Select((t, index) => new
+                {
+                    type = index == 0 ? "Cash" : "QR",
+                    transaction = t
+                })
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi khi xử lý thanh toán kết hợp", error = ex.Message });
+        }
+    }
+
+    private static bool IsPaidStatus(string? status)
+        => string.Equals(status, "Paid", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status, "Success", StringComparison.OrdinalIgnoreCase);
+
+    // Helper method to get user ID from claims
+    private int? GetUserIdFromClaims()
+    {
+        var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return null;
+        }
+        return userId;
+    }
+}
+
+// DTO for sync payments request
+public class SyncPaymentsRequestDto
+{
+    public List<int> TransactionIds { get; set; } = new List<int>();
 }
 

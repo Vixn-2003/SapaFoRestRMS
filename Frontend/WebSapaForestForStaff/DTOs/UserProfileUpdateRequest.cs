@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace WebSapaForestForStaff.DTOs
 {
@@ -16,6 +17,8 @@ namespace WebSapaForestForStaff.DTOs
 
         [Display(Name = "Ảnh đại diện")]
         public string? AvatarUrl { get; set; }
+
+        public IFormFile? AvatarFile { get; set; }
     }
 }
 

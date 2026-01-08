@@ -1,0 +1,102 @@
+@model WebSapaForestForStaff.ViewModels.Payment.OrderSelectionViewModel
+@using WebSapaForestForStaff.Controllers
+
+@{
+    ViewData["Title"] = "Đơn hàng thu ngân";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+
+    // Determine current status from ViewBag (set by controller)
+    var currentStatus = ViewBag.CurrentStatus as string ?? "Confirmed";
+    var initialOrders = currentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase)
+        ? Model.PaidOrders
+        : Model.PendingOrders;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="mb-1">Quản lý đơn hàng</h2>
+        <small class="text-muted">Thu ngân xử lý thanh toán trong ca</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <form method="get" action="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" class="d-flex gap-2 align-items-center">
+            <input type="hidden" name="status" value="@currentStatus" />
+            <label for="datePicker" class="text-muted mb-0">Chọn ngày:</label>
+            <input type="date" 
+                   id="datePicker" 
+                   name="date"
+                   class="form-control" 
+                   value="@Model.SelectedDate.ToString("yyyy-MM-dd")" 
+                   style="width: auto;"
+                   onchange="this.form.submit()" />
+            <button type="submit" 
+                    class="btn btn-outline-primary">
+                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Tabs cho hai trạng thái đơn -->
+<ul class="nav nav-tabs nav-fill mb-4" role="tablist" id="orderTabs">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link fw-semibold @(currentStatus == "Confirmed" ? "active" : string.Empty)" 
+           href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow", new { date = Model.SelectedDate, status = "Confirmed" })">
+            🧾 Đơn chờ thanh toán
+            <span class="badge bg-warning text-dark ms-2">@Model.PendingOrders.Count</span>
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link fw-semibold @(currentStatus == "Paid" ? "active" : string.Empty)" 
+           href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow", new { date = Model.SelectedDate, status = "Paid" })">
+            💰 Đơn đã thanh toán
+            <span class="badge bg-success ms-2">@Model.PaidOrders.Count</span>
+        </a>
+    </li>
+</ul>
+
+<!-- ✅ DEBUG: Hiển thị thông tin debug -->
+@if (false) // Set false để tắt debug
+{
+    <div class="alert alert-info mb-3">
+        <h6><i class="bi bi-bug me-2"></i>Debug Information</h6>
+        <div class="small">
+            <p><strong>Current Status:</strong> @currentStatus</p>
+            <p><strong>ViewBag.OrderStatus:</strong> @ViewBag.OrderStatus</p>
+            <p><strong>ViewBag.CurrentStatus:</strong> @ViewBag.CurrentStatus</p>
+            <p><strong>Selected Date:</strong> @Model.SelectedDate.ToString("yyyy-MM-dd")</p>
+            <p><strong>Pending Orders Count:</strong> @Model.PendingOrders.Count</p>
+            <p><strong>Paid Orders Count:</strong> @Model.PaidOrders.Count</p>
+            <p><strong>Initial Orders Count:</strong> @initialOrders.Count</p>
+            @if (Model.PendingOrders.Any())
+            {
+                <p><strong>Pending Orders Statuses:</strong> 
+                    @string.Join(", ", Model.PendingOrders.Select(o => $"{o.OrderId}:{o.Status}").Take(5))
+                </p>
+            }
+            @if (Model.PaidOrders.Any())
+            {
+                <p><strong>Paid Orders Statuses:</strong> 
+                    @string.Join(", ", Model.PaidOrders.Select(o => $"{o.OrderId}:{o.Status}").Take(5))
+                </p>
+            }
+        </div>
+    </div>
+}
+
+<!-- Order list container -->
+<div id="orderListContainer">
+    @await Html.PartialAsync("~/Views/CashierFlow/_OrderListPartial.cshtml", initialOrders)
+</div>
+
+@* Include Payment Confirmation Modal *@
+@await Html.PartialAsync("~/Views/CashierFlow/Modals/_PaymentConfirmationModal.cshtml")
+
+@section Scripts {
+<script>
+// Script cho Payment Confirmation Modal (nếu có)
+document.addEventListener("DOMContentLoaded", () => {
+    // Có thể thêm các script khác nếu cần
+});
+</script>
+}
+

@@ -9,20 +9,7 @@
     <link rel="stylesheet" href="~/css/home.css" />
 
 }
-@if (!(User?.Identity?.IsAuthenticated ?? false))
-{
-    <div class="container mt-3">
-        <div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
-            <div>
-                <i class="bi bi-info-circle me-2"></i>
-                Login to see table reservation history.
-            </div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
-                Đăng nhập
-            </button>
-        </div>
-    </div>
-}
+
 
 <div id="bannerCarousel" class="carousel slide" data-bs-ride="carousel">
     <div class="carousel-inner" id="bannerContainer">
@@ -56,9 +43,9 @@
                             @foreach (var g in group)
                             {
                                 <div class="card menu-card">
-                                    <img src="@g.item.ImageUrl" class="card-img-top menu-img" alt="@g.item.MenuItemName" />
+                                    <img src="@g.item.ImageUrl" class="card-img-top menu-img" alt="@g.item.Name" />
                                     <div class="card-body text-center">
-                                        <h6 class="menu-title">@g.item.MenuItemName</h6>
+                                        <h6 class="menu-title">@g.item.Name</h6>
                                         <p class="menu-price">@g.item.Price.ToString("N0") ₫</p>
                                     </div>
                                 </div>
@@ -148,7 +135,6 @@
                                             <strong>Địa điểm:</strong> @ev.Location
                                         </p>
                                       
-                                        <a href="/Events/Details?title=@ev.Title" class="btn">Xem chi tiết</a>
                                     </div>
                                 </div>
                             </div>
@@ -191,7 +177,6 @@
             <div class="carousel-caption d-none d-md-block">
                 <div class="d-flex justify-content-center gap-3">
                     <a  class="btn btn-success"  data-bs-toggle="modal" data-bs-target="#reservationModal">Đặt bàn ngay</a>
-                    <a href="/Banner/Details/${banner.id}" class="btn btn-success">Chi tiết</a>
                     <a href="https://maps.google.com/?q=${encodeURIComponent(banner.address || 'Sapa Restaurant')}"
                        target="_blank"
                        class="btn btn-success">Địa chỉ</a>

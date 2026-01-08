@@ -99,8 +99,9 @@
                                                 data-area-name="@table.AreaName"
                                                 data-floor="@table.Floor"
                                                 data-qr-url="@(apiBaseUrl)/api/OrderTable/@table.TableId/qrcode">
-                                            <i class="mdi mdi-file-pdf me-1"></i> PDF
+                                            <i class="mdi mdi-file-word me-1"></i> Word
                                         </button>
+
                                         <button class="btn btn-outline-success btn-sm btn-print-qr btn-action"
                                                 data-table-number="@table.TableNumber"
                                                 data-area-name="@table.AreaName"
@@ -161,8 +162,12 @@
         </nav>
     </div>
 </div>
-
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="~/assets/js/print-qr.js" asp-append-version="true"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script src="~/assets/js/print-qr.js" asp-append-version="true" asp-src="~/assets/js/print-qr.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.6/pizzip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.28.1/docxtemplater.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
 }

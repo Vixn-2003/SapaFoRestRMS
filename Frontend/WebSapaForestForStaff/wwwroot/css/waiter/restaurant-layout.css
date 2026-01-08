@@ -1,0 +1,87 @@
+﻿/* ===== BODY ===== */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f4f4f4;
+}
+
+/* ===== TOP NAVBAR ===== */
+.top-navbar {
+    background: #08382f;
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 25px;
+    color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+/* LEFT - ICON + MENU */
+.top-left {
+    display: flex;
+    align-items: center;
+}
+
+.home-icon {
+    font-size: 28px;
+    cursor: pointer;
+    margin-right: 25px;
+    transition: transform 0.2s ease;
+}
+
+    .home-icon:hover {
+        transform: scale(1.1);
+    }
+
+.top-menu {
+    display: flex;
+    gap: 20px;
+}
+
+/* Menu item */
+.menu-item {
+    padding: 8px 16px;
+    border-radius: 6px;
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+    .menu-item:hover {
+        background: #e6b278; /* hover nền vàng */
+        color: #08382f; /* chữ xanh đậm */
+    }
+
+    .menu-item.active {
+        background: #e6b278 !important; /* nền vàng */
+        color: #08382f !important; /* chữ xanh đậm */
+    }
+
+/* RIGHT ICONS */
+.top-right {
+    display: flex;
+    gap: 18px;
+}
+
+.icon-btn {
+    font-size: 22px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+    .icon-btn:hover {
+        background: rgba(255,255,255,0.2);
+    }
+
+/* ===== MAIN CONTENT ===== */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    padding: 25px;
+}
