@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Net.Http.Json;
 using WebSapaForestForStaff.DTOs.TableManage;
@@ -6,6 +7,7 @@ using WebSapaForestForStaff.Models;
 
 namespace WebSapaForestForStaff.Controllers
 {
+    [Authorize(Policy = "Manager")]
     public class TableManageController : Controller
     {
         private readonly HttpClient _client;
@@ -45,6 +47,13 @@ namespace WebSapaForestForStaff.Controllers
                 : new List<AreaDto>();
 
             var result = await response.Content.ReadFromJsonAsync<TableResponse>();
+            var tables = result?.Data ?? new List<TableManageDto>();
+
+            // --- Tính tổng số bàn và theo trạng thái ---
+            ViewBag.TotalTables = tables.Count;
+            ViewBag.AvailableCount = tables.Count(t => t.Status == "Available");
+            ViewBag.MaintenanceCount = tables.Count(t => t.Status == "Maintenance");
+
             ViewBag.TotalCount = result?.TotalCount ?? 0;
             ViewBag.Page = page;
             ViewBag.PageSize = pageSize;
@@ -154,9 +163,12 @@ namespace WebSapaForestForStaff.Controllers
 
             // Lấy Area để hiển thị dropdown
             var areaResponse = await _client.GetAsync("Area?page=1&pageSize=100");
-            ViewBag.Areas = areaResponse.IsSuccessStatusCode
-                ? (await areaResponse.Content.ReadFromJsonAsync<AreaApiResponse>())?.Data ?? new List<AreaDto>()
-                : new List<AreaDto>();
+            var areas = areaResponse.IsSuccessStatusCode
+    ? (await areaResponse.Content.ReadFromJsonAsync<AreaApiResponse>())?.Data ?? new List<AreaDto>()
+    : new List<AreaDto>();
+
+            ViewBag.Areas = new SelectList(areas, "AreaId", "AreaName");
+
 
             return View(dto);
         }

@@ -1,5 +1,6 @@
 ﻿using BusinessAccessLayer.DTOs.Inventory;
 using BusinessAccessLayer.DTOs.Manager;
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,26 @@ namespace BusinessAccessLayer.Services.Interfaces
 {
     public interface IInventoryIngredientService
     {
-        Task<IEnumerable<InventoryIngredientWithBatchDTO>> GetAllIngredient();
-
+        Task<IEnumerable<InventoryIngredientDTO>> GetAllIngredient();
+        Task<InventoryIngredientDTO> GetIngredientById(int id);
+        Task<IEnumerable<InventoryIngredientDTO>> GetAllIngredientSearch( string search);
+        Task<(decimal TImport, decimal TExport, decimal totalFirst)> GetImportExportBatchesId(int id, DateTime? StartDate, DateTime? EndDate);
+        Task<IEnumerable<BatchIngredientDTO>> GetBatchesAsync(int id);
+        Task<bool> UpdateBatchWarehouse(int idBatch, int idWarehouse, bool isActive);
+        Task<int> AddNewIngredient(IngredientDTO ingredient);
+        Task<int> AddNewBatch(InventoryBatchDTO batchIngredientDTO);
+        Task<(bool success, string message)> UpdateIngredient(int idIngredient, string nameIngredient, int unit);
+        
+        // Batch reservation methods
+        Task<(bool success, string message)> ReserveBatchesForOrderDetailAsync(int orderDetailId);
+        Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailAsync(int orderDetailId);
+        Task<(bool success, string message)> ConsumeReservedBatchesForOrderDetailWithQuantityAsync(int orderDetailId, int quantityToConsume);
+        Task<(bool success, string message)> ReleaseReservedBatchesForOrderDetailAsync(int orderDetailId);
+        
+        // Kitchen ingredient pickup
+        Task<List<BusinessAccessLayer.DTOs.Kitchen.IngredientPickupDTO>> GetIngredientPickupListAsync(string? categoryName = null);
+        
+        // Ingredient shortage detection
+        Task<List<BusinessAccessLayer.DTOs.Kitchen.IngredientShortageDTO>> GetIngredientShortageListAsync();
     }
 }

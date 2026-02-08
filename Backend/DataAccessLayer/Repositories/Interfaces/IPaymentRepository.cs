@@ -1,6 +1,7 @@
-using DomainAccessLayer.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using DomainAccessLayer.Models;
 
 namespace DataAccessLayer.Repositories.Interfaces;
 
@@ -15,9 +16,14 @@ public interface IPaymentRepository : IRepository<Order>
     Task<Order?> GetOrderWithItemsAsync(int orderId);
 
     /// <summary>
-    /// Lấy danh sách đơn hàng chờ thanh toán
+    /// Lấy danh sách đơn hàng theo ngày (kèm đầy đủ navigation properties)
     /// </summary>
-    Task<IEnumerable<Order>> GetPendingOrdersAsync();
+    Task<IEnumerable<Order>> GetOrdersByDateAsync(DateOnly date);
+
+    /// <summary>
+    /// Lấy toàn bộ đơn hàng (kèm đầy đủ navigation properties)
+    /// </summary>
+    Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync();
 
     /// <summary>
     /// Lấy đơn hàng theo mã đơn hoặc số bàn
@@ -38,5 +44,37 @@ public interface IPaymentRepository : IRepository<Order>
     /// Cập nhật trạng thái đơn hàng
     /// </summary>
     Task UpdateOrderStatusAsync(int orderId, string status);
+
+    /// <summary>
+    /// Lấy transaction theo ID
+    /// </summary>
+    Task<Transaction?> GetTransactionByIdAsync(int transactionId);
+
+    /// <summary>
+    /// Lấy danh sách transactions theo OrderId
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetTransactionsByOrderIdAsync(int orderId);
+
+    /// <summary>
+    /// Cập nhật transaction
+    /// </summary>
+    Task UpdateTransactionAsync(Transaction transaction);
+
+    /// <summary>
+    /// Lấy transaction theo TransactionCode
+    /// </summary>
+    Task<Transaction?> GetTransactionByCodeAsync(string transactionCode);
+
+    Task AddOrderHistoryAsync(OrderHistory history);
+    
+    /// <summary>
+    /// Lấy OrderDetail theo ID (bao gồm MenuItem và Combo)
+    /// </summary>
+    Task<OrderDetail?> GetOrderDetailByIdAsync(int orderDetailId);
+
+    /// <summary>
+    /// Lấy tất cả transactions (cho Owner Revenue/Dashboard)
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetAllTransactionsAsync();
 }
 

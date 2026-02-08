@@ -6,6 +6,8 @@ using System.Security.Claims;
 using Newtonsoft.Json;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using WebSapaFoRestForCustomer.DTOs;
+using Microsoft.AspNetCore.Http;
 
 namespace WebSapaFoRestForCustomer.Controllers
 {
@@ -60,7 +62,21 @@ namespace WebSapaFoRestForCustomer.Controllers
                 }
 
                 var errorContent = await response.Content.ReadAsStringAsync();
-                ModelState.AddModelError(string.Empty, "Không thể gửi mã OTP. Vui lòng thử lại.");
+                var errorMessage = "Không thể gửi mã OTP. Vui lòng thử lại.";
+                try
+                {
+                    var errorObj = JsonConvert.DeserializeObject<dynamic>(errorContent);
+                    if (errorObj?.message != null)
+                    {
+                        errorMessage = errorObj.message.ToString();
+                    }
+                }
+                catch
+                {
+                    // ignore parse errors, keep default message
+                }
+
+                ModelState.AddModelError(string.Empty, errorMessage);
                 return View("Login", model);
             }
             catch (Exception ex)
@@ -98,6 +114,34 @@ namespace WebSapaFoRestForCustomer.Controllers
                     var responseContent = await response.Content.ReadAsStringAsync();
                     var authResponse = JsonConvert.DeserializeObject<LoginResponse>(responseContent);
 
+                    // Store token in Session for downstream API calls (ApiService prefers Session token)
+                    HttpContext.Session.SetString("Token", authResponse.Token);
+
+                    // Fetch profile to get AvatarUrl for UI (layout dropdown)
+                    string? avatarUrl = null;
+                    try
+                    {
+                        using var profileClient = new HttpClient { BaseAddress = _httpClient.BaseAddress };
+                        profileClient.DefaultRequestHeaders.Authorization =
+                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
+
+                        var profileResp = await profileClient.GetAsync("api/Customer/profile");
+                        if (profileResp.IsSuccessStatusCode)
+                        {
+                            var profileJson = await profileResp.Content.ReadAsStringAsync();
+                            var profile = JsonConvert.DeserializeObject<CustomerProfile>(profileJson);
+                            avatarUrl = profile?.AvatarUrl;
+                            if (!string.IsNullOrWhiteSpace(avatarUrl))
+                            {
+                                HttpContext.Session.SetString("AvatarUrl", avatarUrl);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Non-critical: avatar can fallback to default icon/image
+                    }
+
                     var claims = new List<Claim>
                     {
                         new Claim(ClaimTypes.NameIdentifier, authResponse.UserId.ToString()),
@@ -106,6 +150,10 @@ namespace WebSapaFoRestForCustomer.Controllers
                         new Claim(ClaimTypes.Role, "Customer"),
                         new Claim("Token", authResponse.Token)
                     };
+                    if (!string.IsNullOrWhiteSpace(avatarUrl))
+                    {
+                        claims.Add(new Claim("AvatarUrl", avatarUrl));
+                    }
 
                     var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                     var authProperties = new AuthenticationProperties
@@ -124,7 +172,24 @@ namespace WebSapaFoRestForCustomer.Controllers
                     return LocalRedirect(returnUrl ?? Url.Action("Index", "Home"));
                 }
 
-                ModelState.AddModelError(string.Empty, "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.");
+                // ✅ FIX: Đọc error message từ API response
+                var errorContent = await response.Content.ReadAsStringAsync();
+                string errorMessage = "Mã OTP không đúng hoặc đã hết hạn. Vui lòng thử lại.";
+                
+                try
+                {
+                    var errorResponse = JsonConvert.DeserializeObject<dynamic>(errorContent);
+                    if (errorResponse?.message != null)
+                    {
+                        errorMessage = errorResponse.message.ToString();
+                    }
+                }
+                catch
+                {
+                    // Nếu không parse được JSON, dùng message mặc định
+                }
+
+                ModelState.AddModelError(string.Empty, errorMessage);
                 return View(model);
             }
             catch (Exception ex)

@@ -17,6 +17,10 @@ public partial class Order
 
     public string? Status { get; set; }
 
+    public DateTime? ConfirmedAt { get; set; }
+
+    public int? ConfirmedByStaffId { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public virtual Customer? Customer { get; set; }
@@ -27,5 +31,9 @@ public partial class Order
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
+    public virtual Staff? ConfirmedByStaff { get; set; }
+
     public virtual Reservation? Reservation { get; set; }
+
+    public virtual ICollection<OrderHistory> OrderHistories { get; set; } = new List<OrderHistory>();
 }

@@ -31,6 +31,9 @@ namespace WebSapaForestForStaff.DTOs
         [Display(Name = "Ngày tạo")]
         public DateTime? CreatedAt { get; set; }
 
+        [Display(Name = "Ảnh đại diện")]
+        public string? AvatarUrl { get; set; }
+
         [Display(Name = "Người tạo")]
         public int? CreatedBy { get; set; }
 

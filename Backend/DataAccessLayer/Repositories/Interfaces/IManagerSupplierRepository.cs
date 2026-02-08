@@ -1,0 +1,15 @@
+﻿using DomainAccessLayer.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccessLayer.Repositories.Interfaces
+{
+    public interface IManagerSupplierRepository : IRepository<Supplier>
+    {
+        Task<Supplier?> GetByCodeAsync(string code);  //  THÊM
+        Task<bool> CheckCodeExistsAsync(string code);
+    }
+}

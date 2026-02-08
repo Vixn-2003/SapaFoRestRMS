@@ -1,0 +1,452 @@
+﻿@using System.Security.Claims
+@using WebSapaForestForStaff.Controllers
+@{
+    Layout = null;
+    
+    // Lấy UserPositionId từ Claims (1 = Waiter, 2 = Cashier)
+    var positionIdClaim = User.FindFirst("PositionId")?.Value;
+    var userPositionId = positionIdClaim != null && int.TryParse(positionIdClaim, out var posId) ? posId : 0;
+    
+    // Xác định controller hiện tại để highlight menu
+    var currentController = ViewContext.RouteData.Values["Controller"]?.ToString();
+    var currentAction = ViewContext.RouteData.Values["Action"]?.ToString();
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewBag.Title</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/waiter/restaurant-layout.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+</head>
+<style>
+    /* Active menu item styling */
+    .menu-item.active {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-bottom: 3px solid #fff;
+        font-weight: 600;
+    }
+    
+    .menu-item {
+        transition: all 0.3s ease;
+    }
+    
+    .menu-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .assistance-popup {
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        width: 300px;
+        max-height: 400px;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        overflow-y: auto;
+        z-index: 9999;
+    }
+
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        font-weight: bold;
+        border-bottom: 1px solid #ddd;
+        background-color: #f8f9fa;
+    }
+
+        .popup-header .close-popup {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+    .popup-body {
+        padding: 8px;
+    }
+
+    .list-group-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+
+        .list-group-item.pending {
+            background-color: #fff3cd;
+        }
+
+        .list-group-item.completed {
+            background-color: #d1e7dd;
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+
+    /* ===== DROPDOWN FIX (Áp dụng từ _LayoutAdmin.cshtml) ===== */
+    .user-dropdown {
+        position: relative;
+    }
+
+    .user-dropdown .dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        z-index: 1050;
+        min-width: 200px;
+        background-color: #fff;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        padding: 0.5rem 0;
+    }
+
+    .user-dropdown .dropdown-menu.show {
+        display: block !important;
+    }
+
+    .user-dropdown .dropdown-item {
+        cursor: pointer;
+        padding: 0.5rem 1rem;
+        display: block;
+        width: 100%;
+        clear: both;
+        font-weight: 400;
+        color: #212529;
+        text-align: inherit;
+        text-decoration: none;
+        white-space: nowrap;
+        background-color: transparent;
+        border: 0;
+    }
+
+    .user-dropdown .dropdown-item:hover,
+    .user-dropdown .dropdown-item:focus {
+        background-color: #f8f9fa;
+        color: #1e2125;
+    }
+
+    .user-dropdown .dropdown-divider {
+        height: 0;
+        margin: 0.5rem 0;
+        overflow: hidden;
+        border-top: 1px solid #e9ecef;
+    }
+
+    /* Ensure dropdown is visible */
+    .user-dropdown.show .dropdown-menu {
+        display: block !important;
+    }
+
+    /* Debug: Add border to see if dropdown is there */
+    .user-dropdown .dropdown-menu {
+        border: 2px solid red !important; /* Temporary debug border */
+    }
+</style>
+<body>
+    <!-- Thêm thẻ container cho toast -->
+    <div id="toast-container" style="position: fixed; top: 80px; right: 20px; z-index: 9999;"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.7/signalr.min.js"></script>
+    
+    <!-- ✅ LOAD SITE.JS - Contains showConfirmPopup function -->
+    <script src="~/js/site.js"></script>
+
+    <!-- HEADER -->
+    <div class="top-navbar pos-navbar">
+        <div class="top-left">
+            <!-- Logo / Home -->
+            <div class="home-icon">
+                🏠
+                <span class="app-title">Sapa Restaurant</span>
+            </div>
+
+            <!-- Menu chính -->
+            <div class="top-menu">
+                @if (userPositionId == 1) // Chỉ hiển thị cho Waiter (Position = 1)
+                {
+                 
+                    <a href="/WaiterOrderTracking/Index"
+                       class="menu-item @(currentController == "WaiterOrderTracking" ? "active" : "")">
+                        Tiến độ phục vụ
+                    </a>
+                }
+                @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
+                {
+                       <a href="/counter-staff/dashboard"
+                           class="menu-item @(currentController == "CounterStaffDashboard" && currentAction == "Index" ? "active" : "")">
+                        <i class="fa-solid fa-chart-line me-1"></i>Tổng quan
+                    </a>
+
+                    <a href="/DashboardTable/ListOrder"
+                       class="menu-item @(currentController == "DashboardTable" && currentAction == "ListOrder" ? "active" : "")">
+                        Đơn đặt bàn
+                    </a>
+                }
+             
+               
+             
+                <a href="/DashboardTable/Index" 
+                   class="menu-item @(currentController == "DashboardTable" && currentAction == "Index" ? "active" : "")">
+                    Sơ đồ bàn
+                </a>
+             
+                <a href="/OrderTable/AssistanceList"
+                   class="menu-item @(currentController == "OrderTable" && currentAction == "AssistanceList" ? "active" : "")">
+                    Hỗ trợ
+                </a>
+                @if (userPositionId == 2) // Chỉ hiển thị cho Cashier (Position = 2)
+                {
+                    @* <a asp-controller="ShiftManagement" 
+                       asp-action="Index" 
+                       class="menu-item @(currentController == "ShiftManagement" ? "active" : "")">
+                        <i class="fa-solid fa-calendar-check me-1"></i>
+                        Quản lý Ca làm việc
+                    </a> *@
+                    <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")" 
+                       class="menu-item @(currentController == "CashierPaymentFlow" ? "active" : "")">
+                        Danh sách order
+                    </a>
+                }
+            </div>
+        </div>
+
+        <!-- Phần thông tin / icon -->
+        <div class="top-right">
+            <div class="icon-btn notifications">
+                🔔
+                <span class="badge"></span>
+            </div>
+            <!-- User profile dropdown (cashier / waiter) -->
+            <div class="icon-btn user-dropdown">
+                <a class="nav-link dropdown-toggle" id="CounterUserDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false" role="button">
+                    <i class="fa-solid fa-user"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end navbar-dropdown" aria-labelledby="CounterUserDropdown">
+                    <form asp-controller="UserProfile" asp-action="Index" method="get" class="dropdown-item p-0 m-0">
+                        <button type="submit" class="btn btn-link dropdown-item p-0 m-0 w-100 text-start">
+                            <i class="fa-solid fa-id-badge me-2"></i> Hồ sơ của tôi
+                        </button>
+                    </form>
+                    <div class="dropdown-divider"></div>
+                    <form asp-controller="Auth" asp-action="Logout" method="post" class="dropdown-item p-0 m-0">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-link dropdown-item p-0 m-0 w-100 text-start">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Popup danh sách yêu cầu hỗ trợ -->
+    <div id="assistancePopup" class="assistance-popup" style="display:none;">
+        <div class="popup-header">
+            <span>Yêu cầu hỗ trợ</span>
+            <button class="close-popup">&times;</button>
+        </div>
+        <div class="popup-body">
+            <ul id="assistanceList" class="list-group">
+                <!-- Danh sách sẽ được render realtime -->
+            </ul>
+            <div id="noRequests" class="text-center text-muted py-2">Không có yêu cầu nào</div>
+        </div>
+    </div>
+
+  
+
+
+    <div class="main-container">
+        @RenderBody()
+    </div>
+
+    <!-- SCRIPT ACTIVE MENU -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // --- 0. Các biến DOM ---
+            const notificationIcon = document.querySelector(".top-navbar .notifications");
+            const assistancePopup = document.getElementById("assistancePopup");
+            const assistanceList = document.getElementById("assistanceList");
+            const noRequests = document.getElementById("noRequests");
+
+            // --- 1. HÀM HIỂN THỊ TOAST ---
+            function showToast(message, type = 'success', autoHide = true) {
+                const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+                const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+                const toastHtml = `
+                    <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>`;
+                const container = document.getElementById('toast-container');
+                container.insertAdjacentHTML('beforeend', toastHtml);
+
+                if(autoHide) setTimeout(() => { container.firstChild?.remove(); }, 3000);
+            }
+
+            // --- 2. Khai báo SignalR toàn cục ---
+            let connection = new signalR.HubConnectionBuilder()
+                .withUrl("https://localhost:7096/restaurantHub")
+                .withAutomaticReconnect()
+                .build();
+
+            // --- 3. Hàm thêm request vào popup ---
+            function addRequestToPopup(data) {
+                noRequests.style.display = "none";
+                const li = document.createElement("li");
+                li.id = `popup-req-${data.requestId}`;
+                li.className = "list-group-item pending";
+                li.innerHTML = `
+                    <div>
+                        <strong>${data.tableName} - ${data.areaName} - Tầng: ${data.floor}</strong><br>
+                    </div>
+                    <div>${data.timeAgo} trước</div>`;
+                assistanceList.prepend(li);
+            }
+
+            // --- 4. Hàm đánh dấu request đã xử lý ---
+            function completeRequestInPopup(requestId) {
+                const li = document.getElementById(`popup-req-${requestId}`);
+                if(li) {
+                    li.classList.remove("pending");
+                    li.classList.add("completed");
+                    setTimeout(() => li.remove(), 2000);
+                }
+            }
+
+            // --- 5. Load request pending từ API ---
+                  async function loadPendingRequests() {
+            try {
+                const res = await fetch("https://localhost:7096/api/OrderTable/Pending?page=1&pageSize=10");
+                if(res.ok) {
+                    let data = await res.json();
+
+                    // data.items mới là array
+                    const requests = Array.isArray(data.items) ? data.items : [];
+
+                    if(requests.length === 0) {
+                        noRequests.style.display = "block";
+                    } else {
+                        noRequests.style.display = "none";
+                        requests.forEach(r => addRequestToPopup(r));
+                    }
+
+                    // Cập nhật badge
+                    const badge = notificationIcon.querySelector(".badge");
+                    if(badge) badge.textContent = requests.length;
+                }
+            } catch(err) {
+                console.error("Lỗi tải request:", err);
+            }
+        }
+
+            loadPendingRequests();
+
+            // --- 6. SignalR Events ---
+            connection.on("ReceiveNewRequest", function(data) {
+                addRequestToPopup(data);
+
+                const badge = notificationIcon.querySelector(".badge");
+                if(badge) {
+                    let count = parseInt(badge.textContent) || 0;
+                    badge.textContent = count + 1;
+                }
+
+                showToast(`Yêu cầu mới từ ${data.tableName}: ${data.note}`, 'danger', true);
+            });
+
+            connection.on("RequestCompleted", function(requestId) {
+                completeRequestInPopup(requestId);
+
+                const badge = notificationIcon.querySelector(".badge");
+                if(badge) {
+                    let count = parseInt(badge.textContent) || 0;
+                    badge.textContent = Math.max(0, count - 1);
+                }
+            });
+
+            // --- 7. Start SignalR ---
+            async function startConnection() {
+                try {
+                    await connection.start();
+                    console.log("SignalR connected!");
+                    await connection.invoke("JoinGroup", "Employees");
+                } catch(err) {
+                    console.error(err);
+                    setTimeout(startConnection, 5000);
+                }
+            }
+            startConnection();
+
+            // --- 8. Popup interaction ---
+            notificationIcon.addEventListener("click", () => {
+                assistancePopup.style.display = assistancePopup.style.display === "block" ? "none" : "block";
+            });
+
+            assistancePopup.querySelector(".close-popup").addEventListener("click", () => {
+                assistancePopup.style.display = "none";
+            });
+
+        });
+    </script>
+
+    <!-- Bootstrap JS - Load từ CDN để đảm bảo tương thích -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <!-- Initialize Dropdown (Sử dụng cách từ _LayoutAdmin.cshtml) -->
+    <script>
+        // Global tooltip enable (fallback if pages don't initialize per-view)
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM Content Loaded - Initializing dropdown...');
+
+            if (typeof bootstrap !== 'undefined') {
+                console.log('Bootstrap is available');
+
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl); });
+
+                // Initialize dropdowns - ensure user dropdown works
+                var userDropdown = document.getElementById('CounterUserDropdown');
+                console.log('CounterUserDropdown element:', userDropdown);
+
+                if (userDropdown) {
+                    console.log('CounterUserDropdown found, Bootstrap should handle it automatically via data-bs-toggle');
+
+                    // Let Bootstrap handle the dropdown automatically via data-bs-toggle
+                    // But ensure we can still manually control it if needed
+                    var dropdown = new bootstrap.Dropdown(userDropdown);
+                    console.log('Dropdown instance created:', dropdown);
+
+                    // Add click handler for debugging
+                    userDropdown.addEventListener('click', function(e) {
+                        console.log('Dropdown clicked, Bootstrap should handle this');
+                    });
+
+                } else {
+                    console.error('CounterUserDropdown element not found');
+                }
+            } else {
+                console.error('Bootstrap is not loaded');
+            }
+        });
+    </script>
+
+    @* Render Scripts section from child views *@
+    @RenderSection("Scripts", required: false)
+
+</body>
+</html>

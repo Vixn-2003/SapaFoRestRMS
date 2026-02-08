@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using DomainAccessLayer.Models;
 using Microsoft.Extensions.Configuration;
+using DomainAccessLayer.Enums;
 namespace DataAccessLayer.Dbcontext;
 
 public partial class SapaFoRestRmsContext : DbContext
@@ -42,6 +43,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<ComboItem> ComboItems { get; set; }
 
     public virtual DbSet<Customer> Customers { get; set; }
+    public virtual DbSet<Department> Departments { get; set; }
 
     public virtual DbSet<Event> Events { get; set; }
 
@@ -61,7 +63,11 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Order> Orders { get; set; }
 
+    public virtual DbSet<OrderHistory> OrderHistories { get; set; }
+
     public virtual DbSet<OrderDetail> OrderDetails { get; set; }
+
+    public virtual DbSet<OrderComboItem> OrderComboItems { get; set; }
 
     public virtual DbSet<Payment> Payments { get; set; }
 
@@ -76,7 +82,7 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<Regulation> Regulations { get; set; }
 
     public virtual DbSet<Reservation> Reservations { get; set; }
-
+    public virtual DbSet<ReservationDeposit> ReservationDeposits { get; set; } = null!;
     public virtual DbSet<ReservationTable> ReservationTables { get; set; }
 
     public virtual DbSet<RestaurantIntro> RestaurantIntros { get; set; }
@@ -89,11 +95,22 @@ public partial class SapaFoRestRmsContext : DbContext
 
     public virtual DbSet<Shift> Shifts { get; set; }
 
-    public virtual DbSet<Staff> Staffs { get; set; }
+    public virtual DbSet<ShiftHistory> ShiftHistorys { get; set; }
+    public virtual DbSet<ShiftTemplate> ShiftTemplates { get; set; }
 
+    public virtual DbSet<Staff> Staffs { get; set; }
+    public DbSet<DayType> DayTypes { get; set; }
+    public DbSet<DayCalendar> DayCalendars { get; set; }
+    public DbSet<ShiftAssignment> ShiftAssignments { get; set; }
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
 
     public virtual DbSet<Transaction> Transactions { get; set; }
+
+    public virtual DbSet<SalaryChangeRequest> SalaryChangeRequests { get; set; }
+
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
+
+    public virtual DbSet<OrderLock> OrderLocks { get; set; }
 
     public virtual DbSet<Supplier> Suppliers { get; set; }
 
@@ -102,10 +119,19 @@ public partial class SapaFoRestRmsContext : DbContext
     public virtual DbSet<Table> Tables { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+    public DbSet<Warehouse> Warehouses { get; set; } = null!;
+
+    public DbSet<Unit> Units { get; set; }
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
+  
     public DbSet<ZaloMessage> ZaloMessages { get; set; }
- 
+
+    // Thêm bảng mới
+    public DbSet<AssistanceRequest> AssistanceRequests { get; set; }
+
+    public virtual DbSet<AuditInventory> AuditInventories { get; set; } = null!;
+
 
     public virtual DbSet<VerificationCode> VerificationCodes { get; set; }
 
@@ -129,6 +155,26 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.CreatedBy)
                 .HasConstraintName("FK_Announcements_Users");
         });
+        // Shift - Department (tắt cascade)
+        modelBuilder.Entity<Shift>()
+            .HasOne(s => s.Department)
+            .WithMany(d => d.Shifts)
+            .HasForeignKey(s => s.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ShiftTemplate - Department (tắt cascade)
+        modelBuilder.Entity<ShiftTemplate>()
+            .HasOne(t => t.Department)
+            .WithMany(d => d.ShiftTemplates)
+            .HasForeignKey(t => t.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Shift - ShiftTemplate (tắt cascade)
+        modelBuilder.Entity<Shift>()
+            .HasOne(s => s.Template)
+            .WithMany(t => t.Shifts)
+            .HasForeignKey(s => s.TemplateId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Attendance>(entity =>
         {
@@ -193,6 +239,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
             entity.Property(e => e.LoyaltyPoints).HasDefaultValue(0);
             entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.IsVip)
+                .HasDefaultValue(false);
 
             entity.HasOne(d => d.User).WithMany(p => p.Customers)
                 .HasForeignKey(d => d.UserId)
@@ -217,11 +265,16 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.IngredientId).HasName("PK__Ingredie__BEAEB25ACD112DE2");
 
+            entity.Property(e => e.IngredientCode).HasMaxLength(50);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.ReorderLevel)
                 .HasDefaultValue(0m)
                 .HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Unit).HasMaxLength(20);
+            entity.HasOne(d => d.Unit)
+      .WithMany(p => p.Ingredients)
+      .HasForeignKey(d => d.UnitId)
+      .OnDelete(DeleteBehavior.Restrict);
+
         });
 
         modelBuilder.Entity<InventoryBatch>(entity =>
@@ -231,17 +284,58 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
-            entity.Property(e => e.QuantityRemaining).HasColumnType("decimal(18, 2)");
 
-            entity.HasOne(d => d.Ingredient).WithMany(p => p.InventoryBatches)
+            entity.Property(e => e.QuantityRemaining)
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.QuantityReserved)
+                .HasColumnType("decimal(18, 2)")
+                .HasDefaultValue(0);
+
+            // Available là computed column trong database
+            entity.Property(e => e.Available)
+                .HasColumnType("decimal(18, 2)")
+                .HasComputedColumnSql("([QuantityRemaining] - [QuantityReserved])", stored: true);
+
+            entity.Property(e => e.IsActive)
+        .HasDefaultValue(true)  
+        .IsRequired();
+
+            // ====== Quan hệ Ingredient - InventoryBatch ======
+            entity.HasOne(d => d.Ingredient)
+                .WithMany(p => p.InventoryBatches)
                 .HasForeignKey(d => d.IngredientId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Inventory__Ingre__2645B050");
 
-            entity.HasOne(d => d.PurchaseOrderDetail).WithMany(p => p.InventoryBatches)
+            // ====== Quan hệ PurchaseOrderDetail - InventoryBatch ======
+            entity.HasOne(d => d.PurchaseOrderDetail)
+                .WithMany(p => p.InventoryBatches)
                 .HasForeignKey(d => d.PurchaseOrderDetailId)
                 .HasConstraintName("FK__Inventory__Purch__2739D489");
+
+            // ====== Quan hệ Warehouse - InventoryBatch ======
+            entity.HasOne(d => d.Warehouse)
+                  .WithMany(w => w.InventoryBatches)
+                  .HasForeignKey(d => d.WarehouseId)
+                  .OnDelete(DeleteBehavior.Restrict)
+                  .HasConstraintName("FK_InventoryBatch_Warehouses");
+
         });
+
+
+        modelBuilder.Entity<Warehouse>(entity =>
+        {
+            entity.HasKey(e => e.WarehouseId).HasName("PK__Warehouse__ID");
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true);
+        });
+
 
         modelBuilder.Entity<KitchenTicket>(entity =>
         {
@@ -264,6 +358,12 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.TicketDetailId).HasName("PK__KitchenT__39BFBDE6C33E07F4");
 
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            entity.Property(e => e.StartedAt).HasColumnType("datetime");
+            entity.Property(e => e.CompletedAt).HasColumnType("datetime");
+
             entity.HasOne(d => d.OrderDetail).WithMany(p => p.KitchenTicketDetails)
                 .HasForeignKey(d => d.OrderDetailId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -272,6 +372,10 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasOne(d => d.Ticket).WithMany(p => p.KitchenTicketDetails)
                 .HasForeignKey(d => d.TicketId)
                 .HasConstraintName("FK__KitchenTi__Ticke__29221CFB");
+
+            entity.HasOne(d => d.AssignedUser).WithMany()
+                .HasForeignKey(d => d.AssignedUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<MarketingCampaign>(entity =>
@@ -318,9 +422,19 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.CourseType).HasMaxLength(20);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+            entity.Property(e => e.IsAds).HasDefaultValue(false);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.TimeCook).HasColumnType("int");
+            entity.Property(e => e.BatchSize).HasColumnType("int").HasDefaultValue(1);
+            
+            // NEW: Configure BillingType enum
+            // Use C# property initializer instead of database default to avoid sentinel ambiguity
+            entity.Property(e => e.BillingType)
+                .HasConversion<int>() // Store as int in database
+                .IsRequired();
+            
             entity.HasOne(d => d.Category).WithMany(p => p.MenuItems)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK__MenuItems__Categ__2BFE89A6");
@@ -332,6 +446,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ConfirmedAt)
                 .HasColumnType("datetime");
             entity.Property(e => e.OrderType).HasMaxLength(20);
             entity.Property(e => e.Status)
@@ -348,6 +464,33 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasOne(d => d.Reservation).WithMany(p => p.Orders)
                 .HasForeignKey(d => d.ReservationId)
                 .HasConstraintName("FK__Orders__Reservat__2FCF1A8A");
+
+            entity.HasOne(d => d.ConfirmedByStaff).WithMany(p => p.ConfirmedOrders)
+                .HasForeignKey(d => d.ConfirmedByStaffId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<OrderHistory>(entity =>
+        {
+            entity.HasKey(e => e.OrderHistoryId);
+
+            entity.Property(e => e.Action)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Reason)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.OrderHistories)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.OrderHistories)
+                .HasForeignKey(d => d.StaffId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<OrderDetail>(entity =>
@@ -358,6 +501,18 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasMaxLength(20)
                 .HasDefaultValue("Pending");
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.IsUrgent).HasDefaultValue(false);
+            entity.Property(e => e.ReadyAt).HasColumnType("datetime");
+            entity.Property(e => e.StartedAt).HasColumnType("datetime");
+            
+            // NEW: Configure QuantityUsed (nullable - only set when customer confirms)
+            entity.Property(e => e.QuantityUsed)
+                .HasDefaultValue(null)
+                .IsRequired(false);
 
             entity.HasOne(d => d.MenuItem).WithMany(p => p.OrderDetails)
                 .HasForeignKey(d => d.MenuItemId)
@@ -367,6 +522,52 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.OrderDetails)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("FK__OrderDeta__Order__2DE6D218");
+
+            entity.HasOne(od => od.Combo)
+                .WithMany(c => c.OrderDetails)
+                .HasForeignKey(od => od.ComboId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrderComboItem>(entity =>
+        {
+            entity.HasKey(e => e.OrderComboItemId).HasName("PK__OrderComboItem__OrderComboItemId");
+
+            entity.ToTable("OrderComboItems");
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            
+            entity.Property(e => e.Quantity)
+                .HasDefaultValue(1)
+                .IsRequired();
+            
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("(getdate())");
+            
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            
+            entity.Property(e => e.IsUrgent).HasDefaultValue(false);
+            
+            entity.Property(e => e.StartedAt).HasColumnType("datetime");
+            
+            entity.Property(e => e.ReadyAt).HasColumnType("datetime");
+
+            // Foreign key to OrderDetail
+            entity.HasOne(d => d.OrderDetail)
+                .WithMany(od => od.OrderComboItems)
+                .HasForeignKey(d => d.OrderDetailId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__OrderComboItem__OrderDetail__OrderDetailId");
+
+            // Foreign key to MenuItem
+            entity.HasOne(d => d.MenuItem)
+                .WithMany()
+                .HasForeignKey(d => d.MenuItemId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__OrderComboItem__MenuItem__MenuItemId");
         });
 
         modelBuilder.Entity<Payment>(entity =>
@@ -453,9 +654,159 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasIndex(e => e.OrderId)
                 .HasDatabaseName("IX_Transactions_OrderId");
 
+            // New columns for Payment Flow
+            entity.Property(e => e.AmountReceived)
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.RefundAmount)
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.GatewayReference)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.GatewayErrorCode)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.GatewayErrorMessage)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.RetryCount)
+                .HasDefaultValue(0)
+                .IsRequired();
+
+            entity.Property(e => e.LastRetryAt)
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.ParentTransactionId);
+
+            entity.Property(e => e.IsManualConfirmed)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.Property(e => e.ConfirmedByUserId);
+
+            // Self-referencing relationship for Split Bill
+            entity.HasOne(d => d.ParentTransaction)
+                .WithMany(p => p.ChildTransactions)
+                .HasForeignKey(d => d.ParentTransactionId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__Transactions__ParentTransactionId");
+
+            // Relationship: Transaction -> User (ConfirmedBy)
+            entity.HasOne(d => d.ConfirmedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.ConfirmedByUserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__Transactions__ConfirmedByUserId");
+
             // Index cho Status
             entity.HasIndex(e => e.Status)
                 .HasDatabaseName("IX_Transactions_Status");
+        });
+
+        // Configure AuditLog entity
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.AuditLogId).HasName("PK__AuditLogs__AuditLogId");
+
+            entity.ToTable("AuditLogs");
+
+            entity.Property(e => e.EventType)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(e => e.EntityType)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(e => e.EntityId)
+                .IsRequired();
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(1000);
+
+            entity.Property(e => e.Metadata)
+                .HasColumnType("nvarchar(max)");
+
+            entity.Property(e => e.IpAddress)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            // Relationship: AuditLog -> User
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__AuditLogs__UserId");
+
+            // Indexes
+            entity.HasIndex(e => e.EventType)
+                .HasDatabaseName("IX_AuditLogs_EventType");
+
+            entity.HasIndex(e => new { e.EntityType, e.EntityId })
+                .HasDatabaseName("IX_AuditLogs_EntityType_EntityId");
+
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_AuditLogs_CreatedAt");
+
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("IX_AuditLogs_UserId");
+        });
+
+        // Configure OrderLock entity
+        modelBuilder.Entity<OrderLock>(entity =>
+        {
+            entity.HasKey(e => e.OrderLockId).HasName("PK__OrderLocks__OrderLockId");
+
+            entity.ToTable("OrderLocks");
+
+            entity.Property(e => e.OrderId)
+                .IsRequired();
+
+            entity.Property(e => e.LockedByUserId)
+                .IsRequired();
+
+            entity.Property(e => e.SessionId)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Reason)
+                .HasMaxLength(500)
+                .HasDefaultValue("Payment in progress")
+                .IsRequired();
+
+            entity.Property(e => e.LockedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            entity.Property(e => e.ExpiresAt)
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            // Relationship: OrderLock -> Order
+            entity.HasOne(d => d.Order)
+                .WithMany(p => p.OrderLocks)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK__OrderLocks__OrderId");
+
+            // Relationship: OrderLock -> User
+            entity.HasOne(d => d.LockedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.LockedByUserId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK__OrderLocks__LockedByUserId");
+
+            // Indexes
+            entity.HasIndex(e => e.OrderId)
+                .HasDatabaseName("IX_OrderLocks_OrderId");
+
+            entity.HasIndex(e => e.ExpiresAt)
+                .HasDatabaseName("IX_OrderLocks_ExpiresAt");
         });
 
         modelBuilder.Entity<Payroll>(entity =>
@@ -486,9 +837,20 @@ public partial class SapaFoRestRmsContext : DbContext
         {
             entity.HasKey(e => e.PurchaseOrderId).HasName("PK__Purchase__036BACA49E3BAAAB");
 
+            // Cấu hình PurchaseOrderId là string và không tự động tạo
+            entity.Property(e => e.PurchaseOrderId)
+                .HasMaxLength(50) // Hoặc độ dài phù hợp
+                .ValueGeneratedNever(); // Không tự động tạo giá trị
+
             entity.Property(e => e.OrderDate)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
+
+            entity.Property(e => e.TimeConfirm)
+            .HasColumnType("datetime")
+            .HasDefaultValue(null);
+
+
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Pending");
@@ -497,24 +859,74 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasForeignKey(d => d.SupplierId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PurchaseO__Suppl__3587F3E0");
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.IdCreator)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PurchaseOrders_Users_Creator");
+            entity.HasOne(d => d.Confirmer)
+                .WithMany()
+                .HasForeignKey(d => d.IdConfirm)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_PurchaseOrders_Users_Confirmer");
+            entity.Property(e => e.UrlImg)
+                .HasMaxLength(500);
         });
 
         modelBuilder.Entity<PurchaseOrderDetail>(entity =>
         {
-            entity.HasKey(e => e.PurchaseOrderDetailId).HasName("PK__Purchase__5026B698B2854271");
+            // 🔑 Khóa chính
+            entity.HasKey(e => e.PurchaseOrderDetailId);
 
-            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PurchaseOrderDetailId)
+                  .ValueGeneratedOnAdd();
 
-            entity.HasOne(d => d.Ingredient).WithMany(p => p.PurchaseOrderDetails)
-                .HasForeignKey(d => d.IngredientId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PurchaseO__Ingre__339FAB6E");
+            // 🔗 FK đến PurchaseOrder
+            entity.Property(e => e.PurchaseOrderId)
+                  .HasMaxLength(50)
+                  .IsRequired();
 
-            entity.HasOne(d => d.PurchaseOrder).WithMany(p => p.PurchaseOrderDetails)
-                .HasForeignKey(d => d.PurchaseOrderId)
-                .HasConstraintName("FK__PurchaseO__Purch__3493CFA7");
+            // 🧾 Thông tin snapshot nguyên liệu
+            entity.Property(e => e.IngredientCode)
+                  .HasMaxLength(50);
+            entity.Property(e => e.IngredientName)
+                  .HasMaxLength(255);
+            entity.Property(e => e.Unit)
+                  .HasMaxLength(50);
+            entity.Property(e => e.WarehouseName)
+          .HasMaxLength(200);
+
+            // 💰 Giá trị số
+            entity.Property(e => e.Quantity)
+                  .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UnitPrice)
+                  .HasColumnType("decimal(15, 2)");
+            entity.Property(e => e.Subtotal)
+                  .HasColumnType("decimal(15, 2)");
+
+            // 🔗 Quan hệ với PurchaseOrder
+            entity.HasOne(d => d.PurchaseOrder)
+                  .WithMany(p => p.PurchaseOrderDetails)
+                  .HasForeignKey(d => d.PurchaseOrderId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_PurchaseOrderDetails_PurchaseOrders");
+
+            // 🔗 Quan hệ với Ingredient (nullable)
+            entity.HasOne(d => d.Ingredient)
+                  .WithMany(p => p.PurchaseOrderDetails)
+                  .HasForeignKey(d => d.IngredientId)
+                  .OnDelete(DeleteBehavior.SetNull)
+                  .HasConstraintName("FK_PurchaseOrderDetails_Ingredients");
+            entity.Property(e => e.ExpiryDate)
+    .HasConversion(
+        v => v.HasValue ? v.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+        v => v.HasValue ? DateOnly.FromDateTime(v.Value) : (DateOnly?)null
+    )
+    .HasColumnType("date");
+    
         });
+
+
 
         modelBuilder.Entity<Recipe>(entity =>
         {
@@ -631,18 +1043,20 @@ public partial class SapaFoRestRmsContext : DbContext
                 .HasColumnType("decimal(18, 2)");
         });
 
-        modelBuilder.Entity<Shift>(entity =>
+        modelBuilder.Entity<Unit>(entity =>
         {
-            entity.HasKey(e => e.ShiftId).HasName("PK__Shifts__C0A83881495D0B69");
+            entity.HasKey(e => e.UnitId);
 
-            entity.Property(e => e.EndTime).HasColumnType("datetime");
-            entity.Property(e => e.StartTime).HasColumnType("datetime");
+            entity.Property(e => e.UnitName)
+                  .HasMaxLength(50)
+                  .IsRequired();
 
-            entity.HasOne(d => d.Staff).WithMany(p => p.Shifts)
-                .HasForeignKey(d => d.StaffId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Shifts__StaffId__3D2915A8");
+            entity.Property(e => e.UnitType)
+                  .IsRequired();
         });
+
+
+     
 
         modelBuilder.Entity<Staff>(entity =>
         {
@@ -661,6 +1075,74 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.HasKey(e => e.PositionId).HasName("PK__Position__60BB9D7D");
             entity.Property(e => e.PositionName).HasMaxLength(100);
             entity.Property(e => e.Status).HasDefaultValue(0);
+            entity.Property(e => e.BaseSalary)
+                .HasDefaultValue(0m)
+                .HasColumnType("decimal(18, 2)");
+        });
+
+        modelBuilder.Entity<SalaryChangeRequest>(entity =>
+        {
+            entity.HasKey(e => e.RequestId).HasName("PK__SalaryChangeRequest__RequestId");
+
+            entity.ToTable("SalaryChangeRequests");
+
+            entity.Property(e => e.CurrentBaseSalary)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.ProposedBaseSalary)
+                .HasColumnType("decimal(18, 2)")
+                .IsRequired();
+
+            entity.Property(e => e.Reason)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending")
+                .IsRequired();
+
+            entity.Property(e => e.OwnerNotes)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime")
+                .IsRequired();
+
+            entity.Property(e => e.ReviewedAt)
+                .HasColumnType("datetime");
+
+            // Relationship: SalaryChangeRequest -> Position (Many-to-One)
+            entity.HasOne(d => d.Position)
+                .WithMany(p => p.SalaryChangeRequests)
+                .HasForeignKey(d => d.PositionId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__Position");
+
+            // Relationship: SalaryChangeRequest -> User (RequestedBy) (Many-to-One)
+            entity.HasOne(d => d.RequestedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.RequestedBy)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__RequestedBy");
+
+            // Relationship: SalaryChangeRequest -> User (ApprovedBy) (Many-to-One, nullable)
+            entity.HasOne(d => d.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(d => d.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__SalaryChangeRequest__ApprovedBy");
+
+            // Indexes
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("IX_SalaryChangeRequests_Status");
+
+            entity.HasIndex(e => e.PositionId)
+                .HasDatabaseName("IX_SalaryChangeRequests_PositionId");
+
+            entity.HasIndex(e => e.RequestedBy)
+                .HasDatabaseName("IX_SalaryChangeRequests_RequestedBy");
         });
 
         modelBuilder.Entity<Staff>()
@@ -716,7 +1198,140 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.CodeSupplier).HasMaxLength(50);
         });
+
+        // Cấu hình AuditInventory
+        modelBuilder.Entity<AuditInventory>(entity =>
+        {
+            entity.HasKey(e => e.AuditId)
+                .HasName("PK__AuditInventory__AuditId");
+
+            entity.ToTable("AuditInventory");
+
+            entity.Property(e => e.AuditId)
+        .IsRequired()
+        .HasMaxLength(50)
+        .ValueGeneratedNever();
+
+            entity.Property(e => e.BatchId)
+    .IsRequired();
+
+            entity.Property(e => e.PurchaseOrderId)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.IngredientCode)
+                .IsRequired()
+                .HasMaxLength(50);
+
+
+            entity.Property(e => e.ingredientName)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            
+            entity.Property(e => e.unit)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.OriginalQuantity)
+                .IsRequired()
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.ExpiryDate)
+                .HasConversion(
+                    v => v.HasValue ? v.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
+                    v => v.HasValue ? DateOnly.FromDateTime(v.Value) : (DateOnly?)null
+                )
+                .HasColumnType("date");
+
+            // Thông tin người tạo
+            entity.Property(e => e.CreatorId)
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .IsRequired()
+                .HasDefaultValueSql("(getdate())")
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.CreatorName)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.CreatorPosition)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.CreatorPhone)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.Reason)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(e => e.AdjustmentQuantity)
+                .IsRequired()
+                .HasColumnType("decimal(18, 2)");
+
+            entity.Property(e => e.IsAddition)
+                .IsRequired();
+
+            entity.Property(e => e.IngredientStatus)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.AuditStatus)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(e => e.ImagePath)
+                .HasMaxLength(500);
+
+            // Thông tin người xác nhận (nullable)
+            entity.Property(e => e.ConfirmedAt)
+                .HasColumnType("datetime");
+
+            entity.Property(e => e.ConfirmerName)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ConfirmerPosition)
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ConfirmerPhone)
+                .HasMaxLength(20);
+
+            // Relationships
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.CreatorId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__AuditInventory__CreatorId");
+
+            entity.HasOne(d => d.Confirmer)
+                .WithMany()
+                .HasForeignKey(d => d.ConfirmerId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK__AuditInventory__ConfirmerId");
+
+            // Indexes
+            entity.HasIndex(e => e.PurchaseOrderId)
+                .HasDatabaseName("IX_AuditInventory_PurchaseOrderId");
+
+            entity.HasIndex(e => e.IngredientCode)
+                .HasDatabaseName("IX_AuditInventory_IngredientCode");
+
+            entity.HasIndex(e => e.AuditStatus)
+                .HasDatabaseName("IX_AuditInventory_AuditStatus");
+
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_AuditInventory_CreatedAt");
+
+            entity.HasIndex(e => e.CreatorId)
+                .HasDatabaseName("IX_AuditInventory_CreatorId");
+        });
+
+
 
         modelBuilder.Entity<SystemLogo>(entity =>
         {
@@ -758,6 +1373,7 @@ public partial class SapaFoRestRmsContext : DbContext
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.PasswordHash).HasMaxLength(200);
             entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.AvatarUrl).HasMaxLength(500);
             entity.Property(e => e.Status).HasDefaultValue(0);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
 
@@ -804,6 +1420,8 @@ public partial class SapaFoRestRmsContext : DbContext
 
         OnModelCreatingPartial(modelBuilder);
     }
+
+
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

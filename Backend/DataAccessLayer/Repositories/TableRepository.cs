@@ -47,6 +47,16 @@ namespace DataAccessLayer.Repositories
         .Take(pageSize)
         .ToListAsync();
 }
+        public async Task<bool> IsDuplicateTableNumberAsync(string tableNumber, int areaId, int? excludeTableId = null)
+        {
+            var query = _context.Tables
+                .Where(t => t.TableNumber == tableNumber && t.AreaId == areaId);
+
+            if (excludeTableId.HasValue)
+                query = query.Where(t => t.TableId != excludeTableId.Value);
+
+            return await query.AnyAsync();
+        }
 
 
         public async Task<int> GetCountAsync(string? search, int? capacity, int? areaId)
@@ -96,6 +106,18 @@ namespace DataAccessLayer.Repositories
                     rt.TableId == tableId &&
                     rt.Reservation.Status != "Cancelled");
         }
+
+        /// <summary>
+        /// Get all tables associated with an order (via Reservation)
+        /// </summary>
+        public async Task<List<Table>> GetTablesByOrderIdAsync(int orderId)
+        {
+            return await _context.Tables
+                .Where(t => t.ReservationTables.Any(rt =>
+                    rt.Reservation.Orders.Any(o => o.OrderId == orderId)))
+                .ToListAsync();
+        }
+
         public async Task SaveAsync()
         {
             await _context.SaveChangesAsync();

@@ -1,0 +1,97 @@
+﻿/* === RỪNG XANH SAPA – MODAL CHỈNH SỬA ĐẶT BÀN === */
+
+#editModal .modal-dialog {
+    max-width: 520px;
+    margin: auto;
+}
+
+/* Nền modal — FIX không bị trong suốt */
+#editModal .modal-content,
+.edit-modal-content {
+    background: linear-gradient(145deg, #1b5e20 0%, #33691e 60%, #0d2b12 100%) !important;
+    border-radius: 20px !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+}
+
+/* Header */
+.edit-modal-header {
+    background: rgba(255, 255, 255, 0.12);
+    border-bottom: none;
+    padding: 1.3rem 1.6rem;
+}
+
+.edit-modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.45rem;
+    color: #ffeb3b;
+    font-weight: 700;
+}
+
+.edit-close-btn {
+    filter: brightness(200%);
+    opacity: 0.9;
+}
+
+/* Body */
+.edit-modal-body {
+    padding: 1.4rem 1.6rem;
+}
+
+/* Input styling */
+.edit-input {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(255,255,255,0.45);
+    color: #2c2c2c;
+    border-radius: 12px;
+    padding: 0.65rem 0.8rem;
+    font-weight: 500;
+}
+
+    .edit-input:focus {
+        border-color: #ffeb3b;
+        box-shadow: 0 0 0 0.18rem rgba(255,235,59,0.35);
+    }
+
+/* Textarea */
+.edit-textarea {
+    resize: none;
+    height: 90px;
+}
+
+/* Footer */
+.edit-modal-footer {
+    background: rgba(0,0,0,0.15);
+    border-top: none;
+    padding: 1rem 1.6rem 1.3rem;
+}
+
+/* Buttons */
+.edit-btn-cancel {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: none;
+}
+
+.edit-btn-save {
+    background: linear-gradient(135deg, #ffca28, #ffb300);
+    border: none;
+    color: #4e342e;
+    font-weight: 700;
+    padding: 0.6rem 1.4rem;
+    border-radius: 999px;
+    box-shadow: 0 12px 26px rgba(0,0,0,0.4);
+}
+
+    .edit-btn-save:hover {
+        transform: translateY(-2px);
+    }
+
+/* Mobile */
+@media (max-width: 576px) {
+    #editModal .modal-dialog {
+        margin: 1rem;
+    }
+}

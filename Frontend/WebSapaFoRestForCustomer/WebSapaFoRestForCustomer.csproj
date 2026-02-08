@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Views\Reservation\" />
+    <Folder Include="Views\Auth\" />
   </ItemGroup>
 
 </Project>

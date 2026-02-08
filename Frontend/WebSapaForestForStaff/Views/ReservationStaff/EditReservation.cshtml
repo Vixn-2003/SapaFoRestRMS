@@ -1,0 +1,48 @@
+﻿@model WebSapaForestForStaff.DTOs.ReservationUpdateViewModel
+@{
+    Layout = "_LayoutManager";
+}
+<div class=" mt-4">
+    <h3>✏️ Cập nhật đơn đặt bàn</h3>
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+    <form asp-action="UpdateReservationPost" method="post">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" name="ReservationId" value="@Model.ReservationId" />
+
+        <div class="mb-3">
+            <label class="form-label">Ngày đặt bàn</label>
+            <input type="date" class="form-control" asp-for="ReservationDate" />
+            <span asp-validation-for="ReservationDate" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Giờ đến</label>
+            <input type="time" class="form-control" asp-for="ReservationTime" />
+            <span asp-validation-for="ReservationTime" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Số lượng người</label>
+            <input type="number" class="form-control" asp-for="NumberOfGuests" />
+            <span asp-validation-for="NumberOfGuests" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Ghi chú</label>
+            <textarea class="form-control" asp-for="Notes"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">💾 Lưu thay đổi</button>
+        <a href="@Url.Action("Index")" class="btn btn-secondary">⬅ Quay lại</a>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

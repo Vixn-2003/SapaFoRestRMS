@@ -1,0 +1,198 @@
+@{
+    ViewData["Title"] = "Quản lý Nhân viên";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+@* Anti-forgery token for AJAX calls *@
+@Html.AntiForgeryToken()
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="row align-items-center">
+        <div class="col">
+            <h3 class="page-title">Quản lý thông tin Nhân viên</h3>
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Quản lý Nhân viên</li>
+            </ul>
+        </div>
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Thêm nhân viên mới
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="searchKeyword">Tìm kiếm</label>
+                    <input type="text" 
+                           id="searchKeyword" 
+                           class="form-control" 
+                           placeholder="Tên, số điện thoại, email..."
+                           autocomplete="off">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="positionFilter">Chức vụ</label>
+                    <select id="positionFilter" class="form-control">
+                        <option value="">Tất cả</option>
+                        @{
+                            var positions = ViewBag.AvailablePositions as List<WebSapaForestForStaff.DTOs.Staff.PositionDto> 
+                                           ?? new List<WebSapaForestForStaff.DTOs.Staff.PositionDto>();
+                        }
+                        @foreach (var p in positions)
+                        {
+                            // Backend filter currently expects position name string
+                            <option value="@p.PositionName">@p.PositionName</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="statusFilter">Trạng thái</label>
+                    <select id="statusFilter" class="form-control">
+                        <option value="">Tất cả</option>
+                        <option value="0">Đang hoạt động</option>
+                        <option value="1">Ngừng hoạt động</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="sortBy">Sắp xếp theo</label>
+                    <select id="sortBy" class="form-control">
+                        <option value="HireDate">Ngày vào làm</option>
+                        <option value="FullName">Tên</option>
+                        <option value="BaseSalary">Lương</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label for="sortDirection">Thứ tự</label>
+                    <select id="sortDirection" class="form-control">
+                        <option value="desc">Giảm dần</option>
+                        <option value="asc">Tăng dần</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="button" 
+                            id="filterBtn" 
+                            class="btn btn-primary btn-block"
+                            title="Tìm kiếm">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Staff Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-center mb-0">
+                <thead>
+                    <tr>
+                        <th>Ảnh đại diện</th>
+                        <th>Tên</th>
+                        <th>Số điện thoại</th>
+                        <th>Email</th>
+                        <th>Chức vụ</th>
+                        <th>Lương cơ bản</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày vào làm</th>
+                        <th class="text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="staffTableBody">
+                    <!-- Data loaded via JavaScript -->
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Đang tải...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Đang tải danh sách nhân viên...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="dataTables_info" id="staffTableInfo">
+                    Hiển thị 0 đến 0 trong tổng số 0 bản ghi
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="dataTables_paginate paging_simple_numbers float-right">
+                    <ul class="pagination" id="staffPagination">
+                        <!-- Pagination generated by JavaScript -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deactivate Modal -->
+<div class="modal fade" id="deactivateModal" tabindex="-1" aria-labelledby="deactivateModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deactivateModalLabel">Ngừng hoạt động nhân viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bạn có chắc chắn muốn ngừng hoạt động nhân viên này?</p>
+                <p><strong>Tên:</strong> <span id="deactivateStaffName"></span></p>
+                <div class="form-group">
+                    <label for="deactivateReason">Lý do (tùy chọn)</label>
+                    <textarea id="deactivateReason" 
+                              class="form-control" 
+                              rows="3" 
+                              placeholder="Nhập lý do ngừng hoạt động..."
+                              maxlength="500"></textarea>
+                    <small class="form-text text-muted">Tối đa 500 ký tự</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger">Ngừng hoạt động</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/staff-management.js"></script>
+    <script>
+        // Show success/error messages from TempData
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <text>
+            toastr.success('@Html.Raw(TempData["SuccessMessage"])');
+            </text>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+            toastr.error('@Html.Raw(TempData["ErrorMessage"])');
+            </text>
+        }
+    </script>
+}

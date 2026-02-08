@@ -1,0 +1,368 @@
+@{
+    ViewData["Title"] = "Kiểm kê mệnh giá - Mở ca";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    var shiftId = ViewData["ShiftId"];
+    var openingBalance = ViewData["OpeningBalance"];
+}
+
+<style>
+    .denominations-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 24px;
+    }
+
+    .step-header {
+        background: linear-gradient(135deg, #10b981, #14a58c);
+        border-radius: 18px;
+        padding: 24px;
+        color: white;
+        margin-bottom: 32px;
+        box-shadow: 0 12px 30px rgba(16, 185, 129, 0.2);
+    }
+
+    .denomination-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 20px;
+        background: #f9fafb;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        transition: all 0.2s;
+    }
+
+    .denomination-row:hover {
+        background: #f0fdf4;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+    }
+
+    .currency-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .currency-label {
+        flex: 1;
+        font-weight: 600;
+        color: #374151;
+        font-size: 18px;
+    }
+
+    .count-input {
+        width: 120px;
+        text-align: center;
+        font-size: 18px;
+        font-weight: 600;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        padding: 8px;
+    }
+
+    .count-input:focus {
+        border-color: #10b981;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .amount-display {
+        min-width: 180px;
+        text-align: right;
+        font-weight: 700;
+        color: #10b981;
+        font-size: 20px;
+    }
+
+    .total-card {
+        background: linear-gradient(135deg, #0f8b83, #14a58c);
+        color: white;
+        border-radius: 16px;
+        padding: 24px;
+        margin: 24px 0;
+        box-shadow: 0 8px 24px rgba(15, 139, 131, 0.25);
+    }
+
+    .total-amount {
+        font-size: 32px;
+        font-weight: 800;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+</style>
+
+<div class="denominations-container">
+    <!-- Step Header -->
+    <div class="step-header">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-cash-stack fs-1 me-3"></i>
+            <div>
+                <h3 class="mb-1">Kiểm kê mệnh giá tiền</h3>
+                <p class="mb-0 opacity-90">Bước 2/3: Nhập số lượng từng mệnh giá</p>
+            </div>
+        </div>
+        <div class="progress mt-3" style="height: 6px;">
+            <div class="progress-bar" role="progressbar" style="width: 66%; background-color: white;"></div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Hướng dẫn:</strong> Nhập số lượng tờ tiền cho từng mệnh giá. Tổng số tiền phải khớp với số dư đầu ca đã khai báo: <strong>@Convert.ToDecimal(openingBalance).ToString("N0") ₫</strong>
+        </div>
+
+        <form id="denominationsForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="shiftId" value="@shiftId" />
+            <input type="hidden" id="expectedAmount" value="@openingBalance" />
+
+            <!-- Vietnamese Denominations -->
+            <div class="denomination-row">
+                <div class="currency-icon">500K</div>
+                <div class="currency-label">500,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="500000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="500000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">200K</div>
+                <div class="currency-label">200,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="200000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="200000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">100K</div>
+                <div class="currency-label">100,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="100000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="100000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">50K</div>
+                <div class="currency-label">50,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="50000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="50000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">20K</div>
+                <div class="currency-label">20,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="20000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="20000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">10K</div>
+                <div class="currency-label">10,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="10000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="10000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">5K</div>
+                <div class="currency-label">5,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="5000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="5000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">2K</div>
+                <div class="currency-label">2,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="2000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="2000">0 ₫</div>
+            </div>
+
+            <div class="denomination-row">
+                <div class="currency-icon">1K</div>
+                <div class="currency-label">1,000 ₫</div>
+                <input type="number" class="form-control count-input" data-denomination="1000" min="0" value="0" onchange="updateTotal()">
+                <div class="amount-display" data-amount="1000">0 ₫</div>
+            </div>
+
+            <!-- Total Summary -->
+            <div class="total-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="mb-2">Tổng số tiền kiểm kê:</div>
+                        <div class="total-amount" id="totalAmount">0 ₫</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="mb-2">Số dư khai báo:</div>
+                        <div class="fs-4 fw-bold">@Convert.ToDecimal(openingBalance).ToString("N0") ₫</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match/Mismatch Alerts -->
+            <div class="alert alert-success d-none" id="matchAlert">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong>Khớp!</strong> Tổng mệnh giá khớp với số dư đầu ca.
+            </div>
+
+            <div class="alert alert-warning d-none" id="mismatchAlert">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Chưa khớp!</strong> Tổng mệnh giá (<span id="calculatedTotal">0</span> ₫) 
+                chưa khớp với số dư đầu ca (@Convert.ToDecimal(openingBalance).ToString("N0") ₫). 
+                Chênh lệch: <span id="differenceAmount">0</span> ₫
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-3 mt-4">
+                <a asp-action="Opening" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Quay lại
+                </a>
+                <button type="button" onclick="submitDenominations()" class="btn btn-success btn-lg flex-grow-1" id="submitBtn" disabled>
+                    <i class="bi bi-arrow-right me-2"></i>Tiếp theo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const shiftId = parseInt(document.getElementById('shiftId').value);
+        const expectedAmount = parseFloat(document.getElementById('expectedAmount').value);
+
+        function formatCurrency(amount) {
+            return amount.toLocaleString('vi-VN') + ' ₫';
+        }
+
+        function updateTotal() {
+            let total = 0;
+            
+            document.querySelectorAll('.count-input').forEach(input => {
+                const denom = parseInt(input.dataset.denomination);
+                const count = parseInt(input.value) || 0;
+                const amount = denom * count;
+                total += amount;
+                
+                // Update row total
+                const amountDisplay = input.parentElement.querySelector('.amount-display');
+                amountDisplay.textContent = formatCurrency(amount);
+            });
+            
+            // Update total display
+            document.getElementById('totalAmount').textContent = formatCurrency(total);
+            document.getElementById('calculatedTotal').textContent = formatCurrency(total);
+            
+            // Calculate difference
+            const difference = total - expectedAmount;
+            document.getElementById('differenceAmount').textContent = formatCurrency(Math.abs(difference));
+            
+            // Show match/mismatch alert
+            const matchAlert = document.getElementById('matchAlert');
+            const mismatchAlert = document.getElementById('mismatchAlert');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (Math.abs(difference) < 1) {
+                matchAlert.classList.remove('d-none');
+                mismatchAlert.classList.add('d-none');
+                submitBtn.disabled = false;
+            } else {
+                matchAlert.classList.add('d-none');
+                mismatchAlert.classList.remove('d-none');
+                submitBtn.disabled = true;
+            }
+        }
+
+        async function submitDenominations() {
+            const denominations = [];
+            let totalAmount = 0;
+            
+            document.querySelectorAll('.count-input').forEach(input => {
+                const denom = parseInt(input.dataset.denomination);
+                const count = parseInt(input.value) || 0;
+                
+                if (count > 0) {
+                    denominations.push({
+                        denomination: denom,
+                        count: count
+                    });
+                    totalAmount += denom * count;
+                }
+            });
+            
+            if (denominations.length === 0) {
+                showToast('Vui lòng nhập ít nhất một mệnh giá', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/shift-management/opening/denominations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({
+                        shiftId: shiftId,
+                        denominations: denominations
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = `/shift-management/opening/confirm/${shiftId}`;
+                } else {
+                    showToast(result.message || 'Lỗi khi lưu mệnh giá', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Lỗi kết nối. Vui lòng thử lại.', 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999;';
+                document.body.appendChild(container);
+            }
+
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation';
+
+            const toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 mb-2 show" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid ${icon} me-2"></i> ${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', toastHtml);
+
+            setTimeout(() => {
+                const toastElement = container.lastElementChild;
+                if (toastElement) {
+                    toastElement.classList.remove('show');
+                    setTimeout(() => toastElement.remove(), 300);
+                }
+            }, 3000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTotal();
+        });
+    </script>
+}
+

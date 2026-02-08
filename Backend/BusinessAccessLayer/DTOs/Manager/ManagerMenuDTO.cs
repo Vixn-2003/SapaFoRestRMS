@@ -1,4 +1,5 @@
-﻿using DomainAccessLayer.Models;
+﻿using DomainAccessLayer.Enums;
+using DomainAccessLayer.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,14 @@ namespace BusinessAccessLayer.DTOs.Manager
         public string CourseType { get; set; } = null!;
         public bool? IsAvailable { get; set; }
         public string? ImageUrl { get; set; }
+
+        public int? TimeCook { get; set; }
+        public int? BatchSize { get; set; }
+
+        public bool? IsAds { get; set; }
+
+        public ItemBillingType BillingType { get; set; } = ItemBillingType.KitchenPrepared;
+
 
         public ManagerCategoryDTO? Category { get; set; }
     }

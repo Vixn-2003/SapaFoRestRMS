@@ -2,6 +2,7 @@
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Dbcontext;
 using DomainAccessLayer.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace SapaFoRestRMSAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [AllowAnonymous]
     public class OrderTableController : ControllerBase
     {
         private readonly IOrderTableService _orderTableService;
@@ -67,9 +69,9 @@ namespace SapaFoRestRMSAPI.Controllers
         [HttpGet("reservation/{reservationId}")]
         public async Task<IActionResult> GetMenuForReservation(
             int reservationId,
-            [FromQuery] string status, 
-            [FromQuery] int? categoryId,      
-            [FromQuery] string? searchString) 
+            [FromQuery] string status,
+            [FromQuery] int? categoryId,
+            [FromQuery] string? searchString)
         {
             try
             {
@@ -84,7 +86,7 @@ namespace SapaFoRestRMSAPI.Controllers
         // GET: /api/OrderTable/floors
         // TRONG: SapaFoRestRMSAPI/Controllers/OrderTableController.cs
 
-        // === SỬA HÀM NÀY ===
+        // ===  ===
         [HttpGet("Filters/AreaNames")]
         public async Task<IActionResult> GetAreaNames()
         {
@@ -95,7 +97,7 @@ namespace SapaFoRestRMSAPI.Controllers
             return Ok(names);
         }
 
-        // === VÀ SỬA HÀM NÀY ===
+        // ===  ===
         [HttpGet("Filters/Floors")]
         public async Task<IActionResult> GetFloors()
         {
@@ -155,7 +157,7 @@ namespace SapaFoRestRMSAPI.Controllers
         [HttpGet("MenuOrder/{tableId}")]
         public async Task<IActionResult> GetMenuForTable(int tableId,
             [FromQuery] int? categoryId,
-    [FromQuery] string? searchString) 
+    [FromQuery] string? searchString)
         {
             try
             {
@@ -188,7 +190,7 @@ namespace SapaFoRestRMSAPI.Controllers
         }
         // === API MỚI: NHẬN GIỎ HÀNG (ORDER) ===
         [HttpPost("SubmitOrder")]
-        public async Task<IActionResult> SubmitOrder([FromBody] OrderSubmissionDto orderDto)
+        public async Task<IActionResult> SubmitOrder([FromBody] SubmitOrderRequest orderDto)
         {
             if (orderDto == null || orderDto.Items == null || !orderDto.Items.Any())
             {
@@ -197,20 +199,17 @@ namespace SapaFoRestRMSAPI.Controllers
 
             try
             {
-                // Gọi service
-                var createdOrder = await _orderTableService.SubmitOrderAsync(orderDto);
-
-                // Trả về 200 OK cùng thông tin order đã tạo
-                return Ok(createdOrder);
+                // Hàm service của bạn giờ đã khớp hoàn hảo
+                var result = await _orderTableService.SubmitOrderAsync(orderDto);
+                return Ok(result);
             }
             catch (Exception ex)
             {
-                // Báo lỗi 400 nếu có lỗi nghiệp vụ (ví dụ: bàn không hợp lệ)
                 return BadRequest(new { message = ex.Message });
             }
         }
 
-
+        //Hủy món ăn nhưng chỉ dc trong 2 phút sau khi đặt
         [HttpPost("CancelItem/{orderDetailId}")]
         public async Task<IActionResult> CancelOrderItem(int orderDetailId)
         {
@@ -218,6 +217,80 @@ namespace SapaFoRestRMSAPI.Controllers
             {
                 await _orderTableService.CancelOrderItemAsync(orderDetailId);
                 return Ok(new { message = "Đã hủy món thành công." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Gọi xử lý sự cố
+        [HttpPost("RequestAssistance")]
+        public async Task<IActionResult> RequestAssistance([FromBody] AssistanceRequestDto requestDto)
+        {
+            try
+            {
+                await _orderTableService.RequestAssistanceAsync(requestDto);
+                return Ok(new { message = "Đã gửi yêu cầu hỗ trợ. Vui lòng chờ trong giây lát!" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // Đặt hàm này gần các hàm GET khác
+
+        [HttpGet("ComboDetails/{comboId}")]
+        public async Task<IActionResult> GetComboDetails(int comboId)
+        {
+            try
+            {
+                // Chỉ cần gọi Service
+                var comboDetails = await _orderTableService.GetComboDetailsAsync(comboId);
+                return Ok(comboDetails);
+            }
+            catch (Exception ex)
+            {
+                // Nếu comboId không tìm thấy, Service sẽ throw Exception
+                // Chúng ta bắt lại và trả về 404 Not Found
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("MenuItemDetails/{menuItemId}")]
+        public async Task<IActionResult> GetMenuItemDetails(int menuItemId)
+        {
+            try
+            {
+                var details = await _orderTableService.GetMenuItemDetailsAsync(menuItemId);
+                return Ok(details);
+            }
+            catch (Exception ex)
+            {
+                // Nếu không tìm thấy, Service sẽ throw Exception
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        // [GET] Lấy danh sách yêu cầu (Có lọc Area, Phân trang)
+        // URL: api/Assistance/Pending?areaId=1&page=1
+        [HttpGet("Pending")]
+        public async Task<IActionResult> GetPending([FromQuery] string? sort, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        {
+            var result = await _orderTableService.GetStaffPendingRequestsAsync(sort, page, pageSize);
+            return Ok(result);
+        }
+
+        // [PUT] Hoàn thành yêu cầu
+        // URL: api/Assistance/{id}/Complete
+        [HttpPut("{id}/Complete")]
+        public async Task<IActionResult> CompleteRequest(int id)
+        {
+            try
+            {
+                await _orderTableService.CompleteAssistanceRequestAsync(id);
+                return Ok(new { message = "Đã xử lý xong!" });
             }
             catch (Exception ex)
             {

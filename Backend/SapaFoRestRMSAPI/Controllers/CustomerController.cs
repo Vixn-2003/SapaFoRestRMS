@@ -8,6 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Configuration;
+using BusinessAccessLayer.DTOs.Customers;
+using BusinessAccessLayer.Services.Interfaces;
+using BusinessAccessLayer.Services;
+using System.ComponentModel.DataAnnotations;
 namespace SapaFoRestRMSAPI.Controllers
 {
     [ApiController]
@@ -17,15 +21,36 @@ namespace SapaFoRestRMSAPI.Controllers
     {
         private readonly SapaFoRestRmsContext _context;
         private readonly IConfiguration _configuration;
+        private readonly ICustomerManagementService _customerManagementService;
+        private readonly OtpService _otpService;
+        private readonly IVerificationService _verificationService;
         private static Dictionary<string, OtpInfo> _otpCache = new();
+        private static Dictionary<string, ContactOtpInfo> _contactOtpCache = new();
 
-        public CustomerController(SapaFoRestRmsContext context, Microsoft.Extensions.Configuration.IConfiguration configuration)
+        public CustomerController(
+            SapaFoRestRmsContext context,
+            Microsoft.Extensions.Configuration.IConfiguration configuration,
+            ICustomerManagementService customerManagementService,
+            OtpService otpService,
+            IVerificationService verificationService)
         {
             _context = context;
             _configuration = configuration;
+            _customerManagementService = customerManagementService;
+            _otpService = otpService;
+            _verificationService = verificationService;
         }
 
         public class OtpInfo
+        {
+            public string OtpCode { get; set; } = string.Empty;
+            public DateTime Expired { get; set; }
+            public int DailyCount { get; set; }
+            public DateTime LastSent { get; set; }
+            public List<DateTime> Timestamps { get; set; } = new();
+        }
+
+        private class ContactOtpInfo
         {
             public string OtpCode { get; set; } = string.Empty;
             public DateTime Expired { get; set; }
@@ -119,6 +144,13 @@ namespace SapaFoRestRMSAPI.Controllers
             if (user == null || user.RoleId != 5)
                 return Unauthorized(new { message = "Tài khoản không hợp lệ" });
 
+            //  FIX: Không cho phép đăng nhập nếu tài khoản đã bị vô hiệu hóa (Status = 1 = Inactive)
+            if (user.Status == 1)
+            {
+                _otpCache.Remove(dto.Phone);
+                return Unauthorized(new { message = "Tài khoản này đang không còn hoạt động trên hệ thống. Vui lòng liên hệ quản trị viên để được kích hoạt lại." });
+            }
+
             _otpCache.Remove(dto.Phone);
 
             // Issue JWT token for Customer
@@ -162,59 +194,219 @@ namespace SapaFoRestRMSAPI.Controllers
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
             var userId = int.Parse(userIdClaim);
 
-            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId && u.IsDeleted == false, ct);
-            if (user == null) return NotFound();
-
             var customer = await _context.Customers.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == userId, ct);
+            if (customer == null) return NotFound(new { message = "Customer not found" });
 
-            return Ok(new
-            {
-                user.UserId,
-                user.FullName,
-                user.Email,
-                user.Phone,
-                user.Status,
-                CustomerId = customer?.CustomerId,
-                LoyaltyPoints = customer?.LoyaltyPoints ?? 0,
-                Notes = customer?.Notes
-            });
-        }
+            var profile = await _customerManagementService.GetCustomerProfileAsync(customer.CustomerId, ct);
+            if (profile == null) return NotFound(new { message = "Profile not found" });
 
-        public class UpdateProfileDto
-        {
-            public string FullName { get; set; } = string.Empty;
-            public string? Phone { get; set; }
-            public string? Notes { get; set; }
+            return Ok(profile);
         }
 
         [HttpPut("profile")]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto, CancellationToken ct)
+        public async Task<IActionResult> UpdateProfile([FromForm] CustomerProfileUpdateRequest request, CancellationToken ct)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             var userIdClaim = User.FindFirst("userId")?.Value;
             if (string.IsNullOrEmpty(userIdClaim)) return Unauthorized();
             var userId = int.Parse(userIdClaim);
 
+            var customer = await _context.Customers.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == userId, ct);
+            if (customer == null) return NotFound(new { message = "Customer not found" });
+
+            var updated = await _customerManagementService.UpdateCustomerProfileAsync(customer.CustomerId, request, ct);
+            if (updated == null) return StatusCode(500, new { message = "Failed to update profile" });
+
+            return Ok(updated);
+        }
+
+        // ====================== CHANGE EMAIL (OTP via Email) ======================
+        public class SendChangeEmailOtpRequest
+        {
+            [Required, EmailAddress, StringLength(100)]
+            public string Email { get; set; } = string.Empty;
+        }
+
+        public class VerifyChangeEmailOtpRequest
+        {
+            [Required, EmailAddress, StringLength(100)]
+            public string Email { get; set; } = string.Empty;
+
+            [Required, StringLength(10)]
+            public string Code { get; set; } = string.Empty;
+        }
+
+        [HttpPost("profile/change-email/send-otp")]
+        public async Task<IActionResult> SendChangeEmailOtp([FromBody] SendChangeEmailOtpRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var userIdClaim = User.FindFirst("userId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+
+            var newEmail = req.Email.Trim();
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId && u.IsDeleted == false, ct);
+            if (user == null) return NotFound(new { message = "User not found" });
+
+            if (string.Equals(user.Email, newEmail, StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Email mới trùng với email hiện tại." });
+
+            var exists = await _context.Users.AsNoTracking().AnyAsync(u => u.IsDeleted == false && u.UserId != userId && u.Email == newEmail, ct);
+            if (exists) return BadRequest(new { message = "Email này đã được sử dụng." });
+
+            // Bind code to this exact target email (avoid using a code to set a different email)
+            var purpose = $"ChangeEmail:{newEmail.ToLowerInvariant()}";
+            await _verificationService.InvalidateCodesAsync(userId, purpose, ct);
+            await _verificationService.GenerateAndSendCodeAsync(userId, newEmail, purpose, ttlMinutes: 10, ct);
+
+            return Ok(new { message = "Mã OTP đã được gửi đến email mới.", expireMinutes = 10 });
+        }
+
+        [HttpPost("profile/change-email/verify")]
+        public async Task<IActionResult> VerifyChangeEmailOtp([FromBody] VerifyChangeEmailOtpRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var userIdClaim = User.FindFirst("userId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+
+            var newEmail = req.Email.Trim();
+            var purpose = $"ChangeEmail:{newEmail.ToLowerInvariant()}";
+
+            var ok = await _verificationService.VerifyCodeAsync(userId, purpose, req.Code.Trim(), ct);
+            if (!ok) return BadRequest(new { message = "Mã OTP không đúng hoặc đã hết hạn." });
+
+            var exists = await _context.Users.AsNoTracking().AnyAsync(u => u.IsDeleted == false && u.UserId != userId && u.Email == newEmail, ct);
+            if (exists) return BadRequest(new { message = "Email này đã được sử dụng." });
+
             var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsDeleted == false, ct);
-            if (user == null) return NotFound();
+            if (user == null) return NotFound(new { message = "User not found" });
 
-            user.FullName = dto.FullName;
-            if (!string.IsNullOrWhiteSpace(dto.Phone)) user.Phone = dto.Phone;
+            user.Email = newEmail;
+            user.ModifiedAt = DateTime.UtcNow;
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync(ct);
 
-            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.UserId == userId, ct);
-            if (customer == null)
+            return Ok(new { message = "Xác thực OTP thành công. Email đã được cập nhật." });
+        }
+
+        // ====================== CHANGE PHONE (OTP via SMS) ======================
+        public class SendChangePhoneOtpRequest
+        {
+            [Required, Phone, StringLength(20)]
+            public string Phone { get; set; } = string.Empty;
+        }
+
+        public class VerifyChangePhoneOtpRequest
+        {
+            [Required, Phone, StringLength(20)]
+            public string Phone { get; set; } = string.Empty;
+
+            [Required, StringLength(10)]
+            public string Code { get; set; } = string.Empty;
+        }
+
+        [HttpPost("profile/change-phone/send-otp")]
+        public async Task<IActionResult> SendChangePhoneOtp([FromBody] SendChangePhoneOtpRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var userIdClaim = User.FindFirst("userId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+
+            var newPhone = req.Phone.Trim();
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId && u.IsDeleted == false, ct);
+            if (user == null) return NotFound(new { message = "User not found" });
+
+            if (string.Equals(user.Phone ?? string.Empty, newPhone, StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "Số điện thoại mới trùng với số hiện tại." });
+
+            var exists = await _context.Users.AsNoTracking().AnyAsync(u => u.IsDeleted == false && u.UserId != userId && u.Phone == newPhone, ct);
+            if (exists) return BadRequest(new { message = "Số điện thoại này đã được sử dụng." });
+
+            // Rate limit + store OTP per (userId + targetPhone)
+            var now = DateTime.Now;
+            var key = $"{userId}:phone:{newPhone}";
+            if (_contactOtpCache.TryGetValue(key, out var info))
             {
-                customer = new DomainAccessLayer.Models.Customer { UserId = userId, Notes = dto.Notes };
-                await _context.Customers.AddAsync(customer, ct);
+                if (info.LastSent.Date != now.Date)
+                {
+                    info.DailyCount = 0;
+                    info.LastSent = now;
+                    info.Timestamps.Clear();
+                }
+
+                info.Timestamps = info.Timestamps.Where(t => (now - t).TotalMinutes < 10).ToList();
+                if (info.Timestamps.Count >= 2)
+                    return BadRequest(new { message = "Bạn đã gửi OTP quá 2 lần trong 10 phút, vui lòng thử lại sau." });
+                if (info.DailyCount >= 3)
+                    return BadRequest(new { message = "Bạn đã gửi OTP quá 3 lần trong ngày, vui lòng thử lại vào ngày mai." });
+            }
+
+            var otp = new Random().Next(100000, 999999).ToString();
+            var expired = now.AddMinutes(5);
+
+            var sent = await _otpService.SendOtpAsync(newPhone, otp);
+            if (!sent) return BadRequest(new { message = "Không thể gửi OTP, vui lòng thử lại." });
+
+            if (!_contactOtpCache.ContainsKey(key))
+            {
+                _contactOtpCache[key] = new ContactOtpInfo
+                {
+                    OtpCode = otp,
+                    Expired = expired,
+                    DailyCount = 1,
+                    LastSent = now,
+                    Timestamps = new List<DateTime> { now }
+                };
             }
             else
             {
-                customer.Notes = dto.Notes;
-                _context.Customers.Update(customer);
+                var x = _contactOtpCache[key];
+                x.OtpCode = otp;
+                x.Expired = expired;
+                x.DailyCount++;
+                x.LastSent = now;
+                x.Timestamps.Add(now);
             }
 
+            return Ok(new { message = "Mã OTP đã được gửi đến số điện thoại mới.", expireAt = expired });
+        }
+
+        [HttpPost("profile/change-phone/verify")]
+        public async Task<IActionResult> VerifyChangePhoneOtp([FromBody] VerifyChangePhoneOtpRequest req, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var userIdClaim = User.FindFirst("userId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+
+            var newPhone = req.Phone.Trim();
+            var key = $"{userId}:phone:{newPhone}";
+            if (!_contactOtpCache.TryGetValue(key, out var info))
+                return BadRequest(new { message = "Chưa gửi OTP cho số điện thoại này." });
+
+            if (DateTime.Now > info.Expired)
+                return BadRequest(new { message = "Mã OTP đã hết hạn." });
+
+            if (!string.Equals(req.Code.Trim(), info.OtpCode, StringComparison.Ordinal))
+                return BadRequest(new { message = "Mã OTP không chính xác." });
+
+            _contactOtpCache.Remove(key);
+
+            var exists = await _context.Users.AsNoTracking().AnyAsync(u => u.IsDeleted == false && u.UserId != userId && u.Phone == newPhone, ct);
+            if (exists) return BadRequest(new { message = "Số điện thoại này đã được sử dụng." });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId && u.IsDeleted == false, ct);
+            if (user == null) return NotFound(new { message = "User not found" });
+
+            user.Phone = newPhone;
+            user.ModifiedAt = DateTime.UtcNow;
             _context.Users.Update(user);
             await _context.SaveChangesAsync(ct);
-            return NoContent();
+
+            return Ok(new { message = "Xác thực OTP thành công. Số điện thoại đã được cập nhật." });
         }
 
         [HttpGet("orders")]

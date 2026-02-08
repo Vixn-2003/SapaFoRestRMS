@@ -1,0 +1,1330 @@
+﻿@model WebSapaForestForStaff.DTOs.Inventory.ExportManagementViewModel
+@{
+    ViewData["Title"] = "Lịch Sử Xuất hàng";
+    Layout = "~/Views/Shared/_LayoutInventory.cshtml";
+    
+    // Ensure Model is never null
+    var viewModel = Model ?? new WebSapaForestForStaff.DTOs.Inventory.ExportManagementViewModel();
+}
+
+<style>
+    /* ==================== EXPORT MANAGEMENT ISOLATED STYLES ==================== */
+    /* Wrap everything in .export-mgmt to avoid conflicts */
+
+    .export-mgmt {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #f3f4f6;
+        color: #111827;
+        min-height: 100vh;
+    }
+
+        .export-mgmt *,
+        .export-mgmt *::before,
+        .export-mgmt *::after {
+            box-sizing: border-box;
+        }
+
+    /* ==================== HEADER ==================== */
+    .export-mgmt__header {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .export-mgmt__title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        color: #111827;
+    }
+
+    /* ==================== STATS GRID ==================== */
+    .export-mgmt__stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .export-mgmt__stat-card {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #3b82f6;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .export-mgmt__stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+    .export-mgmt__stat-card--blue {
+        border-left-color: #3b82f6;
+    }
+
+    .export-mgmt__stat-card--orange {
+        border-left-color: #f97316;
+    }
+
+    .export-mgmt__stat-card--green {
+        border-left-color: #22c55e;
+    }
+
+    .export-mgmt__stat-card--warning {
+        border-left-color: #f59e0b;
+        background: #fffbeb;
+    }
+
+    .export-mgmt__stat-card--info {
+        border-left-color: #8b5cf6;
+    }
+
+    .export-mgmt__stat-icon {
+        font-size: 2rem;
+        line-height: 1;
+    }
+
+    .export-mgmt__stat-content {
+        flex: 1;
+    }
+
+    .export-mgmt__stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .export-mgmt__stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #111827;
+        line-height: 1;
+        display: block;
+    }
+
+    .export-mgmt__stat-status {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
+        display: block;
+    }
+
+    /* ==================== FILTERS SECTION ==================== */
+    .export-mgmt__filters {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+
+    .export-mgmt__filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .export-mgmt__filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .export-mgmt__filter-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .export-mgmt__filter-input,
+    .export-mgmt__filter-select {
+        width: 100%;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        background: white;
+        color: #111827;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+        .export-mgmt__filter-input:focus,
+        .export-mgmt__filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+    /* ==================== ALERT SECTION ==================== */
+    .export-mgmt__alerts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .export-mgmt__alert-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .export-mgmt__alert-header {
+        padding: 1rem 1.25rem;
+        font-weight: 600;
+        font-size: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+        margin: 0;
+    }
+
+    .export-mgmt__alert-content {
+        padding: 1rem;
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .export-mgmt__alert-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+        .export-mgmt__alert-item:last-child {
+            margin-bottom: 0;
+        }
+
+    .export-mgmt__top-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
+    }
+
+        .export-mgmt__top-item:last-child {
+            margin-bottom: 0;
+        }
+
+    .export-mgmt__rank {
+        font-weight: 700;
+        color: #3b82f6;
+        min-width: 2rem;
+    }
+
+    .export-mgmt__item-name {
+        flex: 1;
+        font-size: 0.875rem;
+    }
+
+    .export-mgmt__item-value {
+        font-weight: 600;
+        color: #111827;
+        font-size: 0.875rem;
+    }
+
+    .export-mgmt__warehouse-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #f9fafb;
+        border-radius: 0.5rem;
+    }
+
+        .export-mgmt__warehouse-stat:last-child {
+            margin-bottom: 0;
+        }
+
+    .export-mgmt__badge {
+        display: inline-block;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .export-mgmt__badge--danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .export-mgmt__badge--success {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    /* ==================== TABLE SECTION ==================== */
+    .export-mgmt__table-section {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+
+    .export-mgmt__section-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+        font-size: 1.125rem;
+        margin: 0;
+        background: #f9fafb;
+    }
+
+    .export-mgmt__table-wrapper {
+        overflow-x: auto;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .export-mgmt__table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+        .export-mgmt__table thead {
+            background: #000000;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .export-mgmt__table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .export-mgmt__table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid #e5e7eb;
+            color: #374151;
+        }
+
+        .export-mgmt__table tbody tr {
+            transition: background-color 0.15s;
+        }
+
+            .export-mgmt__table tbody tr:hover {
+                background: #f9fafb;
+            }
+
+    .export-mgmt__ingredient-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .export-mgmt__ingredient-name {
+        font-weight: 600;
+        color: #111827;
+        display: block;
+    }
+
+    .export-mgmt__ingredient-meta {
+        font-size: 0.75rem;
+        color: #6b7280;
+        display: block;
+    }
+
+    .export-mgmt__quantity-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #fee2e2;
+        color: #991b1b;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .export-mgmt__batch-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: #dbeafe;
+        color: #1e40af;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .export-mgmt__text-muted {
+        color: #9ca3af;
+    }
+
+    /* ==================== COMPARISON SECTION ==================== */
+    .export-mgmt__comparison-section {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .export-mgmt__comparison-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+        font-size: 1.125rem;
+        margin: 0;
+        background: #f9fafb;
+    }
+
+    .export-mgmt__comparison-wrapper {
+        overflow-x: auto;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .export-mgmt__comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+
+        .export-mgmt__comparison-table thead {
+            background: #000000;
+        }
+
+        .export-mgmt__comparison-table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #ffffff;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .export-mgmt__comparison-table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+    .export-mgmt__trend-up {
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+    .export-mgmt__trend-down {
+        color: #22c55e;
+        font-weight: 600;
+    }
+
+    .export-mgmt__trend-neutral {
+        color: #6b7280;
+    }
+
+    .export-mgmt__text-center {
+        text-align: center;
+    }
+
+    .export-mgmt__text-success {
+        color: #22c55e;
+    }
+
+    .export-mgmt__text-danger {
+        color: #ef4444;
+    }
+
+    /* ==================== EMPTY STATE ==================== */
+    .export-mgmt__empty {
+        padding: 3rem;
+        text-align: center;
+    }
+
+    .export-mgmt__empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .export-mgmt__empty-title {
+        font-size: 1.25rem;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+    }
+
+    .export-mgmt__alert {
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .export-mgmt__alert--danger {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    /* ==================== RESPONSIVE ==================== */
+    @@media (max-width: 1024px) {
+        .export-mgmt__stats-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+
+        .export-mgmt__alerts {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .export-mgmt {
+            padding: 1rem;
+        }
+
+        .export-mgmt__title {
+            font-size: 1.5rem;
+        }
+
+        .export-mgmt__stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .export-mgmt__filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .export-mgmt__stat-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* ==================== LOADING STATE ==================== */
+    .export-mgmt__loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
+
+    @@keyframes export-mgmt-dots {
+        0%, 20% {
+            content: "Đang tải dữ liệu.";
+        }
+
+        40% {
+            content: "Đang tải dữ liệu..";
+        }
+
+        60%, 100% {
+            content: "Đang tải dữ liệu...";
+        }
+    }
+
+    .export-mgmt__alert-item {
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+        .export-mgmt__alert-item:last-child {
+            border-bottom: none;
+        }
+
+    .export-mgmt__alert-item-left {
+        flex: 1;
+    }
+
+    .export-mgmt__alert-item-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: #111827;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .export-mgmt__alert-item-detail {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    /* Top items specific */
+    .export-mgmt__top-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+        .export-mgmt__top-item:last-child {
+            border-bottom: none;
+        }
+
+    .export-mgmt__top-item-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: #111827;
+    }
+
+    .export-mgmt__top-item-value {
+        font-weight: 600;
+        color: #111827;
+        font-size: 0.875rem;
+    }
+
+    /* Warehouse stats specific */
+    .export-mgmt__warehouse-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.875rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+        .export-mgmt__warehouse-stat:last-child {
+            border-bottom: none;
+        }
+
+    .export-mgmt__warehouse-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        color: #111827;
+    }
+
+    .export-mgmt__warehouse-count {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .export-mgmt__alert-list {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+
+    .export-mgmt__stat-icon-wrapper {
+        width: 3.5rem;
+        height: 3.5rem;
+        background: #f3f4f6;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        flex-shrink: 0;
+    }
+
+    .export-mgmt__stat-card--blue .export-mgmt__stat-icon-wrapper {
+        background: #dbeafe;
+    }
+
+    .export-mgmt__stat-card--orange .export-mgmt__stat-icon-wrapper {
+        background: #ffedd5;
+    }
+
+    .export-mgmt__stat-card--green .export-mgmt__stat-icon-wrapper {
+        background: #d1fae5;
+    }
+
+    .export-mgmt__stat-card--warning .export-mgmt__stat-icon-wrapper {
+        background: #fef3c7;
+    }
+
+    .export-mgmt__stat-card--info .export-mgmt__stat-icon-wrapper {
+        background: #ede9fe;
+    }
+
+    /* ==================== HEADER UPDATE ==================== */
+.export-mgmt__header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+}
+
+.export-mgmt__header-left {
+    flex: 1;
+}
+
+.export-mgmt__header-right {
+    flex-shrink: 0;
+}
+
+.export-mgmt__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #111827;
+}
+
+.export-mgmt__subtitle {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.export-mgmt__report-controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.export-mgmt__report-select {
+    padding: 0.625rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: white;
+    color: #111827;
+    min-width: 150px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.export-mgmt__report-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.export-mgmt__export-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    white-space: nowrap;
+}
+
+.export-mgmt__export-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.export-mgmt__export-btn:active {
+    transform: translateY(0);
+}
+
+.export-mgmt__export-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.export-mgmt__btn-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.export-mgmt__btn-text {
+    line-height: 1;
+}
+
+/* ==================== RESPONSIVE FOR HEADER ==================== */
+@@media (max-width: 768px) {
+    .export-mgmt__header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .export-mgmt__header-right {
+        width: 100%;
+    }
+
+    .export-mgmt__report-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .export-mgmt__report-select,
+    .export-mgmt__export-btn {
+        width: 100%;
+    }
+}
+
+</style>
+
+<div class="export-mgmt">
+    <!-- Header -->
+    <div class="export-mgmt__header">
+        <div class="export-mgmt__header-content">
+            <div class="export-mgmt__header-left">
+                <h1 class="export-mgmt__title">Lịch Sử Xuất Hàng</h1>
+                <p class="export-mgmt__subtitle">Lịch sử xuất hàng cho nhà bếp</p>
+            </div>
+            <div class="export-mgmt__header-right">
+                <div class="export-mgmt__report-controls">
+                    <select class="export-mgmt__report-select" id="reportPeriod">
+                        <option value="today">Hôm nay</option>
+                        <option value="3days">3 ngày qua</option>
+                        <option value="7days">7 ngày qua</option>
+                        <option value="30days">30 ngày qua</option>
+                    </select>
+                    <button id="exportReportBtn" class="export-mgmt__export-btn">
+                        <span class="export-mgmt__btn-text">Xuất báo cáo</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="export-mgmt__stats-grid">
+       
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--warning">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Xuất bất thường (tăng >50%)</span>
+                <span class="export-mgmt__stat-value" id="abnormalExport">0</span>
+                <span class="export-mgmt__stat-status">So với TB 7 ngày</span>
+            </div>
+        </div>
+
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--info">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Tổng giao dịch xuất kho</span>
+                <span class="export-mgmt__stat-value">@viewModel.TotalTransactions</span>
+                <span class="export-mgmt__stat-status">Tất cả thời gian</span>
+            </div>
+        </div>  
+        <div class="export-mgmt__stat-card export-mgmt__stat-card--blue">
+            <div class="export-mgmt__stat-content">
+                <span class="export-mgmt__stat-label">Giao dịch xuất kho hôm nay</span>
+                <span class="export-mgmt__stat-value">@viewModel.TodayTransactions</span>
+                <span class="export-mgmt__stat-status">@DateTime.Today.ToString("dd/MM/yyyy")</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Section -->
+    <div class="export-mgmt__alerts">
+        <div class="export-mgmt__alert-card">
+            <h3 class="export-mgmt__alert-header">Xuất bất thường hôm nay</h3>
+            <div class="export-mgmt__alert-list" id="abnormalAlerts">Đang tính toán...</div>
+        </div>
+
+        <div class="export-mgmt__alert-card">
+            <h3 class="export-mgmt__alert-header">Top Mặt hàng xuất hôm nay</h3>
+            <div class="export-mgmt__alert-list" id="topIngredients">Đang tải...</div>
+        </div>
+
+        <div class="export-mgmt__alert-card">
+            <h3 class="export-mgmt__alert-header">Xuất theo kho hôm nay</h3>
+            <div class="export-mgmt__alert-list" id="warehouseStats">Đang tải...</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="export-mgmt__filters">
+        <div class="export-mgmt__filter-grid">
+            <div class="export-mgmt__filter-group">
+                <label class="export-mgmt__filter-label">Tìm kiếm</label>
+                <input type="text" class="export-mgmt__filter-input" id="searchInput" placeholder="Tìm theo tên, mã Mặt hàng..." />
+            </div>
+
+            <div class="export-mgmt__filter-group">
+                <label class="export-mgmt__filter-label">Khoảng thời gian</label>
+                <select class="export-mgmt__filter-select" id="dateFilter">
+                    <option value="all">Tất cả</option>
+                    <option value="today">Hôm nay</option>
+                    <option value="yesterday">Hôm qua</option>
+                    <option value="7days">7 ngày qua</option>
+                    <option value="30days">30 ngày qua</option>
+                </select>
+            </div>
+
+            <div class="export-mgmt__filter-group">
+                <label class="export-mgmt__filter-label">Kho</label>
+                <select class="export-mgmt__filter-select" id="warehouseFilter">
+                    <option value="">Tất cả kho</option>
+                    @foreach (var warehouse in viewModel.Warehouses)
+                    {
+                        <option value="@warehouse.Id">@warehouse.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="export-mgmt__table-section">
+        <h2 class="export-mgmt__section-header">Chi tiết đơn xuất (@Model.TotalTransactions giao dịch)</h2>
+
+        @if (Model.ExportData.Any())
+        {
+            <div class="export-mgmt__table-wrapper">
+                <table class="export-mgmt__table" id="exportTable">
+                    <thead>
+                        <tr>
+                            <th>Mặt hàng</th>
+                            <th>Số lượng</th>
+                            <th>Thời gian</th>
+                            <th>Kho</th>
+                            <th>Lô hàng</th>
+                            <th>Ghi chú</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in viewModel.ExportData.OrderByDescending(x => x.TransactionDate))
+                        {
+                            <tr data-ingredient-id="@item.IngredientId"
+                                data-warehouse-id="@item.WarehouseId"
+                                data-date="@item.TransactionDate?.ToString("yyyy-MM-dd")">
+                                <td>
+                                    <div class="export-mgmt__ingredient-info">
+                                        <strong class="export-mgmt__ingredient-name">@item.IngredientName</strong>
+                                        <small class="export-mgmt__ingredient-meta">@item.IngredientCode </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="export-mgmt__quantity-badge">-@item.Quantity @item.UnitName</span>
+                                </td>
+                                <td>
+                                    @if (item.TransactionDate.HasValue)
+                                    {
+                                        @item.TransactionDate.Value.ToString("dd/MM/yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="export-mgmt__text-muted">Chưa có</span>
+                                    }
+                                </td>
+                                <td>@item.WarehouseName</td>
+                                <td>
+                                    <span class="export-mgmt__batch-badge">
+                                        @if (!string.IsNullOrEmpty(item.PurchaseOrderId))
+                                        {
+                                            @item.PurchaseOrderId
+                                        }
+                                        else
+                                        {
+                                            <span>#LOT-@item.BatchId</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.Note))
+                                    {
+                                        @item.Note
+                                    }
+                                    else
+                                    {
+                                        <span class="export-mgmt__text-muted">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="export-mgmt__empty">
+                <h3 class="export-mgmt__empty-title">Không có dữ liệu xuất kho</h3>
+                @if (!string.IsNullOrEmpty(viewModel.ErrorMessage))
+                {
+                    <div class="export-mgmt__alert export-mgmt__alert--danger">@viewModel.ErrorMessage</div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="export-mgmt__comparison-section">
+        <div class="export-mgmt__comparison-header" style="display: flex; align-items: center;">
+            <h2 style="margin: 0; font-size: 1.125rem; font-weight: 600;">So sánh tiêu hao</h2>
+            <input type="text"
+                   id="comparisonSearch"
+                   placeholder="Tìm Mặt hàng..."
+                   style="padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; width: 250px; margin-left: 30px" />
+        </div>
+        <div class="export-mgmt__comparison-wrapper">
+            <table class="export-mgmt__comparison-table" id="comparisonTable">
+                <thead>
+                    <tr>
+                        <th>Mặt hàng</th>
+                        <th>Hôm nay</th>
+                        <th>TB 7 ngày</th>
+                        <th>% Chênh</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="export-mgmt__text-center">Đang tính toán...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const exportData = @Html.Raw(Json.Serialize(Model.ExportData));
+
+    // Tính toán thống kê
+    function calculateStats() {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // GIỮ LẠI 2 DÒNG NÀY vì các hàm calculateAbnormalExports, calculateTopIngredients cần dùng
+        const todayExports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= today;
+        });
+
+        const week7Exports = exportData.filter(x => {
+            const transDate = new Date(x.transactionDate);
+            return transDate >= sevenDaysAgo;
+        });
+
+        // Gọi các hàm tính toán khác
+        calculateAbnormalExports(todayExports, week7Exports);
+        calculateTopIngredients(todayExports);
+        calculateWarehouseStats(todayExports);
+        calculateComparison();
+    }
+
+    // Phát hiện xuất bất thường
+    function calculateAbnormalExports(todayExports, week7Exports) {
+        const avgByIngredient = {};
+
+        // Tính trung bình 7 ngày
+        week7Exports.forEach(x => {
+            if (!avgByIngredient[x.ingredientId]) {
+                avgByIngredient[x.ingredientId] = { total: 0, count: 0, name: x.ingredientName };
+            }
+            avgByIngredient[x.ingredientId].total += x.quantity;
+            avgByIngredient[x.ingredientId].count++;
+        });
+
+        // Tìm xuất bất thường (> 150% trung bình)
+        const abnormal = [];
+        todayExports.forEach(x => {
+            const avg = avgByIngredient[x.ingredientId];
+            if (avg && avg.count > 0) {
+                const avgQty = avg.total / avg.count;
+                if (x.quantity > avgQty * 1.5) {
+                    abnormal.push({
+                        name: x.ingredientName,
+                        today: x.quantity,
+                        avg: avgQty,
+                        percent: ((x.quantity / avgQty - 1) * 100).toFixed(0)
+                    });
+                }
+            }
+        });
+
+        document.getElementById('abnormalExport').textContent = `${abnormal.length} loại`;
+
+        if (abnormal.length > 0) {
+            const html = abnormal.map(a =>
+                `<div class="export-mgmt__alert-item">
+                <div class="export-mgmt__alert-item-left">
+                    <div class="export-mgmt__alert-item-name">${a.name}</div>
+                    <div class="export-mgmt__alert-item-detail">Hôm nay: ${a.today.toFixed(2)} | TB 7 ngày: ${a.avg.toFixed(2)}</div>
+                </div>
+                <span class="export-mgmt__badge export-mgmt__badge--danger">+${a.percent}%</span>
+            </div>`
+            ).join('');
+            document.getElementById('abnormalAlerts').innerHTML = html;
+        } else {
+            document.getElementById('abnormalAlerts').innerHTML = `
+                <div class="export-mgmt__empty" style="padding: 2rem;">
+                    <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu xuất bất thường</div>
+                </div>`;
+        }
+    }
+
+    // Top Mặt hàng xuất hôm nay
+    function calculateTopIngredients(todayExports) {
+        const byIngredient = {};
+
+        todayExports.forEach(x => {
+            if (!byIngredient[x.ingredientId]) {
+                byIngredient[x.ingredientId] = { name: x.ingredientName, total: 0, unit: x.unitName };
+            }
+            byIngredient[x.ingredientId].total += x.quantity;
+        });
+
+        const top = Object.values(byIngredient)
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5);
+
+        if (top.length > 0) {
+            const html = top.map((item, idx) =>
+                `<div class="export-mgmt__top-item">
+                    <div class="export-mgmt__top-item-name">${idx + 1}. ${item.name}</div>
+                    <div class="export-mgmt__top-item-value">${item.total.toFixed(2)} ${item.unit}</div>
+                </div>`
+            ).join('');
+            document.getElementById('topIngredients').innerHTML = html;
+        } else {
+            document.getElementById('topIngredients').innerHTML = `
+                <div class="export-mgmt__empty" style="padding: 2rem;">
+                    <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
+                </div>`;
+        }
+    }
+
+    // Xuất theo kho hôm nay
+    function calculateWarehouseStats(todayExports) {
+        const byWarehouse = {};
+
+        todayExports.forEach(x => {
+            if (!byWarehouse[x.warehouseId]) {
+                byWarehouse[x.warehouseId] = { name: x.warehouseName, count: 0 };
+            }
+            byWarehouse[x.warehouseId].count++;
+        });
+
+        const stats = Object.values(byWarehouse);
+
+        if (stats.length > 0) {
+            const html = stats.map(s =>
+                `<div class="export-mgmt__warehouse-stat">
+                    <div class="export-mgmt__warehouse-name">${s.name}</div>
+                    <div class="export-mgmt__warehouse-count">${s.count} giao dịch</div>
+                </div>`
+            ).join('');
+            document.getElementById('warehouseStats').innerHTML = html;
+        } else {
+            document.getElementById('warehouseStats').innerHTML = `
+                <div class="export-mgmt__empty" style="padding: 2rem;">
+                    <div style="color: #6b7280; font-size: 0.875rem;">Chưa có dữ liệu hôm nay</div>
+                </div>`;
+        }
+    }
+
+    // So sánh tiêu hao
+    // So sánh tiêu hao
+    function calculateComparison() {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const todayExports = exportData.filter(x => new Date(x.transactionDate) >= today);
+        const week7Exports = exportData.filter(x => new Date(x.transactionDate) >= sevenDaysAgo);
+
+        const comparison = {};
+
+        // CHỈ LẤY CÁC NGUYÊN LIỆU CÓ XUẤT HÔM NAY
+        todayExports.forEach(x => {
+            if (!comparison[x.ingredientId]) {
+                comparison[x.ingredientId] = {
+                    name: x.ingredientName,
+                    today: 0,
+                    week: 0,
+                    unit: x.unitName
+                };
+            }
+            comparison[x.ingredientId].today += x.quantity;
+        });
+
+        // Tính trung bình 7 ngày CHỈ CHO CÁC NGUYÊN LIỆU ĐÃ XUẤT HÔM NAY
+        week7Exports.forEach(x => {
+            // Chỉ tính nếu nguyên liệu này có xuất hôm nay
+            if (comparison[x.ingredientId]) {
+                comparison[x.ingredientId].week += x.quantity;
+            }
+        });
+
+        const rows = Object.values(comparison).map(c => {
+            const avg7 = c.week / 7;
+            const percent = avg7 > 0 ? ((c.today / avg7 - 1) * 100).toFixed(0) : 0;
+            const arrow = percent > 0 ? '⬆️' : percent < 0 ? '⬇️' : '➡️';
+            const colorClass = percent > 20 ? 'export-mgmt__trend-up' : percent < -20 ? 'export-mgmt__trend-down' : '';
+
+            return `<tr>
+                                <td>${c.name}</td>
+                                <td>${c.today.toFixed(2)} ${c.unit}</td>
+                                <td>${avg7.toFixed(2)} ${c.unit}</td>
+                                <td class="${colorClass}">${arrow} ${percent}%</td>
+                            </tr>`;
+        });
+
+        document.querySelector('#comparisonTable tbody').innerHTML = rows.length > 0 ? rows.join('') :
+            `<tr><td colspan="4" style="text-align: center; padding: 2rem;">
+                <div style="color: #6b7280; font-size: 0.875rem;">Không có dữ liệu so sánh</div>
+            </td></tr>`;
+    }
+
+    // Filter comparison table
+    document.getElementById('comparisonSearch').addEventListener('input', function () {
+        const searchText = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#comparisonTable tbody tr');
+
+        let hasVisibleRow = false;
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const shouldShow = text.includes(searchText);
+            row.style.display = shouldShow ? '' : 'none';
+            if (shouldShow) hasVisibleRow = true;
+        });
+
+        // Hiển thị "Không tìm thấy" nếu không có kết quả
+        if (!hasVisibleRow && rows.length > 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.id = 'no-comparison-result';
+            emptyRow.innerHTML = `<td colspan="4" style="text-align: center; padding: 2rem; color: #6b7280;">
+                    Không tìm thấy Mặt hàng "${searchText}"
+                </td>`;
+
+            // Xóa row cũ nếu có
+            const oldEmpty = document.getElementById('no-comparison-result');
+            if (oldEmpty) oldEmpty.remove();
+
+            document.querySelector('#comparisonTable tbody').appendChild(emptyRow);
+        } else {
+            const oldEmpty = document.getElementById('no-comparison-result');
+            if (oldEmpty) oldEmpty.remove();
+        }
+    });
+
+
+    // Filters
+    document.getElementById('searchInput').addEventListener('input', filterTable);
+    document.getElementById('dateFilter').addEventListener('change', filterTable);
+    document.getElementById('warehouseFilter').addEventListener('change', filterTable);
+
+    function filterTable() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const dateFilter = document.getElementById('dateFilter').value;
+        const warehouseId = document.getElementById('warehouseFilter').value;
+
+        const rows = document.querySelectorAll('#exportTable tbody tr');
+
+        rows.forEach(row => {
+            let show = true;
+
+            // Search - CHỈ TÌM TÊN, MÃ Mặt hàng VÀ LÔ HÀNG
+            if (searchText) {
+                // Lấy tên Mặt hàng (cột 1)
+                const ingredientName = row.querySelector('.export-mgmt__ingredient-name')?.textContent.toLowerCase() || '';
+
+                // Lấy mã Mặt hàng (cột 1 - phần meta)
+                const ingredientCode = row.querySelector('.export-mgmt__ingredient-meta')?.textContent.toLowerCase() || '';
+
+                // Lấy lô hàng (cột 5)
+                const batchInfo = row.querySelector('.export-mgmt__batch-badge')?.textContent.toLowerCase() || '';
+
+                // Kiểm tra xem có khớp với bất kỳ trường nào không
+                const matchName = ingredientName.includes(searchText);
+                const matchCode = ingredientCode.includes(searchText);
+                const matchBatch = batchInfo.includes(searchText);
+
+                show = show && (matchName || matchCode || matchBatch);
+            }
+
+            // Date filter
+            if (dateFilter !== 'all') {
+                const rowDate = new Date(row.dataset.date);
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                switch (dateFilter) {
+                    case 'today':
+                        show = show && rowDate >= today;
+                        break;
+                    case 'yesterday':
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        show = show && rowDate >= yesterday && rowDate < today;
+                        break;
+                    case '7days':
+                        const sevenDays = new Date(today);
+                        sevenDays.setDate(sevenDays.getDate() - 7);
+                        show = show && rowDate >= sevenDays;
+                        break;
+                    case '30days':
+                        const thirtyDays = new Date(today);
+                        thirtyDays.setDate(thirtyDays.getDate() - 30);
+                        show = show && rowDate >= thirtyDays;
+                        break;
+                }
+            }
+
+            // Warehouse filter
+            if (warehouseId) {
+                show = show && row.dataset.warehouseId === warehouseId;
+            }
+
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', calculateStats);
+
+
+    document.getElementById('exportReportBtn').addEventListener('click', async function () {
+        const period = document.getElementById('reportPeriod').value;
+        const btn = this;
+
+        try {
+            btn.disabled = true;
+            btn.textContent = 'Đang tạo báo cáo...';
+
+            const response = await fetch('/ExportInventory/ExportReport', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ period: period })
+            });
+
+            if (!response.ok) {
+                throw new Error('Không thể tạo báo cáo');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `BaoCaoXuatKho_${new Date().getTime()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            btn.textContent = 'Tải thành công!';
+            setTimeout(() => {
+                btn.textContent = 'Xuất báo cáo';
+                btn.disabled = false;
+            }, 2000);
+
+        } catch (error) {
+            console.error('Lỗi:', error);
+            alert('Không thể tạo báo cáo. Vui lòng thử lại!');
+            btn.textContent = 'Xuất báo cáo';
+            btn.disabled = false;
+        }
+    });
+
+</script>
+

@@ -15,5 +15,7 @@
 
         public bool RequireDeposit { get; set; }
         public decimal? DepositAmount { get; set; }
+        public bool DepositPaid { get; set; } = false;
+        public decimal? TotalDepositPaid { get; set; } = 0;
     }
 }

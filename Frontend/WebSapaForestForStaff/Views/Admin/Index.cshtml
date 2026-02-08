@@ -1,47 +1,684 @@
 @model WebSapaForestForStaff.Models.Admin.AdminDashboardViewModel
 @{
+    ViewData["Title"] = "Bảng điều khiển Admin";
     Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
-    ViewData["Title"] = "Admin Dashboard";
 }
 
-<div class="row">
-    <div class="col-12 grid-margin">
-        <div class="card">
-            <div class="card-body">
-                <h4 class="card-title">Trang quản trị hệ thống</h4>
-                <p>
-                    Quản trị toàn bộ hệ thống: tạo tài khoản, phân quyền, kiểm soát truy cập; quản lý thực đơn, giá, khuyến mãi và báo cáo để hệ thống vận hành an toàn, ổn định.
-                </p>
-            </div>
+@section Styles {
+    <style>
+        .kpi-card {
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: none;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .kpi-card .kpi-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        .kpi-card .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 10px 0;
+            line-height: 1.2;
+        }
+        .kpi-card .kpi-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .kpi-card .kpi-change {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+        .kpi-change.positive { color: #28a745; }
+        .kpi-change.negative { color: #dc3545; }
+
+        /* Softer palette for KPI cards to avoid harsh green/red */
+        .kpi-soft-success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #1b5e20;
+        }
+        .kpi-soft-danger {
+            background: linear-gradient(135deg, #fdecea 0%, #f8cfc4 100%);
+            color: #9b1c1c;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-radius: 12px 12px 0 0 !important;
+            border: none;
+        }
+
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            border: none;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .alert-custom {
+            border-radius: 8px;
+            border: none;
+            padding: 15px;
+        }
+
+        .stats-icon {
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+
+        .dashboard-section {
+            margin-bottom: 30px;
+        }
+
+        .dashboard-title {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .dashboard-title i {
+            margin-right: 10px;
+            color: #6c757d;
+        }
+
+        /* Responsive adjustments */
+        @@media (max-width: 768px) {
+            .kpi-card .kpi-value {
+                font-size: 1.5rem;
+            }
+            .chart-container {
+                height: 280px;
+            }
+        }
+    </style>
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">🏢 Bảng điều khiển Admin</h2>
+            <small class="text-muted">Tổng quan hệ thống - @DateTime.Today.ToString("dd/MM/yyyy")</small>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+                <i class="mdi mdi-refresh me-1"></i>Làm mới
+            </button>
         </div>
     </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-custom">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @Model.ErrorMessage
+        </div>
+    }
+    else if (Model.Dashboard != null)
+    {
+        <!-- KPI Cards Row -->
+        <div class="dashboard-section">
+            <h4 class="dashboard-title">
+                <i class="fas fa-tachometer-alt"></i>Chỉ số chính
+            </h4>
+            <div class="row">
+                <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                    <div class="kpi-card bg-primary text-white">
+                        <div class="kpi-icon" style="background: rgba(255,255,255,0.85); color: #1f2937;">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="kpi-label">Tổng người dùng</div>
+                        <div class="kpi-value">@Model.Dashboard.KpiCards.TotalUsers.ToString("N0")</div>
+                        <div class="d-flex justify-content-between">
+                            <span class="kpi-change positive">
+                                <i class="fas fa-user-check me-1"></i>@Model.Dashboard.KpiCards.ActiveUsers.ToString("N0") hoạt động
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                    <div class="kpi-card kpi-soft-success">
+                        <div class="kpi-icon" style="background: #1b5e20; color: #e8f5e9;">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="kpi-label">Doanh thu hôm nay</div>
+                        <div class="kpi-value">@Model.Dashboard.KpiCards.TodayRevenue.ToString("N0") đ</div>
+                        <div class="kpi-change">
+                            <i class="fas fa-calendar-alt me-1"></i>Hôm nay
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                    <div class="kpi-card bg-info text-white">
+                        <div class="kpi-icon" style="background: rgba(255,255,255,0.85); color: #1f2937;">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="kpi-label">Đơn hàng hôm nay</div>
+                        <div class="kpi-value">@Model.Dashboard.KpiCards.TodayOrders.ToString("N0")</div>
+                        <div class="kpi-change">
+                            <i class="fas fa-clock me-1"></i>@DateTime.Now.ToString("HH:mm")
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-md-6 col-sm-12 mb-3">
+                    <div class="kpi-card bg-warning text-white">
+                        <div class="kpi-icon" style="background: rgba(255,255,255,0.85); color: #1f2937;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="kpi-label">Cảnh báo kho</div>
+                        <div class="kpi-value">@Model.Dashboard.KpiCards.TotalAlertsCount.ToString("N0")</div>
+                        <div class="kpi-change">
+                            <i class="fas fa-warehouse me-1"></i>Cần chú ý
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="dashboard-section">
+            <h4 class="dashboard-title">
+                <i class="fas fa-chart-line"></i>Phân tích dữ liệu
+            </h4>
+
+         @*    <!-- Revenue and Orders Charts -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-chart-line me-2"></i>Doanh thu 7 ngày gần nhất
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="revenueChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-shopping-cart me-2"></i>Số đơn hàng 7 ngày gần nhất
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="ordersChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> *@
+
+            <!-- User Distribution and Alerts -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-users-cog me-2"></i>Phân bố vai trò người dùng
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="userRoleChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-exclamation-circle me-2"></i>Phân loại cảnh báo kho
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="alertsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables Section -->
+        <div class="dashboard-section">
+            <h4 class="dashboard-title">
+                <i class="fas fa-table"></i>Dữ liệu chi tiết
+            </h4>
+
+            <div class="row">
+                <!-- Top Active Users -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-user-check me-2"></i>Top 5 người dùng hoạt động
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th><i class="fas fa-user me-1"></i>Họ tên</th>
+                                            <th><i class="fas fa-mouse-pointer me-1"></i>Lượt đăng nhập</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (Model.Dashboard.Top5ActiveUsers != null && Model.Dashboard.Top5ActiveUsers.Any())
+                                        {
+                                            foreach (var user in Model.Dashboard.Top5ActiveUsers)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong>@user.FullName</strong>
+                                                        <br><small class="text-muted">@@user.Username</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">@user.LoginCount</span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="2" class="text-center text-muted">
+                                                    <i class="fas fa-info-circle me-1"></i>Không có dữ liệu
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Selling Categories -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-star me-2"></i>Top 5 danh mục bán chạy
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th><i class="fas fa-tag me-1"></i>Danh mục</th>
+                                            <th><i class="fas fa-boxes me-1"></i>Đã bán</th>
+                                            <th><i class="fas fa-dollar-sign me-1"></i>Doanh thu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (Model.Dashboard.Top5BestSellingCategories != null && Model.Dashboard.Top5BestSellingCategories.Any())
+                                        {
+                                            foreach (var category in Model.Dashboard.Top5BestSellingCategories)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong>@category.CategoryName</strong>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">@category.ItemsSold</span>
+                                                    </td>
+                                                    <td>
+                                                        <strong class="text-success">@category.Revenue.ToString("N0") đ</strong>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted">
+                                                    <i class="fas fa-info-circle me-1"></i>Không có dữ liệu
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Logs Section -->
+        @if (Model.Dashboard.RecentLogs != null && Model.Dashboard.RecentLogs.Any())
+        {
+            <div class="dashboard-section">
+                <h4 class="dashboard-title">
+                    <i class="fas fa-history"></i>Nhật ký hệ thống gần đây
+                </h4>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-clock me-1"></i>Thời gian</th>
+                                        <th><i class="fas fa-user me-1"></i>Người dùng</th>
+                                        <th><i class="fas fa-cog me-1"></i>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var log in Model.Dashboard.RecentLogs)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <small class="text-muted">@log.TimeFormatted</small>
+                                            </td>
+                                            <td>
+                                                <strong>@@log.Username</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">@log.Action</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-warning alert-custom">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.
+        </div>
+    }
 </div>
 
-<div class="row">
-    <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <h4 class="mb-2">Tổng người dùng</h4>
-                <h2 class="fw-bold">@Model.TotalUsers</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <h4 class="mb-2">Đơn đặt (Chờ/Xác nhận)</h4>
-                <h2 class="fw-bold">@Model.TotalReservationsPendingOrConfirmed</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <h4 class="mb-2">Sự kiện/KM</h4>
-                <h2 class="fw-bold">@Model.TotalEvents</h2>
-            </div>
-        </div>
-    </div>
-</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Embed data from ViewModel into JavaScript
+        var dashboardData = @Html.Raw(Json.Serialize(Model.Dashboard ?? new WebSapaForestForStaff.DTOs.AdminDashboard.AdminDashboardDto()));
 
+        // Global chart instances for cleanup
+        var charts = {};
 
+        // Initialize all charts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+        });
+
+        function initializeCharts() {
+            // Revenue Chart
+            if (dashboardData.RevenueLast7Days && dashboardData.RevenueLast7Days.length > 0) {
+                const revenueCtx = document.getElementById('revenueChart');
+                if (revenueCtx) {
+                    charts.revenue = new Chart(revenueCtx, {
+                        type: 'line',
+                        data: {
+                            labels: dashboardData.RevenueLast7Days.map(item => item.DateLabel),
+                            datasets: [{
+                                label: 'Doanh thu (VNĐ)',
+                                data: dashboardData.RevenueLast7Days.map(item => item.Revenue),
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                pointBackgroundColor: 'rgb(75, 192, 192)',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 6,
+                                pointHoverRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return 'Doanh thu: ' + new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' đ';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return new Intl.NumberFormat('vi-VN').format(value) + ' đ';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Orders Chart
+            if (dashboardData.OrdersLast7Days && dashboardData.OrdersLast7Days.length > 0) {
+                const ordersCtx = document.getElementById('ordersChart');
+                if (ordersCtx) {
+                    charts.orders = new Chart(ordersCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: dashboardData.OrdersLast7Days.map(item => item.DateLabel),
+                            datasets: [{
+                                label: 'Số đơn hàng',
+                                data: dashboardData.OrdersLast7Days.map(item => item.OrderCount),
+                                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                                borderColor: 'rgb(255, 99, 132)',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                borderSkipped: false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return 'Đơn hàng: ' + context.parsed.y;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // User Role Distribution Chart
+            if (dashboardData.UserRoleDistribution && dashboardData.UserRoleDistribution.RoleDistribution) {
+                const userRoleCtx = document.getElementById('userRoleChart');
+                if (userRoleCtx) {
+                    const roleData = dashboardData.UserRoleDistribution.RoleDistribution;
+                    const labels = Object.keys(roleData);
+                    const data = Object.values(roleData);
+
+                    charts.userRole = new Chart(userRoleCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: data,
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.8)',
+                                    'rgba(54, 162, 235, 0.8)',
+                                    'rgba(255, 205, 86, 0.8)',
+                                    'rgba(75, 192, 192, 0.8)',
+                                    'rgba(153, 102, 255, 0.8)',
+                                    'rgba(255, 159, 64, 0.8)',
+                                    'rgba(201, 203, 207, 0.8)',
+                                    'rgba(255, 99, 255, 0.8)'
+                                ],
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        padding: 20,
+                                        usePointStyle: true
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Alerts Chart
+            if (dashboardData.WarehouseAlerts) {
+                const alertsCtx = document.getElementById('alertsChart');
+                if (alertsCtx) {
+                    charts.alerts = new Chart(alertsCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: ['Hết hàng', 'Sắp hết hạn', 'Tổng cảnh báo'],
+                            datasets: [{
+                                data: [
+                                    dashboardData.WarehouseAlerts.LowStockCount,
+                                    dashboardData.WarehouseAlerts.NearExpiryCount,
+                                    dashboardData.WarehouseAlerts.TotalAlerts
+                                ],
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.8)',
+                                    'rgba(255, 205, 86, 0.8)',
+                                    'rgba(54, 162, 235, 0.8)'
+                                ],
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        padding: 20,
+                                        usePointStyle: true
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.label + ': ' + context.parsed;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // Refresh dashboard function
+        function refreshDashboard() {
+            // Show loading state
+            const refreshBtn = document.querySelector('button[onclick="refreshDashboard()"]');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="mdi mdi-loading mdi-spin me-1"></i>Đang tải...';
+            refreshBtn.disabled = true;
+
+            // Reload the page to refresh data
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+
+        // Cleanup charts on page unload
+        window.addEventListener('beforeunload', function() {
+            Object.values(charts).forEach(chart => {
+                if (chart) {
+                    chart.destroy();
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,3000 @@
+﻿@{
+    Layout = "_LayoutInventory";
+    ViewData["Title"] = "Quản Lý Nhà Cung Cấp";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Nhà cung cấp</title>
+    <style>
+
+/* ===== BASE STYLES & RESET ===== */
+.sm-container * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.sm-page-wrapper {
+    /* min-h-screen bg-gray-50 p-6 */
+    min-height: 100vh;
+    background-color: #f9fafb;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1f2937; /* text-gray-800 */
+}
+
+/* ===== TYPOGRAPHY & HEADER ===== */
+.sm-space-y-6 > * + * {
+    margin-top: 24px; /* space-y-6 */
+}
+
+.sm-header-area {
+    /* mb-6 */
+    margin-bottom: 24px;
+}
+
+.sm-title {
+    /* text-3xl font-bold text-gray-900 */
+    font-size: 30px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.sm-subtitle {
+    /* text-gray-600 mt-1 */
+    color: #4b5563;
+    margin-top: 4px;
+}
+
+/* ===== STATS CARDS (QUICK STATS) ===== */
+.sm-stats-grid {
+    /* grid grid-cols-4 gap-4 */
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.sm-stat-card {
+    /* bg-white border rounded-lg p-5 */
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.sm-card-header {
+    /* flex items-center justify-between mb-3 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.sm-card-label {
+    /* text-sm text-gray-600 font-medium */
+    font-size: 14px;
+    color: #4b5563;
+    font-weight: 500;
+}
+
+.sm-card-icon {
+    /* w-5 h-5 text-blue-600 */
+    width: 20px;
+    height: 20px;
+}
+
+.sm-icon-blue { color: #2563eb; }
+.sm-icon-green { color: #10b981; }
+.sm-icon-orange { color: #f97316; }
+.sm-icon-purple { color: #9333ea; }
+.sm-icon-red { color: #dc2626; }
+.sm-icon-gray { color: #4b5563; }
+
+.sm-stat-value {
+    /* text-3xl font-bold */
+    font-size: 30px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.sm-stat-value.sm-green { color: #10b981; }
+.sm-stat-value.sm-orange { color: #f97316; }
+.sm-stat-value.sm-purple { color: #9333ea; }
+
+.sm-stat-subtext {
+    /* text-xs text-gray-500 mt-2 */
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 8px;
+}
+
+.sm-stat-subtext.sm-green { color: #10b981; }
+
+.sm-status-dot {
+    /* w-3 h-3 bg-green-500 rounded-full */
+    width: 12px;
+    height: 12px;
+    background-color: #10b981;
+    border-radius: 50%;
+}
+
+/* ===== TWO COLUMN LAYOUT (Recent & Top) ===== */
+.sm-two-col-grid {
+    /* grid grid-cols-2 gap-6 */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.sm-panel {
+    /* bg-white border rounded-lg */
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.sm-panel-header {
+    /* p-4 border-b */
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.sm-panel-header.sm-flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sm-panel-title {
+    /* font-semibold flex items-center gap-2 */
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+}
+
+.sm-panel-title svg {
+    /* w-5 h-5 text-gray-600 */
+    width: 20px;
+    height: 20px;
+    color: #4b5563;
+}
+
+.sm-select {
+    /* text-sm border rounded px-2 py-1 */
+    font-size: 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 4px 8px;
+    background-color: white;
+    cursor: pointer;
+}
+
+.sm-select:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px #3b82f6; /* focus:ring-2 focus:ring-blue-500 */
+}
+
+/* List/Transaction Items */
+.sm-divide-y > * + * {
+    border-top: 1px solid #e5e7eb;
+}
+
+.sm-list-item {
+    /* p-4 hover:bg-gray-50 */
+    padding: 16px;
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+
+.sm-list-item:hover {
+    background-color: #f9fafb;
+}
+
+.sm-flex-start-between {
+    /* flex justify-between items-start mb-1 */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+
+.sm-item-name {
+    /* font-medium text-sm */
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sm-item-value {
+    /* text-sm font-semibold text-green-600 */
+    font-size: 14px;
+    font-weight: 600;
+    color: #10b981;
+}
+
+.sm-item-subtext {
+    /* text-xs text-gray-500 */
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.sm-panel-footer {
+    /* p-3 border-t text-center */
+    padding: 12px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+.sm-footer-btn {
+    /* text-blue-600 hover:text-blue-700 text-sm font-medium */
+    color: #2563eb;
+    font-size: 14px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.sm-footer-btn:hover {
+    color: #1d4ed8;
+}
+
+/* Top Suppliers Ranking */
+.sm-rank-content {
+    /* flex items-center gap-3 */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sm-rank-badge {
+    /* w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm */
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.sm-rank-badge.rank-1 { /* bg-yellow-100 text-yellow-700 */
+    background-color: #fef9c3;
+    color: #b45309;
+}
+
+.sm-rank-badge.rank-2 { /* bg-gray-100 text-gray-700 */
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.sm-rank-badge.rank-3 { /* bg-orange-100 text-orange-700 */
+    background-color: #ffedd5;
+    color: #c2410c;
+}
+
+.sm-rank-info {
+    /* flex-1 */
+    flex-grow: 1;
+}
+
+/* ===== SUPPLIER LIST HEADER & ACTIONS ===== */
+.sm-list-controls {
+    /* flex justify-between items-center */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.sm-list-title-h3 {
+    /* text-lg font-semibold */
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.sm-action-group {
+    /* flex gap-3 */
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Search Input */
+.sm-search-wrapper {
+    /* relative */
+    position: relative;
+}
+
+.sm-search-icon {
+    /* absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 */
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+}
+
+.sm-search-input {
+    /* pl-10 pr-4 py-2 border rounded-lg w-64 */
+    padding: 8px 16px 8px 40px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 256px;
+    background-color: white;
+    transition: all 0.2s;
+}
+
+.sm-search-input:focus {
+    /* focus:ring-2 focus:ring-blue-500 focus:border-transparent */
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Filter Select */
+.sm-filter-select {
+    /* px-4 py-2 border rounded-lg */
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sm-filter-select:focus {
+    /* focus:ring-2 focus:ring-blue-500 */
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Add Button */
+.sm-add-btn {
+    /* flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.sm-add-btn:hover {
+    background-color: #1d4ed8;
+}
+
+.sm-add-btn svg {
+    /* w-5 h-5 */
+    width: 20px;
+    height: 20px;
+}
+
+/* ===== SUPPLIER CARDS (LIST) ===== */
+.sm-supplier-cards-grid {
+    /* grid gap-4 (Changed from grid-gap to gap for compatibility) */
+    display: grid;
+    gap: 16px;
+}
+
+.sm-supplier-card {
+    /* bg-white border rounded-lg p-6 hover:shadow-md transition-shadow */
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+    transition: box-shadow 0.3s;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.sm-supplier-card:hover {
+    /* hover:shadow-md */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.sm-card-content-wrapper {
+    /* flex justify-between items-start */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.sm-card-main-info {
+    /* flex-1 */
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.sm-card-title-group {
+    /* flex items-center gap-3 mb-2 */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.sm-card-title-h3 {
+    /* text-lg font-semibold */
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.sm-card-code {
+    /* text-sm text-gray-500 */
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.sm-status-tag {
+    /* px-3 py-1 rounded-full text-xs font-medium */
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.sm-tag-active {
+    /* bg-green-100 text-green-700 */
+    background-color: #d1fae5;
+    color: #047857;
+}
+
+.sm-tag-inactive {
+    /* bg-gray-100 text-gray-700 */
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.sm-contact-grid {
+    /* grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600 */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.sm-contact-grid p span {
+    font-weight: 500; /* strong */
+}
+
+.sm-stats-footer {
+    /* flex gap-6 text-sm */
+    display: flex;
+    gap: 24px;
+    font-size: 14px;
+}
+
+.sm-stat-item {
+    /* flex items-center gap-2 */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sm-stat-item svg {
+    /* w-4 h-4 text-blue-500/text-green-500 */
+    width: 16px;
+    height: 16px;
+}
+
+.sm-stat-item.sm-blue svg { color: #3b82f6; }
+.sm-stat-item.sm-green svg { color: #10b981; }
+
+.sm-action-buttons {
+    /* flex gap-2 */
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.sm-action-btn {
+    /* p-2 text-blue-600 hover:bg-blue-50 rounded-lg */
+    padding: 8px;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    line-height: 1; /* fix alignment for icons */
+}
+
+.sm-action-btn svg {
+    /* w-5 h-5 */
+    width: 20px;
+    height: 20px;
+}
+
+.sm-action-btn:hover {
+    background-color: #eff6ff; /* blue-50 */
+}
+
+.sm-btn-view { color: #2563eb; }
+
+.sm-btn-edit { color: #4b5563; }
+.sm-btn-edit:hover { background-color: #f3f4f6; }
+
+.sm-btn-power.active { /* Tạm ngưng (active supplier) */
+    color: #f97316;
+}
+
+.sm-btn-power.inactive { /* Kích hoạt (inactive supplier) */
+    color: #10b981;
+}
+
+.sm-btn-power.active:hover { background-color: #fff7ed; } /* orange-50 */
+.sm-btn-power.inactive:hover { background-color: #ecfdf5; } /* green-50 */
+
+.sm-btn-delete {
+    /* text-red-600 hover:bg-red-50 */
+    color: #dc2626;
+}
+
+.sm-btn-delete:hover {
+    background-color: #fef2f2; /* red-50 */
+}
+
+/* ===== DETAIL VIEW STYLES (SupplierDetail) ===== */
+.sm-back-btn {
+    /* text-blue-600 hover:text-blue-700 mb-2 */
+    color: #2563eb;
+    margin-bottom: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    display: block;
+    transition: color 0.2s;
+}
+
+.sm-back-btn:hover {
+    color: #1d4ed8;
+}
+
+.sm-detail-title {
+    /* text-2xl font-bold */
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.sm-detail-code {
+    /* text-gray-500 */
+    color: #6b7280;
+}
+
+.sm-detail-header-actions {
+    /* flex gap-2 */
+    display: flex;
+    gap: 8px;
+}
+
+.sm-detail-action-btn {
+    /* px-4 py-2 border rounded-lg hover:bg-gray-50 */
+    padding: 8px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background-color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.sm-detail-action-btn:hover {
+    background-color: #f9fafb;
+}
+
+.sm-detail-action-btn.sm-primary {
+    /* bg-blue-600 text-white rounded-lg hover:bg-blue-700 */
+    background-color: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+
+.sm-detail-action-btn.sm-primary:hover {
+    background-color: #1d4ed8;
+}
+
+/* Detail Stats Cards */
+.sm-detail-stat-card {
+    /* bg-blue-50 p-4 rounded-lg */
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: none; /* No shadow */
+}
+
+.sm-detail-card-blue { background-color: #eff6ff; }
+.sm-detail-card-green { background-color: #ecfdf5; }
+.sm-detail-card-orange { background-color: #fff7ed; }
+.sm-detail-card-purple { background-color: #faf5ff; }
+
+.sm-detail-stat-value {
+    /* text-2xl font-bold text-blue-600 */
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.sm-detail-value-blue { color: #2563eb; }
+.sm-detail-value-green { color: #10b981; }
+.sm-detail-value-orange { color: #f97316; }
+.sm-detail-value-purple { color: #9333ea; }
+
+/* Tabs */
+.sm-tabs-bar {
+    /* border-b */
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 16px;
+}
+
+.sm-tabs-group {
+    /* flex gap-6 */
+    display: flex;
+    gap: 24px;
+}
+
+.sm-tab-btn {
+    /* pb-3 px-2 font-medium */
+    padding: 0 8px 12px 8px;
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: color 0.2s;
+    color: #6b7280; /* text-gray-500 */
+}
+
+.sm-tab-btn.sm-active-tab {
+    /* border-b-2 border-blue-600 text-blue-600 */
+    border-bottom: 2px solid #2563eb;
+    color: #2563eb;
+}
+
+/* Tables (Order History, Products) */
+.sm-table {
+    /* w-full */
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sm-table-thead {
+    /* bg-gray-50 */
+    background-color: #f9fafb;
+}
+
+.sm-table-th {
+    /* px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase */
+    padding: 12px 24px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.sm-table-th.sm-text-right { text-align: right; }
+
+.sm-table-tbody > .sm-table-tr {
+    border-top: 1px solid #e5e7eb; /* divide-y simulation */
+}
+
+.sm-table-tbody > .sm-table-tr:hover {
+    background-color: #f9fafb; /* hover:bg-gray-50 */
+}
+
+.sm-table-td {
+    /* px-6 py-4 text-sm */
+    padding: 16px 24px;
+    font-size: 14px;
+    color: #374151; /* text-gray-700 */
+}
+
+.sm-table-td.sm-font-medium { font-weight: 500; }
+.sm-table-td.sm-blue-link { color: #2563eb; font-weight: 500; }
+
+.sm-table-status-tag {
+    /* px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 */
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 9999px;
+    background-color: #d1fae5;
+    color: #047857;
+    white-space: nowrap;
+}
+
+.sm-table-action-btn {
+    /* text-blue-600 hover:text-blue-700 text-sm */
+    color: #2563eb;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.sm-table-action-btn:hover {
+    color: #1d4ed8;
+}
+
+/* Products Panel Header */
+.sm-products-panel-header {
+    /* p-4 border-b flex justify-between items-center */
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Stats Tab Content */
+.sm-chart-panel {
+    /* bg-white border rounded-lg p-6 */
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+}
+
+.sm-chart-title {
+    /* font-semibold mb-4 flex items-center gap-2 */
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sm-chart-title svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Bar Chart Simulation */
+.sm-bar-chart-container {
+    /* h-64 flex items-end justify-around gap-2 */
+    height: 256px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    gap: 8px;
+    padding-top: 10px; /* Space for the top of the bars */
+}
+
+.sm-bar {
+    /* flex-1 bg-blue-500 rounded-t */
+    flex-grow: 1;
+    background-color: #3b82f6;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    min-width: 4px; /* Ensure thin bars are visible */
+}
+
+.sm-chart-labels {
+    /* flex justify-between text-xs text-gray-500 mt-2 */
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 8px;
+}
+
+/* Trend Chart Simulation */
+.sm-trend-item {
+    /* space-y-4 */
+    margin-bottom: 16px;
+}
+
+.sm-trend-item:last-child {
+    margin-bottom: 0;
+}
+
+.sm-trend-header {
+    /* flex justify-between text-sm mb-1 */
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.sm-trend-name {
+    color: #1f2937;
+}
+
+.sm-trend-change.sm-green { color: #10b981; }
+.sm-trend-change.sm-red { color: #dc2626; }
+.sm-trend-change.sm-gray { color: #4b5563; }
+
+.sm-progress-bar-bg {
+    /* w-full bg-gray-200 rounded-full h-2 */
+    width: 100%;
+    background-color: #e5e7eb;
+    border-radius: 9999px;
+    height: 8px;
+}
+
+.sm-progress-bar-fill {
+    /* h-2 rounded-full */
+    height: 8px;
+    border-radius: 9999px;
+}
+
+.sm-progress-fill-green { background-color: #10b981; }
+.sm-progress-fill-red { background-color: #dc2626; }
+.sm-progress-fill-gray { background-color: #6b7280; }
+
+/* Aggregate Report */
+.sm-report-grid {
+    /* grid grid-cols-3 gap-4 */
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.sm-report-card {
+    /* text-center p-4 bg-gray-50 rounded-lg */
+    text-align: center;
+    padding: 16px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+}
+
+.sm-report-label {
+    /* text-sm text-gray-600 mb-1 */
+    font-size: 14px;
+    color: #4b5563;
+    margin-bottom: 4px;
+}
+
+.sm-report-value {
+    /* text-2xl font-bold */
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.sm-report-sub {
+    /* text-xs text-green-600/text-gray-600 */
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.sm-report-sub.sm-green { color: #10b981; }
+.sm-report-sub.sm-gray { color: #4b5563; }
+
+
+/* ===== MODAL STYLES ===== */
+.sm-modal-overlay {
+    /* fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.sm-modal-content {
+    /* bg-white rounded-lg p-6 w-full max-w-2xl */
+    background-color: white;
+    border-radius: 8px;
+    padding: 24px;
+    width: 100%;
+    max-width: 672px; /* max-w-2xl */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.sm-modal-title {
+    /* text-xl font-bold mb-4 */
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.sm-modal-body-group {
+    /* space-y-4 */
+    margin-bottom: 24px;
+}
+
+.sm-modal-body-group > * + * {
+    margin-top: 16px;
+}
+
+.sm-modal-form-grid {
+    /* grid grid-cols-2 gap-4 */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.sm-form-label {
+    /* block text-sm font-medium mb-1 */
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #111827;
+}
+
+.sm-form-input,
+.sm-form-textarea {
+    /* w-full px-3 py-2 border rounded-lg */
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.sm-form-input:focus,
+.sm-form-textarea:focus {
+    /* focus:ring-2 focus:ring-blue-500 focus:border-blue-500 */
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.sm-modal-footer {
+    /* flex justify-end gap-3 mt-6 */
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+/* Modal Buttons - Reuse detail actions for consistency */
+.sm-modal-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.sm-modal-btn.sm-cancel {
+    /* px-4 py-2 border rounded-lg hover:bg-gray-50 */
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #374151;
+}
+
+.sm-modal-btn.sm-cancel:hover {
+    background-color: #f9fafb;
+}
+
+.sm-modal-btn.sm-save {
+    /* px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 */
+    background-color: #2563eb;
+    color: white;
+    border: 1px solid #2563eb;
+}
+
+.sm-modal-btn.sm-save:hover {
+    background-color: #1d4ed8;
+}
+
+/* ===== RESPONSIVE STYLES ===== */
+@@media (max-width: 1280px) {
+    /* max-w-7xl behavior on smaller screens */
+    .sm-max-width-area {
+        padding: 0 16px;
+    }
+}
+
+@@media (max-width: 1024px) {
+    /* Desktop -> Tablet/Large Mobile */
+    .sm-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .sm-two-col-grid {
+        grid-template-columns: 1fr;
+    }
+    .sm-contact-grid {
+        grid-template-columns: 1fr;
+        gap: 8px; /* Reduce gap */
+    }
+    .sm-chart-panel, .sm-report-grid {
+        /* Stats tab columns reduced */
+        grid-template-columns: 1fr;
+    }
+}
+
+@@media (max-width: 768px) {
+    /* Tablet -> Mobile */
+    .sm-page-wrapper {
+        padding: 16px;
+    }
+    .sm-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .sm-list-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .sm-action-group {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    .sm-search-input, .sm-filter-select, .sm-add-btn {
+        width: 100%;
+    }
+    .sm-search-input {
+        /* Ensure padding is still correct when full width */
+        padding-left: 40px;
+    }
+    .sm-supplier-card .sm-card-content-wrapper {
+        flex-direction: column;
+    }
+    .sm-supplier-card .sm-action-buttons {
+        margin-top: 16px;
+        justify-content: flex-end;
+    }
+    .sm-contact-grid {
+        grid-template-columns: 1fr;
+    }
+    .sm-modal-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+        /* ===== SUPPLIER LIST CONTAINER WITH FIXED HEIGHT ===== */
+        .sm-supplier-list-wrapper {
+            max-height: 600px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 8px; /* Để tránh scrollbar che nội dung */
+        }
+
+            /* Custom scrollbar cho container */
+            .sm-supplier-list-wrapper::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .sm-supplier-list-wrapper::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 4px;
+            }
+
+            .sm-supplier-list-wrapper::-webkit-scrollbar-thumb {
+                background: #888;
+                border-radius: 4px;
+            }
+
+                .sm-supplier-list-wrapper::-webkit-scrollbar-thumb:hover {
+                    background: #555;
+                }
+
+                /* ===== TRANSACTIONS MODAL STYLES ===== */
+.sm-modal-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sm-modal-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #6b7280;
+    transition: color 0.2s;
+}
+
+.sm-modal-close-btn:hover {
+    color: #1f2937;
+}
+
+.sm-modal-filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.sm-modal-table-wrapper {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.sm-modal-table-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sm-modal-table-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.sm-modal-table-wrapper::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.sm-modal-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.sm-transactions-supplier-code {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.sm-transactions-value {
+    font-weight: 600;
+    color: #10b981;
+}
+
+.sm-transactions-date {
+    color: #4b5563;
+    font-size: 14px;
+}
+
+/* Responsive cho modal */
+@@media (max-width: 768px) {
+    .sm-modal-filters {
+        flex-direction: column;
+    }
+    
+    .sm-modal-table-wrapper {
+        max-height: 400px;
+    }
+}
+
+
+/* ===== HIGHLIGHT EFFECT FOR SUPPLIER CARD ===== */
+.sm-supplier-card.highlighted {
+    animation: highlightPulse 2s ease-in-out;
+    border: 2px solid #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+@@keyframes highlightPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.2);
+    }
+}
+
+/* Hover effect cho clickable items */
+.sm-clickable-supplier {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.sm-clickable-supplier:hover {
+    color: #1d4ed8 !important;
+    text-decoration: underline;
+}
+
+        /* ===== EXPANDABLE ORDER DETAILS ===== */
+        .sm-order-details-row {
+            display: none;
+            background-color: #f9fafb;
+        }
+
+            .sm-order-details-row.expanded {
+                display: table-row;
+            }
+
+        .sm-order-details-cell {
+            padding: 20px 24px !important;
+            border-top: none !important;
+        }
+
+        .sm-order-details-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .sm-details-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .sm-details-table {
+            width: 100%;
+            font-size: 13px;
+        }
+
+            .sm-details-table thead {
+                background-color: #f9fafb;
+            }
+
+            .sm-details-table th {
+                padding: 8px 12px;
+                text-align: left;
+                font-weight: 500;
+                color: #6b7280;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .sm-details-table td {
+                padding: 10px 12px;
+                border-bottom: 1px solid #f3f4f6;
+            }
+
+            .sm-details-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .sm-details-table tbody tr:hover {
+                background-color: #f9fafb;
+            }
+
+        .sm-details-summary {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            justify-content: flex-end;
+            gap: 24px;
+            font-size: 14px;
+        }
+
+        .sm-summary-item {
+            display: flex;
+            gap: 8px;
+        }
+
+        .sm-summary-label {
+            color: #6b7280;
+        }
+
+        .sm-summary-value {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .sm-summary-total {
+            color: #10b981;
+            font-size: 16px;
+        }
+
+        /* Icon rotation animation */
+        .sm-expand-icon {
+            transition: transform 0.3s ease;
+            display: inline-block;
+        }
+
+            .sm-expand-icon.rotated {
+                transform: rotate(180deg);
+            }
+/* ===== TOAST NOTIFICATION ===== */
+.sm-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sm-toast {
+    min-width: 300px;
+    max-width: 400px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+    background-color: white;
+    border-left: 4px solid;
+}
+
+.sm-toast.success {
+    border-left-color: #10b981;
+}
+
+.sm-toast.error {
+    border-left-color: #dc2626;
+}
+
+.sm-toast.warning {
+    border-left-color: #f97316;
+}
+
+.sm-toast-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.sm-toast.success .sm-toast-icon {
+    color: #10b981;
+}
+
+.sm-toast.error .sm-toast-icon {
+    color: #dc2626;
+}
+
+.sm-toast.warning .sm-toast-icon {
+    color: #f97316;
+}
+
+.sm-toast-content {
+    flex: 1;
+}
+
+.sm-toast-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: #111827;
+}
+
+.sm-toast-message {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.sm-toast-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #9ca3af;
+    transition: color 0.2s;
+}
+
+.sm-toast-close:hover {
+    color: #111827;
+}
+
+@@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.sm-toast.hiding {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
+</style>
+
+
+
+</head>
+<body>
+    <div class="sm-page-wrapper">
+        <div class="sm-max-width-area">
+            <div class="sm-header-area">
+                <h1 class="sm-title" style="font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 5px;">
+                    Quản lý Nhà cung cấp
+                </h1>
+                <p class="sm-subtitle">Quản lý thông tin, lịch sử giao dịch</p>
+            </div>
+
+            <div id="sm-main-content">
+                <div id="sm-tab-list" class="sm-space-y-6" style="display: block;">
+
+                    <div class="sm-stats-grid">
+                        <!-- Card 1: Tổng nhà cung cấp -->
+                        <div class="sm-stat-card">
+                            <div class="sm-card-header">
+                                <span class="sm-card-label">Tổng nhà cung cấp</span>
+                                <svg class="sm-card-icon sm-icon-blue" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z" /></svg>
+                            </div>
+                            <p class="sm-stat-value" id="stat-total-suppliers">0</p>
+                            <p class="sm-stat-subtext" id="stat-total-subtext">Đang hoạt động</p>
+                        </div>
+
+                        <!-- Card 2: Giao dịch tháng này -->
+                        <div class="sm-stat-card">
+                            <div class="sm-card-header">
+                                <span class="sm-card-label">Giao dịch tháng này</span>
+                                <svg class="sm-card-icon sm-icon-purple" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" /></svg>
+                            </div>
+                            <p class="sm-stat-value sm-purple" id="stat-transactions">0</p>
+                            <p class="sm-stat-subtext" id="stat-transactions-subtext">Tháng hiện tại</p>
+                        </div>
+                    </div>
+
+                    <div class="sm-two-col-grid">
+                        <!-- Panel 1: Recent Transactions -->
+                        <div class="sm-panel" style=" max-height: 460px;">
+                            <div class="sm-panel-header">
+                                <h3 class="sm-panel-title">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" /></svg>
+                                    Giao dịch gần đây
+                                </h3>
+                            </div>
+                            <div class="sm-divide-y" id="sm-recent-transactions">
+                                <!-- Nội dung sẽ được render bởi JavaScript -->
+                            </div>
+                            <div class="sm-panel-footer">
+                                <button class="sm-footer-btn">Xem tất cả →</button>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Top Suppliers -->
+                        <div class="sm-panel">
+                            <div class="sm-panel-header">
+                                <h3 class="sm-panel-title">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z" /></svg>
+                                    Top nhà cung cấp
+                                </h3>
+                            </div>
+                            <div class="sm-divide-y" id="sm-top-suppliers-list">
+                                <!-- Nội dung sẽ được render bởi JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sm-list-controls">
+                        <h3 class="sm-list-title-h3">Danh sách nhà cung cấp</h3>
+                        <div class="sm-action-group">
+                            <div class="sm-search-wrapper">
+                                <svg class="sm-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                                <input type="text"
+                                       class="sm-search-input"
+                                       id="sm-supplier-search-input"
+                                       placeholder="Tìm theo tên, mã..." />
+                            </div>
+                            <button class="sm-add-btn" id="sm-add-supplier-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14" /></svg>
+                                <span>Thêm nhà cung cấp</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sm-supplier-list-wrapper">
+                        <div class="sm-supplier-cards-grid" id="sm-supplier-cards-container">
+                        </div>
+                    </div>
+
+                </div>
+
+                <div id="sm-tab-detail" class="sm-space-y-6" style="display: none;">
+                </div>
+            </div>
+
+            <div id="sm-add-modal" class="sm-modal-overlay" style="display: none;">
+                <div class="sm-modal-content">
+                    <h3 class="sm-modal-title">Thêm nhà cung cấp mới</h3>
+                    <div class="sm-modal-body-group">
+                        <div class="sm-modal-form-grid">
+                            <div>
+                                <label class="sm-form-label" for="add-code">Mã nhà cung cấp</label>
+                                <input type="text" id="add-code" class="sm-form-input" placeholder="NCC001" />
+                            </div>
+                            <div>
+                                <label class="sm-form-label" for="add-name">Tên nhà cung cấp</label>
+                                <input type="text" id="add-name" class="sm-form-input" placeholder="Tên công ty" />
+                            </div>
+                        </div>
+                        <div class="sm-modal-form-grid">
+                            <div>
+                                <label class="sm-form-label" for="add-contact">Người liên hệ</label>
+                                <input type="text" id="add-contact" class="sm-form-input" placeholder="Họ tên" />
+                            </div>
+                            <div>
+                                <label class="sm-form-label" for="add-phone">Số điện thoại</label>
+                                <input type="text" id="add-phone" class="sm-form-input" placeholder="0901234567" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="sm-form-label" for="add-email">Email</label>
+                            <input type="email" id="add-email" class="sm-form-input" placeholder="email@example.com" />
+                        </div>
+                        <div>
+                            <label class="sm-form-label" for="add-address">Địa chỉ</label>
+                            <textarea id="add-address" class="sm-form-textarea" rows="2" placeholder="Địa chỉ đầy đủ"></textarea>
+                        </div>
+                    </div>
+                    <div class="sm-modal-footer">
+                        <button id="sm-modal-cancel-btn" class="sm-modal-btn sm-cancel">
+                            Hủy
+                        </button>
+                        <button id="sm-modal-save-btn" class="sm-modal-btn sm-save">
+                            Lưu
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Xem tất cả giao dịch gần đây -->
+            <div id="sm-transactions-modal" class="sm-modal-overlay" style="display: none;">
+                <div class="sm-modal-content" style="max-width: 900px;">
+                    <div class="sm-modal-header-row">
+                        <h3 class="sm-modal-title">Giao dịch gần đây (50 đơn)</h3>
+                        <button class="sm-modal-close-btn" id="sm-close-transactions-modal">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="sm-modal-filters">
+                        <div class="sm-search-wrapper" style="flex: 1;">
+                            <svg class="sm-search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.35-4.35" />
+                            </svg>
+                            <input type="text"
+                                   class="sm-search-input"
+                                   id="sm-transactions-search"
+                                   placeholder="Tìm theo tên hoặc mã nhà cung cấp..." />
+                        </div>
+                        <select class="sm-filter-select" id="sm-transactions-sort">
+                            <option value="date-desc">Ngày gần nhất</option>
+                            <option value="date-asc">Ngày xa nhất</option>
+                            <option value="value-desc">Giá trị cao → thấp</option>
+                            <option value="value-asc">Giá trị thấp → cao</option>
+                        </select>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="sm-modal-table-wrapper">
+                        <table class="sm-table">
+                            <thead class="sm-table-thead">
+                                <tr>
+                                    <th class="sm-table-th">Nhà cung cấp</th>
+                                    <th class="sm-table-th">Mã NCC</th>
+                                    <th class="sm-table-th">Giá trị đơn</th>
+                                    <th class="sm-table-th">Thời gian</th>
+                                </tr>
+                            </thead>
+                            <tbody class="sm-table-tbody" id="sm-transactions-table-body">
+                                <!-- Nội dung sẽ được render bằng JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="sm-modal-footer" style="justify-content: center;">
+                        <button class="sm-modal-btn sm-cancel" id="sm-transactions-modal-close">
+                            Đóng
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!-- Modal Chỉnh sửa nhà cung cấp -->
+    <div id="sm-edit-modal" class="sm-modal-overlay" style="display: none;">
+        <div class="sm-modal-content">
+            <h3 class="sm-modal-title">Chỉnh sửa nhà cung cấp</h3>
+            <div class="sm-modal-body-group">
+                <div class="sm-modal-form-grid">
+                    <div>
+                        <label class="sm-form-label" for="edit-code">Mã nhà cung cấp</label>
+                        <input type="text" id="edit-code" class="sm-form-input" disabled style="background-color: #f3f4f6; cursor: not-allowed;" />
+                    </div>
+                    <div>
+                        <label class="sm-form-label" for="edit-name">Tên nhà cung cấp</label>
+                        <input type="text" id="edit-name" class="sm-form-input" placeholder="Tên công ty" />
+                    </div>
+                </div>
+                <div class="sm-modal-form-grid">
+                    <div>
+                        <label class="sm-form-label" for="edit-contact">Người liên hệ</label>
+                        <input type="text" id="edit-contact" class="sm-form-input" placeholder="Họ tên" />
+                    </div>
+                    <div>
+                        <label class="sm-form-label" for="edit-phone">Số điện thoại</label>
+                        <input type="text" id="edit-phone" class="sm-form-input" placeholder="0901234567" maxlength="10" />
+                    </div>
+                </div>
+                <div>
+                    <label class="sm-form-label" for="edit-email">Email</label>
+                    <input type="email" id="edit-email" class="sm-form-input" placeholder="email@example.com" />
+                </div>
+                <div>
+                    <label class="sm-form-label" for="edit-address">Địa chỉ</label>
+                    <textarea id="edit-address" class="sm-form-textarea" rows="2" placeholder="Địa chỉ đầy đủ"></textarea>
+                </div>
+            </div>
+            <div class="sm-modal-footer">
+                <button id="sm-edit-modal-cancel-btn" class="sm-modal-btn sm-cancel">
+                    Hủy
+                </button>
+                <button id="sm-edit-modal-save-btn" class="sm-modal-btn sm-save">
+                    Cập nhật
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sm-toast-container" class="sm-toast-container"></div>
+
+    <script>
+        function showToast(type, title, message, duration = 4000) {
+            const container = document.getElementById('sm-toast-container');
+            if (!container) return;
+
+            // Icon SVG cho từng loại
+            const icons = {
+                success: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>`,
+                error: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>`,
+                warning: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>`
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `sm-toast ${type}`;
+            toast.innerHTML = `
+                <div class="sm-toast-icon">${icons[type]}</div>
+                <div class="sm-toast-content">
+                    <div class="sm-toast-title">${title}</div>
+                    ${message ? `<div class="sm-toast-message">${message}</div>` : ''}
+                </div>
+                <button class="sm-toast-close">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // Close button handler
+            const closeBtn = toast.querySelector('.sm-toast-close');
+            closeBtn.addEventListener('click', () => removeToast(toast));
+
+            // Auto remove after duration
+            setTimeout(() => removeToast(toast), duration);
+        }
+
+        function removeToast(toast) {
+            toast.classList.add('hiding');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }
+
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ====================================================================
+            // ===== I. CONFIGURATION & UTILITY FUNCTIONS (Hàm tiện ích) =====
+            // ====================================================================
+
+            const $ = selector => document.querySelector(selector);
+            const $$ = selector => document.querySelectorAll(selector);
+
+            // --- CẤU HÌNH API ENDPOINTS ---
+            const ENDPOINTS = {
+                SUMMARY_LIST: '/ManagerSupplier/Summary',
+                ORDERS_HISTORY: (id) => `/ManagerSupplier/OrdersHistory/${id}`,
+                PRODUCTS_SUPPLIED: (id) => `/ManagerSupplier/ProductsSupplied/${id}`,
+                TOP_SUPPLIERS: '/ManagerSupplier/TopSuppliers',
+                RECENT_TRANSACTIONS: '/ManagerSupplier/RecentTransactions',
+                ALL_RECENT_TRANSACTIONS: '/ManagerSupplier/AllRecentTransactions',
+                MONTHLY_STATS: '/ManagerSupplier/MonthlyStats',
+                CREATE_SUPPLIER: '/ManagerSupplier/Create',  // ✅ THÊM
+                UPDATE_SUPPLIER: (id) => `/ManagerSupplier/Update/${id}`,  // ✅ THÊM
+                DELETE_SUPPLIER: (id) => `/ManagerSupplier/Delete/${id}`
+            };
+
+            // --- Fetch Utility ---
+            async function fetchData(url, options = {}) {
+                const showEmptyToast = options.showEmptyToast !== false; // Mặc định là true
+                const silent = options.silent || false; // Không hiển thị toast nào
+
+                try {
+                    const response = await fetch(url);
+
+                    // ✅ XỬ LÝ 404 - KHÔNG HIỂN THỊ LỖI
+                    if (response.status === 404) {
+                        console.warn(`Data not found (404): ${url}`);
+                        if (showEmptyToast && !silent) {
+                            showToast('warning', 'Dữ liệu trống', 'Không có dữ liệu để hiển thị');
+                        }
+                        return null;
+                    }
+
+                    // ✅ XỬ LÝ CÁC LỖI KHÁC (500, 400, v.v.)
+                    if (!response.ok) {
+                        console.error(`HTTP Error ${response.status}: ${url}`);
+
+                        // Chỉ hiển thị lỗi nghiêm trọng (500+)
+                        if (response.status >= 500 && !silent) {
+                            showToast('error', 'Lỗi server', 'Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.');
+                        }
+                        return null;
+                    }
+
+                    const data = await response.json();
+
+                    // ✅ KIỂM TRA DỮ LIỆU RỖNG
+                    if (!data || (Array.isArray(data) && data.length === 0)) {
+                        console.info(`Empty data returned from: ${url}`);
+                        if (showEmptyToast && !silent) {
+                            showToast('warning', 'Dữ liệu trống', 'Không có dữ liệu để hiển thị');
+                        }
+                        return Array.isArray(data) ? [] : null;
+                    }
+
+                    return data;
+
+                } catch (error) {
+                    console.error("Fetch error:", url, error);
+
+                    // Chỉ hiển thị lỗi network/connection
+                    if (!silent) {
+                        showToast('error', 'Lỗi kết nối', 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+                    }
+                    return null;
+                }
+            }
+
+            // --- Formatting Utils ---
+            function formatCurrency(num) { return num.toLocaleString('vi-VN'); }
+            function formatMillion(num) { return (num / 1000000).toFixed(1) + 'M'; }
+
+
+
+function validatePhone(phone) {
+    const re = /^0\d{9}$/;  // 10 số, bắt đầu bằng 0
+    return re.test(phone);
+}
+
+function validateSupplierForm(data, isEdit = false) {
+    const errors = [];
+    
+    if (!isEdit && !data.code?.trim()) {
+        errors.push('Mã nhà cung cấp không được để trống');
+    }
+    if (!data.name?.trim()) {
+        errors.push('Tên nhà cung cấp không được để trống');
+    }
+    if (!data.contact?.trim()) {
+        errors.push('Người liên hệ không được để trống');
+    }
+    if (!data.phone?.trim()) {
+        errors.push('Số điện thoại không được để trống');
+    } else if (!validatePhone(data.phone)) {
+        errors.push('Số điện thoại phải có 10 số và bắt đầu bằng 0');
+    }
+    if (!data.email?.trim()) {
+        errors.push('Email không được để trống');
+    } else if (!validateEmail(data.email)) {  // ✅ THÊM
+        errors.push('Email không đúng định dạng');
+    }
+    if (!data.address?.trim()) {
+        errors.push('Địa chỉ không được để trống');
+    }
+    
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
+}
+
+
+function validateEmail(email) {
+    const re = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+    return re.test(email);
+}
+
+function validatePhone(phone) {
+    const re = /^0\d{9}$/;
+    return re.test(phone);
+}
+
+            // ====================================================================
+            // ===== II. STATE MANAGEMENT & RENDER FLOW =====
+            // ====================================================================
+
+            // Dữ liệu gốc và trạng thái
+            let SUPPLIERS_DATA = [];
+            let state = {
+                activeTab: 'list',
+                detailSubTab: 'orders',
+                selectedSupplier: null,
+                searchTerm: '',
+                showAddModal: false,
+                showEditModal: false,  // ✅ THÊM
+                editingSupplierId: null,
+                showTransactionsModal: false,  // ✅ THÊM
+                allTransactions: [],  // ✅ THÊM - Lưu 50 giao dịch
+                filteredTransactions: [],  // ✅ THÊM - Dữ liệu sau khi filter
+                transactionsSearch: '',  // ✅ THÊM
+                transactionsSort: 'date-desc',  // ✅ THÊM
+                topPeriod: 'month',
+                orderHistory: [],
+                ingredients: [],
+                topSuppliers: [],
+                recentTransactions: [],
+                monthlyStats: null
+            };
+
+
+            function setState(newState) {
+                state = { ...state, ...newState };
+
+                // Xử lý modal transactions
+                const transactionsModal = $('#sm-transactions-modal');
+                if (transactionsModal) {
+                    transactionsModal.style.display = state.showTransactionsModal ? 'flex' : 'none';
+                }
+
+                // ✅ Xử lý modal edit
+                const editModal = $('#sm-edit-modal');
+                if (editModal) {
+                    editModal.style.display = state.showEditModal ? 'flex' : 'none';
+                }
+
+                render();
+            }
+
+
+            // Hàm render chính (Giữ nguyên)
+            function render() {
+                const listTab = $('#sm-tab-list');
+                const detailTab = $('#sm-tab-detail');
+                const modal = $('#sm-add-modal');
+
+                listTab.style.display = state.activeTab === 'list' ? 'block' : 'none';
+                detailTab.style.display = state.activeTab === 'detail' ? 'block' : 'none';
+                modal.style.display = state.showAddModal ? 'flex' : 'none';
+
+                if (state.activeTab === 'list') {
+                    renderSupplierListContent();
+                } else if (state.activeTab === 'detail' && state.selectedSupplier) {
+                    renderSupplierDetailContent();
+                    // Logic render SubContent sẽ nằm trong renderSupplierDetailContent
+                }
+            }
+
+
+            const closeModalBtn = $('#sm-close-transactions-modal');
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener('click', closeTransactionsModal);
+            }
+
+            // Đóng modal bằng nút "Đóng"
+            const closeBtn = $('#sm-transactions-modal-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeTransactionsModal);
+            }
+
+            // Đóng modal khi click overlay
+            const modalOverlay = $('#sm-transactions-modal');
+            if (modalOverlay) {
+                modalOverlay.addEventListener('click', (e) => {
+                    if (e.target.id === 'sm-transactions-modal') {
+                        closeTransactionsModal();
+                    }
+                });
+            }
+
+            // Tìm kiếm trong modal
+            const searchInput = $('#sm-transactions-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    state.transactionsSearch = e.target.value;
+                    filterAndSortTransactions();
+                });
+            }
+
+            // Sắp xếp trong modal
+            const sortSelect = $('#sm-transactions-sort');
+            if (sortSelect) {
+                sortSelect.addEventListener('change', (e) => {
+                    state.transactionsSort = e.target.value;
+                    filterAndSortTransactions();
+                });
+            }
+
+
+            // ====================================================================
+            // ===== III. DATA FETCHING & UI UPDATES (Logic Tích hợp API) =====
+            // ====================================================================
+
+            async function fetchAndInitializeData() {
+                // ✅ LẤY DANH SÁCH NHÀ CUNG CẤP - KHÔNG HIỂN THỊ TOAST
+                const summaryData = await fetchData(ENDPOINTS.SUMMARY_LIST, { silent: true });
+                window.SUPPLIERS_DATA = summaryData || [];
+
+                // ✅ LẤY TOP SUPPLIERS - KHÔNG HIỂN THỊ TOAST
+                const topSuppliersData = await fetchData(ENDPOINTS.TOP_SUPPLIERS, { silent: true });
+                state.topSuppliers = topSuppliersData || [];
+
+                // ✅ LẤY RECENT TRANSACTIONS - KHÔNG HIỂN THỊ TOAST
+                const recentTransactionsData = await fetchData(ENDPOINTS.RECENT_TRANSACTIONS, { silent: true });
+                state.recentTransactions = recentTransactionsData || [];
+
+                // ✅ LẤY THỐNG KÊ THÁNG - KHÔNG HIỂN THỊ TOAST
+                const monthlyStatsData = await fetchData(ENDPOINTS.MONTHLY_STATS, { silent: true });
+                state.monthlyStats = monthlyStatsData;
+
+                // ✅ CHỈ HIỂN THỊ 1 TOAST DUY NHẤT NẾU TẤT CẢ ĐỀU NULL
+                if (!summaryData && !topSuppliersData && !recentTransactionsData && !monthlyStatsData) {
+                    showToast('warning', 'Không có dữ liệu', 'Hệ thống chưa có dữ liệu nhà cung cấp');
+                }
+
+                render();
+            }
+
+            // --- B. Fetch Dữ liệu Chi tiết khi chuyển View ---
+            async function fetchDetailData(supplierId, subTab) {
+                renderSubContent(); // Hiển thị loading
+
+                let data = null;
+                if (subTab === 'orders') {
+                    // ✅ KHÔNG HIỂN THỊ TOAST KHI TẢI
+                    data = await fetchData(ENDPOINTS.ORDERS_HISTORY(supplierId), { silent: true });
+                    state.orderHistory = data || [];
+                    renderSubContent();
+                } else if (subTab === 'products') {
+                    // ✅ KHÔNG HIỂN THỊ TOAST KHI TẢI
+                    data = await fetchData(ENDPOINTS.PRODUCTS_SUPPLIED(supplierId), { silent: true });
+                    state.ingredients = data || [];
+                    renderSubContent();
+                }
+            }
+
+
+            async function fetchAllTransactions() {
+                // ✅ KHÔNG HIỂN THỊ TOAST KHI TẢI
+                const data = await fetchData(ENDPOINTS.ALL_RECENT_TRANSACTIONS, { silent: true });
+                state.allTransactions = data || [];
+                state.filteredTransactions = data || [];
+                renderTransactionsModal();
+            }
+
+            // ✅ HÀM LỌC VÀ SẮP XẾP GIAO DỊCH
+            function filterAndSortTransactions() {
+                let filtered = [...state.allTransactions];
+
+                // Lọc theo từ khóa tìm kiếm
+                const searchTerm = state.transactionsSearch.toLowerCase();
+                if (searchTerm) {
+                    filtered = filtered.filter(txn =>
+                        txn.supplierName.toLowerCase().includes(searchTerm) ||
+                        txn.supplierCode.toLowerCase().includes(searchTerm)
+                    );
+                }
+
+                // Sắp xếp
+                switch (state.transactionsSort) {
+                    case 'date-desc':
+                        filtered.sort((a, b) => new Date(b.timeConfirm) - new Date(a.timeConfirm));
+                        break;
+                    case 'date-asc':
+                        filtered.sort((a, b) => new Date(a.timeConfirm) - new Date(b.timeConfirm));
+                        break;
+                    case 'value-desc':
+                        filtered.sort((a, b) => b.totalValue - a.totalValue);
+                        break;
+                    case 'value-asc':
+                        filtered.sort((a, b) => a.totalValue - b.totalValue);
+                        break;
+                }
+
+                state.filteredTransactions = filtered;
+                renderTransactionsModal();
+            }
+
+            // ✅ HÀM RENDER MODAL GIAO DỊCH
+            function renderTransactionsModal() {
+                const tbody = $('#sm-transactions-table-body');
+                if (!tbody) return;
+
+                const transactions = state.filteredTransactions;
+
+                if (transactions.length === 0) {
+                    tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="sm-table-td" style="text-align: center; color: #9ca3af; padding: 40px;">
+                            Không tìm thấy giao dịch phù hợp
+                        </td>
+                    </tr>
+                `;
+                    return;
+                }
+
+                const html = transactions.map(txn => {
+                    const formattedValue = formatMillion(txn.totalValue);
+                    const formattedDate = new Date(txn.timeConfirm).toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    return `
+                    <tr class="sm-table-tr">
+                        <td class="sm-table-td sm-font-medium">${txn.supplierName}</td>
+                        <td class="sm-table-td">
+                            <span class="sm-transactions-supplier-code">${txn.supplierCode}</span>
+                        </td>
+                        <td class="sm-table-td">
+                            <span class="sm-transactions-value">${formattedValue} VNĐ</span>
+                        </td>
+                        <td class="sm-table-td">
+                            <span class="sm-transactions-date">${formattedDate}</span>
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+
+                tbody.innerHTML = html;
+            }
+
+            // ✅ MỞ MODAL KHI CLICK "Xem tất cả"
+            function openTransactionsModal() {
+                state.showTransactionsModal = true;
+                state.transactionsSearch = '';
+                state.transactionsSort = 'date-desc';
+
+                // Reset input values
+                const searchInput = $('#sm-transactions-search');
+                const sortSelect = $('#sm-transactions-sort');
+                if (searchInput) searchInput.value = '';
+                if (sortSelect) sortSelect.value = 'date-desc';
+
+                setState({ showTransactionsModal: true });
+                fetchAllTransactions();
+            }
+
+            // ✅ ĐÓNG MODAL
+            function closeTransactionsModal() {
+                setState({ showTransactionsModal: false });
+            }
+
+
+
+            /** Render nội dung cho Tab Danh sách (Sử dụng dữ liệu thực) */
+            function renderSupplierListContent() {
+                const suppliers = window.SUPPLIERS_DATA || [];
+                const total = suppliers.length;
+
+                // CẬP NHẬT UI - Stats Cards
+                const totalElement = $('#stat-total-suppliers');
+                const totalSubtextElement = $('#stat-total-subtext');
+                const transactionsElement = $('#stat-transactions');
+                const transactionsSubtextElement = $('#stat-transactions-subtext');
+
+                if (totalElement) totalElement.textContent = total;
+                if (totalSubtextElement) {
+                    totalSubtextElement.textContent = total > 0 ? 'Đang hoạt động' : 'Chưa có nhà cung cấp';
+                }
+
+                // ✅ HIỂN THỊ DỮ LIỆU THỐNG KÊ THÁNG
+                if (state.monthlyStats) {
+                    if (transactionsElement) {
+                        transactionsElement.textContent = state.monthlyStats.ordersThisMonth;
+                    }
+                    if (transactionsSubtextElement) {
+                        transactionsSubtextElement.textContent = `Tháng ${state.monthlyStats.month}/${state.monthlyStats.year}`;
+                    }
+                } else {
+                    if (transactionsElement) transactionsElement.textContent = '0';
+                    if (transactionsSubtextElement) transactionsSubtextElement.textContent = 'Chưa có giao dịch';
+                }
+
+                // Phần render danh sách suppliers
+                const filteredSuppliers = filterSuppliers();
+                const container = $('#sm-supplier-cards-container');
+                let html = '';
+
+                if (filteredSuppliers.length === 0) {
+                    const message = suppliers.length === 0
+                        ? 'Hệ thống chưa có nhà cung cấp nào. Nhấn "Thêm nhà cung cấp" để bắt đầu.'
+                        : 'Không tìm thấy nhà cung cấp phù hợp với từ khóa tìm kiếm.';
+
+                    html = `<div style="text-align: center; color: #6b7280; padding: 40px; background: white; border-radius: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 16px; opacity: 0.5;">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <p style="font-size: 16px; margin-bottom: 8px;">${message}</p>
+                </div>`;
+                } else {
+                    html = filteredSuppliers.map(supplier => `
+                    <div class="sm-supplier-card" data-supplier-id="${supplier.id}">
+                        <div class="sm-card-content-wrapper">
+                            <div class="sm-card-main-info">
+                                <div class="sm-card-title-group">
+                                    <h3 class="sm-card-title-h3">${supplier.name}</h3>
+                                    <span class="sm-card-code">(${supplier.code})</span>
+                                    <span class="sm-status-tag sm-tag-active">Hoạt động</span>
+                                </div>
+                                <div class="sm-contact-grid">
+                                    <div>
+                                        <p><span>Người liên hệ:</span> ${supplier.contact || 'N/A'}</p>
+                                        <p><span>Điện thoại:</span> ${supplier.phone || 'N/A'}</p>
+                                        <p><span>Email:</span> ${supplier.email || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p><span>Địa chỉ:</span> ${supplier.address || 'N/A'}</p>
+                                        <p><span>Đơn hàng cuối:</span> ${supplier.lastOrder ? new Date(supplier.lastOrder).toLocaleDateString('vi-VN') : 'Chưa có'}</p>
+                                    </div>
+                                </div>
+                                <div class="sm-stats-footer">
+                                    <div class="sm-stat-item sm-blue">
+                                        <svg class="sm-card-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/></svg>
+                                        <span><strong>${supplier.totalOrders}</strong> đơn hàng</span>
+                                    </div>
+                                    <div class="sm-stat-item sm-green">
+                                        <svg class="sm-card-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 15h10v2H7zM19 19H5V5h14v14zm-9-9h4v2h-4v-2zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                                        <span><strong>${formatMillion(supplier.totalValue)}</strong> VNĐ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sm-action-buttons">
+                                <button class="sm-action-btn sm-btn-view" title="Xem chi tiết" onclick="viewSupplierDetail(${supplier.id})">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </button>
+                                <button class="sm-action-btn sm-btn-edit" title="Chỉnh sửa" onclick="editSupplier(${supplier.id})">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                </button>
+                                <button class="sm-action-btn sm-btn-delete" title="Xóa" onclick="deleteSupplier(${supplier.id})">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 11v6M14 11v6M2 6h20M5 6l1.5 14h11L19 6M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                }
+
+                container.innerHTML = html;
+
+                requestAnimationFrame(() => {
+                    renderTopSuppliers();
+                    renderRecentTransactions();
+                });
+            }
+
+
+            /** Hàm hiển thị dialog xác nhận */
+            function showConfirmToast(title, message) {
+                return new Promise((resolve) => {
+                    // Tạo overlay
+                    const overlay = document.createElement('div');
+                    overlay.className = 'sm-modal-overlay';
+                    overlay.style.display = 'flex';
+                    overlay.style.zIndex = '10000';
+
+                    // Tạo confirm dialog
+                    overlay.innerHTML = `
+                    <div class="sm-modal-content" style="max-width: 400px;">
+                        <h3 class="sm-modal-title">${title}</h3>
+                        <p style="color: #6b7280; margin: 16px 0;">${message}</p>
+                        <div class="sm-modal-footer">
+                            <button id="confirm-cancel" class="sm-modal-btn sm-cancel">
+                                Hủy
+                            </button>
+                            <button id="confirm-ok" class="sm-modal-btn sm-save" style="background-color: #dc2626;">
+                                Xác nhận
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                    document.body.appendChild(overlay);
+
+                    // Xử lý sự kiện
+                    document.getElementById('confirm-cancel').onclick = () => {
+                        document.body.removeChild(overlay);
+                        resolve(false);
+                    };
+
+                    document.getElementById('confirm-ok').onclick = () => {
+                        document.body.removeChild(overlay);
+                        resolve(true);
+                    };
+
+                    // Click overlay để đóng
+                    overlay.onclick = (e) => {
+                        if (e.target === overlay) {
+                            document.body.removeChild(overlay);
+                            resolve(false);
+                        }
+                    };
+                });
+            }
+
+            /** Xóa nhà cung cấp (chuyển isActive = false) */
+            window.deleteSupplier = async function (id) {
+                const confirmDelete = await showConfirmToast('Xác nhận xóa', 'Bạn có chắc muốn xóa nhà cung cấp này?');
+                if (!confirmDelete) return;
+
+                try {
+                    const response = await fetch(ENDPOINTS.DELETE_SUPPLIER(id), {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        showToast('success', 'Thành công', 'Đã xóa nhà cung cấp thành công!');
+                        fetchAndInitializeData();
+                    } else {
+                        const result = await response.json();
+                        showToast('error', 'Lỗi', result.message || 'Không thể xóa nhà cung cấp');
+                    }
+                } catch (error) {
+                    console.error('Error deleting supplier:', error);
+                    showToast('error', 'Lỗi kết nối', 'Không thể kết nối đến máy chủ');
+                }
+            }
+
+            /** Lọc danh sách nhà cung cấp dựa trên state */
+            function filterSuppliers() {
+                return window.SUPPLIERS_DATA.filter(s => {
+                    const matchSearch = s.name.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
+                        s.code.toLowerCase().includes(state.searchTerm.toLowerCase());
+                    return matchSearch;
+                });
+            }
+
+
+            /** Render Top Suppliers List - Click để highlight trong danh sách */
+            function renderTopSuppliers() {
+                const container = $('#sm-top-suppliers-list');
+
+                if (!container) {
+                    console.error('Container #sm-top-suppliers-list not found');
+                    return;
+                }
+
+                const suppliers = state.topSuppliers || [];
+
+                if (suppliers.length === 0) {
+                    container.innerHTML = `
+                    <div class="sm-list-item" style="text-align: center; color: #9ca3af; padding: 24px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 12px; opacity: 0.4;">
+                            <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>
+                        </svg>
+                        <p style="font-size: 14px;">Chưa có dữ liệu xếp hạng</p>
+                    </div>
+                `;
+                    return;
+                }
+
+                let html = suppliers.map((supplier, index) => {
+                    const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : 'rank-3';
+                    const value = formatMillion(supplier.value);
+
+                    return `
+                    <div class="sm-list-item sm-clickable-supplier"
+                         onclick="highlightSupplierByCode('${supplier.code}')"
+                         title="Click để xem trong danh sách">
+                        <div class="sm-rank-content">
+                            <div class="sm-rank-badge ${rankClass}">${index + 1}</div>
+                            <div class="sm-rank-info">
+                                <p class="sm-item-name">${supplier.name} (${supplier.code})</p>
+                                <p class="sm-item-subtext">${supplier.orders} đơn hàng</p>
+                            </div>
+                            <span class="sm-item-value">${value}</span>
+                        </div>
+                    </div>
+                `;
+                }).join('');
+
+                container.innerHTML = html;
+            }
+
+            /** Render Recent Transactions - Click để highlight trong danh sách */
+            function renderRecentTransactions() {
+                const container = $('#sm-recent-transactions');
+
+                if (!container) {
+                    console.error('Container #sm-recent-transactions not found');
+                    return;
+                }
+
+                const transactions = state.recentTransactions || [];
+
+                if (transactions.length === 0) {
+                    container.innerHTML = `
+                    <div class="sm-list-item" style="text-align: center; color: #9ca3af; padding: 24px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 12px; opacity: 0.4;">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        <p style="font-size: 14px;">Chưa có giao dịch gần đây</p>
+                    </div>
+                `;
+                    return;
+                }
+
+                let html = transactions.map(txn => {
+                    const formattedValue = formatMillion(txn.totalValue);
+                    const formattedDate = new Date(txn.timeConfirm).toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    return `
+                    <div class="sm-list-item">
+                        <div class="sm-flex-start-between">
+                            <p class="sm-item-name sm-clickable-supplier"
+                               onclick="highlightSupplierByName('${txn.supplierName.replace(/'/g, "\\'")}')"
+                               title="Click để xem trong danh sách">
+                                ${txn.supplierName}
+                            </p>
+                            <span class="sm-item-value">${formattedValue}</span>
+                        </div>
+                        <p class="sm-item-subtext">${formattedDate}</p>
+                    </div>
+                `;
+                }).join('');
+
+                container.innerHTML = html;
+
+                // Gắn sự kiện cho nút "Xem tất cả"
+                const viewAllBtn = container.closest('.sm-panel').querySelector('.sm-footer-btn');
+                if (viewAllBtn) {
+                    viewAllBtn.onclick = openTransactionsModal;
+                }
+            }
+
+            /** Render cấu trúc Detail và gọi fetch dữ liệu chi tiết */
+            /** Render cấu trúc Detail - XÓA TAB STATS */
+            function renderSupplierDetailContent() {
+                const supplier = state.selectedSupplier;
+                const detailTab = $('#sm-tab-detail');
+
+                if (!supplier) return;
+
+                // HTML cấu trúc Detail View - CHỈ CÒN 2 TABS
+                let html = `
+                <div class="sm-list-controls">
+                    <div>
+                        <button class="sm-back-btn" onclick="goToSupplierList()">&larr; Quay lại danh sách</button>
+                        <h2 class="sm-detail-title">${supplier.name}</h2>
+                        <p class="sm-detail-code">${supplier.code}</p>
+                    </div>
+                </div>
+
+                <div class="sm-stats-grid">
+                    <div class="sm-stat-card sm-detail-stat-card sm-detail-card-blue">
+                         <div class="sm-card-header"><span class="sm-card-label">Tổng đơn hàng</span><svg class="sm-card-icon sm-icon-blue" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2z"/></svg></div>
+                         <p class="sm-detail-stat-value sm-detail-value-blue">${supplier.totalOrders}</p>
+                         <p class="sm-stat-subtext">Đã thống kê</p>
+                    </div>
+                     <div class="sm-stat-card sm-detail-stat-card sm-detail-card-green">
+                         <div class="sm-card-header"><span class="sm-card-label">Tổng giá trị</span><svg class="sm-card-icon sm-icon-green" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79h6.79v-2h-8.89c.73-3.08 3.51-5.3 6.89-5.3s6.16 2.22 6.89 5.3H11v2h8.8c.13.58.2 1.17.2 1.79 0 4.08-3.05 7.44-7 7.93z"/></svg></div>
+                         <p class="sm-detail-stat-value sm-detail-value-green">${formatMillion(supplier.totalValue)}</p>
+                         <p class="sm-stat-subtext">VNĐ năm nay</p>
+                    </div>                  
+                </div>
+
+                <div class="sm-tabs-bar">
+                    <div class="sm-tabs-group">
+                        <button class="sm-tab-btn ${state.detailSubTab === 'orders' ? 'sm-active-tab' : ''}" data-sub-tab="orders">Lịch sử đơn hàng</button>
+                        <button class="sm-tab-btn ${state.detailSubTab === 'products' ? 'sm-active-tab' : ''}" data-sub-tab="products">Danh mục sản phẩm</button>
+                    </div>
+                </div>
+
+                <div id="sm-detail-sub-content"></div>
+            `;
+                detailTab.innerHTML = html;
+
+                // Gắn sự kiện tab
+                detailTab.querySelectorAll('.sm-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const newSubTab = e.target.dataset.subTab;
+                        if (newSubTab !== state.detailSubTab) {
+                            setState({ detailSubTab: newSubTab });
+                            fetchDetailData(supplier.id, newSubTab);
+                        }
+                    });
+                });
+
+                // Gọi fetch cho tab mặc định (orders)
+                renderSubContent();
+                fetchDetailData(supplier.id, state.detailSubTab);
+            }
+
+            /** Render nội dung cho Sub Tabs (Sử dụng state.orderHistory và state.ingredients) */
+            /** Render nội dung cho Sub Tabs - CÓ EXPAND CHI TIẾT ĐON */
+            function renderSubContent() {
+                const subContentContainer = $('#sm-detail-sub-content');
+                if (!subContentContainer) return;
+
+                const tab = state.detailSubTab;
+                let content = '';
+
+                // Hiển thị loading nếu chưa có dữ liệu
+                if (tab === 'orders' && state.orderHistory === null) {
+                    content = `<div class="sm-panel p-8 text-center text-gray-500">Đang tải lịch sử đơn hàng...</div>`;
+                } else if (tab === 'products' && state.ingredients === null) {
+                    content = `<div class="sm-panel p-8 text-center text-gray-500">Đang tải danh mục sản phẩm...</div>`;
+                }
+                // Render Orders với expandable details
+                else if (tab === 'orders') {
+                    const history = state.orderHistory;
+                    if (history && history.length > 0) {
+                        content = `
+                    <div class="sm-panel">
+                        <table class="sm-table">
+                            <thead class="sm-table-thead">
+                                <tr>
+                                    <th class="sm-table-th">Mã đơn</th>
+                                    <th class="sm-table-th">Ngày đặt</th>
+                                    <th class="sm-table-th">Số mặt hàng</th>
+                                    <th class="sm-table-th">Tổng tiền</th>
+                                    <th class="sm-table-th">Trạng thái</th>
+                                    <th class="sm-table-th sm-text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody class="sm-table-tbody">
+                                ${history.map(order => `
+                                    <tr class="sm-table-tr">
+                                        <td class="sm-table-td sm-font-medium sm-blue-link">${order.id}</td>
+                                        <td class="sm-table-td">${new Date(order.date).toLocaleDateString('vi-VN')}</td>
+                                        <td class="sm-table-td">${order.items} mặt hàng</td>
+                                        <td class="sm-table-td sm-font-medium">${formatMillion(order.total)} VNĐ</td>
+                                        <td class="sm-table-td">
+                                            <span class="sm-table-status-tag">${order.status}</span>
+                                        </td>
+                                        <td class="sm-table-td sm-text-right">
+                                            <button class="sm-table-action-btn" onclick="toggleOrderDetails('${order.id}')">
+                                                <span>Xem chi tiết</span>
+                                                <svg class="sm-expand-icon" id="icon-${order.id}" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-left: 4px;">
+                                                    <path d="m6 9 6 6 6-6"/>
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <!-- Expandable Details Row -->
+                                    <tr class="sm-order-details-row" id="details-${order.id}">
+                                        <td colspan="6" class="sm-order-details-cell">
+                                            <div class="sm-order-details-content">
+                                                <!-- Nội dung sẽ được load khi click -->
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                    } else if (history) {
+                        content = `<div class="sm-panel p-4 text-center text-gray-500">Nhà cung cấp này chưa có lịch sử đơn hàng nào.</div>`;
+                    }
+                }
+                // Render Products (giữ nguyên)
+                else if (tab === 'products') {
+                    const ingredients = state.ingredients;
+                    if (ingredients && ingredients.length > 0) {
+                        content = `
+                        <div class="sm-panel">
+                            <div class="sm-products-panel-header">
+                                <h3 class="sm-panel-title">Danh mục mặt hàng cung cấp</h3>
+                            </div>
+                            <table class="sm-table">
+                                <thead class="sm-table-thead">
+                                    <tr>
+                                        <th class="sm-table-th">Tên mặt hàng</th>
+                                        <th class="sm-table-th">Đơn vị</th>
+                                        <th class="sm-table-th">Giá gần nhất</th>
+                                        <th class="sm-table-th">Giá TB</th>
+                                        <th class="sm-table-th">Tần suất mua</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="sm-table-tbody">
+                                    ${ingredients.map(ing => `
+                                        <tr class="sm-table-tr">
+                                            <td class="sm-table-td sm-font-medium">${ing.name}</td>
+                                            <td class="sm-table-td">${ing.unit}</td>
+                                            <td class="sm-table-td">${formatCurrency(ing.lastPrice)} VNĐ</td>
+                                            <td class="sm-table-td sm-gray">${formatCurrency(ing.avgPrice)} VNĐ</td>
+                                            <td class="sm-table-td">${ing.frequency} lần/năm</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    } else if (ingredients) {
+                        content = `<div class="sm-panel p-4 text-center text-gray-500">Nhà cung cấp này chưa cung cấp mặt hàng nào.</div>`;
+                    }
+                }
+
+                subContentContainer.innerHTML = content;
+            }
+
+            /** Quay lại danh sách nhà cung cấp */
+            window.goToSupplierList = function () {
+                setState({ activeTab: 'list', selectedSupplier: null });
+            }
+
+            // Sự kiện Tìm kiếm (Search)
+            $('#sm-supplier-search-input').addEventListener('input', (e) => {
+                setState({ searchTerm: e.target.value });
+            });
+
+            // Sự kiện Modal (Thêm nhà cung cấp)
+            $('#sm-add-supplier-btn').addEventListener('click', () => {
+                // Reset form
+                $('#add-code').value = '';
+                $('#add-name').value = '';
+                $('#add-contact').value = '';
+                $('#add-phone').value = '';
+                $('#add-email').value = '';
+                $('#add-address').value = '';
+
+                setState({ showAddModal: true });
+            });
+
+            $('#sm-modal-cancel-btn').addEventListener('click', () => {
+                setState({ showAddModal: false });
+            });
+
+            $('#sm-modal-save-btn').addEventListener('click', async () => {
+                const data = {
+                    code: $('#add-code').value.trim(),
+                    name: $('#add-name').value.trim(),
+                    contact: $('#add-contact').value.trim(),
+                    phone: $('#add-phone').value.trim(),
+                    email: $('#add-email').value.trim(),
+                    address: $('#add-address').value.trim()
+                };
+
+                // Validate
+                const validation = validateSupplierForm(data, false);
+                if (!validation.isValid) {
+                    validation.errors.forEach((error, index) => {
+                        setTimeout(() => {
+                            showToast('error', 'Lỗi xác thực', error);
+                        }, index * 300); // Hiển thị lần lượt
+                    });
+                    return;
+                }
+
+                try {
+                    // Hiển thị loading (optional)
+                    const saveBtn = $('#sm-modal-save-btn');
+                    const originalText = saveBtn.textContent;
+                    saveBtn.textContent = 'Đang lưu...';
+                    saveBtn.disabled = true;
+
+                    const response = await fetch(ENDPOINTS.CREATE_SUPPLIER, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            CodeSupplier: data.code,
+                            Name: data.name,
+                            ContactInfo: data.contact,
+                            Phone: data.phone,
+                            Email: data.email,
+                            Address: data.address
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        showToast('success', 'Thành công', 'Thêm nhà cung cấp thành công!');
+                        setState({ showAddModal: false });
+
+                        // Reset form
+                        $('#add-code').value = '';
+                        $('#add-name').value = '';
+                        $('#add-contact').value = '';
+                        $('#add-phone').value = '';
+                        $('#add-email').value = '';
+                        $('#add-address').value = '';
+
+                        // Reload data
+                        fetchAndInitializeData();
+                    } else {
+                        showToast('error', 'Lỗi', result.message || 'Không thể thêm nhà cung cấp');
+                    }
+
+                    // Reset button
+                    saveBtn.textContent = originalText;
+                    saveBtn.disabled = false;
+
+                } catch (error) {
+                    console.error('Error creating supplier:', error);
+                    showToast('error', 'Lỗi kết nối', 'Không thể kết nối đến máy chủ');
+
+                    // Reset button
+                    const saveBtn = $('#sm-modal-save-btn');
+                    saveBtn.textContent = 'Lưu';
+                    saveBtn.disabled = false;
+                }
+            });
+
+            // Đóng modal khi click ra ngoài overlay
+            $('#sm-add-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'sm-add-modal') {
+                    setState({ showAddModal: false });
+                }
+            });
+
+            // ===== INITIALIZATION (Khởi tạo) =====
+            fetchAndInitializeData();
+
+
+            /** Render chi tiết đơn hàng - LAZY LOADING */
+            window.renderOrderDetails = async function (order) {
+                try {
+                    // Fetch dữ liệu từ API
+                    const details = await fetchData(`/ManagerSupplier/OrderDetails/${order.id}`);
+
+                    if (!details || !details.purchaseOrderDetails || details.purchaseOrderDetails.length === 0) {
+                        return '<p style="text-align: center; color: #9ca3af; padding: 20px;">Không có dữ liệu chi tiết</p>';
+                    }
+
+                    const items = details.purchaseOrderDetails;
+
+                    // ✅ LẤY DỮ LIỆU TRỰC TIẾP TỪ item, KHÔNG QUA item.ingredient
+                    const itemsHtml = items.map(item => `
+                    <tr>
+                        <td>
+                            <div style="font-weight: 500;">${item.ingredientName || 'N/A'}</div>
+                            <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">Mã: ${item.ingredientCode || 'N/A'}</div>
+                        </td>
+                        <td>${item.quantity} ${item.unit || ''}</td>
+                        <td>${formatCurrency(item.unitPrice)} đ</td>
+                        <td style="font-weight: 500;">${formatCurrency(item.subtotal)} đ</td>
+                    </tr>
+                `).join('');
+
+                    const total = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+
+                    return `
+                    <table class="sm-details-table">
+                        <thead>
+                            <tr>
+                                <th>Tên sản phẩm</th>
+                                <th>Số lượng</th>
+                                <th>Đơn giá</th>
+                                <th style="text-align: right;">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                    <div class="sm-details-summary">
+                        <div class="sm-summary-item">
+                            <span class="sm-summary-label">Tổng cộng:</span>
+                            <span class="sm-summary-value sm-summary-total">${formatCurrency(total)} đ</span>
+                        </div>
+                    </div>
+                `;
+                } catch (error) {
+                    console.error('Error rendering order details:', error);
+                    return '<p style="text-align: center; color: #dc2626; padding: 20px;">Lỗi khi tải chi tiết đơn hàng</p>';
+                }
+            }
+
+            /** Toggle hiển thị chi tiết đơn hàng */
+            window.toggleOrderDetails = async function (orderId) {
+                const detailsRow = document.getElementById(`details-${orderId}`);
+                const icon = document.getElementById(`icon-${orderId}`);
+                const contentDiv = detailsRow?.querySelector('.sm-order-details-content');
+
+                if (!detailsRow || !icon) return;
+
+                if (detailsRow.classList.contains('expanded')) {
+                    // Collapse
+                    detailsRow.classList.remove('expanded');
+                    icon.classList.remove('rotated');
+                } else {
+                    // Đóng tất cả row khác
+                    document.querySelectorAll('.sm-order-details-row.expanded').forEach(row => {
+                        row.classList.remove('expanded');
+                    });
+                    document.querySelectorAll('.sm-expand-icon.rotated').forEach(ic => {
+                        ic.classList.remove('rotated');
+                    });
+
+                    // Mở row hiện tại
+                    detailsRow.classList.add('expanded');
+                    icon.classList.add('rotated');
+
+                    // Load details nếu chưa load
+                    if (contentDiv && !contentDiv.dataset.loaded) {
+                        contentDiv.innerHTML = '<p style="text-align:center; padding:20px; color: #6b7280;">⏳ Đang tải...</p>';
+
+                        const order = state.orderHistory.find(o => o.id === orderId);
+                        if (order) {
+                            const detailsHtml = await window.renderOrderDetails(order);
+                            contentDiv.innerHTML = `
+                                        <div class="sm-details-header">Chi tiết đơn hàng #${orderId}</div>
+                                        ${detailsHtml}
+                                    `;
+                            contentDiv.dataset.loaded = 'true';
+                        }
+                    }
+                }
+            }
+
+            // ===== HELPER FUNCTIONS FOR HIGHLIGHTING =====
+
+            window.viewSupplierDetail = function (supplierId) {
+                const supplier = window.SUPPLIERS_DATA.find(s => s.id === supplierId);
+                if (supplier) {
+                    setState({
+                        activeTab: 'detail',
+                        selectedSupplier: supplier,
+                        detailSubTab: 'orders',
+                        orderHistory: null,
+                        ingredients: null
+                    });
+                }
+            }
+
+            window.highlightSupplierByCode = function (code) {
+                // Scroll to supplier card
+                const card = document.querySelector(`[data-supplier-id]`);
+                const allCards = document.querySelectorAll('.sm-supplier-card');
+
+                allCards.forEach(c => c.classList.remove('highlighted'));
+
+                const targetSupplier = window.SUPPLIERS_DATA.find(s => s.code === code);
+                if (targetSupplier) {
+                    const targetCard = document.querySelector(`[data-supplier-id="${targetSupplier.id}"]`);
+                    if (targetCard) {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetCard.classList.add('highlighted');
+
+                        // Remove highlight sau 3s
+                        setTimeout(() => {
+                            targetCard.classList.remove('highlighted');
+                        }, 3000);
+                    }
+                }
+            }
+
+            window.highlightSupplierByName = function (name) {
+                const allCards = document.querySelectorAll('.sm-supplier-card');
+                allCards.forEach(c => c.classList.remove('highlighted'));
+
+                const targetSupplier = window.SUPPLIERS_DATA.find(s => s.name === name);
+                if (targetSupplier) {
+                    const targetCard = document.querySelector(`[data-supplier-id="${targetSupplier.id}"]`);
+                    if (targetCard) {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetCard.classList.add('highlighted');
+
+                        setTimeout(() => {
+                            targetCard.classList.remove('highlighted');
+                        }, 3000);
+                    }
+                }
+            }
+
+            // ===== EDIT SUPPLIER FUNCTIONS =====
+
+            window.editSupplier = function (supplierId) {
+                const supplier = window.SUPPLIERS_DATA.find(s => s.id === supplierId);
+
+                if (!supplier) {
+                    showToast('error', 'Lỗi', 'Không tìm thấy nhà cung cấp');
+                    return;
+                }
+
+                // Fill form
+                $('#edit-code').value = supplier.code;
+                $('#edit-name').value = supplier.name;
+                $('#edit-contact').value = supplier.contact || '';
+                $('#edit-phone').value = supplier.phone || '';
+                $('#edit-email').value = supplier.email || '';
+                $('#edit-address').value = supplier.address || '';
+
+                setState({
+                    showEditModal: true,
+                    editingSupplierId: supplierId
+                });
+            }
+
+            // Event listeners cho modal edit
+            const editCancelBtn = $('#sm-edit-modal-cancel-btn');
+            if (editCancelBtn) {
+                editCancelBtn.addEventListener('click', () => {
+                    setState({ showEditModal: false, editingSupplierId: null });
+                });
+            }
+
+            const editSaveBtn = $('#sm-edit-modal-save-btn');
+            if (editSaveBtn) {
+                editSaveBtn.addEventListener('click', async () => {
+                    const data = {
+                        name: $('#edit-name').value.trim(),
+                        contact: $('#edit-contact').value.trim(),
+                        phone: $('#edit-phone').value.trim(),
+                        email: $('#edit-email').value.trim(),
+                        address: $('#edit-address').value.trim()
+                    };
+
+                    // Validate
+                    const validation = validateSupplierForm(data, true);
+                    if (!validation.isValid) {
+                        validation.errors.forEach((error, index) => {
+                            setTimeout(() => {
+                                showToast('error', 'Lỗi xác thực', error);
+                            }, index * 300);
+                        });
+                        return;
+                    }
+
+                    try {
+                        // Hiển thị loading
+                        const saveBtn = $('#sm-edit-modal-save-btn');
+                        const originalText = saveBtn.textContent;
+                        saveBtn.textContent = 'Đang cập nhật...';
+                        saveBtn.disabled = true;
+
+                        const response = await fetch(ENDPOINTS.UPDATE_SUPPLIER(state.editingSupplierId), {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                Name: data.name,
+                                ContactInfo: data.contact,
+                                Phone: data.phone,
+                                Email: data.email,
+                                Address: data.address
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            showToast('success', 'Thành công', 'Cập nhật nhà cung cấp thành công!');
+                            setState({ showEditModal: false, editingSupplierId: null });
+                            fetchAndInitializeData();
+                        } else {
+                            showToast('error', 'Lỗi', result.message || 'Không thể cập nhật nhà cung cấp');
+                        }
+
+                        // Reset button
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+
+                    } catch (error) {
+                        console.error('Error updating supplier:', error);
+                        showToast('error', 'Lỗi kết nối', 'Không thể kết nối đến máy chủ');
+
+                        // Reset button
+                        const saveBtn = $('#sm-edit-modal-save-btn');
+                        saveBtn.textContent = 'Cập nhật';
+                        saveBtn.disabled = false;
+                    }
+
+
+                });
+            }
+
+            // ✅ VALIDATE REAL-TIME CHO PHONE
+            const addPhoneInput = $('#add-phone');
+            if (addPhoneInput) {
+                addPhoneInput.addEventListener('input', (e) => {
+                    const phone = e.target.value;
+                    if (phone && !validatePhone(phone)) {
+                        e.target.style.borderColor = '#dc2626';
+                    } else {
+                        e.target.style.borderColor = '#d1d5db';
+                    }
+                });
+            }
+
+            const editPhoneInput = $('#edit-phone');
+            if (editPhoneInput) {
+                editPhoneInput.addEventListener('input', (e) => {
+                    const phone = e.target.value;
+                    if (phone && !validatePhone(phone)) {
+                        e.target.style.borderColor = '#dc2626';
+                    } else {
+                        e.target.style.borderColor = '#d1d5db';
+                    }
+                });
+            }
+
+            // ✅ VALIDATE REAL-TIME CHO EMAIL
+            const addEmailInput = $('#add-email');
+            if (addEmailInput) {
+                addEmailInput.addEventListener('input', (e) => {
+                    const email = e.target.value;
+                    if (email && !validateEmail(email)) {
+                        e.target.style.borderColor = '#dc2626';
+                    } else {
+                        e.target.style.borderColor = '#d1d5db';
+                    }
+                });
+            }
+
+            const editEmailInput = $('#edit-email');
+            if (editEmailInput) {
+                editEmailInput.addEventListener('input', (e) => {
+                    const email = e.target.value;
+                    if (email && !validateEmail(email)) {
+                        e.target.style.borderColor = '#dc2626';
+                    } else {
+                        e.target.style.borderColor = '#d1d5db';
+                    }
+                });
+            }
+
+        });
+
+
+    </script>
+</body>
+</html>

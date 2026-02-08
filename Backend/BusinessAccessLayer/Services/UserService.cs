@@ -9,6 +9,7 @@ using BusinessAccessLayer.DTOs.Users;
 using BusinessAccessLayer.Services.Interfaces;
 using DataAccessLayer.Repositories.Interfaces;
 using DataAccessLayer.UnitOfWork.Interfaces;
+using DomainAccessLayer.Common;
 using DomainAccessLayer.Models;
 
 namespace BusinessAccessLayer.Services
@@ -19,22 +20,26 @@ namespace BusinessAccessLayer.Services
         private readonly IMapper _mapper;
         private readonly IRoleRepository _roleRepository;
         private readonly IEmailService _emailService;
+        private readonly ICloudinaryService? _cloudinaryService;
+        private static readonly HashSet<int> RestrictedCreationRoleIds = new() { 2, 5 };
 
-        public UserService(IUnitOfWork unitOfWork, IMapper mapper, IRoleRepository roleRepository, IEmailService emailService)
+        public UserService(IUnitOfWork unitOfWork, IMapper mapper, IRoleRepository roleRepository, IEmailService emailService, ICloudinaryService? cloudinaryService = null)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _roleRepository = roleRepository;
             _emailService = emailService;
+            _cloudinaryService = cloudinaryService;
         }
 
         public async Task<IEnumerable<UserDto>> GetAllAsync(CancellationToken ct = default)
         {
             var users = await _unitOfWork.Users.GetAllAsync();
-            var activeUsers = users.Where(u => u.IsDeleted == false).ToList();
+            // Loại bỏ Admin (RoleId = 2) và user đã xóa
+            var filtered = users.Where(u => u.IsDeleted == false && u.RoleId != 2).ToList();
 
             var userDtos = new List<UserDto>();
-            foreach (var user in activeUsers)
+            foreach (var user in filtered)
             {
                 var userDto = _mapper.Map<UserDto>(user);
                 // Load Role name
@@ -62,11 +67,47 @@ namespace BusinessAccessLayer.Services
             return userDto;
         }
 
+        public async Task<UserDetailsResponse?> GetDetailsAsync(int id, CancellationToken ct = default)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.IsDeleted == true)
+            {
+                return null;
+            }
+
+            var role = await _roleRepository.GetByIdAsync(user.RoleId);
+
+            var response = new UserDetailsResponse
+            {
+                UserId = user.UserId,
+                FullName = user.FullName,
+                Email = user.Email,
+                Phone = user.Phone,
+                RoleId = user.RoleId,
+                RoleName = role?.RoleName ?? "Unknown",
+                Status = user.Status,
+                AvatarUrl = user.AvatarUrl,
+                CreatedAt = user.CreatedAt,
+                ModifiedAt = user.ModifiedAt,
+                LastLoginAt = null, // Chưa lưu lịch sử đăng nhập
+                CreatedByName = await GetUserNameAsync(user.CreatedBy),
+                ModifiedByName = await GetUserNameAsync(user.ModifiedBy),
+                LoginHistory = new List<LoginHistoryItem>(),
+                RecentActivities = new List<ActivityItem>()
+            };
+
+            return response;
+        }
+
         public async Task<UserListResponse> SearchAsync(UserSearchRequest request, CancellationToken ct = default)
         {
+            const int AdminRoleId = 2;
+
             // Get all users from repository (already filtered by IsDeleted = false)
             var allUsers = await _unitOfWork.Users.GetAllAsync();
-            var usersList = allUsers.ToList();
+            var usersList = allUsers
+                .Where(u => u.IsDeleted == false && u.RoleId != AdminRoleId) // loại admin, giữ owner
+                .ToList();
 
             // Apply search term (search in FullName, Email, Phone)
             if (!string.IsNullOrWhiteSpace(request.SearchTerm))
@@ -158,8 +199,25 @@ namespace BusinessAccessLayer.Services
                 throw new InvalidOperationException("Email already exists");
             }
 
+            if (RestrictedCreationRoleIds.Contains(request.RoleId))
+            {
+                throw new InvalidOperationException("Không được phép tạo tài khoản Admin hoặc Customer bằng chức năng này");
+            }
+
+            // Determine password: ưu tiên Password, sau đó TemporaryPassword, cuối cùng tự sinh
+            var effectivePassword = !string.IsNullOrWhiteSpace(request.Password)
+                ? request.Password.Trim()
+                : !string.IsNullOrWhiteSpace(request.TemporaryPassword)
+                    ? request.TemporaryPassword.Trim()
+                    : PasswordGenerator.Generate();
+
+            if (effectivePassword.Length < 6)
+            {
+                throw new InvalidOperationException("Mật khẩu phải có ít nhất 6 ký tự");
+            }
+
             // Hash password
-            var passwordHash = HashPassword(request.Password);
+            var passwordHash = HashPassword(effectivePassword);
 
             // Map request to User entity
             var user = new User
@@ -177,18 +235,20 @@ namespace BusinessAccessLayer.Services
             await _unitOfWork.Users.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
-            // Send credentials to user's email (best-effort)
-            try
+            if (request.SendEmailNotification)
             {
-                var subject = "Tài khoản SapaFoRestRMS đã được tạo";
-                var body = $@"
+                // Send credentials to user's email (best-effort)
+                try
+                {
+                    var subject = "Tài khoản SapaFoRestRMS đã được tạo";
+                    var body = $@"
 <div style='font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;'>
   <p>Chào {request.FullName},</p>
   <p>Tài khoản của bạn đã được tạo trên hệ thống SapaFoRest RMS.</p>
   <p><strong>Thông tin đăng nhập:</strong></p>
   <ul>
     <li>Email: <strong>{request.Email}</strong></li>
-    <li>Mật khẩu tạm thời: <strong>{request.Password}</strong></li>
+    <li>Mật khẩu tạm thời: <strong>{effectivePassword}</strong></li>
   </ul>
   <p>Vui lòng đăng nhập và đổi mật khẩu sau lần đăng nhập đầu tiên để đảm bảo an toàn.</p>
   <p>Trân trọng,</p>
@@ -196,11 +256,12 @@ namespace BusinessAccessLayer.Services
   <hr />
   <small>Đây là email tự động, vui lòng không trả lời.</small>
 </div>";
-                await _emailService.SendAsync(request.Email, subject, body);
-            }
-            catch
-            {
-                // Intentionally swallow email errors to not block account creation
+                    await _emailService.SendAsync(request.Email, subject, body);
+                }
+                catch
+                {
+                    // Intentionally swallow email errors to not block account creation
+                }
             }
 
             // Map to DTO for response
@@ -251,6 +312,21 @@ namespace BusinessAccessLayer.Services
             {
                 user.Phone = request.Phone;
             }
+
+            // Ưu tiên upload file lên Cloudinary nếu có
+            if (request.AvatarFile != null && request.AvatarFile.Length > 0 && _cloudinaryService != null)
+            {
+                var uploadedUrl = await _cloudinaryService.UploadImageAsync(request.AvatarFile, "avatars");
+                if (!string.IsNullOrWhiteSpace(uploadedUrl))
+                {
+                    user.AvatarUrl = uploadedUrl;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(request.AvatarUrl))
+            {
+                user.AvatarUrl = request.AvatarUrl.Trim();
+            }
+
             user.ModifiedAt = DateTime.UtcNow;
 
             await _unitOfWork.Users.UpdateAsync(user);
@@ -300,11 +376,72 @@ namespace BusinessAccessLayer.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task<string> ResetPasswordAsync(int id, ResetUserPasswordRequest request, CancellationToken ct = default)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(id);
+            if (user == null || user.IsDeleted == true)
+            {
+                throw new InvalidOperationException("User not found");
+            }
+
+            var newPassword = !string.IsNullOrWhiteSpace(request.NewPassword)
+                ? request.NewPassword.Trim()
+                : PasswordGenerator.Generate();
+
+            if (newPassword.Length < 6)
+            {
+                throw new InvalidOperationException("Mật khẩu phải có ít nhất 6 ký tự");
+            }
+
+            user.PasswordHash = HashPassword(newPassword);
+            user.ModifiedAt = DateTime.UtcNow;
+
+            await _unitOfWork.Users.UpdateAsync(user);
+            await _unitOfWork.SaveChangesAsync();
+
+            if (request.SendEmailNotification)
+            {
+                try
+                {
+                    var subject = "Mật khẩu của bạn đã được đặt lại";
+                    var body = $@"
+<div style='font-family:Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;'>
+  <p>Chào {user.FullName},</p>
+  <p>Mật khẩu của bạn đã được đặt lại bởi quản trị viên.</p>
+  <p><strong>Mật khẩu mới:</strong> {newPassword}</p>
+  <p>Vui lòng đăng nhập và đổi mật khẩu ngay để đảm bảo an toàn.</p>
+  <p>Trân trọng,</p>
+  <p>SapaFoRest RMS</p>
+  <hr />
+  <small>Đây là email tự động, vui lòng không trả lời.</small>
+</div>";
+                    await _emailService.SendAsync(user.Email, subject, body);
+                }
+                catch
+                {
+                    // Không chặn flow nếu gửi email lỗi
+                }
+            }
+
+            return newPassword;
+        }
+
         private static string HashPassword(string password)
         {
             using var sha256 = System.Security.Cryptography.SHA256.Create();
             var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
             return Convert.ToBase64String(hashedBytes);
+        }
+
+        private async Task<string?> GetUserNameAsync(int? userId)
+        {
+            if (!userId.HasValue)
+            {
+                return null;
+            }
+
+            var user = await _unitOfWork.Users.GetByIdAsync(userId.Value);
+            return user?.FullName;
         }
     }
 }

@@ -25,17 +25,20 @@ namespace WebSapaFoRestForCustomer.Models
         [Display(Name = "Thời gian")]
         public DateTime? ReservationTime { get; set; }
 
-        [Required(ErrorMessage = "Số lượng khách là bắt buộc")]
+        [Required(ErrorMessage = "Số lượng người là bắt buộc")]
         [Range(1, 100, ErrorMessage = "Số lượng khách phải từ 1 trở lên")]
-        [Display(Name = "Số lượng khách")]
+        [Display(Name = "Số lượng người")]
         public int NumberOfGuests { get; set; }
 
         [Display(Name = "Ghi chú")]
         public string? Notes { get; set; }
 
         [Display(Name = "Mã OTP")]
+        [Required(ErrorMessage = "Vui lòng nhập OTP.")]
         public string? OtpCode { get; set; }
 
+        [Required(ErrorMessage = "Vui lòng chọn phương thức thanh toán.")]
+        public string PaymentMethod { get; set; } = "PAYOS";
         // Kiểm tra logic tổng hợp ngày & giờ đặt
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {

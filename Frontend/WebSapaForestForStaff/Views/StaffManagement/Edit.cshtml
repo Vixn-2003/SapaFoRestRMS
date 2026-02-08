@@ -1,0 +1,305 @@
+@model WebSapaForestForStaff.Models.StaffViewModels.StaffEditViewModel
+
+@{
+    ViewData["Title"] = "Chỉnh sửa nhân viên";
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div class="row align-items-center">
+        <div class="col">
+            <h3 class="page-title">Chỉnh sửa thông tin  nhân viên</h3>
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="Index">Quản lý Nhân viên</a></li>
+                <li class="breadcrumb-item active">Chỉnh sửa nhân viên</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Form -->
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="card-title mb-0"><i class="fas fa-user-edit"></i> Thông tin nhân viên</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" asp-route-id="@Model.StaffId" method="post" id="editStaffForm" enctype="multipart/form-data">
+                    <input type="hidden" asp-for="StaffId" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                    <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-id-card"></i> Thông tin cá nhân</h5>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="FullName" class="control-label required"></label>
+                                <input asp-for="FullName" class="form-control" autocomplete="off" />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Email" class="control-label"></label>
+                                <input asp-for="Email" class="form-control" type="email" readonly style="background-color: #e9ecef;" />
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-lock"></i> Email không thể thay đổi
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Phone" class="control-label"></label>
+                                <input asp-for="Phone" class="form-control" type="tel" autocomplete="tel" />
+                                <span asp-validation-for="Phone" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="HireDate" class="control-label"></label>
+                                <input asp-for="HireDate" class="form-control" type="date" readonly style="background-color: #e9ecef;" />
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-lock"></i> Ngày vào làm không thể thay đổi
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-briefcase"></i> Chức vụ & Lương</h5>
+
+                    <div class="form-group">
+                        <label asp-for="PositionId" class="control-label required">
+                            <i class="fas fa-briefcase"></i> Chức vụ
+                        </label>
+                        <select asp-for="PositionId" class="form-control form-control-lg" id="positionSelect">
+                            <option value="">-- Chọn chức vụ --</option>
+                            @if (Model.AvailablePositions != null && Model.AvailablePositions.Any())
+                            {
+                                @foreach (var position in Model.AvailablePositions)
+                                {
+                                    <option value="@position.PositionId" 
+                                            data-salary="@position.BaseSalary"
+                                            selected="@(Model.PositionId == position.PositionId)">
+                                        @position.PositionName - @position.BaseSalary.ToString("N0") VND
+                                    </option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="PositionId" class="text-danger"></span>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Chọn chức vụ cho nhân viên. Lương cơ bản sẽ được tự động điền theo chức vụ.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label">
+                            <i class="fas fa-calculator"></i> Lương cơ bản 
+                            <span class="badge badge-info">Tự động điền</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="text" id="displaySalary" class="form-control form-control-lg" readonly value="@Model.BaseSalary.ToString("N0") VND" 
+                                   style="background-color: #e3f2fd; font-weight: bold; font-size: 1.2rem; color: #1976d2;">
+                            <div class="input-group-append">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="fas fa-coins"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <input type="hidden" asp-for="BaseSalary" id="hiddenBaseSalary" value="@Model.BaseSalary" />
+                        <small class="form-text text-info">
+                            <i class="fas fa-lightbulb"></i> Lương được tự động tính từ chức vụ có mức lương cao nhất
+                        </small>
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-toggle-on"></i> Trạng thái</h5>
+
+                    <div class="form-group">
+                        <label asp-for="Status" class="control-label required"></label>
+                        <select asp-for="Status" class="form-control form-control-lg">
+                            <option value="1">✓ Đang hoạt động</option>
+                            <option value="0">✗ Ngừng hoạt động</option>
+                        </select>
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-image"></i> Hình ảnh</h5>
+
+                    <div class="form-group">
+                        <label class="control-label">
+                            <i class="fas fa-image"></i> Ảnh đại diện
+                        </label>
+                        <div class="border rounded p-3" style="background-color: #f8f9fa;">
+                            <!-- Image Preview -->
+                            <div class="text-center mb-3" id="avatarPreviewContainer">
+                                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                                {
+                                    <img id="avatarPreview" src="@Model.AvatarUrl" alt="Avatar" class="img-thumbnail" style="max-width: 200px; max-height: 200px; object-fit: cover;">
+                                }
+                                else
+                                {
+                                    <img id="avatarPreview" src="" alt="Avatar Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px; object-fit: cover; display: none;">
+                                }
+                                <button type="button" class="btn btn-sm btn-danger d-block mx-auto mt-2" id="removeAvatarBtn">
+                                    <i class="fas fa-trash"></i> Xóa ảnh
+                                </button>
+                            </div>
+                            
+                            <!-- File Input -->
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="avatarFileInput" 
+                                   name="AvatarFile"
+                                   accept="image/jpeg,image/png,image/jpg,image/gif">
+                            
+                            <input type="hidden" asp-for="AvatarUrl" id="currentAvatarUrl" value="@Model.AvatarUrl" />
+                            <span asp-validation-for="AvatarUrl" class="text-danger"></span>
+                        </div>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> Click vào nút để upload/thay đổi ảnh. Hỗ trợ JPG, PNG, GIF (tối đa 5MB)
+                        </small>
+                    </div>
+
+                    <div class="form-group text-right mt-4 pt-3 border-top">
+                        <a asp-action="Index" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-times"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-warning btn-lg text-dark" id="btnSubmit">
+                            <i class="fas fa-save"></i> Cập nhật nhân viên
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // ========== AVATAR UPLOAD ==========
+            $('#avatarFileInput').on('change', function(e) {
+                const file = e.target.files[0];
+                
+                if (file) {
+                    // Validate file size (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                        toastr.error('Kích thước ảnh không được vượt quá 5MB');
+                        $(this).val('');
+                        return;
+                    }
+                    
+                    // Validate file type
+                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                    if (!validTypes.includes(file.type)) {
+                        toastr.error('Vui lòng chọn file ảnh JPG, PNG hoặc GIF');
+                        $(this).val('');
+                        return;
+                    }
+                    
+                    // Show preview
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#avatarPreview').attr('src', e.target.result).show();
+                        $('#avatarPreviewContainer').show();
+                    };
+                    reader.readAsDataURL(file);
+                    
+                    toastr.success('Đã chọn ảnh thành công');
+                }
+            });
+            
+            // Remove avatar
+            $('#removeAvatarBtn').on('click', function() {
+                $('#avatarFileInput').val('');
+                const currentUrl = $('#currentAvatarUrl').val();
+                if (currentUrl) {
+                    $('#avatarPreview').attr('src', currentUrl).show();
+                } else {
+                    $('#avatarPreview').attr('src', '').hide();
+                }
+                toastr.info('Đã hủy thay đổi ảnh');
+            });
+            
+            // ========== SALARY CALCULATION ==========
+            function updateSalary() {
+                const selectedOption = $('#positionSelect option:selected');
+                const salary = parseFloat(selectedOption.data('salary')) || 0;
+                
+                if (salary > 0) {
+                    $('#displaySalary').val(salary.toLocaleString('vi-VN') + ' VND');
+                    $('#hiddenBaseSalary').val(salary);
+                    $('#displaySalary').css('color', '#1976d2');
+                    $('#positionSelect').removeClass('is-invalid');
+                } else {
+                    $('#displaySalary').val('0 VND');
+                    $('#hiddenBaseSalary').val(0);
+                    $('#displaySalary').css('color', '#999');
+                }
+            }
+            
+            // Initialize salary on page load
+            updateSalary();
+            
+            // Listen to position select changes
+            $('#positionSelect').on('change', function() {
+                updateSalary();
+            });
+            
+            // ========== FORM VALIDATION ==========
+            $('#editStaffForm').on('submit', function(e) {
+                const positionId = parseInt($('#positionSelect').val());
+                
+                if (!positionId || positionId <= 0) {
+                    e.preventDefault();
+                    toastr.error('Vui lòng chọn chức vụ!');
+                    $('#positionSelect').addClass('is-invalid');
+                    return false;
+                }
+                
+                const baseSalary = parseFloat($('#hiddenBaseSalary').val());
+                if (baseSalary <= 0) {
+                    e.preventDefault();
+                    toastr.error('Lương cơ bản phải lớn hơn 0!');
+                    return false;
+                }
+                
+                // Disable submit button to prevent double submission
+                $('#btnSubmit').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang xử lý...');
+            });
+        });
+    </script>
+    
+    <style>
+        .required::after {
+            content: " *";
+            color: red;
+        }
+        #positionSelect {
+            font-size: 1.1rem;
+        }
+        #positionSelect option {
+            padding: 10px;
+        }
+        #avatarPreview {
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        #uploadAvatarBtn {
+            font-size: 1rem;
+            padding: 12px;
+        }
+        #uploadAvatarBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+            transition: all 0.3s ease;
+        }
+    </style>
+}

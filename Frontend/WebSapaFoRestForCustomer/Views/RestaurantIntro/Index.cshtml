@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giới thiệu Nhà hàng - Sapa Forest</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f9f9f9;
+        }
+
+        .hero {
+            background: url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+            height: 70vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+        }
+
+            .hero h1 {
+                font-size: 3rem;
+                font-weight: 700;
+            }
+
+        .intro-section {
+            padding: 60px 0;
+        }
+
+        .intro-card img {
+            border-radius: 10px;
+            height: 250px;
+            object-fit: cover;
+        }
+
+        .intro-card .card-body {
+            padding: 20px;
+        }
+
+        .values-section {
+            background-color: #ffffff;
+            padding: 60px 0;
+        }
+
+        .value-icon {
+            font-size: 40px;
+            color: #198754;
+        }
+
+        footer {
+            background-color: #222;
+            color: #ccc;
+            padding: 30px 0;
+            text-align: center;
+        }
+
+        .ratio iframe {
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hero Section -->
+    <section class="hero text-center">
+        <div>
+            <h1>Chào mừng đến với Nhà hàng Sapa Forest</h1>
+            <p class="lead">Nơi hương vị và thiên nhiên giao hòa</p>
+        </div>
+    </section>
+
+    <!-- Intro Section -->
+    <section class="intro-section container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-success">Câu chuyện của chúng tôi</h2>
+            <p class="text-muted">Khám phá hành trình hình thành, triết lý ẩm thực và niềm đam mê mang lại trải nghiệm tinh túy từ thiên nhiên Sapa.</p>
+        </div>
+        <div id="intro-container" class="row g-4 justify-content-center"></div>
+    </section>
+
+    <!-- Values Section -->
+    <section class="values-section">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-success">Giá trị cốt lõi</h2>
+                <p class="text-muted">Những điều làm nên bản sắc và niềm tự hào của chúng tôi</p>
+            </div>
+            <div class="row text-center">
+                <div class="col-md-4 mb-4">
+                    <div class="value-icon mb-3">🌿</div>
+                    <h5 class="fw-semibold">Tự nhiên & Bản địa</h5>
+                    <p class="text-muted">Nguyên liệu tươi ngon được chọn lọc từ nông trại địa phương, tôn vinh hương vị vùng cao nguyên.</p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="value-icon mb-3">🍽️</div>
+                    <h5 class="fw-semibold">Tinh tế & Đẳng cấp</h5>
+                    <p class="text-muted">Không gian ấm cúng cùng phong cách phục vụ chuyên nghiệp, mang lại trải nghiệm ẩm thực sang trọng.</p>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="value-icon mb-3">🤝</div>
+                    <h5 class="fw-semibold">Tận tâm & Gắn kết</h5>
+                    <p class="text-muted">Chúng tôi trân trọng từng khoảnh khắc của bạn, xem mỗi bữa ăn là một câu chuyện được sẻ chia.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Sapa Forest Restaurant | Thiết kế bởi Lương</p>
+    </footer>
+
+    <script>
+        async function loadRestaurantIntro() {
+            try {
+                const response = await fetch("https://localhost:7096/api/RestaurantIntro/active");
+                if (!response.ok) throw new Error("Lỗi khi gọi API");
+
+                const intros = await response.json();
+                const container = document.getElementById("intro-container");
+                container.innerHTML = "";
+
+                intros.forEach(intro => {
+                    // ✅ Xử lý link YouTube
+                    let embedUrl = "";
+                    if (intro.videoUrl?.includes("youtube.com/watch?v=")) {
+                        const videoId = new URL(intro.videoUrl).searchParams.get("v");
+                        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                    } else if (intro.videoUrl?.includes("youtu.be/")) {
+                        const videoId = intro.videoUrl.split("youtu.be/")[1];
+                        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                    }
+
+                    const card = document.createElement("div");
+                    card.className = "col-md-6 col-lg-4 intro-card";
+
+                    card.innerHTML = `
+                        <div class="card h-100 shadow-sm border-0">
+                            <img src="${intro.imageUrl || '/images/default.jpg'}" class="card-img-top" alt="${intro.title}">
+                            <div class="card-body">
+                                <h5 class="card-title text-success">${intro.title}</h5>
+                                <p class="card-text text-muted">${intro.description || 'Không có mô tả.'}</p>
+                                ${embedUrl ? `
+                                    <div class="ratio ratio-16x9 mt-3">
+                                        <iframe src="${embedUrl}" allowfullscreen></iframe>
+                                    </div>` : ''}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error("❌ Lỗi:", error);
+                document.getElementById("intro-container").innerHTML =
+                    `<p class="text-danger text-center">Không thể tải dữ liệu giới thiệu.</p>`;
+            }
+        }
+
+        window.onload = loadRestaurantIntro;
+    </script>
+
+</body>
+</html>

@@ -1,164 +1,324 @@
 ﻿@model ReservationListViewModel
+@using WebSapaForestForStaff.DTOs
+@using WebSapaForestForStaff.DTOs.TimeSlotCapacity
+
 @{
+    Layout = "_LayoutManager";
     ViewData["Title"] = "Quản lý đặt bàn - Nhà hàng Sapa Forest";
 }
 
-<!-- Liên kết CSS riêng -->
 <link rel="stylesheet" href="~/css/reservation-list.css" />
 
-<div class="container py-4 reservation-page">
-    <h2><i class="bi bi-journal-text me-2"></i>Danh sách đơn đặt bàn</h2>
+<h2><i class="bi bi-journal-text me-2"></i>Danh sách đơn đặt bàn</h2>
 
-    <div class="card p-3 mb-3 card-filter">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label">Trạng thái</label>
-                <select name="status" class="form-select">
-                    <option value="">-- Tất cả --</option>
-                    <option value="Pending" selected="@(ViewBag.Status == "Pending")">Chờ xử lý</option>
-                    <option value="Confirmed" selected="@(ViewBag.Status == "Confirmed")">Đã xác nhận</option>
-                </select>
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Tên khách hàng</label>
-                <input type="text" name="customerName" value="@ViewBag.CustomerName" class="form-control" placeholder="Nhập tên khách hàng..." />
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Số điện thoại</label>
-                <input type="text" name="phone" value="@ViewBag.Phone" class="form-control" placeholder="Nhập SĐT..." />
-            </div>
-
-            <div class="col-md-2">
-                <label class="form-label">Ngày đặt</label>
-                <input type="date" name="reservationDate" value="@ViewBag.ReservationDate" class="form-control" />
-            </div>
-
-            <div class="col-md-2">
-                <label class="form-label">Ca</label>
-                <select name="timeSlot" class="form-select">
-                    <option value="">-- Tất cả --</option>
-                    <option value="Ca sáng" selected="@(ViewBag.TimeSlot == "Ca sáng")">Ca sáng</option>
-                    <option value="Ca trưa" selected="@(ViewBag.TimeSlot == "Ca trưa")">Ca trưa</option>
-                    <option value="Ca tối" selected="@(ViewBag.TimeSlot == "Ca tối")">Ca tối</option>
-                </select>
-            </div>
-
-            <div class="col-md-12 text-end">
-                <button type="submit" class="btn btn-primary px-4 me-2">
-                    <i class="bi bi-funnel"></i> Lọc
-                </button>
-                <a href="@Url.Action("Index")" class="btn btn-secondary px-4">
-                    <i class="bi bi-arrow-repeat"></i> Reset
-                </a>
-            </div>
-        </form>
-    </div>
-
-    <div class="mb-3 text-end">
-        <a asp-action="CreateReservation" class="btn btn-success">
-            <i class="bi bi-plus-circle"></i> Tạo đơn tại quầy
-        </a>
-    </div>
-
-    <table class="table table-hover table-bordered align-middle">
-        <thead>
-            <tr>
-                <th>Mã đơn</th>
-                <th>Tên khách hàng</th>
-                <th>SĐT</th>
-                <th>Ngày đặt</th>
-                <th>Ca</th>
-                <th>Số người</th>
-                 <th>Đặt cọc (VND)</th>
-                <th>Trạng thái</th>
-                <th class="text-center">Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (Model.Data != null && Model.Data.Any())
-            {
-                foreach (var r in Model.Data)
-                {
-                    <tr>
-                        <td class="text-center fw-semibold">@r.ReservationId</td>
-                        <td>@r.CustomerName</td>
-                        <td>@r.CustomerPhone</td>
-                        <td class="text-center">@r.ReservationDate.ToString("dd/MM/yyyy")</td>
-                        <td class="text-center">@r.TimeSlot</td>
-                        <td class="text-center">@r.NumberOfGuests</td>
-                         <td>
-                    @if (r.DepositAmount.HasValue && r.DepositAmount.Value > 0)
-                    {
-                        @String.Format("{0:N0}", r.DepositAmount) 
-                    }
-                    else
-                    {
-                        <span class="text-muted">Chưa cọc/Không cần cọc </span>
-                    }
-                </td>
-                        <td class="text-center">
-                            <span class="badge @(r.Status == "Pending" ? "bg-warning text-dark" : "bg-success")">
-                                @(r.Status == "Pending" ? "Chờ xử lý" : "Đã xác nhận")
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <a class="btn btn-sm btn-outline-primary" href="@Url.Action("AssignTables", "ReservationStaff", new { id = r.ReservationId })">
-                                <i class="bi bi-clipboard-check"></i> Xử lý
-                            </a>
-                             <form asp-action="CancelReservation" asp-controller="ReservationStaff"
-          method="post" class="d-inline">
-        <input type="hidden" name="id" value="@r.ReservationId" />
-        <input type="hidden" name="refund" value="false" />
-        <button type="submit" class="btn btn-sm btn-outline-danger"
-                onclick="return confirm('Xác nhận hủy đơn KHÔNG hoàn cọc?');">
-            <i class="bi bi-x-circle"></i> Hủy
-        </button>
-    </form>
-
-    <!-- Nút Hủy + Hoàn cọc -->
-    <form asp-action="CancelReservation" asp-controller="ReservationStaff"
-          method="post" class="d-inline">
-        <input type="hidden" name="id" value="@r.ReservationId" />
-        <input type="hidden" name="refund" value="true" />
-        <button type="submit" class="btn btn-sm btn-outline-success"
-                onclick="return confirm('Xác nhận HỦY ĐƠN và HOÀN CỌC cho khách hàng?');">
-            <i class="bi bi-check-circle"></i> Hủy + Hoàn cọc
-        </button>
-    </form>
-                        </td>
-                    </tr>
-                }
-            }
-            else
-            {
-                <tr><td colspan="8" class="text-center text-muted py-3">Không có dữ liệu phù hợp</td></tr>
-            }
-        </tbody>
-    </table>
-
-    @if (Model.TotalPages > 1)
-    {
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-                @for (int i = 1; i <= Model.TotalPages; i++)
-                {
-                    <li class="page-item @(i == Model.Page ? "active" : "")">
-                        <a class="page-link"
-                           href="@Url.Action("Index", new {
-                               status = ViewBag.Status,
-                               customerName = ViewBag.CustomerName,
-                               phone = ViewBag.Phone,
-                               reservationDate = ViewBag.ReservationDate,
-                               timeSlot = ViewBag.TimeSlot,
-                               page = i
-                           })">
-                            @i
-                        </a>
-                    </li>
-                }
-            </ul>
-        </nav>
-    }
+<!-- Hiển thị tổng số đơn + count từng loại -->
+<div class="mb-3">
+    <span class="badge bg-info text-dark me-2">
+        Tổng số đơn: @(ViewBag.TotalReservations ?? 0)
+    </span>
+    <span class="badge bg-warning text-dark me-2">
+        Chờ xử lý: @(ViewBag.StatusCounts?["Pending"] ?? 0)
+    </span>
+    <span class="badge bg-success me-2">
+        Đã xác nhận: @(ViewBag.StatusCounts?["Confirmed"] ?? 0)
+    </span>
+    <span class="badge bg-danger">
+        Đã hủy: @(ViewBag.StatusCounts?["Cancelled"] ?? 0)
+    </span>
 </div>
+
+@* ====== THỐNG KÊ SỨC CHỨA THEO NGÀY + CA ====== *@
+@if (ViewBag.CapacitySummary != null)
+{
+    var cap = ViewBag.CapacitySummary as DayCapacitySummaryDto;
+
+    if (cap != null)
+    {
+        <div class="card mb-3 shadow-sm" style="border-left:4px solid #0d6efd;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h5 class="mb-1">
+                            <i class="bi bi-graph-up-arrow me-2"></i>
+                            Sức chứa ngày @cap.Date.ToString("dd/MM/yyyy")
+                        </h5>
+                        <small class="text-muted">
+                            Tổng quan tình trạng bàn trong ngày (tất cả các ca)
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Tổng quan trong ngày -->
+                <div class="row text-center mb-3">
+                    @* <div class="col-md-4 mb-2">
+                        <div class="bg-light border rounded p-2">
+                            <div class="text-muted small">Tổng sức chứa</div>
+                            <div class="fs-5 fw-semibold">@cap.TotalRestaurantCapacity người</div>
+                        </div>
+                    </div> *@
+                   @*  <div class="col-md-4 mb-2">
+                        <div class="bg-light border rounded p-2">
+                            <div class="text-muted small">Số lượng chỗ đã </div>
+                            <div class="fs-5 fw-semibold text-danger">@cap.TotalReservedGuestsInDay người</div>
+                        </div>
+                    </div> *@
+                  @*   <div class="col-md-4 mb-2">
+                        <div class="bg-light border rounded p-2">
+                            <div class="text-muted small">Còn lại trong ngày</div>
+                            <div class="fs-5 fw-semibold text-success">@cap.RemainingCapacityForDay người</div>
+                        </div>
+                    </div> *@
+                </div>
+
+                <!-- Theo từng ca -->
+                @if (cap.TimeSlots != null && cap.TimeSlots.Any())
+                {
+                    <hr class="my-2" />
+                    <div class="row">
+                        @foreach (var ts in cap.TimeSlots)
+                        {
+                            var percentUsed = ts.TotalCapacity == 0
+                                ? 0
+                                : (int)Math.Round((double)ts.ReservedGuests * 100 / ts.TotalCapacity);
+
+                            var barClass = percentUsed switch
+                            {
+                                >= 90 => "bg-danger",
+                                >= 70 => "bg-warning",
+                                _ => "bg-success"
+                            };
+
+                            <div class="col-md-4 mb-3">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="fw-semibold">@ts.TimeSlot</span>
+                                        <span class="badge bg-light text-dark border">
+                                            @percentUsed% dùng
+                                        </span>
+                                    </div>
+                                    <small class="text-muted d-block mb-1">
+                                        Sức chứa: @ts.TotalCapacity • Số lượng Chỗ đã xếp: @ts.ReservedGuests • Sức chứa Còn lại: @ts.RemainingCapacity
+                                    </small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar @barClass" role="progressbar"
+                                             style="width: @percentUsed%"
+                                             aria-valuenow="@percentUsed" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted small">
+                        Chưa có đơn đặt bàn nào trong ngày này.
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+<!-- Thông báo hủy đơn -->
+@if (TempData["CancelReservationError"] != null)
+{
+    <div class="alert alert-danger">@TempData["CancelReservationError"]</div>
+}
+@if (TempData["CancelReservationSuccess"] != null)
+{
+    <div class="alert alert-success">@TempData["CancelReservationSuccess"]</div>
+}
+
+<!-- Filter -->
+<div class="card p-3 mb-3 card-filter">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label">Trạng thái</label>
+            <select name="status" class="form-select">
+                <option value="">-- Tất cả --</option>
+                <option value="Pending" selected="@(ViewBag.Status == "Pending")">Chờ xử lý</option>
+                <option value="Confirmed" selected="@(ViewBag.Status == "Confirmed")">Đã xác nhận</option>
+                <option value="Cancelled" selected="@(ViewBag.Status == "Cancelled")">Đã hủy</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Tên khách hàng</label>
+            <input type="text" name="customerName" value="@ViewBag.CustomerName" class="form-control" placeholder="Nhập tên khách hàng..." />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Số điện thoại</label>
+            <input type="text" name="phone" value="@ViewBag.Phone" class="form-control" placeholder="Nhập SĐT..." />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Ngày đặt</label>
+            <input type="date" name="reservationDate" value="@ViewBag.ReservationDate" class="form-control" />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Ca</label>
+            <select name="timeSlot" class="form-select">
+                <option value="">-- Tất cả --</option>
+                <option value="Ca sáng" selected="@(ViewBag.TimeSlot == "Ca sáng")">Ca sáng</option>
+                <option value="Ca trưa" selected="@(ViewBag.TimeSlot == "Ca trưa")">Ca trưa</option>
+                <option value="Ca tối" selected="@(ViewBag.TimeSlot == "Ca tối")">Ca tối</option>
+            </select>
+        </div>
+
+        <div class="col-md-12 text-end">
+            <button type="submit" class="btn btn-primary px-4 me-2">
+                <i class="bi bi-funnel"></i> Lọc
+            </button>
+            <a href="@Url.Action("Index")" class="btn btn-secondary px-4">
+                <i class="bi bi-arrow-repeat"></i> Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="mb-3 text-end">
+    <a asp-action="CreateReservation" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Tạo đơn thông tin đặt bàn
+    </a>
+</div>
+
+<!-- Bảng danh sách đơn -->
+<table class="table table-hover table-bordered align-middle">
+    <thead>
+        <tr>
+            <th>Mã đơn</th>
+            <th>Tên khách hàng</th>
+            <th>SĐT</th>
+            <th>Ngày đặt</th>
+            <th>Giờ đến </th>
+            <th>Ca</th>
+            <th>Số người</th>
+            <th>Cần Đặt cọc (VND)</th>
+            <th>Đã Đặt cọc (VND)</th>
+            <th>Đã đặt cọc/Hoàn cọc</th>
+            <th>Trạng thái</th>
+            <th class="text-center">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Data != null && Model.Data.Any())
+        {
+            foreach (var r in Model.Data)
+            {
+                <tr>
+                    <td class="text-center fw-semibold">@r.ReservationId</td>
+                    <td>@r.CustomerName</td>
+                    <td>@r.CustomerPhone</td>
+                    <td class="text-center">@r.ReservationDate.ToString("dd/MM/yyyy")</td>
+                    <td class="text-center">@r.ReservationTime.ToString("HH:mm")</td>
+                    <td class="text-center">@r.TimeSlot</td>
+                    <td class="text-center">@r.NumberOfGuests</td>
+                    <td>
+                        @if (r.DepositAmount.HasValue && r.DepositAmount.Value > 0)
+                        {
+                            @String.Format("{0:N0}", r.DepositAmount)
+                        }
+                        else
+                        {
+                            <span class="text-muted">Chưa cọc/Không cần cọc</span>
+                        }
+                    </td>
+                    <td>
+                        @if (r.TotalDepositPaid.HasValue && r.TotalDepositPaid.Value > 0)
+                        {
+                            @String.Format("{0:N0}", r.TotalDepositPaid)
+                        }
+                        else
+                        {
+                            <span class="text-muted">Chưa cọc/Không cần cọc</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        @if (r.DepositAmount.HasValue && r.DepositAmount.Value > 0)
+                        {
+                            <span>
+                                @String.Format("{0:N0}", r.TotalDepositPaid)
+                                @if (r.DepositPaid)
+                                {
+                                    <span class="badge bg-success ms-2">Đã cọc</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark ms-2">Hoàn cọc</span>
+                                }
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Không cần cọc</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <span class="badge @(r.Status == "Pending" ? "bg-warning text-dark" 
+                             : r.Status == "Confirmed" ? "bg-success" 
+                             : "bg-danger")">
+                            @(r.Status == "Pending" ? "Chờ xử lý" 
+                              : r.Status == "Confirmed" ? "Đã xác nhận" 
+                              : "Đã hủy")
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <a class="btn btn-sm btn-outline-primary" href="@Url.Action("AssignTables", "ReservationStaff", new { id = r.ReservationId })">
+                            <i class="bi bi-clipboard-check"></i> Xếp bàn 
+                        </a>
+                        <!-- Hủy đơn -->
+                        <form asp-action="CancelReservation" asp-controller="ReservationStaff" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@r.ReservationId" />
+                            <input type="hidden" name="refund" value="false" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Xác nhận hủy đơn KHÔNG hoàn cọc?');">
+                                <i class="bi bi-x-circle"></i> Hủy
+                            </button>
+                        </form>
+                        <form asp-action="CancelReservation" asp-controller="ReservationStaff" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@r.ReservationId" />
+                            <input type="hidden" name="refund" value="true" />
+                            <button type="submit" class="btn btn-sm btn-outline-success"
+                                    onclick="return confirm('Xác nhận HỦY ĐƠN và HOÀN CỌC cho khách hàng?');">
+                                <i class="bi bi-check-circle"></i> Hủy + Hoàn cọc
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr><td colspan="12" class="text-center text-muted py-3">Không có dữ liệu phù hợp</td></tr>
+        }
+    </tbody>
+</table>
+
+<!-- Phân trang -->
+@if (Model.TotalPages > 1)
+{
+    <nav style="margin-top:10px" aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            @for (int i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.Page ? "active" : "")">
+                    <a class="page-link"
+                       href="@Url.Action("Index", new {
+                           status = ViewBag.Status,
+                           customerName = ViewBag.CustomerName,
+                           phone = ViewBag.Phone,
+                           reservationDate = ViewBag.ReservationDate,
+                           timeSlot = ViewBag.TimeSlot,
+                           page = i
+                       })">
+                        @i
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

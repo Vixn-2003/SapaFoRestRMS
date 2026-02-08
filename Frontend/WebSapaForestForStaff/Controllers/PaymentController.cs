@@ -15,53 +15,6 @@ namespace WebSapaForestForStaff.Controllers
             return View();
         }
 
-        // 1. Màn hình danh sách đơn chờ thanh toán
-        public IActionResult OrderSelection()
-        {
-            ViewBag.ApiBaseUrl = _apiBaseUrl;
-            return View();
-        }
-
-        // 2. Màn hình chi tiết đơn hàng
-        public IActionResult OrderDetail(int id)
-        {
-            ViewBag.OrderId = id;
-            ViewBag.ApiBaseUrl = _apiBaseUrl;
-            return View();
-        }
-
-        // 3. Màn hình chọn phương thức thanh toán
-        public IActionResult PaymentMethod(int orderId)
-        {
-            ViewBag.OrderId = orderId;
-            ViewBag.ApiBaseUrl = _apiBaseUrl;
-            return View();
-        }
-
-        // 4. Màn hình xác nhận thanh toán
-        public IActionResult PaymentConfirmation(int orderId, string method)
-        {
-            ViewBag.OrderId = orderId;
-            ViewBag.PaymentMethod = method;
-            ViewBag.ApiBaseUrl = _apiBaseUrl;
-            return View();
-        }
-
-        // 5. Màn hình kết quả thanh toán
-        public IActionResult PaymentResult(int orderId, string? sessionId = null)
-        {
-            ViewBag.OrderId = orderId;
-            ViewBag.SessionId = sessionId;
-            ViewBag.ApiBaseUrl = _apiBaseUrl;
-            return View();
-        }
-
-        // 6. Màn hình in/gửi hóa đơn
-        public IActionResult Receipt(int orderId)
-        {
-            ViewBag.OrderId = orderId;
-            ViewBag.ApiBaseUrl = _apiBaseUrl;
-            return View();
-        }
+       
     }
 }

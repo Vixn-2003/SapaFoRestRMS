@@ -76,11 +76,18 @@ namespace BusinessAccessLayer.Services
             // Business rule: Default status to 0 if invalid
             var status = (request.Status >= 0 && request.Status <= 2) ? request.Status : 0;
 
+            // Business rule: BaseSalary validation
+            if (request.BaseSalary < 0)
+            {
+                throw new ArgumentException("BaseSalary không được nhỏ hơn 0");
+            }
+
             var position = new Position
             {
                 PositionName = request.PositionName,
                 Description = request.Description,
-                Status = status
+                Status = status,
+                BaseSalary = request.BaseSalary // Owner/Admin có thể set BaseSalary khi tạo Position
             };
 
             await _positionRepository.AddAsync(position);
@@ -107,9 +114,13 @@ namespace BusinessAccessLayer.Services
             }
 
             // Update properties
+            // LƯU Ý: BaseSalary KHÔNG được update trực tiếp ở đây
+            // Manager muốn thay đổi BaseSalary phải tạo SalaryChangeRequest
+            // Chỉ khi Owner approve thì BaseSalary mới được cập nhật (trong SalaryChangeRequestService)
             position.PositionName = request.PositionName;
             position.Description = request.Description;
             position.Status = request.Status;
+            // BaseSalary không được update ở đây - giữ nguyên giá trị hiện tại
 
             await _positionRepository.UpdateAsync(position);
             await _positionRepository.SaveChangesAsync();

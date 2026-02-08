@@ -1,0 +1,938 @@
+﻿@model WebSapaForestForStaff.DTOs.ManagementCombo.ComboEditDto
+@{
+    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+}
+
+<style>
+    /* Tùy chỉnh thanh cuộn */
+    .custom-scroll::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+    /* Category Filter */
+    .cat-filter {
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+        .cat-filter.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+            border-color: #0d6efd !important;
+        }
+
+    /* Card Item */
+    .dish-card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-color: #0d6efd;
+    }
+
+    .top-item-card {
+        min-width: 170px;
+        max-width: 170px;
+    }
+
+    /* Qty Control */
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    .qty-control {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        background-color: #fff;
+        height: 28px;
+        overflow: hidden;
+    }
+
+    .qty-btn {
+        width: 24px;
+        height: 100%;
+        border: none;
+        background-color: #f8f9fa;
+        color: #495057;
+        font-size: 14px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+        .qty-btn:hover {
+            background-color: #e2e6ea;
+        }
+
+    .qty-input {
+        width: 35px;
+        height: 100%;
+        border: none;
+        border-left: 1px solid #ced4da;
+        border-right: 1px solid #ced4da;
+        text-align: center;
+        font-weight: 600;
+        font-size: 13px;
+        color: #333;
+        background: #fff;
+        padding: 0;
+    }
+
+        .qty-input:focus {
+            outline: none;
+            background-color: #fff;
+        }
+</style>
+
+<div class="container-fluid py-3 h-100 d-flex flex-column">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-shrink-0">
+        <div>
+            <h4 class="fw-bold text-dark mb-0"><i class="mdi mdi-pencil-box-multiple"></i> Chỉnh sửa Combo</h4>
+            <small class="text-muted">Quản lý các món ăn và giá bán cho Combo</small>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="mdi mdi-arrow-left"></i> Quay lại
+        </a>
+    </div>
+
+    <div class="row mb-3 flex-shrink-0">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm bg-white">
+                <div class="card-body py-2">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-danger me-2"><i class="mdi mdi-fire"></i> HOT</span>
+                        <h6 class="mb-0 fw-bold text-danger">Món mới đề xuất</h6>
+                    </div>
+                    <div id="topDishesContainer" class="d-flex gap-3 overflow-auto custom-scroll pb-2" style="min-height: 80px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 flex-grow-1" style="min-height: 0;">
+        <div class="col-lg-3 d-flex flex-column">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header bg-white fw-bold text-primary">
+                    <i class="mdi mdi-information-outline"></i> Thiết lập Combo
+                </div>
+                <div class="card-body overflow-auto custom-scroll">
+                    <form asp-action="Edit"
+                          asp-controller="ManagerCombo"
+                          asp-route-id="@Model.ComboId"
+                          method="post"
+                          id="frmEditCombo"
+                          enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <!-- Thông báo thành công -->
+                        @if (TempData["Success"] != null)
+                        {
+                            <div class="alert alert-success" role="alert">
+                                @TempData["Success"]
+                            </div>
+                        }
+
+                        <div asp-validation-summary="All" class="alert alert-danger small"></div>
+                        <input type="hidden" asp-for="ComboId" />
+                        <div id="jsValidationErrors" class="alert alert-danger d-none"></div>
+
+                        <div id="hiddenItemsContainer" class="d-none"></div>
+
+                        <div class="mb-3 text-center">
+                            <div class="position-relative d-inline-block w-100">
+                                <!-- Ảnh hiện tại -->
+                                <img id="comboImagePreview"
+                                     src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "/images/default-food.png" : Model.ImageUrl)"
+                                     class="img-thumbnail shadow-sm w-100"
+                                     style="height: 160px; object-fit: cover; border-radius: 8px;" />
+
+                                <!-- Nút chọn ảnh mới -->
+                                <div class="mt-2">
+                                    <label for="imageFileInputEdit" class="btn btn-sm btn-outline-warning w-100">
+                                        <i class="mdi mdi-camera-plus"></i> Thay đổi ảnh
+                                    </label>
+                                    <input type="file"
+                                           id="imageFileInputEdit"
+                                           name="ImageFile"
+                                           accept="image/*"
+                                           class="d-none"
+                                           onchange="previewImageEdit(event)" />
+                                    <small class="text-muted d-block mt-1">Chọn ảnh mới để thay đổi (tối đa 5MB)</small>
+                                </div>
+
+                                <!-- Hidden field lưu URL ảnh cũ -->
+                                <input type="hidden" asp-for="ImageUrl" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Tên Combo</label>
+                            <input asp-for="Name" class="form-control" placeholder="Nhập tên combo..." />
+                        </div>
+                           <div class="mb-3">
+                            <label class="form-label fw-bold small">
+                                Mô tả Combo
+                            </label>
+                            <textarea asp-for="Description"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Nhập mô tả combo..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-success">Giá bán (VNĐ)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-success text-white">₫</span>
+                                <input asp-for="SellingPrice" type="number" class="form-control fw-bold text-success" id="sellingPrice" />
+                            </div>
+                        </div>
+                        <hr class="my-3">
+                        <div class="bg-light p-3 rounded">
+                            <div class="d-flex justify-content-between mb-2 small">
+                                <span>Tổng giá trị thực:</span>
+                                <input type="text" id="totalPrice" class="form-control form-control-sm text-end w-50 bg-white" readonly />
+                            </div>
+                            <div class="d-flex justify-content-between small">
+                                <span class="text-success fw-bold">Tiết kiệm:</span>
+                                <input type="text" id="savings" class="form-control form-control-sm text-end w-50 bg-white text-success fw-bold" readonly />
+                            </div>
+                        </div>
+                        <br />
+                        <div class="mb-3 p-2 border rounded bg-light d-flex align-items-center justify-content-between">
+
+                            <!-- Toggle (bên trái) -->
+                            <div class="form-check form-switch m-0 p-0">
+                                <input asp-for="IsAvailable"
+                                       class="form-check-input ms-0"
+                                       type="checkbox"
+                                       id="isAvailableSwitch"
+                                       value="true"
+                                       onchange="updateStatusText(this)" />
+
+                            </div>
+
+                            <!-- Trạng thái (bên phải) -->
+                            <div class="text-end">
+                                <span class="badge @(Model.IsAvailable ? "bg-success" : "bg-secondary")"
+                                      id="statusText">
+                                    @(Model.IsAvailable ? "Đang bán" : "Ngừng bán")
+                                </span>
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary w-100 mt-4 py-2 fw-bold shadow-sm">
+                                <i class="mdi mdi-content-save"></i> LƯU THAY ĐỔI
+                            </button>
+
+                            <a asp-action="Index"
+                               asp-controller="ManagerCombo"
+                               class="btn btn-outline-secondary flex-fill py-2 fw-bold">
+                                <i class="mdi mdi-close-circle-outline"></i> HỦY
+                            </a>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 d-flex flex-column">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header bg-white">
+                    <div class="input-group input-group-sm mb-2">
+                        <span class="input-group-text bg-white border-end-0"><i class="mdi mdi-magnify"></i></span>
+                        <input type="text" id="searchDish" class="form-control border-start-0" placeholder="Tìm tên món ăn..." />
+                    </div>
+                    <div id="categoryFilters" class="d-flex gap-2 overflow-auto custom-scroll pb-1"></div>
+                </div>
+                <div class="card-body bg-light p-2 overflow-auto custom-scroll">
+                    <div id="allDishes" class="row g-2"></div>
+
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center pagination-sm" id="paginationControls"></ul>
+                    </nav>
+
+                    <div id="loadingSpinner" class="text-center my-3 d-none">
+                        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 d-flex flex-column">
+            <div class="card shadow-sm h-100 border-0">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center text-warning-emphasis">
+                    <span class="fw-bold"><i class="mdi mdi-basket"></i> Món đã chọn (<span id="countSelected">0</span>)</span>
+                    <button type="button" class="btn btn-xs btn-outline-danger btn-sm border-0" onclick="confirmDeleteAll()">Xóa hết</button>
+                </div>
+                <div class="card-body p-0 overflow-auto custom-scroll" style="background-color: #fffbf5;">
+                    <div id="selectedDishes" class="p-2">
+                        @for (int i = 0; i < Model.Items.Count; i++)
+                        {
+                            <div class="card mb-2 border-0 shadow-sm dish-item" data-id="@Model.Items[i].MenuItemId">
+                                <div class="card-body p-2 d-flex align-items-center">
+                                    <input type="hidden" name="Items[@i].MenuItemId" value="@Model.Items[i].MenuItemId" />
+                                    <input type="hidden" name="Items[@i].MenuItemName" value="@Model.Items[i].MenuItemName" />
+                                    <input type="hidden" name="Items[@i].OriginalPrice" value="@Model.Items[i].OriginalPrice" class="original-price-hidden" />
+                                    <input type="hidden" name="Items[@i].ImageUrl" value="@Model.Items[i].ImageUrl" />
+                                    <input type="hidden" name="Items[@i].CategoryName" value="@Model.Items[i].CategoryName" />
+
+                                    <img src="@(string.IsNullOrEmpty(Model.Items[i].ImageUrl) ? "/images/default-food.png" : Model.Items[i].ImageUrl)"
+                                         class="rounded border" style="width:48px; height:48px; object-fit:cover;" />
+
+                                    <div class="ms-2 flex-grow-1" style="min-width:0;">
+                                        <div class="fw-bold text-truncate text-dark" style="font-size: 0.95rem;">@Model.Items[i].MenuItemName</div>
+                                        <div class="text-danger fw-bold" style="font-size:0.8rem;">@Model.Items[i].OriginalPrice.ToString("N0") đ</div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="qty-control">
+                                            <button type="button" class="qty-btn" onclick="updateQty(this, -1)">-</button>
+                                            <input type="number" name="Items[@i].Quantity" value="@Model.Items[i].Quantity" class="qty-input quantity-input" min="1" readonly />
+                                            <button type="button" class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                                        </div>
+                                        <button type="button" class="btn btn-light text-danger btn-sm border-0 remove-dish" title="Xóa món">
+                                            <i class="mdi mdi-trash-can-outline fs-5"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-warning-subtle py-2 border-0">
+                <h6 class="modal-title fw-bold text-warning-emphasis"><i class="mdi mdi-alert-circle-outline"></i> Xác nhận</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="mb-0" id="confirmMessageText">Bạn có chắc chắn?</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pt-0 pb-3">
+                <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmAction" class="btn btn-primary btn-sm px-4">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // --- 0. CẤU HÌNH & TRẠNG THÁI ---
+        // Lưu ý: Đổi port 7096 thành port thực tế của bạn nếu cần
+        const API_URL = 'https://localhost:7096/api/ManagerCombo/AllMenu';
+
+        let currentPage = 1;
+        let totalPages = 1;
+        let isLoading = false;
+        let currentFilter = { keyword: "", category: "all" };
+
+        // Lấy dữ liệu từ ViewBag (Controller phải truyền ViewBag.AllDishes và ViewBag.TopDishes sang View Edit)
+        const rawResponse = @Html.Raw(Json.Serialize(ViewBag.AllDishes));
+        window.allDishesList = rawResponse && rawResponse.items ? rawResponse.items : (Array.isArray(rawResponse) ? rawResponse : []);
+        
+        // Cập nhật phân trang từ dữ liệu server
+        totalPages = rawResponse ? (rawResponse.totalPages || 1) : 1;
+        currentPage = rawResponse ? (rawResponse.pageIndex || 1) : 1;
+
+        window.topDishesList = @Html.Raw(Json.Serialize(ViewBag.TopDishes)) || [];
+
+        // --- 1. KHỞI TẠO (ON LOAD) ---
+                   document.addEventListener("DOMContentLoaded", function() {
+            console.log("🚀 Edit Page Loaded - Script Active");
+
+            // --- 1. KHỞI TẠO GIAO DIỆN ---
+            // (Giữ lại các hàm render của bạn)
+            if(typeof renderCategories === 'function') renderCategories();
+            if(typeof renderMainMenu === 'function' && window.allDishesList) renderMainMenu(window.allDishesList);
+            if(typeof renderTopMenu === 'function') renderTopMenu();
+            if(typeof renderPagination === 'function') renderPagination();
+            if(typeof updateTotals === 'function') updateTotals();
+
+            // --- 2. XỬ LÝ XÓA MÓN ---
+            const selectedContainer = document.getElementById('selectedDishes');
+            if (selectedContainer) {
+                selectedContainer.addEventListener('click', function(e) {
+                    const btnRemove = e.target.closest('.remove-dish');
+                    if (btnRemove) {
+                        const card = btnRemove.closest('.dish-item');
+                        if (card) {
+                            card.classList.add('animate__animated', 'animate__fadeOutRight');
+                            setTimeout(() => {
+                                card.remove();
+                                if(typeof updateTotals === 'function') updateTotals();
+                            }, 300);
+                        }
+                    }
+                });
+            }
+
+            // --- 3. XỬ LÝ TÌM KIẾM ---
+            const searchInput = document.getElementById('searchDish');
+            if (searchInput) {
+                let timeout = null;
+                searchInput.addEventListener('input', function(e) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        if(window.currentFilter) window.currentFilter.keyword = e.target.value;
+                        if(typeof loadPage === 'function') loadPage(1);
+                    }, 300);
+                });
+            }
+
+            // --- 4. CẬP NHẬT GIÁ BÁN ---
+            const sellingPriceInput = document.getElementById('sellingPrice');
+            if (sellingPriceInput) {
+                sellingPriceInput.addEventListener('input', function() {
+                     if(typeof updateTotals === 'function') updateTotals();
+                });
+            }
+
+            // ============================================================
+            // 🔥 5. XỬ LÝ SUBMIT FORM (ĐOẠN QUAN TRỌNG NHẤT) 🔥
+            // ============================================================
+            const form = document.getElementById('frmEditCombo'); // Lấy đúng ID form
+            const errorContainer = document.getElementById('jsValidationErrors');
+
+            if (form) {
+                console.log("✅ Đã tìm thấy Form 'frmEditCombo'. Sẵn sàng xử lý!");
+
+                 form.addEventListener('submit', function(e) {
+        // Reset lỗi cũ
+        errorContainer.innerHTML = '';
+        errorContainer.classList.add('d-none');
+
+        // A. Tìm các món đang hiển thị bên phải
+        const uiItems = document.querySelectorAll('#selectedDishes .dish-item');
+
+        // Nếu không có món nào -> Chặn submit và hiển thị lỗi
+        if (uiItems.length === 0) {
+            e.preventDefault();
+            errorContainer.innerHTML = "⚠️ Combo phải có ít nhất 1 món ăn!";
+            errorContainer.classList.remove('d-none');
+            return;
+        }
+
+        // B. Tìm cái thùng chứa input ẩn
+        const hiddenContainer = document.getElementById('hiddenItemsContainer');
+        if (!hiddenContainer) {
+            e.preventDefault();
+            errorContainer.innerHTML = "❌ LỖI CODE: Không tìm thấy div id='hiddenItemsContainer' trong form!";
+            errorContainer.classList.remove('d-none');
+            return;
+        }
+
+                    // C. Xóa sạch dữ liệu cũ trong thùng chứa
+                    hiddenContainer.innerHTML = '';
+
+                    // D. Tạo input mới từ danh sách hiển thị và nhét vào thùng
+                    console.log(`🔄 Đang đóng gói ${uiItems.length} món...`);
+
+                    uiItems.forEach((row, index) => {
+                        const id = row.dataset.id;
+                        // Lấy số lượng (nếu không tìm thấy input thì mặc định là 1)
+                        const qtyInput = row.querySelector('.qty-input');
+                        const qty = qtyInput ? qtyInput.value : 1;
+
+                        // 1. Tạo Input ID: name="Items[0].MenuItemId"
+                        const inputId = document.createElement('input');
+                        inputId.type = 'hidden';
+                        inputId.name = `Items[${index}].MenuItemId`; // Quan trọng: Index phải liên tục 0,1,2...
+                        inputId.value = id;
+                        hiddenContainer.appendChild(inputId);
+
+                        // 2. Tạo Input Quantity: name="Items[0].Quantity"
+                        const inputQty = document.createElement('input');
+                        inputQty.type = 'hidden';
+                        inputQty.name = `Items[${index}].Quantity`;
+                        inputQty.value = qty;
+                        hiddenContainer.appendChild(inputQty);
+                    });
+
+                    // E. KHÔNG GỌI e.preventDefault() Ở ĐÂY NỮA
+                    // Để form tự động submit tiếp với dữ liệu mới vừa nhét vào hiddenContainer
+                    console.log("🚀 Đã đóng gói xong. Form đang gửi về server...");
+                });
+            } else {
+                console.error("❌ LỖI: Không tìm thấy thẻ <form id='frmEditCombo'>. Kiểm tra lại file HTML!");
+            }
+        });
+
+        // --- 2. LOGIC TẢI DỮ LIỆU & PHÂN TRANG ---
+        async function loadPage(pageIndex) {
+            if (isLoading) return;
+            isLoading = true;
+
+            const spinner = document.getElementById('loadingSpinner');
+            const container = document.getElementById('allDishes');
+            
+            if(spinner) spinner.classList.remove('d-none');
+            if(container) container.style.opacity = '0.5';
+
+            try {
+                const params = new URLSearchParams({
+                    pageIndex: pageIndex,
+                    pageSize: 10
+                });
+
+                if (currentFilter.category !== 'all') {
+                    params.append('category', currentFilter.category);
+                }
+
+                if (currentFilter.keyword) {
+                    params.append('search', currentFilter.keyword);
+                }
+
+                const url = `${API_URL}?${params.toString()}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Lỗi API: " + response.status);
+
+                const data = await response.json();
+
+                window.allDishesList = data.items || [];
+                currentPage = data.pageIndex || pageIndex;
+                totalPages = data.totalPages || 1;
+
+                renderMainMenu(window.allDishesList, false);
+                renderPagination();
+
+            } catch (error) {
+                console.error("Lỗi tải trang:", error);
+                if(container) container.innerHTML = `<div class="col-12 text-center text-danger">Lỗi tải dữ liệu menu.</div>`;
+            } finally {
+                isLoading = false;
+                if(spinner) spinner.classList.add('d-none');
+                if(container) container.style.opacity = '1';
+            }
+        }
+
+        // --- 3. RENDER GIAO DIỆN ---
+        function renderMainMenu(list, append = false) {
+            const container = document.getElementById('allDishes');
+            if (!container) return;
+            if (!append) container.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                if(!append) container.innerHTML = `<div class="col-12 text-center text-muted py-5"><i class="mdi mdi-food-off fs-1"></i><br>Không tìm thấy món ăn</div>`;
+                return;
+            }
+
+            const html = list.map(d => {
+                // Xử lý thống nhất tên trường (chữ hoa/thường do API trả về)
+                const id = d.menuItemId || d.MenuItemId;
+                const name = d.menuItemName || d.MenuItemName || "Món";
+                const price = Number(d.originalPrice ?? d.OriginalPrice ?? 0);
+                const category = d.categoryName || d.CategoryName || "Khác";
+                const img = d.imageURL || d.imageUrl || d.ImageUrl || '';
+                
+                // Escape chuỗi để tránh lỗi HTML
+                const safeName = name.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                const safeCat = category.replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+
+                return `
+                <div class="col-6 col-md-6 col-xl-4 dish-col animate__animated animate__fadeIn">
+                    <div class="card h-100 dish-card-hover border" style="cursor:pointer;" onclick="addItemWrapper(this)"
+                         data-id="${id}" data-name="${safeName}" data-price="${price}" data-img="${img}" data-cat="${safeCat}">
+                        <div class="position-relative">
+                             ${img ? `<img src="${img}" class="card-img-top" style="height: 100px; object-fit: cover;" loading="lazy">` :
+                                     `<div class="bg-secondary-subtle d-flex align-items-center justify-content-center" style="height:100px;"><i class="mdi mdi-image-off text-muted"></i></div>`}
+                             <span class="position-absolute bottom-0 end-0 badge bg-dark m-1 opacity-75">${price.toLocaleString('vi-VN')}đ</span>
+                        </div>
+                        <div class="card-body p-2">
+                            <h6 class="card-title text-truncate mb-0 small fw-bold" title="${safeName}">${name}</h6>
+                            <small class="text-muted d-block text-truncate" style="font-size:0.7rem;">${category}</small>
+                        </div>
+                        <div class="card-footer p-1 bg-white border-top-0 text-center">
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100 py-0" style="font-size:0.8rem;">+ Thêm</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('paginationControls');
+            if(!container) return;
+            container.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            let html = '';
+            // Prev
+            html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="loadPage(${currentPage - 1})">&laquo;</a>
+                     </li>`;
+
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+
+            if (startPage > 1) {
+                html += `<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadPage(1)">1</a></li>`;
+                if (startPage > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="javascript:void(0)" onclick="loadPage(${i})">${i}</a>
+                         </li>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                html += `<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadPage(${totalPages})">${totalPages}</a></li>`;
+            }
+
+            // Next
+            html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="loadPage(${currentPage + 1})">&raquo;</a>
+                     </li>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderCategories() {
+            const categories = ["Tất cả", ...new Set(window.allDishesList.map(d => d.categoryName || d.CategoryName || "Khác").filter(Boolean))];
+            const container = document.getElementById('categoryFilters');
+            if(container) {
+                container.innerHTML = categories.map((cat, index) => {
+                    const isActive = (currentFilter.category === 'all' && index === 0) || currentFilter.category === cat;
+                    return `<span class="badge rounded-pill border px-3 py-2 cat-filter ${isActive ? 'active' : 'bg-white text-dark'}"
+                                 style="cursor:pointer" onclick="filterByCategory(this, '${index === 0 ? 'all' : cat}')">${cat}</span>`;
+                }).join('');
+            }
+        }
+
+        function renderTopMenu() {
+            const container = document.getElementById('topDishesContainer');
+            if(!container) return;
+
+            if(!window.topDishesList || window.topDishesList.length === 0) {
+                container.innerHTML = '<span class="text-muted small ms-2 my-auto">Chưa có dữ liệu món mới</span>';
+                return;
+            }
+            container.innerHTML = window.topDishesList.map(d => {
+                const id = d.menuItemId || d.MenuItemId;
+                const name = d.menuItemName || d.MenuItemName;
+                const price = Number(d.originalPrice ?? d.OriginalPrice ?? 0);
+                const img = d.imageURL || d.imageUrl || d.ImageUrl || '';
+                const category = d.categoryName || d.CategoryName || "Khác";
+                
+                const safeName = (name || "").replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                const safeCat = (category || "").replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+
+                return `
+                <div class="top-item-card card flex-shrink-0 border dish-card-hover" style="cursor:pointer"
+                     onclick="addItemWrapper({dataset: {id: '${id}', name: '${safeName}', price: '${price}', img: '${img}', cat: '${safeCat}'}})">
+                    <div class="row g-0 align-items-center h-100">
+                        <div class="col-4 h-100">
+                            ${img ? `<img src="${img}" class="img-fluid rounded-start h-100" style="object-fit:cover; min-height:60px">` : 
+                                    `<div class="bg-light h-100 d-flex align-items-center justify-content-center"><i class="mdi mdi-food small"></i></div>`}
+                        </div>
+                        <div class="col-8">
+                            <div class="card-body p-2">
+                                <div class="text-truncate fw-bold small" title="${name}">${name}</div>
+                                <div class="text-danger small fw-bold">${price.toLocaleString('vi-VN')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // --- 4. TƯƠNG TÁC NGƯỜI DÙNG ---
+
+        window.filterByCategory = function(el, catName) {
+            document.querySelectorAll('.cat-filter').forEach(e => {
+                e.classList.remove('active');
+                e.classList.add('bg-white', 'text-dark');
+            });
+            el.classList.remove('bg-white', 'text-dark');
+            el.classList.add('active');
+
+            currentFilter.category = catName;
+            loadPage(1);
+        }
+
+        window.addItemWrapper = function(el) {
+            const data = el.dataset;
+            const dish = {
+                MenuItemId: data.id,
+                MenuItemName: data.name,
+                OriginalPrice: Number(data.price),
+                ImageUrl: data.img,
+                CategoryName: data.cat
+            };
+
+            // Setup Modal Confirm
+            const modalEl = document.getElementById('confirmModal');
+            if(!modalEl) {
+                // Nếu không có modal thì thêm luôn không hỏi
+                addDishToCombo(dish);
+                return;
+            }
+
+            const msgEl = document.getElementById('confirmMessageText');
+            const actionBtn = document.getElementById('btnConfirmAction');
+            const titleEl = modalEl.querySelector('.modal-title');
+
+            titleEl.innerHTML = '<i class="mdi mdi-help-circle-outline"></i> Xác nhận thêm món';
+            msgEl.innerHTML = `Bạn có chắc muốn thêm món <br><strong>"${dish.MenuItemName}"</strong><br> vào Combo không?`;
+            actionBtn.className = 'btn btn-primary btn-sm px-4';
+            
+            actionBtn.onclick = function() {
+                addDishToCombo(dish);
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                modalInstance.hide();
+            };
+
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            if (!modal) modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
+        window.addDishToCombo = function(dish) {
+            const container = document.getElementById('selectedDishes');
+            
+            // Kiểm tra món đã có chưa
+            const existingRow = container.querySelector(`.dish-item[data-id="${dish.MenuItemId}"]`);
+            if (existingRow) {
+                // Nếu có rồi thì tăng số lượng
+                const qtyBtn = existingRow.querySelector('.qty-btn[onclick*="1"]'); // Nút +
+                updateQty(qtyBtn, 1);
+                
+                // Hiệu ứng highlight
+                existingRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                existingRow.classList.add('border-warning');
+                setTimeout(() => existingRow.classList.remove('border-warning'), 1000);
+            } else {
+                // Nếu chưa có thì thêm mới
+                const tempIndex = container.querySelectorAll('.dish-item').length;
+                const div = document.createElement('div');
+                div.className = 'card mb-2 border-0 shadow-sm dish-item animate__animated animate__fadeInLeft';
+                div.dataset.id = dish.MenuItemId;
+                
+                // HTML cho item mới
+                div.innerHTML = `
+                <div class="card-body p-2 d-flex align-items-center">
+                    <input type="hidden" name="Items[${tempIndex}].MenuItemId" value="${dish.MenuItemId}" />
+                    <input type="hidden" name="Items[${tempIndex}].MenuItemName" value="${dish.MenuItemName}" />
+                    <input type="hidden" class="item-price" name="Items[${tempIndex}].OriginalPrice" value="${dish.OriginalPrice}" />
+                    <input type="hidden" name="Items[${tempIndex}].ImageUrl" value="${dish.ImageUrl}" />
+                    <input type="hidden" name="Items[${tempIndex}].CategoryName" value="${dish.CategoryName}" />
+                    
+                    <img src="${dish.ImageUrl || '/images/default-food.png'}" class="rounded border" style="width:48px; height:48px; object-fit:cover;" />
+                    
+                    <div class="ms-2 flex-grow-1" style="min-width:0;">
+                        <div class="fw-bold text-truncate text-dark" style="font-size: 0.95rem;">${dish.MenuItemName}</div>
+                        <div class="text-danger fw-bold" style="font-size:0.8rem;">${Number(dish.OriginalPrice).toLocaleString('vi-VN')} đ</div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                         <div class="qty-control">
+                            <button type="button" class="qty-btn" onclick="updateQty(this, -1)">-</button>
+                            <input type="number" name="Items[${tempIndex}].Quantity" value="1" class="qty-input quantity-input" min="1" readonly />
+                            <button type="button" class="qty-btn" onclick="updateQty(this, 1)">+</button>
+                        </div>
+                        <button type="button" class="btn btn-light text-danger btn-sm border-0 remove-dish" title="Xóa món">
+                            <i class="mdi mdi-trash-can-outline fs-5"></i>
+                        </button>
+                    </div>
+                </div>`;
+                
+                // Thêm vào đầu danh sách
+                container.insertBefore(div, container.firstChild);
+            }
+            updateTotals();
+        }
+
+        window.updateQty = function(btn, delta) {
+            const input = btn.parentElement.querySelector('input');
+            let val = Number(input.value) + delta;
+            if (val < 1) val = 1;
+            input.value = val;
+            updateTotals();
+        }
+
+        window.confirmDeleteAll = function() {
+            const count = document.querySelectorAll("#selectedDishes .dish-item").length;
+            if(count === 0) return;
+
+            const modalEl = document.getElementById('confirmModal');
+            if(!modalEl) {
+                // Nếu không có modal
+                if(confirm("Xóa hết món?")) {
+                    document.getElementById('selectedDishes').innerHTML = '';
+                    updateTotals();
+                }
+                return;
+            }
+
+            const msgEl = document.getElementById('confirmMessageText');
+            const actionBtn = document.getElementById('btnConfirmAction');
+            const titleEl = modalEl.querySelector('.modal-title');
+
+            titleEl.innerHTML = '<i class="mdi mdi-alert-circle-outline"></i> Xác nhận xóa';
+            msgEl.innerText = "Bạn có chắc muốn XÓA HẾT các món đã chọn?";
+            actionBtn.className = 'btn btn-danger btn-sm px-4';
+
+            actionBtn.onclick = function() {
+                document.getElementById('selectedDishes').innerHTML = '';
+                updateTotals();
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                modalInstance.hide();
+            };
+
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            if (!modal) modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
+
+        // --- 5. LOGIC TÍNH TOÁN & XỬ LÝ FORM ---
+
+        function updateTotals() {
+            let total = 0;
+            // Duyệt qua tất cả các món (cả server-render và js-render)
+            document.querySelectorAll("#selectedDishes .dish-item").forEach(d => {
+                // Lấy giá: ưu tiên class .item-price (js thêm), fallback sang .original-price-hidden (server render)
+                const priceInput = d.querySelector('.item-price') || d.querySelector('.original-price-hidden');
+                const price = Number(priceInput ? priceInput.value : 0);
+                
+                const qtyInput = d.querySelector('.quantity-input');
+                const qty = Number(qtyInput ? qtyInput.value : 1);
+                
+                total += price * qty;
+            });
+
+            // Hiển thị tổng giá trị thực
+            const totalEl = document.getElementById("totalPrice");
+            if(totalEl) totalEl.value = total.toLocaleString('vi-VN');
+
+            // Tính tiết kiệm
+            const sellingPriceEl = document.getElementById("sellingPrice");
+            const sellingPrice = Number(sellingPriceEl ? sellingPriceEl.value : 0);
+            
+            const savings = total - sellingPrice;
+            const savingsEl = document.getElementById('savings');
+            if(savingsEl) savingsEl.value = savings.toLocaleString('vi-VN');
+
+            // Đếm số lượng món
+            const countEl = document.getElementById('countSelected');
+            if(countEl) countEl.innerText = document.querySelectorAll("#selectedDishes .dish-item").length;
+        }
+
+        function reindexItems() {
+            // Sắp xếp lại index cho mảng Items[0], Items[1]... để Server đọc được
+            const rows = document.querySelectorAll('#selectedDishes .dish-item');
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    // Thay thế số trong Items[...] bằng index hiện tại
+                    if(input.name) input.name = input.name.replace(/Items\[\d+\]/, `Items[${index}]`);
+                });
+            });
+        }
+
+        function updateStatusText(checkbox) {
+            const statusText = document.getElementById("statusText");
+            if(!statusText) return;
+            
+            if (checkbox.checked) {
+                statusText.textContent = "Đang bán";
+                statusText.className = "badge bg-success";
+            } else {
+                statusText.textContent = "Ngừng bán";
+                statusText.className = "badge bg-secondary";
+            }
+        }
+
+
+
+
+         const form = document.getElementById('createComboForm');
+
+        form.addEventListener('submit', function () {
+
+            const hiddenContainer = document.getElementById('hiddenItemsContainer');
+            hiddenContainer.innerHTML = ''; // clear cũ
+
+            // Clone toàn bộ Items từ cột 3
+            document.querySelectorAll('#selectedDishes input[name^="Items"]').forEach(input => {
+                hiddenContainer.appendChild(input.cloneNode(true));
+            });
+
+            // Re-index cho chuẩn ModelBinder
+            reindexHiddenItems();
+        });
+        function reindexHiddenItems() {
+            const rows = document.querySelectorAll('#hiddenItemsContainer .dish-item, #hiddenItemsContainer input');
+
+            let index = 0;
+            let currentGroup = {};
+
+            document.querySelectorAll('#hiddenItemsContainer input[name^="Items"]').forEach(input => {
+                input.name = input.name.replace(/Items\[\d+\]/, `Items[${index}]`);
+
+                // tăng index khi gặp Quantity (1 món = 1 group)
+                if (input.name.endsWith('.Quantity')) {
+                    index++;
+                }
+            });
+        }
+
+        function previewImageEdit(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Kiểm tra kích thước
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File quá lớn! Vui lòng chọn ảnh nhỏ hơn 5MB.');
+                event.target.value = '';
+                return;
+            }
+
+            // ✅ DEBUG: In ra để kiểm tra
+            console.log("📸 Image selected:", file.name, file.size, "bytes");
+
+            // Preview ảnh
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('comboImagePreview').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+          
+    </script>
+}

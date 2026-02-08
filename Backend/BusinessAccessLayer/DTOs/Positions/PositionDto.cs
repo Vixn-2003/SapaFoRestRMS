@@ -6,6 +6,7 @@ namespace BusinessAccessLayer.DTOs.Positions
         public string PositionName { get; set; } = null!;
         public string? Description { get; set; }
         public int Status { get; set; }
+        public decimal BaseSalary { get; set; }
     }
 }
 

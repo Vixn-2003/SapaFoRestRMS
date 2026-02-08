@@ -1,0 +1,534 @@
+@model WebSapaForestForStaff.DTOs.Payment.OrderDetailDto
+
+@using System.Collections.Generic
+@using System.Linq
+@using System.Text.Json
+@using WebSapaForestForStaff.Controllers
+
+@{
+    ViewData["Title"] = "Hóa đơn thanh toán";
+    Layout = "~/Views/Shared/_counterstaffLayout.cshtml";
+    // Lấy thông tin bàn: ưu tiên TableNumbers (danh sách), sau đó TableNumber (đơn), cuối cùng là property Table (computed)
+    var tables = "—";
+    if (Model.TableNumbers != null && Model.TableNumbers.Any())
+    {
+        tables = string.Join(", ", Model.TableNumbers);
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.TableNumber))
+    {
+        tables = Model.TableNumber;
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Table))
+    {
+        tables = Model.Table;
+    }
+
+    // ✅ Filter logic giống Payment.cshtml:
+    // 1. Bỏ qua các món đã bị hủy (cancelled/removed)
+    // 2. Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+    // 3. Chỉ lấy các món có trạng thái khác "Pending" và không bị hủy
+    var billableItems = (Model.Items ?? new List<WebSapaForestForStaff.DTOs.Payment.OrderItemDto>()).Where(i =>
+    {
+        var status = (i.KitchenStatus ?? "").Trim().ToLower();
+        
+        // Bỏ qua các món đã bị hủy
+        if (status == "cancelled" || status == "đã hủy" || status == "removed")
+        {
+            return false;
+        }
+        
+        // ✅ Bỏ qua các món có trạng thái "Pending" (áp dụng cho cả món lẻ và combo)
+        if (status == "pending" || status == "chờ xác nhận" || string.IsNullOrEmpty(status))
+        {
+            return false;
+        }
+        
+        // ✅ Các món có trạng thái khác "Pending" và không bị hủy → lấy
+        return true;
+    }).ToList();
+
+    // Build payment breakdown from transactions (if available)
+    var paidTransactions = (Model.Transactions ?? new List<WebSapaForestForStaff.DTOs.Payment.TransactionDto>())
+        .Where(t =>
+            string.Equals(t.Status, "Paid", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(t.Status, "Completed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(t.Status, "Success", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrEmpty(t.Status)) // fallback
+        .ToList();
+
+    var receiptJson = JsonSerializer.Serialize(new
+    {
+        Model.OrderId,
+        Model.OrderCode,
+        Tables = tables,
+        CustomerName = Model.CustomerName ?? "Khách lẻ",
+        CustomerPhone = Model.CustomerPhone ?? "—",
+        CreatedAt = Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--",
+        PaidAt = Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--",
+        StaffName = Model.StaffName ?? Model.WaiterName ?? "—",
+        PaymentMethod = Model.PaymentMethod ?? "—",
+        Subtotal = Model.Subtotal,
+        VatAmount = Model.VatAmount,
+        ServiceFee = Model.ServiceFee,
+        DiscountAmount = Model.DiscountAmount,
+        DepositAmount = Model.DepositAmount,
+        DepositPaid = Model.DepositPaid,
+        DepositRefundAmount = Model.DepositRefundAmount,
+        TotalAmount = Model.TotalAmount,
+        Transactions = paidTransactions.Select(t => new {
+            t.PaymentMethod,
+            t.Amount,
+            t.AmountReceived,
+            t.RefundAmount,
+            t.Status
+        }),
+        Items = billableItems.Select(i => new
+        {
+            Name = !string.IsNullOrEmpty(i.ComboName) ? i.ComboName : i.MenuItemName,
+            IsCombo = !string.IsNullOrEmpty(i.ComboName),
+            QuantityUsed = i.QuantityUsed > 0 ? i.QuantityUsed : i.Quantity,
+            UnitPrice = i.UnitPrice,
+            TotalPrice = i.TotalPrice
+        })
+    });
+}
+
+<style>
+    body {
+        background-color: #f5f7fa;
+    }
+
+    /* Layout tổng thể giống Payment.cshtml */
+    .cashier-shell {
+        padding: 24px 32px;
+        min-height: calc(100vh - 80px);
+    }
+
+    /* Header full-width trên cùng */
+    .receipt-page-header {
+        margin-bottom: 24px;
+    }
+
+    .receipt-header-card {
+        background-color: #ffffff;
+        border-radius: 18px;
+        padding: 16px 20px;
+        box-shadow: 0 14px 35px rgba(15, 139, 131, 0.12);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        border: 2px solid #16a34a; /* xanh lá viền */
+    }
+
+    .receipt-header-main {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .receipt-header-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        background: rgba(22, 163, 74, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        color: #16a34a;
+    }
+
+    .receipt-header-text .page-title {
+        color: #111827;
+        margin-bottom: 2px;
+    }
+
+    .receipt-header-sub {
+        font-size: 13px;
+        opacity: 0.95;
+    }
+
+    .receipt-header-sub span + span::before {
+        content: "•";
+        margin: 0 6px;
+        opacity: 0.8;
+    }
+
+    .cashier-card {
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 18px 40px rgba(15, 139, 131, 0.08);
+    }
+
+    .btn-print-receipt {
+        width: auto;
+    }
+</style>
+
+<div class="cashier-shell">
+    <!-- HEADER FULL-WIDTH: Thông tin đơn + khách + trạng thái -->
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger d-flex align-items-start gap-3 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle fs-4 mt-1"></i>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-2">Lỗi khi tải hóa đơn</h6>
+                <p class="mb-0">@errorMessage</p>
+                <hr class="my-2">
+                <small class="text-muted">
+                    <strong>Gợi ý:</strong>
+                    <ul class="mb-0 mt-1" style="padding-left: 20px;">
+                        <li>Kiểm tra đơn hàng đã được thanh toán chưa</li>
+                        <li>Thử tải lại hóa đơn sau vài giây</li>
+                        <li>Liên hệ quản trị viên nếu vấn đề vẫn tiếp tục</li>
+                    </ul>
+                </small>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-3" role="alert">
+            <i class="bi bi-check-circle fs-4"></i>
+            <span>@successMessage</span>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card mb-3 cashier-card">
+                <div class="card-header fw-bold bg-white">
+                    Thông tin khách hàng
+                </div>
+                <div class="card-body">
+                    <div class="row gy-3">
+                        <div class="col-sm-6">
+                            <div class="text-muted small">Khách hàng</div>
+                            <div class="fw-bold fs-5">@(Model.CustomerName ?? "Khách lẻ")</div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <div class="text-muted small">Điện thoại</div>
+                            <div class="fw-bold">@(Model.CustomerPhone ?? "—")</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="text-muted small">Thời gian tạo</div>
+                            <div class="fw-semibold">@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
+                        </div>
+                        <div class="col-sm-6 text-sm-end">
+                            <div class="text-muted small">Thời gian thanh toán</div>
+                            <div class="fw-semibold">@(Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card cashier-card">
+                <div class="card-header fw-bold bg-white">
+                    Danh sách món ăn / đồ uống
+                    @{
+                        var billableCount = billableItems.Count;
+                    }
+                    <span class="badge bg-primary ms-2">@billableCount món</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Tên món</th>
+                                    <th>SL dùng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var index = 1;
+                                    if (!billableItems.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-4">Không có món nào cần thanh toán.</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        foreach (var item in billableItems)
+                                        {
+                                            var usedQuantity = item.QuantityUsed > 0 ? item.QuantityUsed : item.Quantity;
+                                            <tr>
+                                                <td class="text-center">@index</td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(item.ComboName))
+                                                    {
+                                                        <div>@item.ComboName</div>
+                                                        <div class="text-muted small fst-italic">Combo</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @item.MenuItemName
+                                                    }
+                                                </td>
+                                                <td class="text-center">@usedQuantity</td>
+                                                <td class="text-end">@item.UnitPrice.ToString("N0") ₫</td>
+                                                <td class="text-end">@item.TotalPrice.ToString("N0") ₫</td>
+                                            </tr>
+                                            index++;
+                                        }
+                                    }
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="bi bi-receipt-cutoff me-2 text-secondary"></i>
+                                        Tạm tính
+                                        <small class="text-muted d-block">
+                                            Giá món trước thuế và phí
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold align-middle">@Model.Subtotal.ToString("N0") ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="bi bi-percent me-2 text-secondary"></i>
+                                        VAT (10%)
+                                        <i class="bi bi-info-circle ms-1 text-primary"
+                                           data-bs-toggle="tooltip"
+                                           title="Thuế Giá Trị Gia Tăng 10% theo quy định nhà nước."></i>
+                                        <small class="text-muted d-block">
+                                            Thuế VAT (10%): Thuế giá trị gia tăng theo quy định
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold align-middle">@Model.VatAmount.ToString("N0") ₫</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                        <i class="bi bi-hand-index-thumb me-2 text-secondary"></i>
+                                        Phí phục vụ (5%)
+                                        <i class="bi bi-info-circle ms-1 text-primary"
+                                           data-bs-toggle="tooltip"
+                                           title="Phụ thu 5% khi khách sử dụng dịch vụ phục vụ tại bàn."></i>
+                                        <small class="text-muted d-block">
+                                            Phí phục vụ (5%): Phụ thu phục vụ tại bàn
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold align-middle">@Model.ServiceFee.ToString("N0") ₫</td>
+                                </tr>
+                                @if (Model.DiscountAmount > 0)
+                                {
+                                    <tr>
+                                        <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                            <i class="bi bi-tags me-2 text-secondary"></i>
+                                            Giảm giá
+                                            <i class="bi bi-info-circle ms-1 text-primary"
+                                               data-bs-toggle="tooltip"
+                                               title="Giảm giá theo chương trình khuyến mãi hoặc mã ưu đãi áp dụng."></i>
+                                            <small class="text-muted d-block">
+                                                Giảm giá – theo chương trình khuyến mãi / mã giảm giá đã áp dụng
+                                            </small>
+                                        </td>
+                                        <td class="text-end fw-bold text-danger align-middle">-@Model.DiscountAmount.ToString("N0") ₫</td>
+                                    </tr>
+                                }
+                                @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                                {
+                                    <tr class="table-info">
+                                        <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                            <i class="fa-solid fa-hand-holding-dollar me-1"></i>
+                                            Đã đặt cọc
+                                            <small class="text-muted d-block">
+                                                Số tiền khách đã thanh toán trước sẽ được trừ vào hóa đơn
+                                            </small>
+                                        </td>
+                                        <td class="text-end fw-bold text-success align-middle">-@Model.DepositAmount.Value.ToString("N0") ₫</td>
+                                    </tr>
+                                }
+                                @if (Model.DepositRefundAmount.HasValue && Model.DepositRefundAmount.Value > 0)
+                                {
+                                    <tr class="table-warning">
+                                        <td colspan="4" class="fw-semibold ps-3 align-middle">
+                                            <i class="fa-solid fa-money-bill-wave me-1 text-warning"></i>
+                                            Tiền cần trả lại cho khách
+                                            <small class="text-muted d-block">
+                                                Tiền cọc lớn hơn tổng tiền thanh toán, cần trả lại tiền thừa
+                                            </small>
+                                        </td>
+                                        <td class="text-end fw-bold text-warning align-middle" style="font-size:1.3rem;">
+                                            +@Model.DepositRefundAmount.Value.ToString("N0") ₫
+                                        </td>
+                                    </tr>
+                                }
+                                @{
+                                    var totalBeforeDeposit = Model.Subtotal + Model.VatAmount + Model.ServiceFee - Model.DiscountAmount;
+                                }
+                                <tr class="table-info">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#e7f3ff;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-calculator text-info fs-4"></i>
+                                            <span class="fs-5">Tổng cộng thanh toán</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            Tạm tính + VAT + Phí phục vụ - Giảm giá
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-info align-middle" style="background:#e7f3ff; font-size:1.6rem;">
+                                        @totalBeforeDeposit.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                                @{
+                                    // Build payment breakdown
+                                    var payments = paidTransactions.Any()
+                                        ? paidTransactions
+                                        : new List<WebSapaForestForStaff.DTOs.Payment.TransactionDto>();
+
+                                    // Fallback: nếu không có transactions, tạo 1 dòng từ PaymentMethod/TotalAmount
+                                    if (!payments.Any())
+                                    {
+                                        payments.Add(new WebSapaForestForStaff.DTOs.Payment.TransactionDto
+                                        {
+                                            PaymentMethod = string.IsNullOrWhiteSpace(Model.PaymentMethod) ? "Unknown" : Model.PaymentMethod,
+                                            Amount = Model.TotalAmount,
+                                            AmountReceived = Model.AmountReceived,
+                                            RefundAmount = Model.ChangeAmount,
+                                            Status = "Paid"
+                                        });
+                                    }
+
+                                    string RenderMethodLabel(string? method)
+                                    {
+                                        var m = method?.Trim() ?? "";
+                                        return m.ToLower() switch
+                                        {
+                                            "cash" => "Tiền mặt",
+                                            "qrbanktransfer" => "QR",
+                                            "vietqr" => "QR",
+                                            "qr" => "QR",
+                                            "card" => "Thẻ",
+                                            "ewallet" => "Ví điện tử",
+                                            "split" => "Chia hóa đơn",
+                                            "combined" => "Tiền mặt + QR", // ✅ FIX: Hiển thị Combined payment
+                                            _ => string.IsNullOrWhiteSpace(m) ? "Khác" : m
+                                        };
+                                    }
+                                }
+                                <tr class="table-success">
+                                    <td colspan="4" class="fw-bold ps-3 align-middle" style="background:#f0faf9;">
+                                        <span class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-cash-coin text-primary fs-4"></i>
+                                            <span class="fs-5">Số tiền khách hàng phải trả</span>
+                                        </span>
+                                        <small class="text-muted d-block mt-1">
+                                            @if (Model.DepositPaid == true && Model.DepositAmount.HasValue && Model.DepositAmount.Value > 0)
+                                            {
+                                                <text>Tổng cộng (@totalBeforeDeposit.ToString("N0") ₫) - Đã cọc (@Model.DepositAmount.Value.ToString("N0") ₫)</text>
+                                            }
+                                            else
+                                            {
+                                                <text>Tổng cộng thanh toán</text>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary align-middle" style="background:#f0faf9; font-size:1.8rem;">
+                                        @Model.TotalAmount.ToString("N0") ₫
+                                    </td>
+                                </tr>
+                                @if (payments.Any())
+                                {
+                                    <tr class="table-light">
+                                        <td colspan="5" class="ps-3 pt-3">
+                                            <div class="text-muted small fw-semibold mb-2">
+                                                <i class="bi bi-credit-card me-1"></i>
+                                                Chi tiết thanh toán:
+                                            </div>
+                                            @foreach (var pay in payments)
+                                            {
+                                                <div class="d-flex justify-content-between align-items-center mb-2 ps-3">
+                                                    <span>
+                                                        <i class="bi bi-arrow-right-short text-primary"></i>
+                                                        @RenderMethodLabel(pay.PaymentMethod)
+                                                    </span>
+                                                    <span class="fw-bold">@pay.Amount.ToString("N0") ₫</span>
+                                                </div>
+                                                if (pay.PaymentMethod != null &&
+                                                    pay.PaymentMethod.Equals("Cash", StringComparison.OrdinalIgnoreCase) &&
+                                                    pay.RefundAmount.HasValue &&
+                                                    pay.RefundAmount.Value > 0)
+                                                {
+                                                    <div class="d-flex justify-content-between align-items-center mb-2 ps-4 text-warning">
+                                                        <span class="small">
+                                                            <i class="bi bi-arrow-return-right"></i>
+                                                            Tiền thối lại
+                                                        </span>
+                                                        <span class="fw-bold small">+@pay.RefundAmount.Value.ToString("N0") ₫</span>
+                                                    </div>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card cashier-card">
+                <div class="card-header fw-bold bg-white">
+                    Thông tin đơn hàng
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-6 text-muted small">Mã đơn</dt>
+                        <dd class="col-6 fw-semibold text-end">@(Model.OrderCode ?? $"#{Model.OrderId}")</dd>
+
+
+                        <dt class="col-6 text-muted small">Thu ngân xử lý</dt>
+                        <dd class="col-6 fw-semibold text-end">@(Model.StaffName ?? Model.WaiterName ?? "—")</dd>
+
+                        <dt class="col-6 text-muted small">Phương thức thanh toán</dt>
+                        <dd class="col-6 fw-semibold text-end">@(Model.PaymentMethod ?? "—")</dd>
+                    </dl>
+                </div>
+                <div class="card-footer bg-white d-flex flex-wrap gap-2 justify-content-end">
+                    <button class="btn btn-outline-success btn-sm btn-print-receipt"
+                            data-order-id="@Model.OrderId"
+                            data-order-code="@(Model.OrderCode ?? $"#{Model.OrderId}")"
+                            @* ✅ REMOVED: data-tables - không sử dụng trong receipt print *@
+                            data-customer-name="@(Model.CustomerName ?? "Khách lẻ")"
+                            data-customer-phone="@(Model.CustomerPhone ?? "—")"
+                            data-created-at="@(Model.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"
+                            data-paid-at="@(Model.PaidAt?.ToString("dd/MM/yyyy HH:mm") ?? "--")"
+                            data-staff-name="@(Model.StaffName ?? Model.WaiterName ?? "—")"
+                            data-payment-method="@(Model.PaymentMethod ?? "—")"
+                            data-subtotal="@Model.Subtotal"
+                            data-vat="@Model.VatAmount"
+                            data-service-fee="@Model.ServiceFee"
+                            data-discount="@Model.DiscountAmount"
+                            data-total="@Model.TotalAmount">
+                        <i class="bi bi-printer me-1"></i> In
+                    </button>
+                    <a href="@Url.Action(nameof(CashierPaymentFlowController.OrderSelection), "CashierPaymentFlow")"
+                       class="btn btn-outline-secondary">
+                        Quay lại danh sách
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Định nghĩa biến global chứa dữ liệu receipt (sử dụng Razor syntax)
+        window.receiptData = @Html.Raw(receiptJson);
+    </script>
+    <script src="~/js/cashier/receipt.js"></script>
+}

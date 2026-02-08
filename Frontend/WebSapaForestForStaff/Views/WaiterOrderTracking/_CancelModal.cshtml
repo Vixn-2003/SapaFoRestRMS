@@ -1,0 +1,45 @@
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-times-circle text-warning"></i> Hủy món</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="cancelForm">
+                    <input type="hidden" id="cancelOrderDetailId" />
+                    <input type="hidden" id="cancelOrderComboItemId" />
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Món chưa được nấu, hủy món sẽ không tính tiền.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lý do hủy <span class="text-danger">*</span></label>
+                        <select class="form-select" id="cancelReason" required>
+                            <option value="">-- Chọn lý do --</option>
+                            <option value="Khách đổi ý">Khách đổi ý</option>
+                            <option value="Khách không muốn nữa">Khách không muốn nữa</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="cancelReasonOther" style="display: none;">
+                        <label class="form-label">Lý do khác</label>
+                        <textarea class="form-control" id="cancelReasonOtherText" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-warning" onclick="submitCancelRequest()">
+                    <i class="fas fa-times"></i> Xác nhận hủy
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('cancelReason').addEventListener('change', function() {
+        document.getElementById('cancelReasonOther').style.display = this.value === 'Khác' ? 'block' : 'none';
+    });
+</script>
+

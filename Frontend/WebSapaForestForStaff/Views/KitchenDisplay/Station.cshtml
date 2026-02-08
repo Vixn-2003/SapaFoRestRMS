@@ -1,6 +1,6 @@
 @{
     ViewData["Title"] = "Trạm Bếp - " + (ViewBag.CategoryName ?? "N/A");
-    Layout = "~/Views/Shared/_LayoutManager.cshtml";
+    Layout = "~/Views/Shared/_LayoutKitchen.cshtml";
 }
 
 @section Styles {
@@ -44,7 +44,7 @@
         }
 
         .stream-title {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: bold;
             color: #2c3e50;
         }
@@ -52,9 +52,10 @@
         .stream-count {
             background: #1976d2;
             color: white;
-            padding: 5px 15px;
+            padding: 8px 18px;
             border-radius: 20px;
             font-weight: bold;
+            font-size: 18px;
         }
 
         .items-table {
@@ -68,19 +69,19 @@
         }
 
         .items-table th {
-            padding: 10px 8px;
+            padding: 15px 12px;
             text-align: left;
             font-weight: 600;
             color: #2c3e50;
             border-bottom: 2px solid #dee2e6;
-            font-size: 14px;
+            font-size: 18px;
             white-space: nowrap;
         }
 
         .items-table td {
-            padding: 10px 8px;
+            padding: 15px 12px;
             border-bottom: 1px solid #dee2e6;
-            font-size: 14px;
+            font-size: 18px;
             vertical-align: middle;
             word-wrap: break-word;
         }
@@ -105,6 +106,7 @@
         .notes-text {
             color: #dc3545;
             font-weight: 600;
+            font-size: 16px;
         }
 
         .empty-state {
@@ -115,7 +117,7 @@
 
         .time-cell {
             font-family: 'Courier New', monospace;
-            font-size: 16px;
+            font-size: 22px;
             font-weight: 600;
             color: #1976d2;
         }
@@ -123,14 +125,14 @@
         .grouped-items-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .grouped-item-card {
             background: #f8f9fa;
             border-radius: 6px;
-            padding: 12px 15px;
-            border-left: 3px solid #1976d2;
+            padding: 15px 18px;
+            border-left: 4px solid #1976d2;
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
@@ -140,15 +142,15 @@
         }
 
         .grouped-item-name {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             line-height: 1.3;
         }
 
         .grouped-item-quantity {
-            font-size: 16px;
+            font-size: 18px;
             color: #ff9800;
             font-weight: 600;
         }
@@ -187,6 +189,328 @@
             justify-content: center;
             margin-top: 30px;
         }
+
+        /* Recipe Popup Styles */
+        .recipe-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            animation: fadeIn 0.2s;
+        }
+
+        .recipe-popup {
+            background: #ffffff;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            overflow: hidden;
+            animation: slideUp 0.3s;
+        }
+
+        .recipe-popup-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #e3f2fd;
+        }
+
+        .recipe-popup-icon {
+            font-size: 24px;
+            color: #1976d2;
+            margin-right: 10px;
+        }
+
+        .recipe-popup-title {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2933;
+        }
+
+        .recipe-popup-close {
+            border: none;
+            background: transparent;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .recipe-popup-body {
+            padding: 16px 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .recipe-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .recipe-table th,
+        .recipe-table td {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 6px 8px;
+        }
+
+        .recipe-table th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        .recipe-popup-footer {
+            padding: 10px 20px 14px;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
+        }
+
+        .recipe-popup-btn {
+            padding: 8px 18px;
+            border-radius: 6px;
+            border: none;
+            background: #1976d2;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .recipe-popup-btn:hover {
+            background: #1565c0;
+        }
+
+        /* Confirm Popup Styles */
+        .confirm-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            animation: fadeIn 0.2s;
+        }
+
+        .confirm-popup {
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s;
+            overflow: hidden;
+        }
+
+        .confirm-popup-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fff3cd;
+        }
+
+        .confirm-popup-icon {
+            font-size: 28px;
+            color: #ffc107;
+        }
+
+        .confirm-popup-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            color: #333;
+        }
+
+        .confirm-popup-body {
+            padding: 24px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .confirm-popup-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .confirm-popup-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .confirm-popup-btn-cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .confirm-popup-btn-cancel:hover {
+            background: #5a6268;
+        }
+
+        .confirm-popup-btn-confirm {
+            background: #007bff;
+            color: white;
+        }
+
+        .confirm-popup-btn-confirm:hover {
+            background: #0056b3;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @@keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Tab Navigation Styles */
+        .tab-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 18px;
+            font-weight: 600;
+            color: #6c757d;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            top: 2px;
+        }
+
+        .tab-button:hover {
+            color: #1976d2;
+        }
+
+        .tab-button.active {
+            color: #1976d2;
+            border-bottom-color: #1976d2;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Ingredient Pickup Styles */
+        .ingredient-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 16px;
+        }
+
+        .ingredient-table thead {
+            background: #f8f9fa;
+        }
+
+        .ingredient-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .ingredient-table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .ingredient-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .warehouse-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #e7f3ff;
+            color: #0066cc;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .quantity-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #28a745;
+            color: white;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .expiry-date.warning {
+            color: #ff9800;
+            font-weight: 600;
+        }
+
+        .expiry-date.danger {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .urgent-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #ff9800;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .ingredient-table tbody tr.urgent-row {
+            background: #fff3cd;
+            border-left: 4px solid #ff9800;
+        }
+
+        .ingredient-table tbody tr.urgent-row:hover {
+            background: #ffe69c;
+        }
     </style>
 }
 
@@ -196,10 +520,22 @@
         <p class="station-subtitle" id="stationSubtitle">Món đang nấu (<span id="cookingCount">0</span>)</p>
     </div>
 
-    <!-- 2 Luồng: Món đang order và Món cần nấu ngay -->
+    <!-- Tab Navigation -->
+    <div class="tab-navigation">
+        <button class="tab-button active" onclick="switchTab('cooking')" id="tabCooking">
+            Món cần nấu
+        </button>
+        <button class="tab-button" onclick="switchTab('ingredients')" id="tabIngredients">
+            Nguyên liệu cần thiết
+        </button>
+    </div>
+
+    <!-- Tab Content: Món cần nấu -->
+    <div id="tabContentCooking" class="tab-content active">
+        <!-- 2 Luồng: Món đang order và Món cần nấu ngay -->
     <div class="row">
-        <!-- Luồng 1: Món đang trong quá trình order (grouped by dish) - 2/5 màn hình -->
-        <div class="col-md-5 mb-4">
+        <!-- Luồng 1: Món đang trong quá trình order (grouped by dish) - 1/3 màn hình -->
+        <div class="col-md-4 mb-4">
             <div class="card stream-section h-100">
                 <div class="card-body d-flex flex-column">
                     <div class="stream-header">
@@ -215,8 +551,8 @@
             </div>
         </div>
 
-        <!-- Luồng 2: Món cần nấu ngay (đã được fire) - 3/5 màn hình -->
-        <div class="col-md-7 mb-4">
+        <!-- Luồng 2: Món cần nấu ngay (đã được fire) - 2/3 màn hình -->
+        <div class="col-md-8 mb-4">
             <div class="card stream-section h-100">
                 <div class="card-body d-flex flex-column">
                     <div class="stream-header">
@@ -228,9 +564,9 @@
                             <table class="table items-table mb-0">
                                 <thead class="table-light sticky-top">
                                     <tr>
-                                        <th style="width: 50px;">Chọn</th>
-                                        <th style="width: 120px;">Thời gian bắt đầu</th>
-                                        <th style="width: 80px;">Bàn</th>
+                                        <th style="width: 60px;">Chọn</th>
+                                        <th style="width: 150px;">Thời gian nấu</th>
+                                        <th style="width: 100px;">Bàn</th>
                                         <th>Món</th>
                                         <th>Ghi chú</th>
                                     </tr>
@@ -248,17 +584,74 @@
         </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-        <button class="btn btn-success btn-lg" onclick="completeSelectedItems()">
-            <i class="mdi mdi-check-circle"></i> Hoàn thành
-        </button>
-        <button class="btn btn-secondary btn-lg" onclick="sendBackToSousChef()">
-            <i class="mdi mdi-arrow-left"></i> Gửi lại bếp phó
-        </button>
-        <button class="btn btn-warning btn-lg" onclick="reportMissingIngredients()">
-            <i class="mdi mdi-alert"></i> Thiếu nguyên liệu
-        </button>
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-success btn-lg" onclick="completeSelectedItems()">
+                <i class="mdi mdi-check-circle"></i> Hoàn thành
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab Content: Nguyên liệu cần thiết -->
+    <div id="tabContentIngredients" class="tab-content">
+        <div class="card stream-section">
+            <div class="card-body">
+                <div class="stream-header">
+                    <span class="stream-title">Nguyên liệu cần lấy từ lô hàng</span>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="display: flex; gap: 5px; background: #f8f9fa; padding: 4px; border-radius: 6px;">
+                            <button id="viewDetailBtn" class="btn btn-sm" onclick="switchIngredientView('detail')" style="background: #007bff; color: white; border: none;">Chi tiết</button>
+                            <button id="viewSummaryBtn" class="btn btn-sm" onclick="switchIngredientView('summary')" style="background: transparent; color: #6c757d; border: none;">Tổng hợp</button>
+                        </div>
+                        <span class="badge bg-primary stream-count" id="ingredientCount">0</span>
+                    </div>
+                </div>
+                <div style="max-height: 600px; overflow-y: auto;">
+                    <div id="loadingIngredients" class="empty-state" style="display: none;">
+                        <i class="mdi mdi-loading mdi-spin" style="font-size: 24px;"></i> Đang tải...
+                    </div>
+                    <div id="emptyIngredients" class="empty-state" style="display: none;">
+                        <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.5;">📦</div>
+                        <div>Không có nguyên liệu cần lấy</div>
+                    </div>
+                    
+                    <!-- Chi tiết view -->
+                    <div id="detailView" class="table-responsive">
+                        <table class="ingredient-table" id="ingredientTable" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>Món ăn</th>
+                                    <th>Số lượng</th>
+                                    <th>Nguyên liệu</th>
+                                    <th>Kho</th>
+                                    <th>Lô hàng</th>
+                                    <th>Số lượng cần lấy</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ingredientTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Tổng hợp view -->
+                    <div id="summaryView" class="table-responsive" style="display: none;">
+                        <table class="ingredient-table" id="ingredientSummaryTable" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>Nguyên liệu</th>
+                                    <th>Đơn vị</th>
+                                    <th>Kho</th>
+                                    <th>Lô hàng</th>
+                                    <th>Tổng số lượng cần lấy</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ingredientSummaryTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -278,6 +671,230 @@
             return textarea.value;
         }
 
+        // Tab switching function
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.getElementById('tabContentCooking').classList.remove('active');
+            document.getElementById('tabContentIngredients').classList.remove('active');
+            
+            // Remove active class from all buttons
+            document.getElementById('tabCooking').classList.remove('active');
+            document.getElementById('tabIngredients').classList.remove('active');
+            
+            // Show selected tab
+            if (tabName === 'cooking') {
+                document.getElementById('tabContentCooking').classList.add('active');
+                document.getElementById('tabCooking').classList.add('active');
+            } else if (tabName === 'ingredients') {
+                document.getElementById('tabContentIngredients').classList.add('active');
+                document.getElementById('tabIngredients').classList.add('active');
+                // Load ingredients when switching to ingredients tab
+                loadIngredientPickupList();
+            }
+        }
+
+        // Load ingredient pickup list
+        async function loadIngredientPickupList() {
+            const loadingIndicator = document.getElementById('loadingIngredients');
+            const emptyState = document.getElementById('emptyIngredients');
+            const ingredientTable = document.getElementById('ingredientTable');
+            const tableBody = document.getElementById('ingredientTableBody');
+            const ingredientCount = document.getElementById('ingredientCount');
+
+            loadingIndicator.style.display = 'block';
+            emptyState.style.display = 'none';
+            ingredientTable.style.display = 'none';
+
+            try {
+                let categoryName = '@Html.Raw(ViewBag.CategoryName)';
+                if (categoryName.includes('&#')) {
+                    categoryName = decodeHtmlEntities(categoryName);
+                }
+                
+                const url = categoryName && categoryName !== 'N/A'
+                    ? `${window.API_BASE_URL}/InventoryIngredient/kitchen-pickup?categoryName=${encodeURIComponent(categoryName)}`
+                    : `${window.API_BASE_URL}/InventoryIngredient/kitchen-pickup`;
+                
+                const response = await fetch(url);
+                const result = await response.json();
+
+                loadingIndicator.style.display = 'none';
+
+                if (result.success && result.data && result.data.length > 0) {
+                    // Store data globally for view switching
+                    window.ingredientData = result.data;
+                    
+                    // Render based on current view
+                    const currentView = document.getElementById('viewDetailBtn').style.background === 'rgb(0, 123, 255)' ? 'detail' : 'summary';
+                    renderIngredientView(result.data, currentView);
+                    ingredientCount.textContent = result.data.length;
+                } else {
+                    emptyState.style.display = 'block';
+                    ingredientCount.textContent = '0';
+                }
+            } catch (error) {
+                console.error('Error loading ingredient pickup list:', error);
+                loadingIndicator.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.querySelector('div:last-child').textContent = 'Lỗi khi tải dữ liệu';
+                ingredientCount.textContent = '0';
+            }
+        }
+
+        function createIngredientRow(item) {
+            const row = document.createElement('tr');
+            
+            // Add urgent class if item is urgent
+            if (item.isUrgent) {
+                row.classList.add('urgent-row');
+            }
+
+            // Urgent badge
+            const urgentBadge = item.isUrgent ? '<span class="urgent-badge">ƯU TIÊN</span>' : '';
+
+            row.innerHTML = `
+                <td>
+                    <strong>${escapeHtml(item.menuItemName)}</strong>
+                    ${urgentBadge}
+                </td>
+                <td>${item.orderQuantity}</td>
+                <td>
+                    ${escapeHtml(item.ingredientName)}<br>
+                    <small class="text-muted">Đơn vị: ${item.unitName || '-'}</small>
+                </td>
+                <td><span class="warehouse-badge">${escapeHtml(item.warehouseName)}</span></td>
+                <td><small>Lô #${item.batchId}</small></td>
+                <td><span class="quantity-badge">${formatNumber(item.quantityToPick)} ${item.unitName || ''}</span></td>
+            `;
+
+            return row;
+        }
+
+        // Switch between detail and summary view
+        function switchIngredientView(viewType) {
+            const detailBtn = document.getElementById('viewDetailBtn');
+            const summaryBtn = document.getElementById('viewSummaryBtn');
+            const detailView = document.getElementById('detailView');
+            const summaryView = document.getElementById('summaryView');
+            
+            if (viewType === 'detail') {
+                detailBtn.style.background = '#007bff';
+                detailBtn.style.color = 'white';
+                summaryBtn.style.background = 'transparent';
+                summaryBtn.style.color = '#6c757d';
+                detailView.style.display = 'block';
+                summaryView.style.display = 'none';
+            } else {
+                detailBtn.style.background = 'transparent';
+                detailBtn.style.color = '#6c757d';
+                summaryBtn.style.background = '#007bff';
+                summaryBtn.style.color = 'white';
+                detailView.style.display = 'none';
+                summaryView.style.display = 'block';
+            }
+            
+            // Re-render with current data
+            if (window.ingredientData) {
+                renderIngredientView(window.ingredientData, viewType);
+            }
+        }
+
+        // Render ingredient view (detail or summary)
+        function renderIngredientView(data, viewType) {
+            const emptyState = document.getElementById('emptyIngredients');
+            const ingredientTable = document.getElementById('ingredientTable');
+            const ingredientSummaryTable = document.getElementById('ingredientSummaryTable');
+            const tableBody = document.getElementById('ingredientTableBody');
+            const summaryTableBody = document.getElementById('ingredientSummaryTableBody');
+            
+            if (viewType === 'detail') {
+                tableBody.innerHTML = '';
+                data.forEach(item => {
+                    const row = createIngredientRow(item);
+                    tableBody.appendChild(row);
+                });
+                ingredientTable.style.display = 'table';
+                ingredientSummaryTable.style.display = 'none';
+                emptyState.style.display = 'none';
+            } else {
+                // Group by ingredient, warehouse, and batch
+                const grouped = {};
+                data.forEach(item => {
+                    const key = `${item.ingredientId}_${item.warehouseId}_${item.batchId}`;
+                    if (!grouped[key]) {
+                        grouped[key] = {
+                            ingredientId: item.ingredientId,
+                            ingredientName: item.ingredientName,
+                            unitName: item.unitName,
+                            warehouseId: item.warehouseId,
+                            warehouseName: item.warehouseName,
+                            batchId: item.batchId,
+                            totalQuantity: 0,
+                            isUrgent: item.isUrgent // Keep urgent flag if any item is urgent
+                        };
+                    }
+                    grouped[key].totalQuantity += parseFloat(item.quantityToPick);
+                    // If any item is urgent, mark the group as urgent
+                    if (item.isUrgent) {
+                        grouped[key].isUrgent = true;
+                    }
+                });
+                
+                // Convert to array and sort (urgent first, then by ingredient name)
+                const summaryData = Object.values(grouped)
+                    .sort((a, b) => {
+                        if (a.isUrgent !== b.isUrgent) {
+                            return a.isUrgent ? -1 : 1; // Urgent items first
+                        }
+                        return a.ingredientName.localeCompare(b.ingredientName);
+                    });
+                
+                summaryTableBody.innerHTML = '';
+                summaryData.forEach(item => {
+                    const row = createSummaryRow(item);
+                    summaryTableBody.appendChild(row);
+                });
+                ingredientSummaryTable.style.display = 'table';
+                ingredientTable.style.display = 'none';
+                emptyState.style.display = 'none';
+            }
+        }
+
+        function createSummaryRow(item) {
+            const row = document.createElement('tr');
+            
+            // Add urgent class if item is urgent
+            if (item.isUrgent) {
+                row.classList.add('urgent-row');
+            }
+
+            // Urgent badge
+            const urgentBadge = item.isUrgent ? '<span class="urgent-badge">ƯU TIÊN</span>' : '';
+
+            row.innerHTML = `
+                <td>
+                    <strong>${escapeHtml(item.ingredientName)}</strong>
+                    ${urgentBadge}
+                </td>
+                <td>${item.unitName || '-'}</td>
+                <td><span class="warehouse-badge">${escapeHtml(item.warehouseName)}</span></td>
+                <td><small>Lô #${item.batchId}</small></td>
+                <td><span class="quantity-badge">${formatNumber(item.totalQuantity)} ${item.unitName || ''}</span></td>
+            `;
+
+            return row;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatNumber(num) {
+            return parseFloat(num).toFixed(2).replace(/\.?0+$/, '');
+        }
+
         $(document).ready(function() {
             let categoryName = '@Html.Raw(ViewBag.CategoryName)';
             
@@ -294,6 +911,13 @@
             console.log('Initializing station with category:', categoryName);
             console.log('API Base URL:', window.API_BASE_URL);
             initializeStation(categoryName);
+            
+            // Auto-refresh ingredients every 10 seconds when on ingredients tab
+            setInterval(() => {
+                if (document.getElementById('tabContentIngredients').classList.contains('active')) {
+                    loadIngredientPickupList();
+                }
+            }, 10000);
         });
     </script>
 }

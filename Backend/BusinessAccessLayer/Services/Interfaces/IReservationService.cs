@@ -5,12 +5,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static DataAccessLayer.Repositories.ReservationRepository;
 
 namespace BusinessAccessLayer.Services.Interfaces
 {
     public interface IReservationService
     {
+        Task<bool> HasExistingReservationAsync(string phone, DateTime date, string timeSlot);
         Task<Reservation> CreateReservationAsync(ReservationCreateDto dto);
+        Task AddDepositAsync(int reservationId, ReservationDeposit deposit);
+        Task UpdateReservationDepositStatusAsync(Reservation reservation);
         Task<object> GetPendingAndConfirmedReservationsAsync(
     string? status = null,
     DateTime? date = null,
@@ -23,10 +27,16 @@ namespace BusinessAccessLayer.Services.Interfaces
 
         Task<object> GetAllTablesGroupedByAreaAsync();
         Task<List<int>> GetBookedTableIdsAsync(DateTime date, string slot);
+        Task<List<BookedTableDetailDto>> GetBookedTableDetailsAsync(DateTime date, string slot);
         Task<object> SuggestTablesByAreasAsync(DateTime date, string slot, int guests, int? currentReservationId = null);
         Task<object> AssignTablesAsync(AssignTableDto dto);
         Task<object> ResetTablesAsync(int reservationId);
         Task<object> CancelReservationAsync(int reservationId, bool refund);
+        Task<object> GetReservationsByCustomerAsync(int customerId);
+        Task<object> UpdateReservationAsync(int reservationId, ReservationUpdateDto dto);
+        Task<object> CancelReservationByCustomerAsync(int reservationId);
+        Task<int> GetPendingCountAsync();
 
+        Task<int?> GetActiveReservationIdByTableAsync(int tableId);
     }
 }

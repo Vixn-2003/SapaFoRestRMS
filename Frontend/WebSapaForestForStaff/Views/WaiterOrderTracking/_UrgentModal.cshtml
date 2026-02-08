@@ -1,0 +1,43 @@
+<div class="modal fade" id="urgentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-fire text-danger"></i> Yêu cầu làm gấp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="urgentForm">
+                    <input type="hidden" id="urgentOrderDetailId" />
+                    <input type="hidden" id="urgentOrderComboItemId" />
+                    <div class="mb-3">
+                        <label class="form-label">Lý do làm gấp <span class="text-danger">*</span></label>
+                        <select class="form-select" id="urgentReason" required>
+                            <option value="">-- Chọn lý do --</option>
+                            <option value="Khách vội">Khách vội</option>
+                            <option value="Trẻ con đói">Trẻ con đói</option>
+                            <option value="Khách VIP">Khách VIP</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="urgentReasonOther" style="display: none;">
+                        <label class="form-label">Lý do khác</label>
+                        <textarea class="form-control" id="urgentReasonOtherText" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" onclick="submitUrgentRequest()">
+                    <i class="fas fa-fire"></i> Xác nhận làm gấp
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('urgentReason').addEventListener('change', function() {
+        document.getElementById('urgentReasonOther').style.display = this.value === 'Khác' ? 'block' : 'none';
+    });
+</script>
+
